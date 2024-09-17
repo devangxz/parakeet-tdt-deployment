@@ -1,6 +1,6 @@
 import { AxiosError } from 'axios'
 import { Session } from 'next-auth'
-import { toast as toastInstance } from 'sonner/dist/index'
+import { toast as toastInstance } from 'sonner'
 
 import { BACKEND_URL } from '@/constants'
 
