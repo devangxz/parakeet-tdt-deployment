@@ -1,0 +1,142 @@
+{
+  "signup": {
+    "title": "खाता बनाएं",
+    "fields": {
+      "firstName": {
+        "type": "text",
+        "label": "पहला नाम",
+        "required": true,
+        "name": "firstName"
+      },
+      "lastName": {
+        "type": "text",
+        "label": "अंतिम नाम",
+        "required": true,
+        "name": "lastName"
+      },
+      "email": {
+        "type": "email",
+        "label": "ईमेल",
+        "required": true,
+        "name": "email"
+      },
+      "phone": {
+        "type": "phone",
+        "label": "फ़ोन नंबर",
+        "required": true,
+        "name": "phone"
+      },
+      "password": {
+        "type": "password",
+        "label": "पासवर्ड",
+        "required": true,
+        "name": "password"
+      },
+      "confirmPassword": {
+        "type": "password",
+        "label": "पासवर्ड की पुष्टि करें",
+        "required": true,
+        "name": "confirmPassword"
+      },
+      "userType": {
+        "type": "radio",
+        "label": "उपयोगकर्ता प्रकार",
+        "required": true,
+        "options": ["ग्राहक", "ट्रांसक्राइबर"],
+        "name": "userType"
+      },
+      "industry": {
+        "type": "select",
+        "label": "उद्योग चुनें",
+        "required": true,
+        "options": [
+          "कानूनी",
+          "वीडियो",
+          "प्रवचन",
+          "पॉडकास्ट",
+          "शैक्षिक",
+          "डिसर्टेशन",
+          "मार्केटिंग",
+          "अन्य"
+        ],
+        "name": "industry"
+      },
+      "terms": {
+        "type": "checkbox",
+        "label": "मैं नियम और शर्तों से सहमत हूँ",
+        "required": true,
+        "name": "terms"
+      },
+      "receive_updates": {
+        "type": "checkbox",
+        "label": "अपडेट और डिस्काउंट कूपन प्राप्त करें (हर 3 महीने में एक बार)",
+        "required": false,
+        "name": "receive_updates"
+      }
+    },
+    "submit": {
+      "text": "स्क्राइबी के साथ खाता बनाएं",
+      "color": "प्राथमिक"
+    },
+    "login": {
+      "text": "मौजूदा उपयोगकर्ता?",
+      "linkText": "लॉगिन",
+      "link": "/login"
+    },
+    "validations": {
+      "firstName": {
+        "required": "आवश्यक है",
+        "maxLength": "पहला नाम NAME_LENGTH अक्षरों से अधिक नहीं हो सकता",
+        "pattern": "पहला नाम केवल अक्षर, संख्या, अंतरिक्ष और अंडरस्कोर हो सकता है"
+      },
+      "lastName": {
+        "required": "आवश्यक है",
+        "maxLength": "अंतिम नाम NAME_LENGTH अक्षरों से अधिक नहीं हो सकता",
+        "pattern": "अंतिम नाम केवल अक्षर, संख्या, अंतरिक्ष और अंडरस्कोर हो सकता है"
+      },
+      "email": {
+        "invalid": "अमान्य ईमेल।",
+        "required": "आवश्यक है"
+      },
+      "countryCode": {
+        "required": "आवश्यक है",
+        "pattern": "देश कोड को एक मान्य ISO 3166-1 अल्फा-2 कोड होना चाहिए"
+      },
+      "phone": {
+        "required": "फ़ोन नंबर आवश्यक है",
+        "pattern": "फ़ोन नंबर मान्य होना चाहिए"
+      },
+      "password": {
+        "minLength": "पासवर्ड कम से कम PASSWORD_LENGTH अक्षर होना चाहिए",
+        "lowercase": "पासवर्ड में कम से कम एक लोअरकेस अक्षर होना चाहिए",
+        "uppercase": "पासवर्ड में कम से कम एक अपरकेस अक्षर होना चाहिए",
+        "number": "पासवर्ड में कम से कम एक संख्या होनी चाहिए",
+        "specialChar": "पासवर्ड में कम से कम एक विशेष वर्ण होना चाहिए",
+        "required": "पासवर्ड आवश्यक है"
+      },
+      "confirmPassword": {
+        "match": "पासवर्ड मेल खाने चाहिए",
+        "required": "कृपया अपना पासवर्ड पुष्टि करें"
+      },
+      "userType": {
+        "invalid": "अमान्य ग्राहक प्रकार",
+        "required": "ग्राहक प्रकार आवश्यक है"
+      },
+      "industry": {
+        "invalid": "अमान्य उद्योग",
+        "required": "आवश्यक है"
+      },
+      "terms": {
+        "required": "आवश्यक है"
+      },
+      "receive_updates": {
+        "required": "आवश्यक है"
+      }
+    },
+    "errorCodes": {
+      "SCRB_SIGNUP_ERROR": "साइनअप प्रक्रिया के दौरान त्रुटि हुई",
+      "SCRB_USER_ALREADY_EXISTS": "उपयोगकर्ता पहले से मौजूद है। कृपया नए ईमेल आईडी के साथ प्रयास करें।",
+      "SCRB_SIGNUP_GENERIC_ERROR": "साइनअप के दौरान त्रुटि हुई"
+    }
+  }
+}

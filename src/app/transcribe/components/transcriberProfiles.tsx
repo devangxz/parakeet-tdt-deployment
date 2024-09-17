@@ -1,0 +1,93 @@
+'use client'
+import { ChevronDown } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { signOut, useSession } from 'next-auth/react'
+
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuGroup,
+} from '@/components/ui/dropdown-menu'
+
+const getInitials = (name: string) => {
+  const nameParts = name.split(' ')
+  let initials = nameParts[0].charAt(0)
+  if (nameParts.length > 1) {
+    initials += nameParts[1].charAt(0)
+  } else {
+    initials += nameParts[0].charAt(1)
+  }
+
+  return initials.toUpperCase()
+}
+
+const TranscriberProfile = () => {
+  const router = useRouter()
+  const { data: session } = useSession()
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant='outline' className='relative h-8 w-8 rounded-full'>
+          <Avatar className='h-9 w-[3.5rem]'>
+            <AvatarFallback>
+              {getInitials(session?.user?.name ?? 'NA')}
+              <ChevronDown className='ml-1 h-4 w-4' />
+            </AvatarFallback>
+          </Avatar>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className='w-56' align='end' forceMount>
+        <DropdownMenuLabel className='font-normal'>
+          <div className='flex flex-col space-y-1'>
+            <p className='text-sm font-medium leading-none'>
+              {session?.user?.name}
+            </p>
+            <p className='text-xs leading-none text-muted-foreground'>
+              {session?.user?.email}
+            </p>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuItem onClick={() => router.push(`/transcribe/qc`)}>
+            Dashboard
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => router.push(`/settings/personal-info`)}
+          >
+            Settings
+          </DropdownMenuItem>
+          {/* <DropdownMenuItem onClick={() => router.push(`/transcribe/referrals`)}>
+                        Referrals
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push(`/transcribe/referrals`)}>
+                        Affiliate
+                    </DropdownMenuItem> */}
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => router.push(`/faq`)}>
+          FAQ
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push(`/contact`)}>
+          Contact support
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className='text-red-500'
+          onClick={() =>
+            signOut({ callbackUrl: process.env.NEXT_PUBLIC_SITE_URL })
+          }
+        >
+          Logout
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+export default TranscriberProfile

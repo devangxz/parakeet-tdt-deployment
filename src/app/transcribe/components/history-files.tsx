@@ -1,0 +1,386 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+'use client'
+import { ReloadIcon } from '@radix-ui/react-icons'
+import { ColumnDef } from '@tanstack/react-table'
+import { diffWords } from 'diff'
+import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
+
+import { DataTable } from './data-table'
+import { determinePwerLevel, determineRate } from './utils'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { BACKEND_URL, LEGAL_QC_TRANSCRIBER_RATE } from '@/constants'
+import { BaseTranscriberFile } from '@/types/files'
+import axiosInstance from '@/utils/axios'
+import formatDuration from '@/utils/formatDuration'
+import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
+
+interface File extends BaseTranscriberFile {
+  qc_cost: number
+  jobId: number
+  jobType: string
+}
+
+export default function HistoryFilesPage() {
+  const [assignedFiles, setAssginedFiles] = useState<File[] | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [loadingFileOrder, setLoadingFileOrder] = useState<
+    Record<number, boolean>
+  >({})
+  const [diff, setDiff] = useState('')
+  const [isDiffModalOpen, setIsDiffModalOpen] = useState(false)
+  const pathname = usePathname()
+  const isLegalQCPage = pathname === '/transcribe/legal-qc'
+
+  const fetchFiles = async (showLoader = false) => {
+    if (showLoader) {
+      setIsLoading(true)
+    } else {
+      setIsLoading(false)
+    }
+    try {
+      const url = isLegalQCPage
+        ? `${BACKEND_URL}/history-qc-file?type=legal`
+        : `${BACKEND_URL}/history-qc-file?type=general`
+      const response = await axiosInstance.get(url)
+
+      if (response.data) {
+        const orders = response.data
+          .map(
+            (
+              assignment: {
+                id: number
+                completedTs: string
+                cancelledTs: string
+                earnings: number
+                status: string
+                type: string
+                acceptedTs: string
+                order: {
+                  pwer: number
+                  orderTs: string
+                  id: number
+                  fileId: string
+                  File: { filename: string; duration: number }
+                  status: string
+                  priority: number
+                  qc_cost: number
+                  deliveryTs: string
+                  highDifficulty: boolean
+                  orderType: string
+                  rateBonus: number
+                  instructions: string | null
+                }
+              },
+              index: number
+            ) => {
+              const diff = determinePwerLevel(assignment.order.pwer)
+              const rate = determineRate(
+                assignment.order.pwer,
+                LEGAL_QC_TRANSCRIBER_RATE
+              )
+
+              const { timeString, dateString } = getFormattedTimeStrings(
+                assignment.status === 'COMPLETED'
+                  ? assignment.completedTs
+                  : assignment.status === 'ACCEPTED'
+                  ? assignment.acceptedTs
+                  : assignment.cancelledTs
+              )
+
+              return {
+                jobId: assignment.id,
+                index: index + 1,
+                orderId: assignment.order.id,
+                fileId: assignment.order.fileId,
+                filename: assignment.order.File.filename,
+                orderTs: assignment.order.orderTs,
+                pwer: assignment.order.pwer,
+                status: assignment.status,
+                priority: assignment.order.priority,
+                qc_cost: assignment.earnings,
+                duration: assignment.order.File.duration,
+                deliveryTs: assignment.order.deliveryTs,
+                hd: assignment.order.highDifficulty,
+                orderType: assignment.order.orderType,
+                rateBonus: assignment.order.rateBonus,
+                timeString,
+                dateString,
+                diff,
+                rate,
+                instructions: null,
+                jobType: assignment.type,
+              }
+            }
+          )
+          .sort(
+            (a: { jobId: number }, b: { jobId: number }) => b.jobId - a.jobId
+          )
+        setAssginedFiles(orders ?? [])
+        setError(null)
+      }
+    } catch (err) {
+      setError('an error occurred')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchFiles(true)
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '50vh',
+        }}
+      >
+        <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+        <p>Loading...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '20vh',
+        }}
+      >
+        <p>An Error Occured</p>
+      </div>
+    )
+  }
+
+  const columns: ColumnDef<File>[] = [
+    {
+      accessorKey: 'id',
+      header: 'Details',
+      cell: ({ row }) => (
+        <div>
+          <div className='mb-2 font-medium'>{row.original.fileId}</div>
+          <div className='mb-2 font-medium'>{row.original.filename}</div>
+          <div className='flex gap-2'>
+            <Tooltip>
+              <TooltipTrigger>
+                <Badge
+                  variant='outline'
+                  className='font-semibold text-[10px] text-green-600'
+                >
+                  {row.original.diff}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Difficulty</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger>
+                <Badge
+                  variant='outline'
+                  className='font-semibold text-[10px] text-blue-800'
+                >
+                  GB, NA
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Spellings</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger>
+                <Badge
+                  variant='outline'
+                  className='font-semibold text-[10px] text-green-600'
+                >
+                  {row.original.pwer ? row.original.pwer.toFixed(2) : '-'}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>PWER</p>
+              </TooltipContent>
+            </Tooltip>
+            {row.original.jobType === 'REVIEW' && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge
+                    variant='outline'
+                    className='font-semibold text-[10px] text-green-600'
+                  >
+                    CF
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Custom Formatting</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'duration',
+      header: 'Price/Duration',
+      cell: ({ row }) => (
+        <div>
+          <p>${row.original.qc_cost.toFixed(2)} </p>
+          <p>{formatDuration(row.getValue('duration'))}</p>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'dateString',
+      header: 'Submitted On',
+      cell: ({ row }) => (
+        <div>
+          <p>{row.original.timeString},</p>
+          <p>{row.original.dateString}</p>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => (
+        <div>
+          <Badge
+            variant='outline'
+            className='font-semibold text-[12px] text-green-600'
+          >
+            {row.original.status}
+          </Badge>
+        </div>
+      ),
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      enableHiding: false,
+      cell: ({ row }) => (
+        <div className='flex items-center gap-4'>
+          {loadingFileOrder[row.original.index] ? (
+            <Button
+              disabled
+              variant='order'
+              className='format-button w-[140px]'
+            >
+              Please wait
+              <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+            </Button>
+          ) : (
+            <Button
+              className='not-rounded w-[140px]'
+              variant='order'
+              onClick={() =>
+                diffHandler(row.original.fileId, row.original.index)
+              }
+            >
+              Diff
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ]
+
+  function diffParagraphs(asrText: string, qcText: string) {
+    // Split the texts into paragraphs
+    const asrParagraphs = asrText.split('\n\n')
+    const qcParagraphs = qcText.split('\n\n')
+
+    // Find the maximum number of paragraphs
+    const maxLength = Math.max(asrParagraphs.length, qcParagraphs.length)
+
+    let diffResult = ''
+
+    for (let i = 0; i < maxLength; i++) {
+      const asrParagraph = asrParagraphs[i] || ''
+      const qcParagraph = qcParagraphs[i] || ''
+
+      const diffArray = diffWords(asrParagraph, qcParagraph)
+
+      // Reconstruct the paragraph with diff markers
+      diffArray.forEach((part) => {
+        // Green for added, red for removed, grey for unchanged
+        const color = part.added ? 'added' : part.removed ? 'removed' : ''
+
+        diffResult += `<span class="${color}">${part.value}</span>`
+      })
+
+      // Add paragraph break
+      diffResult += '<br><br>'
+    }
+
+    return diffResult
+  }
+
+  const diffHandler = async (fileId: string, index: number) => {
+    setLoadingFileOrder((prev) => ({ ...prev, [index]: true }))
+    try {
+      const res = await axiosInstance.get(
+        `${BACKEND_URL}/get-files?fileId=${fileId}&fileType=asr,qc`
+      )
+      const { file1, file2 } = res.data
+      const diff = diffParagraphs(file1, file2)
+      setDiff(diff)
+      setIsDiffModalOpen(true)
+      toast.success('Diff loaded successfully')
+    } catch (error) {
+      toast.error('Failed to load diff')
+    } finally {
+      setLoadingFileOrder((prev) => ({ ...prev, [index]: false }))
+    }
+  }
+
+  return (
+    <>
+      <DataTable
+        data={assignedFiles ?? []}
+        columns={columns}
+        renderRowSubComponent={({ row }: { row: any }) =>
+          row.original.instructions ? (
+            <div className='p-2'>
+              <strong>Customer Instructions:</strong>
+              <p>{row.original.instructions}</p>
+            </div>
+          ) : null
+        }
+      />
+      <Dialog open={isDiffModalOpen} onOpenChange={setIsDiffModalOpen}>
+        <DialogContent className='sm:max-w-[792px]'>
+          <DialogHeader>
+            <DialogTitle>Diff Between ASR and QC</DialogTitle>
+            <DialogDescription className='pt-10'>
+              <div dangerouslySetInnerHTML={{ __html: diff }} />
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
