@@ -1,0 +1,144 @@
+{
+  "signup": {
+    "title": "Create account",
+    "fields": {
+      "firstName": {
+        "type": "text",
+        "label": "First Name",
+        "required": true,
+        "name": "firstName"
+      },
+      "lastName": {
+        "type": "text",
+        "label": "Last Name",
+        "required": true,
+        "name": "lastName"
+      },
+      "email": {
+        "type": "email",
+        "label": "Email",
+        "required": true,
+        "name": "email"
+      },
+      "phone": {
+        "type": "phone",
+        "label": "Phone Number",
+        "required": true,
+        "name": "phone"
+      },
+      "password": {
+        "type": "password",
+        "label": "Password",
+        "required": true,
+        "name": "password"
+      },
+      "confirmPassword": {
+        "type": "password",
+        "label": "Confirm Password",
+        "required": true,
+        "name": "confirmPassword"
+      },
+      "userType": {
+        "type": "radio",
+        "label": "User Type",
+        "required": true,
+        "options": ["Customer", "Transcriber"],
+        "name": "userType"
+      },
+      "industry": {
+        "type": "select",
+        "label": "Select Industry",
+        "required": true,
+        "options": [
+          "Legal",
+          "Video",
+          "Sermon",
+          "Podcast",
+          "Academic",
+          "Dissertation",
+          "Marketing",
+          "Other"
+        ],
+        "name": "industry"
+      },
+      "terms": {
+        "type": "checkbox",
+        "label": "I agree to the Terms and Conditions",
+        "required": true,
+        "name": "terms"
+      },
+      "receive_updates": {
+        "type": "checkbox",
+        "label": "Receive updates and discount coupons (once every 3 months)",
+        "required": false,
+        "name": "receive_updates"
+      }
+    },
+    "submit": {
+      "text": "Create account with Scribie",
+      "color": "primary"
+    },
+    "login": {
+      "text": "Existing user?",
+      "linkText": "Login",
+      "link": "/login"
+    },
+    "validations": {
+      "firstName": {
+        "required": "Required",
+        "maxLength": "First name cannot exceed NAME_LENGTH characters",
+        "pattern": "First name can only contain letters, numbers, spaces, and underscores"
+      },
+      "lastName": {
+        "required": "Required",
+        "maxLength": "Last name cannot exceed NAME_LENGTH characters",
+        "pattern": "Last name can only contain letters, numbers, spaces, and underscores"
+      },
+      "email": {
+        "invalid": "Invalid email.",
+        "required": "Required"
+      },
+      "countryCode": {
+        "required": "Required",
+        "pattern": "Country Code must be a valid ISO 3166-1 alpha-2 code"
+      },
+      "phone": {
+        "required": "Phone number is required",
+        "pattern": "Phone number must be valid"
+      },
+      "password": {
+        "minLength": "Password must be at least 8  characters",
+        "lowercase": "Password must contain at least one lowercase character",
+        "uppercase": "Password must contain at least one uppercase character",
+        "number": "Password must contain at least one number",
+        "specialChar": "Password must contain at least one special character",
+        "required": "Password is required"
+      },
+      "confirmPassword": {
+        "match": "Passwords must match",
+        "required": "Please confirm your password"
+      },
+      "userType": {
+        "invalid": "Invalid Customer Type",
+        "required": "Customer Type is required"
+      },
+      "industry": {
+        "invalid": "Invalid Industry",
+        "required": "Required"
+      },
+      "terms": {
+        "required": "Required"
+      },
+      "receive_updates": {
+        "required": "Required"
+      }
+    },
+    "errorCodes": {
+      "SU_SIGNUP_ERROR": "Error occurred during signup process",
+      "SU_USER_ALREADY_EXISTS": "User Already Exist. Please try with new email id.",
+      "SU_SIGNUP_GENERIC_ERROR": "An error occurred during signup please tey again",
+      "SU_USER_CREATION_ERROR": "Error occurred during user creation process",
+      "SU_USER_CREATION_GENERIC_ERROR": "An error occurred during user creation. Please try again"
+    }
+  }
+}

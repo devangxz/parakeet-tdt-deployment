@@ -1,0 +1,84 @@
+{
+  "Accordian": [
+    {
+      "heading": "What is human transcription?",
+      "content": "Human transcription is done by our certified transcribers and we guarantee 99+s% accuracy for it."
+    },
+    {
+      "heading": "How does the human service work?",
+      "content": "You have to upload your files and pay by the audio minute. The payment has to be made in advance. The work will be distribute to our transcribers and the transcript will be delivered to your account once all the 4-steps of our process is complete. You can check the transcript online with our editor, make any changes if required and download the Word document for your use. We will also make any changes at your request."
+    },
+    {
+      "heading": "How much do the transcripts cost?",
+      "content": "For a 1 hour file, the human transcript will cost $48. Please use the cost estimator to get the exact cost or request a custom quote."
+    },
+    {
+      "heading": "What payment options are available?",
+      "content": "We support all major credit cards and PayPal."
+    },
+    {
+      "heading": "Do you support billing or purchase orders?",
+      "content": "Yes, we support billing accounts for larger projects. A contract has to be executed to set up a billing account. We only support ACH payments for billing currently."
+    },
+    {
+      "heading": "Do you have subscriptions?",
+      "content": "Yes, we offer subscription plans. Contact Us"
+    },
+    {
+      "heading": "Do you deliver a Word file?",
+      "content": "Yes, we provide the transcript in Word format along with Open Document Text, PDF and plain text formats."
+    },
+    {
+      "heading": "Are the speakers tracked in the transcript?",
+      "content": "Yes. We mark each speaker with their initials (if names are provided/available) or as Speaker 1, Speaker 2, Speaker 3 etc., and provide an option to enable/disable it. However, the speaker tracking is best effort for more than 4 speakers and may be off in places."
+    },
+    {
+      "heading": "Is there a sample transcript available?",
+      "content": "Yes. Our blog has many political speeches that we have transcribed over the years. You can also try out out editor from there."
+    },
+    {
+      "heading": "What is the accuracy level of the transcripts?",
+      "content": "For human transcripts, we guarantee 99%+ accuracy, unless the audio quality is very poor or the accents are hard."
+    },
+    {
+      "heading": "What languages do you support?",
+      "content": "We support only English at the moment. Support for other languages is on our roadmap. Please join our newsletter to get notified once we release it."
+    },
+    {
+      "heading": "How are the transcripts prepared?",
+      "content": "The transcripts are prepared by our freelance transcribers who correct the automated transcripts by following a formal 4-step process."
+    },
+    {
+      "heading": "In which format should I upload my file?",
+      "content": "We support almost all open audio/video file formats. We do not support any propreitary formats such as WebEx ARF or Olympus DSS. However you can convert those files into an mp3 or mp4 file using converters provided by your vendor and upload those to Scribie."
+    },
+    {
+      "heading": "Are there other tools to convert files?",
+      "content": "We recommend Audacity. Its a free open source program and has a wide support for different file types."
+    },
+    {
+      "heading": "Can you offer me a discount of only part of the file is in English?",
+      "content": "No, since we still have to pay our transcribers for the full duration of the file. However you can edit out the Non-English parts and save on the cost."
+    },
+    {
+      "heading": "Is confidentiality assured?",
+      "content": "Yes, we restrict access strictly on a need to know basis. Our transcribers are also bound by the NDA in our terms of service. We also take a number of measures to ensure that your data remains secure. We absolutely do not sell or share your data with any third parties."
+    },
+    {
+      "heading": "Can you sign an NDA?",
+      "content": "Absolutely. Please contact us with your agreement and we will get back to you in 1-2 business days."
+    },
+    {
+      "heading": "How can I sign up as a transcriber?",
+      "content": "Please visit our transcriber sign up page to get started."
+    },
+    {
+      "heading": "Is the turn around time in calendar days?",
+      "content": "Yes, the turn around time includes weekends and holidays."
+    },
+    {
+      "heading": "What are your business days?",
+      "content": "Our transcribers work 24x7. Live chat, phone and email support is available on the weekdays and only email support is available on the weekends."
+    }
+  ]
+}

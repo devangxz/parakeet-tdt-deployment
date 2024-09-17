@@ -1,0 +1,11 @@
+[
+  { "link": "#introduction", "name": "Introduction" },
+  { "link": "#spaces", "name": "Spaces" },
+  { "link": "#numbers", "name": "Numbers" },
+  { "link": "#plurals", "name": "Plurals" },
+  { "link": "#time-of-day", "name": "Time of day" },
+  { "link": "#capitalization", "name": "Capitalization" },
+  { "link": "#hyphenation", "name": "Hyphenation" },
+  { "link": "#names", "name": "Names" },
+  { "link": "#latin-abbreviations", "name": "Latin Abbreviations" }
+]

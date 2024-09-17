@@ -1,0 +1,55 @@
+{
+"SCB_DEFAULT_ORDER_OPTIONS_SUCCESS": "Your default order options have been saved successfully.",
+"SCB_DEFAULT_ORDER_OPTIONS_EMPTY": "Please provide the required order options.",
+"SCB_DEFAULT_ORDER_OPTIONS_FAILEO": "An error occurred while saving your default order options. Please try again.",
+
+"SCB_GET_DEFAULT_OPTIONS_SUCCESS": "Your default options and instructions have been retrieved successfully.",
+"SCB_GET_DEFAULT_OPTIONS_NOT_FOUND": "No default options found. Please set your default options.",
+"SCB_GET_DEFAULT_OPTIONS_FAILED": "An error occurred while fetching your default options. Please try again.",
+
+"SCB_DEFAULT_ORDER_INSTRUCTIONS_SUCCESS": "Your default order instructions have been saved successfully.",
+"SCB_DEFAULT_ORDER_INSTRUCTIONS_EMPTY": "Please provide the required instructions.",
+"SCB_DEFAULT_ORDER_INSTRUCTIONS_SAVE_FAILED": "An error occurred while saving your default order instructions. Please try again.",
+
+"SCB_DEFAULT_ORDER_PREFERENCES_SUCCESS": "Your default order preferences have been submitted successfully.",
+"SCB_DEFAULT_ORDER_PREFERENCES_EMPTY": "Please provide the required preferences.",
+"SCB_DEFAULT_ORDER_PREFERENCES_SAVE_FAILED": "An error occurred while submitting your default order preferences. Please try again.",
+
+"SCB_GET_DEFAULT_PREFERENCES_SUCCESS": "Your default preferences and records per page have been retrieved successfully.",
+"SCB_GET_DEFAULT_PREFERENCES_NOT_FOUND": "No default preferences found. Please set your preferences.",
+"SCB_GET_DEFAULT_PREFERENCES_FAILED": "An error occurred while fetching your default preferences. Please try again.",
+
+"SCB_UPDATE_PASSWORD_SUCCESS": "Your password has been updated successfully.",
+"SCB_UPDATE_PASSWORD_SAME": "New password cannot be the same as the old password.",
+"SCB_UPDATE_PASSWORD_EMPTY": "Please provide a password.",
+"SCB_UPDATE_PASSWORD_MISMATCH": "The old password you entered is incorrect.",
+"SCB_UPDATE_PASSWORD_FAILED": "An error occurred while updating your password. Please try again.",
+
+"SCB_DELETE_ACCOUNT_SUCCESS": "Your account has been deleted successfully.",
+"SCB_DELETE_ACCOUNT_EMPTY": "User ID is required to delete account.", 
+"SCB_DELETE_ACCOUNT_NO_PERM": "You do not have the necessary permissions to delete this account.",
+"SCB_DELETE_ACCOUNT_WRONG_PWD": "The password you entered is incorrect.",
+"SCB_DELETE_ACCOUNT_FAILED": "An error occurred during the account deletion process. Please try again.",
+
+"SCB_UPDATE_SECONDARY_EMAIL_SUCCESS": "Your secondary email has been updated successfully.",
+"SCB_UPDATE_SECONDARY_EMAIL_EMPTY": "Please provide the required information to update your secondary email.",
+"SCB_UPDATE_SECONDARY_EMAIL_NO_USER": "User not found.",
+"SCB_UPDATE_SECONDARY_EMAIL_SAVE_FAILED": "An error occurred while updating your secondary email. Please try again.",
+"SCB_UPDATE_SECONDARY_EMAIL_SIGNIN_SUCCESS": "Your secondary email has been updated successfully as you signin email. Please verify the link sent to your email.",
+
+"SCB_GET_USER_INFO_SUCCESS": "Your user information has been fetched successfully.", 
+"SCB_GET_USER_INFO_NOT_FOUND": "User information not found.",
+"SCB_GET_USER_INFO_FAILED": "An error occurred while fetching your user information. Please try again.",
+
+"SCB_UPDATE_USER_INFO_SUCCESS": "Your user information has been updated successfully.",
+"SCB_UPDATE_USER_INFO_EMPTY": "Please provide the required information to update your user information.",
+"SCB_UPDATE_USER_INFO_NOT_FOUND": "User not found.",
+"SCB_UPDATE_USER_INFO_FAILED": "An error occurred while updating your user information. Please try again.",
+
+"SCB_SWITCH_USER_ID_MISSING": "User ID is required to switch the user role.",
+"SCB_SWITCH_USER_NOT_FOUND": "User not found for role switch.",
+"SCB_SWITCH_USER_TO_CUSTOMER_SUCCESS": "User role has been switched to customer successfully.",
+"SCB_SWITCH_USER_TO_CUSTOMER_FAILED": "An error occurred while switching the user role. Please try again."
+
+}
+

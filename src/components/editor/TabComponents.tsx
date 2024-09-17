@@ -1,0 +1,52 @@
+import { ReloadIcon } from "@radix-ui/react-icons";
+import { Change } from "diff";
+import ReactQuill from "react-quill";
+
+import Diff from './Diff';
+import Editor from "./Editor";
+import { TabsContent } from "./Tabs";
+import { Textarea } from "../ui/textarea";
+import { OrderDetails } from "@/app/editor/dev/[orderId]/page";
+import { CTMSWord } from "@/app/editor/test/transcriptUtils";
+import { ConvertedASROutput } from "@/utils/editorUtils";
+
+export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, getCtms, disableGoToWord }: { transcript: string, ctms: ConvertedASROutput[], audioPlayer: HTMLAudioElement | null, audioDuration: number, getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void, getCtms: (ctms: CTMSWord[]) => void, disableGoToWord: boolean }) => (
+    <TabsContent className='h-[86%] mt-0' value='transcribe'>
+        <div className='bg-white border border-gray-200 border-t-0 rounded-b-2xl px-5 py-5 h-[99%] relative'>
+            {!transcript && <div className="flex items-center justify-center h-[99%]">
+                <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                <span>Loading...</span>
+            </div>}
+            {transcript && <Editor disableGoToWord={disableGoToWord} getQuillRef={getQuillRef} transcript={transcript} ctms={ctms} audioPlayer={audioPlayer} duration={audioDuration} getCtms={getCtms} />}
+        </div>
+    </TabsContent>
+)
+
+export const SpeakerNameTabComponent = () => (
+    <TabsContent className='h-[86%] mt-0' value='speaker'>
+        <div className='bg-white border border-gray-200 border-t-0 rounded-b-2xl px-5 py-5 overflow-y-scroll h-[99%] no-scrollbar'>
+            {/* TODO: Create new speaker name input */}
+        </div>
+    </TabsContent>
+)
+
+export const DiffTabComponent = ({ diff }: { diff: Change[] }) => (
+    <TabsContent className='h-[86%] mt-0' value='diff'>
+        <div className='bg-white border border-gray-200 border-t-0 rounded-b-2xl px-5 py-5 overflow-y-scroll h-[99%] no-scrollbar'>
+            <Diff diffOutput={diff} />
+        </div>
+    </TabsContent>
+)
+
+export const InfoTabComponent = ({ orderDetails }: { orderDetails: OrderDetails }) => (
+    <TabsContent className='h-[86%] mt-0' value='info'>
+        <div className='bg-white border border-gray-200 border-t-0 rounded-b-2xl px-5 py-5 overflow-y-scroll h-[99%] no-scrollbar'>
+            <Textarea
+                placeholder='Customer instructions'
+                className='h-full resize-none'
+                value={orderDetails.instructions}
+                readOnly
+            />
+        </div>
+    </TabsContent>
+)

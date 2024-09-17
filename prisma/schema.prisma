@@ -1,0 +1,800 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//  ███    ███  ██████  ██████  ███████ ██      ███████
+//  ████  ████ ██    ██ ██   ██ ██      ██      ██
+//  ██ ████ ██ ██    ██ ██   ██ █████   ██      ███████
+//  ██  ██  ██ ██    ██ ██   ██ ██      ██           ██
+//  ██      ██  ██████  ██████  ███████ ███████ ███████
+
+model User {
+  id                        Int                     @id @default(autoincrement())
+  email                     String                  @unique
+  user                      String?
+  pass                      String?
+  salt                      String?
+  assocPass                 String?                 @map("assoc_pass")
+  lang                      String?
+  remember                  Boolean?
+  recordsPerPage            Int                     @default(10) @map("records_per_page")
+  firstname                 String?
+  lastname                  String?
+  address1                  String?
+  address2                  String?
+  city                      String?
+  state                     String?
+  country                   String?
+  postalCode                String?                 @map("postal_code")
+  phoneNumber               String?                 @map("phone_number")
+  lastAccess                DateTime                @default(now()) @map("last_access")
+  ip                        String?
+  status                    Status                  @default(CREATED)
+  planId                    Int                     @default(0) @map("plan_id")
+  role                      Role                    @default(CUSTOMER)
+  referralCode              String?                 @map("referral_code")
+  referredBy                String?                 @map("referred_by")
+  referralRate              Float?                  @map("referral_rate")
+  paypalId                  String?                 @map("paypal_id")
+  secondaryEmail            String?                 @map("secondary_email")
+  createdAt                 DateTime                @default(now()) @map("created_at")
+  source                    String?
+  splInstructions           String?                 @map("spl_instructions")
+  industry                  String?
+  updatedAt                 DateTime                @default(now()) @map("updated_at")
+  resetPasswordToken        String?                 @unique @map("reset_password_token")
+  resetPasswordTokenExpires DateTime?               @map("reset_password_token_expires")
+  Customer                  Customer?
+  File                      File[]
+  Invoice                   Invoice[]
+  Order                     Order[]
+  DefaultOption             DefaultOption?
+  DefaultInstruction        DefaultInstruction?
+  UserRate                  UserRate?
+  Folder                    Folder[]
+  TeamMember                TeamMember[]
+  Organization              Organization?
+  Coupon                    Coupon[]
+  Verifier                  Verifier?
+  Assignment                JobAssignment[]
+  CustomerNotifyPrefs       CustomerNotifyPrefs[]
+  Withdrawals               Withdrawal[]
+  TranscriberNotifyPrefs    TranscriberNotifyPrefs?
+  Bonus                     Bonus[]
+  MiscEarnings              MiscEarnings[]
+  FrequentTerms             FrequentTerms?
+
+  @@index([role])
+  @@index([email])
+  @@index([user])
+  @@map("scb_users")
+}
+
+model Customer {
+  id                             Int      @id @default(autoincrement())
+  userId                         Int      @unique @map("user_id")
+  user                           User     @relation(fields: [userId], references: [id])
+  deliveryLimit                  Int      @default(4) @map("delivery_limit")
+  discountRate                   Float    @default(0) @map("discount_rate")
+  hdDiscount                     Float    @default(0) @map("hd_discount")
+  billing                        Boolean  @default(false)
+  survey                         Boolean  @default(true)
+  refundToCredits                Boolean  @default(false) @map("refund_to_credits")
+  useCreditsDefault              Boolean  @default(true) @map("use_credits_default")
+  watch                          Boolean  @default(false)
+  proAccount                     Int      @default(0) @map("pro_account")
+  lastSelectedInternalTeamUserId String?  @map("last_selected_internal_team_user_id")
+  customPlan                     Boolean  @default(false) @map("custom_plan")
+  delWatch                       Float    @default(0) @map("del_watch")
+  isPreDeliveryEligible          Boolean  @default(false) @map("is_pre_delivery_eligible")
+  createdAt                      DateTime @default(now()) @map("created_at")
+  updatedAt                      DateTime @default(now()) @map("updated_at")
+
+  @@index([userId])
+  @@map("scb_customers")
+}
+
+model File {
+  id                        Int           @id @default(autoincrement())
+  userId                    Int           @map("user_id")
+  user                      User          @relation(fields: [userId], references: [id])
+  filename                  String        @db.VarChar(255)
+  fileId                    String        @unique @map("file_id")
+  duration                  Int
+  bitRate                   Float?        @map("bit_rate")
+  sampleRate                Float?        @map("sample_rate")
+  downloadCount             Int           @default(0) @map("download_count") @db.SmallInt
+  filesize                  Int
+  archived                  Boolean       @default(false)
+  uploadedBy                Int           @map("uploaded_by")
+  parentId                  Int?          @map("parent_id")
+  fullPath                  String?       @map("full_path")
+  deletedAt                 DateTime?     @map("deleted_at")
+  customFormattingDetails   Json?         @map("custom_formatting_details")
+  customDetailsChangesCount Int           @default(0) @map("custom_details_changes_count")
+  customInstructions        String?       @map("custom_instructions")
+  createdAt                 DateTime      @default(now()) @map("created_at")
+  updatedAt                 DateTime      @default(now()) @map("updated_at")
+  Orders                    Order[]
+  InvoiceFile               InvoiceFile[]
+  fileStatus                FileStatus    @default(NONE) @map("file_status")
+
+  @@index([userId])
+  @@index([fileId])
+  @@map("scb_files")
+}
+
+model Folder {
+  id        Int      @id @default(autoincrement())
+  name      String
+  parentId  Int?     @map("parent_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
+  userId    Int      @map("user_id")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("scb_folders")
+}
+
+model Invoice {
+  id              Int           @id @default(autoincrement())
+  invoiceId       String        @unique @map("invoice_id")
+  type            InvoiceType   @default(TRANSCRIPT)
+  userId          Int           @map("user_id")
+  user            User          @relation(fields: [userId], references: [id])
+  itemNumber      String?       @map("item_number")
+  options         String?
+  orderInfo       String?       @map("order_info")
+  flexDelivery    Boolean       @default(false) @map("flex_delivery")
+  addlProofing    Boolean       @default(false) @map("addl_proofing")
+  instructions    String?
+  custom          Int           @default(0)
+  amount          Float         @default(0)
+  discount        Float         @default(0)
+  fee             Float         @default(0)
+  status          InvoiceStatus @default(PENDING)
+  refundAmount    Float         @default(0) @map("refund_amount")
+  paymentMethod   PaymentMethod @default(NA) @map("payment_method")
+  transactionId   String?       @unique @map("transaction_id")
+  ts              DateTime      @default(now())
+  creditsUsed     Float         @default(0) @map("credits_used")
+  creditsRefunded Float         @default(0) @map("credits_refunded")
+  paidBy          Int?          @map("paid_by")
+  orderRate       Float         @default(0) @map("order_rate")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @default(now()) @map("updated_at")
+
+  @@index([itemNumber])
+  @@index([invoiceId])
+  @@index([userId])
+  @@index([status])
+  @@index([paidBy])
+  @@map("scb_invoices")
+}
+
+model Order {
+  id             Int         @id @default(autoincrement())
+  userId         Int         @map("user_id")
+  user           User        @relation(fields: [userId], references: [id])
+  fileId         String      @unique @map("file_id")
+  instructions   String?
+  priority       Int         @default(0)
+  tat            Int
+  status         OrderStatus @default(PENDING)
+  orderTs        DateTime    @default(now()) @map("order_ts")
+  deadlineTs     DateTime    @default(now()) @map("deadline_ts")
+  rating         Rating?
+  referralAmount Float?      @map("referral_amount")
+  deliveryTs     DateTime    @default(now()) @map("delivery_ts")
+
+  deliveredTs DateTime @default(now()) @map("delivered_ts")
+  deliveredBy Int?     @map("delivered_by")
+
+  delayReason    DelayReason? @map("delay_reason")
+  highDifficulty Boolean?     @default(false) @map("high_difficulty")
+
+  qcCost     Float @default(0) @map("qc_cost")
+  reviewCost Float @default(0) @map("review_cost")
+
+  rateBonus Float @default(0) @map("rate_bonus")
+
+  ASRTimeTaken Int?   @map("asr_time_taken")
+  LLMTimeTaken Int?   @map("llm_time_taken")
+  pwer         Float?
+  wer          Float?
+
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @default(now()) @map("updated_at")
+  orderType     OrderType     @default(TRANSCRIPTION) @map("order_type")
+  reportMode    ReportMode    @default(NONE) @map("report_mode")
+  reportOption  ReportOption? @map("report_option")
+  reportComment String?       @map("report_comment")
+  comments      String?
+
+  // Relations
+  File       File?           @relation(fields: [fileId], references: [fileId])
+  Assignment JobAssignment[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([fileId])
+  @@map("scb_orders")
+}
+
+model DefaultOption {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  options   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
+
+  @@index([userId])
+  @@map("scb_default_options")
+}
+
+model DefaultInstruction {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @unique @map("user_id")
+  user         User     @relation(fields: [userId], references: [id])
+  instructions String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @map("updated_at")
+
+  @@index([userId])
+  @@map("scb_default_instructions")
+}
+
+model InvoiceFile {
+  id        Int      @id @default(autoincrement())
+  invoiceId String   @map("invoice_id")
+  fileId    String   @map("file_id")
+  price     Float    @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
+  File      File     @relation(fields: [fileId], references: [fileId])
+
+  @@index([invoiceId])
+  @@index([fileId])
+  @@map("scb_invoice_files")
+}
+
+model UserRate {
+  id                                     Int       @id @default(autoincrement())
+  userId                                 Int       @unique @map("user_id")
+  user                                   User      @relation(fields: [userId], references: [id])
+  manualRate                             Float     @default(0) @map("manual_rate")
+  svRate                                 Float     @default(0) @map("sv_rate")
+  ts                                     DateTime  @default(now())
+  agreedMonthlyHours                     Float     @default(0) @map("agreed_monthly_hours")
+  addChargeRate                          Float     @default(0) @map("add_charge_rate")
+  audioTimeCoding                        Float     @default(0) @map("audio_time_coding")
+  rushOrder                              Float     @map("rush_order")
+  customFormat                           Float     @default(0) @map("custom_format")
+  customFormatOption                     String?   @map("custom_format_option")
+  deadline                               Int       @default(5)
+  customFormatQcRate                     Float     @default(0) @map("custom_format_qc_rate")
+  customFormatReviewRate                 Float     @default(6) @map("custom_format_review_rate")
+  customFormatMediumDifficultyReviewRate Float     @default(6) @map("custom_format_medium_difficulty_review_rate")
+  customFormatHighDifficultyReviewRate   Float     @default(8) @map("custom_format_high_difficulty_review_rate")
+  orderType                              OrderType @default(TRANSCRIPTION) @map("order_type")
+  createdAt                              DateTime  @default(now()) @map("created_at")
+  updatedAt                              DateTime  @default(now()) @map("updated_at")
+
+  @@index([userId])
+  @@map("scb_user_rates")
+}
+
+model Organization {
+  id        Int      @id @default(autoincrement())
+  name      String   @map("name")
+  userId    Int      @unique @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
+
+  @@index([userId])
+  @@map("scb_organizations")
+}
+
+model Invite {
+  id        Int      @id @default(autoincrement())
+  email     String
+  inviteKey String   @unique @map("invite_key")
+  accepted  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
+
+  @@index([email])
+  @@index([inviteKey])
+  @@map("scb_invites")
+}
+
+model Template {
+  id        Int      @id @default(autoincrement())
+  name      String
+  userId    Int?     @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
+
+  @@index([userId])
+  @@index([name])
+  @@map("scb_templates")
+}
+
+model Team {
+  id        Int          @id @default(autoincrement())
+  owner     Int
+  name      String
+  createdAt DateTime     @default(now()) @map("created_at")
+  members   TeamMember[]
+
+  @@index([owner])
+  @@map("scb_teams")
+}
+
+model TeamMember {
+  id     Int              @id @default(autoincrement())
+  teamId Int              @map("team_id")
+  userId Int              @map("user_id")
+  role   TeamMemberRole   @default(MANAGER)
+  status TeamMemberStatus @default(NONE)
+
+  team Team @relation(fields: [teamId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, teamId])
+  @@map("scb_team_members")
+}
+
+model Coupon {
+  id           Int        @id @default(autoincrement())
+  couponCode   String?    @unique @map("coupon_code")
+  type         CouponType @default(USER)
+  userId       Int?       @map("user_id")
+  discountRate Float?     @default(0) @map("discount_rate")
+  validDays    Int?       @default(0) @map("valid_days")
+  applyCount   Int?       @default(0) @map("apply_count")
+  activated    Boolean?   @default(false) @map("activated")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @default(now()) @map("updated_at")
+  User         User?      @relation(fields: [userId], references: [id])
+
+  @@map("scb_coupons")
+}
+
+model Verifier {
+  id               Int      @id @default(autoincrement())
+  userId           Int      @unique @map("user_id")
+  quota            Int?     @default(3600)
+  accents          String?  @default("NA")
+  qcType           QCType?  @default(CONTRACTOR) @map("qa_type")
+  qcRate           Int      @default(0) @map("qc_rate")
+  cfRate           Int      @default(0) @map("cf_rate")
+  cfRRate          Int      @default(0) @map("cf_r_rate")
+  qcDisabled       Boolean? @default(false) @map("qc_disabled")
+  dailyBonusAmount Int?     @default(5) @map("daily_bonus_amount")
+  qcPromotionAt    DateTime @default(now()) @map("qc_promotion_at")
+  superQc          Boolean? @default(false) @map("super_qc")
+  watchlist        Boolean? @default(false)
+  legalEnabled     Boolean? @default(false) @map("legal_enabled")
+  cfReviewEnabled  Boolean? @default(false) @map("cf_review_enabled")
+  cfBonusEnabled   Boolean? @default(false) @map("cf_bonus_enabled")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @default(now()) @map("updated_at")
+
+  User User @relation(fields: [userId], references: [id])
+
+  @@map("scb_verifiers")
+}
+
+model JobAssignment {
+  id            Int           @id @default(autoincrement())
+  transcriberId Int           @map("transcriber_id")
+  orderId       Int           @map("order_id")
+  status        JobStatus     @default(ACCEPTED)
+  acceptedTs    DateTime      @default(now()) @map("accepted_ts")
+  completedTs   DateTime?     @map("completed_ts")
+  cancelledTs   DateTime?     @map("cancelled_ts")
+  earnings      Float         @default(0) @map("earnings")
+  type          JobType       @default(QC)
+  inputFile     InputFileType @default(ASR_OUTPUT) @map("input_file")
+
+  user  User  @relation(fields: [transcriberId], references: [id])
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([transcriberId])
+  @@index([orderId])
+  @@map("scb_job_assignments")
+}
+
+model CustomerNotifyPrefs {
+  id                   Int     @id @default(autoincrement())
+  userId               Int     @unique @map("user_id")
+  transcriptOrder      Boolean @default(true) @map("transcript_order")
+  newsletter           Boolean @default(true)
+  ccStored             Boolean @default(true) @map("cc_stored")
+  transcriptDelivered  Boolean @default(true) @map("transcript_delivered")
+  transcriptCancelled  Boolean @default(true) @map("transcript_cancelled")
+  transcriptRefund     Boolean @default(true) @map("transcript_refund")
+  teamMemberWhoOrdered Boolean @default(false) @map("team_member_who_ordered")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("scb_customer_notify_prefs")
+}
+
+model TranscriberNotifyPrefs {
+  id                   Int     @id @default(autoincrement())
+  userId               Int     @unique @map("user_id")
+  newFilesAvailability Boolean @default(true) @map("new_files_avaiilability")
+  fileAssignment       Boolean @default(true) @map("file_assignment")
+  fileSubmission       Boolean @default(true) @map("file_submission")
+  earningsCredit       Boolean @default(true) @map("earnings_credit")
+  withdrawalRequest    Boolean @default(true) @map("withdrawal_request")
+  newsletter           Boolean @default(true) @map("newsletter")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("scb_transcriber_notify_prefs")
+}
+
+model Withdrawal {
+  id            Int              @id @default(autoincrement())
+  userId        Int              @map("user_id")
+  amount        Float?           @default(0)
+  fee           Float?
+  invoiceId     String?          @map("invoice_id")
+  toPaypalId    String?          @map("to_paypal_id")
+  status        WithdrawalStatus @default(PENDING)
+  requestedAt   DateTime         @default(now()) @map("requested_at")
+  completedAt   DateTime?        @map("completed_at")
+  ppAddFundsInv String?          @map("pp_add_funds_inv")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([invoiceId])
+  @@map("scb_withdrawals")
+}
+
+model FileAccent {
+  id         Int    @id @default(autoincrement())
+  userId     Int    @map("user_id")
+  fileId     String @map("file_id")
+  accentCode String @map("accent_code")
+
+  @@index([userId])
+  @@index([fileId])
+  @@map("scb_file_accents")
+}
+
+model Bonus {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  amount    Float     @default(0)
+  type      BonusType @default(DAILY)
+  fileIds   String?   @map("file_ids")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("scb_bonus")
+}
+
+model OrderLegacy {
+  id             Int         @id @default(autoincrement())
+  userId         Int         @map("user_id")
+  fileId         String      @unique @map("file_id")
+  instructions   String?
+  priority       Int         @default(0)
+  tat            Int
+  status         OrderStatus @default(PENDING)
+  assignedTo     Int?        @map("assigned_to")
+  orderTs        DateTime    @default(now()) @map("order_ts")
+  deadlineTs     DateTime    @default(now()) @map("deadline_ts")
+  rating         Rating?
+  referralAmount Float?      @map("referral_amount")
+  deliveryTs     DateTime    @default(now()) @map("delivery_ts")
+
+  deliveredTs DateTime @default(now()) @map("delivered_ts")
+  deliveredBy Int?     @map("delivered_by")
+
+  delayReason    DelayReason? @map("delay_reason")
+  highDifficulty Boolean?     @default(false) @map("high_difficulty")
+
+  qcCost     Float @default(0) @map("qc_cost")
+  reviewCost Float @default(0) @map("review_cost")
+
+  rateBonus Float @default(0) @map("rate_bonus")
+
+  ASRTimeTaken Int?   @map("asr_time_taken")
+  LLMTimeTaken Int?   @map("llm_time_taken")
+  pwer         Float?
+  wer          Float?
+
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @default(now()) @map("updated_at")
+  orderType     OrderType     @default(TRANSCRIPTION) @map("order_type")
+  reportMode    ReportMode    @default(NONE) @map("report_mode")
+  reportOption  ReportOption? @map("report_option")
+  reportComment String?       @map("report_comment")
+  comments      String?
+
+  @@index([userId])
+  @@index([status])
+  @@index([fileId])
+  @@map("scb_orders_legacy")
+}
+
+model MiscJobsAttachments {
+  id               Int      @id @default(autoincrement())
+  fileId           String   @map("file_id")
+  filename         String
+  ts               DateTime @default(now())
+  originalFilename String?  @map("original_filename")
+  fileExtension    String?  @map("file_extension")
+
+  @@index([fileId])
+  @@index([filename])
+  @@map("scb_misc_jobs_attachments")
+}
+
+model MiscEarnings {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  amount    Float    @default(0)
+  reason    String   @map("reason")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("scb_misc_earnings")
+}
+
+model FrequentTerms {
+  id            Int     @id @default(autoincrement())
+  edited        String?
+  autoGenerated String? @map("auto_generated")
+  userId        Int     @unique @map("user_id")
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("scb_frequent_terms")
+}
+
+//  ███████ ███    ██ ██    ██ ███    ███ ███████
+//  ██      ████   ██ ██    ██ ████  ████ ██
+//  █████   ██ ██  ██ ██    ██ ██ ████ ██ ███████
+//  ██      ██  ██ ██ ██    ██ ██  ██  ██      ██
+//  ███████ ██   ████  ██████  ██      ██ ███████
+
+enum Status {
+  CREATED
+  VERIFIED
+  SUSPENDED
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+  TRANSCRIBER
+  TRANSCRIBER_LEVEL_2_LEGACY
+  PROOFREADER_LEGACY
+  REVIEWER
+  VERIFIER_LEGACY
+  QC
+  CSADMIN
+  OM
+  SUPERADMIN
+  INTERNAL_TEAM_USER
+  DEV_TEAM
+  DEV_ADMINS
+}
+
+enum OrderStatus {
+  PENDING
+  TRANSCRIBED
+  QC_ASSIGNED
+  QC_COMPLETED
+  FORMATTED
+  REVIEWER_ASSIGNED
+  REVIEW_COMPLETED
+  FINALIZER_ASSIGNED
+  FINALIZING_COMPLETED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+  BLOCKED
+  PRE_DELIVERED
+  SUBMITTED_FOR_APPROVAL
+  SUBMITTED_FOR_SCREENING
+}
+
+enum OrderType {
+  TRANSCRIPTION
+  TRANSCRIPTION_FORMATTING
+}
+
+enum ReportMode {
+  NONE
+  MANUAL
+  AUTO
+  OM
+}
+
+enum ReportOption {
+  HIGH_ERROR_RATE
+  INCOMPLETE
+  INCORRECT_PARAGRAPH_BREAKS
+  DOES_NOT_MATCH_AUDIO
+  HIGH_DIFFICULTY
+  NETWORK_ERROR
+  NO_SPOKEN_AUDIO
+  GUIDELINE_VIOLATIONS
+  ONLY_BACKGROUND_CONVERSATION
+  ONLY_MUSIC
+  OTHER
+  AUTO_PWER_ABOVE_THRESHOLD
+  AUTO_DIFF_BELOW_THRESHOLD
+}
+
+enum InvoiceType {
+  TRANSCRIPT
+  WITHDRAWAL
+  ADDL_FORMATTING
+  ADDL_PROOFREADING
+  PP_ADD_FUNDS
+  ADD_CREDITS
+  FREE_CREDITS
+  FORMATTING
+  CAPTIONING
+  DEPRECATED
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  BILLED
+}
+
+enum PaymentMethod {
+  NA
+  PAYPAL
+  CREDITCARD
+  BILLING
+  CREDITS
+}
+
+enum Rating {
+  POOR
+  BAD
+  OKAY
+  GOOD
+  EXCELLENT
+}
+
+enum QcStep {
+  SAMPLING
+  DELIVERY
+  REPROOFREAD
+  PENDING_PF
+}
+
+enum DelayReason {
+  AMBIENT_NOISE
+  NOISY_BACKGROUND
+  DISTANT
+  ACCENT
+  ECHO
+  DISTURBANCE
+  DISTORTIONS
+  QUALITY
+  DICTION
+  SLURRING
+  INAUDIBLE
+  MUFFLED
+  REVERB
+  OTHER
+  DUPLICATE
+  BLANK
+  NON_ENGLISH
+  RE_UPLOAD
+  HIGH_DIFFICULTY
+}
+
+enum BlankCheck {
+  PENDING
+  COMPLETED
+}
+
+enum AssignMode {
+  MANUAL
+  AUTO
+}
+
+enum TeamMemberRole {
+  SUPER_ADMIN
+  MANAGER
+  INTERNAL_TEAM_USER
+  SUPERVISOR
+  USER
+  TEAM_ADMIN
+}
+
+enum TeamMemberStatus {
+  NONE
+  INVITED
+  ACCEPTED
+}
+
+enum FileStatus {
+  NONE
+  DUPLICATE
+}
+
+enum CouponType {
+  GLOBAL
+  USER
+  ONE_TIME
+}
+
+enum QCType {
+  CONTRACTOR
+  FREELANCER
+}
+
+enum JobStatus {
+  ACCEPTED
+  COMPLETED
+  CANCELLED
+  REJECTED
+  TIMEDOUT
+  SUBMITTED_FOR_APPROVAL
+}
+
+enum JobType {
+  TR_LEGACY
+  RV_LEGACY
+  PR_LEGACY
+  QC
+  REVIEW
+  FINALIZE
+}
+
+enum WithdrawalStatus {
+  PENDING
+  COMPLETED
+  DENIED
+  CANCELLED
+  FAILED
+  PROCESSING
+  INITIATED
+}
+
+enum InputFileType {
+  ASR_OUTPUT
+  QC_OUTPUT
+  LLM_OUTPUT
+  REVIEW_OUTPUT
+}
+
+enum BonusType {
+  DAILY
+  MONTHLY
+  FILE
+}

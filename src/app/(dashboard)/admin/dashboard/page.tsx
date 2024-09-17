@@ -1,0 +1,36 @@
+import AccountAccess from './components/account-access'
+import AccountSuspension from './components/account-suspension'
+import AddCredits from './components/add-credits'
+import AddLegalQC from './components/add-legal-qc'
+import AddMiscEarnings from './components/add-misc-earnings'
+import ChangePaypalEmail from './components/change-paypal-email'
+import Coupon from './components/coupon'
+import CustomPlan from './components/custom-plan'
+import DisableQC from './components/disable-qc'
+import EnableCustomFormattingBonus from './components/enable-custom-format-bonus'
+import EnableCustomFormattingReview from './components/enable-custom-format-review'
+import EnablePreDelivery from './components/enable-pre-delivery'
+import TransferFiles from './components/transfer-files'
+
+export default async function AdminDashboard() {
+  return (
+    <>
+      <div className='h-full flex-1 flex-col space-y-8 p-5 md:flex bg-muted/40'>
+        <h1 className='text-lg font-semibold md:text-lg'>Admin Dashboard</h1>
+        <AccountAccess />
+        <AddCredits />
+        <Coupon />
+        <TransferFiles />
+        <CustomPlan />
+        <DisableQC />
+        <AccountSuspension />
+        <ChangePaypalEmail />
+        <AddLegalQC />
+        <EnableCustomFormattingReview />
+        <EnablePreDelivery />
+        <EnableCustomFormattingBonus />
+        <AddMiscEarnings />
+      </div>
+    </>
+  )
+}
