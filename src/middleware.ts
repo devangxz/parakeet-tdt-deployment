@@ -8,10 +8,11 @@ import type { NextRequest } from 'next/server'
 export async function middleware(req: NextRequest) {
   const requestedUrl = req.nextUrl.pathname
 
-  if (
-    requestedUrl.startsWith('/api') &&
-    !requestedUrl.startsWith('/api/auth')
-  ) {
+  if (requestedUrl.startsWith('/api/auth')) {
+    return NextResponse.next()
+  }
+
+  if (requestedUrl.startsWith('/api')) {
     const apiKey = req.headers.get('x-api-key')
 
     if (apiKey) {
