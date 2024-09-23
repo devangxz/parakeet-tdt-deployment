@@ -1,9 +1,11 @@
-import NextAuth from 'next-auth/next'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import NextAuth, { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 
-import { NEXT_AUTH_SESSION_MAX_AGE, BACKEND_URL } from '@/constants'
+import { NEXT_AUTH_SESSION_MAX_AGE } from '@/constants'
+import { signInUser } from '@/services/auth-service'
 
-const handler = NextAuth({
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -19,21 +21,17 @@ const handler = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
         try {
-          const res = await fetch(`${BACKEND_URL}/login`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password,
-            }),
+          const userDetails = await signInUser({
+            email: credentials.email,
+            password: credentials.password,
           })
 
-          const user = await res.json()
-
-          if (res.ok && user.token) {
-            return { ...user.user, email: credentials.email, token: user.token }
+          if (userDetails.success) {
+            return {
+              ...(userDetails.user as any),
+              email: credentials.email,
+              token: userDetails.token,
+            }
           }
 
           // Return null if user data could not be retrieved
@@ -57,7 +55,6 @@ const handler = NextAuth({
       return { ...token, ...user }
     },
     async session({ session, token }) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       session.user = token as any
       return session
     },
@@ -65,6 +62,8 @@ const handler = NextAuth({
   pages: {
     signIn: '/signin',
   },
-})
+}
+
+const handler = NextAuth(authOptions)
 
 export { handler as GET, handler as POST }

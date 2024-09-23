@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
+import axios from 'axios'
 import Link from 'next/link'
 import { signIn } from 'next-auth/react'
 import React, { useState } from 'react'
@@ -32,11 +32,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { INDUSTRIES, BACKEND_URL } from '@/constants'
+import { INDUSTRIES } from '@/constants'
 import { getRedirectPathByRole } from '@/utils/roleRedirect'
 
 const SingupForm = () => {
-  const [captcha, setCaptcha] = useState<boolean>(false)
+  const [captcha, setCaptcha] = useState<boolean>(true)
   const [loading, setLoading] = useState(false)
   const [showOtherIndustryInput, setShowOtherIndustryInput] = useState(false)
   const form = useForm<z.infer<typeof formSchema>>({
@@ -62,26 +62,23 @@ const SingupForm = () => {
         return
       }
       setLoading(true)
-      const response = await fetch(`${BACKEND_URL}/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: values.userEmail,
-          password: values.password,
-          firstname: values.firstName,
-          lastname: values.lastName,
-          role: values.userType,
-          phone: values.phone,
-          industry:
-            values.otherIndustry !== ''
-              ? values.otherIndustry
-              : values.industry,
-        }),
-      })
-      const responseData = await response.json()
-      if (responseData.success) {
+      const userData = {
+        email: values.userEmail,
+        password: values.password,
+        firstname: values.firstName,
+        lastname: values.lastName,
+        role: values.userType,
+        phone: values.phone,
+        industry:
+          values.otherIndustry !== ''
+            ? values.otherIndustry
+            : values.industry || '',
+      }
+
+      const response = await axios.post('/api/auth/sign-up', userData)
+
+      if (response.status === 201) {
+        toast.success('Account created successfully')
         const result = await signIn('credentials', {
           redirect: false,
           email: values.userEmail,
@@ -96,7 +93,6 @@ const SingupForm = () => {
             window.location.href = redirectUrl
           }
         } else {
-          setLoading(false)
           const tId = toast.success(
             `User Created Sucessfully, please login to your account`
           )
@@ -104,12 +100,20 @@ const SingupForm = () => {
         }
         form.reset()
       } else {
-        setLoading(false)
-        toast.error(`Failed to create account: ${responseData.message}`)
+        toast.error(`Failed to create account: ${response.data.message}`)
       }
     } catch (error) {
+      if (axios.isAxiosError(error)) {
+        toast.error(
+          `Failed to create user: ${
+            error.response?.data.message || error.message
+          }`
+        )
+      } else {
+        toast.error(`Failed to create user: An unexpected error occurred`)
+      }
+    } finally {
       setLoading(false)
-      toast.error(`Failed to create user: ${error}`)
     }
   }
   return (
@@ -117,12 +121,10 @@ const SingupForm = () => {
       <SideImage />
       <div className='flex items-center justify-center py-12'>
         <div className='mx-auto grid w-[350px] gap-6'>
-          <p>We are currently in beta and not accepting new users.</p>
-          {/* Disable Signup for now */}
-          {/* <div className='grid gap-2'>
+          <div className='grid gap-2'>
             <h1 className='text-4xl font-bold'>Create Account</h1>
-          </div> */}
-          {/* <Form {...form}>
+          </div>
+          <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-3'>
               <FormField
                 control={form.control}
@@ -347,7 +349,7 @@ const SingupForm = () => {
                 </Button>
               )}
             </form>
-          </Form> */}
+          </Form>
         </div>
       </div>
     </div>
