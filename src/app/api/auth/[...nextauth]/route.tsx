@@ -5,7 +5,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { NEXT_AUTH_SESSION_MAX_AGE } from '@/constants'
 import { signInUser } from '@/services/auth-service'
 
-export const authOptions: NextAuthOptions = {
+const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'Credentials',
