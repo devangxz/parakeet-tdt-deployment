@@ -6,6 +6,7 @@ import React, { ChangeEvent, Suspense, useState, useCallback } from 'react'
 import Dropzone from 'react-dropzone'
 import { toast } from 'sonner'
 
+import S3Upload from './components/s3Upload'
 import AllUploads from './list'
 import { UploadFilesType, uploadFiles } from './upload-controllers'
 import GooglePicker from '@/components/google-picker'
@@ -61,6 +62,10 @@ const Dashboard = () => {
 
   return (
     <main className='flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40'>
+      <div>
+        <S3Upload />
+      </div>
+
       <div className='flex items-center justify-between'>
         <Tabs defaultValue='hard-drive' className='w-full mt-4'>
           <div className='flex items-center justify-between mb-4'>
@@ -196,35 +201,35 @@ const Dashboard = () => {
                       <div className='flex gap-4 mt-4 font-semibold text-indigo-600 leading-[133%]'>
                         {session?.user?.organizationName.toLocaleLowerCase() !==
                           'remotelegal' && (
-                          <>
-                            <input
-                              id='fileInput'
-                              type='file'
-                              multiple
-                              hidden
-                              onChange={(
-                                event: ChangeEvent<HTMLInputElement>
-                              ) =>
-                                event.target.files &&
-                                handleFilesUpload({
-                                  files: event.target.files,
-                                  type: 'files',
-                                  toast,
-                                  session,
-                                  fetchFiles: fetchFiles,
-                                })
-                              }
-                              accept={FILE_TYPES.join(',')}
-                            />
-                            <label
-                              data-testid='file-uploader'
-                              htmlFor='fileInput'
-                              className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
-                            >
-                              Choose File
-                            </label>
-                          </>
-                        )}
+                            <>
+                              <input
+                                id='fileInput'
+                                type='file'
+                                multiple
+                                hidden
+                                onChange={(
+                                  event: ChangeEvent<HTMLInputElement>
+                                ) =>
+                                  event.target.files &&
+                                  handleFilesUpload({
+                                    files: event.target.files,
+                                    type: 'files',
+                                    toast,
+                                    session,
+                                    fetchFiles: fetchFiles,
+                                  })
+                                }
+                                accept={FILE_TYPES.join(',')}
+                              />
+                              <label
+                                data-testid='file-uploader'
+                                htmlFor='fileInput'
+                                className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
+                              >
+                                Choose File
+                              </label>
+                            </>
+                          )}
 
                         <input
                           id='folderInput'
