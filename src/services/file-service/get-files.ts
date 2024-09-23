@@ -5,7 +5,7 @@ import prisma from '@/lib/prisma'
 export async function getFilesByStatus(
   status: string,
   userId: number,
-  internalTeamUserId: number
+  internalTeamUserId: number | null
 ) {
   try {
     let files
