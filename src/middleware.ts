@@ -6,10 +6,48 @@ import { getRedirectPathByRole } from '@/utils/roleRedirect'
 import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
+  const requestedUrl = req.nextUrl.pathname
+
+  if (
+    requestedUrl.startsWith('/api') &&
+    !requestedUrl.startsWith('/api/auth')
+  ) {
+    const apiKey = req.headers.get('x-api-key')
+
+    if (apiKey) {
+      // TODO:Validate API key by checking against the database and adding the user to the request
+      // const user = await prisma.user.findUnique({
+      //   where: { apiKey },
+      // })
+      // if (user) {
+      //   req.user = user
+      //   return NextResponse.next()
+      // }
+      // } else {
+      //   return NextResponse.json(
+      //     { message: 'Invalid API key' },
+      //     { status: 401 }
+      //   )
+      // }
+    }
+
+    // If no API key, check for JWT session using NextAuth
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
+
+    if (!token) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Attach the user object to the request
+    req = Object.assign(req, { user: token })
+
+    return NextResponse.next()
+  }
+
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
 
   if (!token) {
-    return NextResponse.redirect(new URL('/api/auth/signin', req.url))
+    return NextResponse.redirect(new URL('/signin', req.url))
   }
 
   const isCustomer = token.role === 'CUSTOMER'
@@ -58,11 +96,14 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
+    // Apply middleware to all API routes except the ones you want to exclude
+    // '/api/(?!excluded-route|another-excluded-route)(.*)',
     '/files/:path*',
     '/payments/:path*',
     '/settings/:path*',
     '/admin/:path*',
     '/dev/:path*',
     '/transcribe/:path*',
+    '/api/:path*',
   ],
 }
