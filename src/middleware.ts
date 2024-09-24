@@ -103,7 +103,7 @@ export const config = {
   matcher: [
     // Apply middleware to all API routes except the ones you want to exclude
     // '/api/(?!excluded-route|another-excluded-route)(.*)',
-    '/files/:path*',
+    // '/files/:path*',
     '/payments/:path*',
     '/settings/:path*',
     '/admin/:path*',
