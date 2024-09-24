@@ -12,6 +12,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
+  if (requestedUrl.startsWith('/api/webhook')) {
+    return NextResponse.next()
+  }
+
   if (requestedUrl.startsWith('/api')) {
     const apiKey = req.headers.get('x-api-key')
 
