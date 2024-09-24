@@ -1,7 +1,11 @@
 // TODO: Remove unnecessary logs
 import axios from 'axios';
+import { Queue } from 'bullmq';
 
-import { TranscriptionService } from '../services/transcription.service';
+import { redis } from '../lib/redis';
+// import { TranscriptionService } from '../services/transcription.service';
+
+const transcriptionQueue = new Queue('transcription', { connection: redis });
 
 const RENDER_API_KEY = process.env.RENDER_API_KEY;
 const RENDER_SERVICE_ID = process.env.RENDER_SERVICE_ID;
@@ -9,9 +13,10 @@ const RENDER_API_URL = `https://api.render.com/v1/services/${RENDER_SERVICE_ID}/
 
 async function manageWorkers() {
   try {
-    const transcriptionService = new TranscriptionService();
-    const queue = transcriptionService.getQueue();
-    const jobCounts = await queue.getJobCounts('waiting', 'active');
+    console.log("Running manageWorkers", redis.options.host);
+    // const transcriptionService = new TranscriptionService();
+    // const queue = transcriptionService.getQueue();
+    const jobCounts = await transcriptionQueue.getJobCounts('waiting', 'active');
     const totalJobs = jobCounts.waiting + jobCounts.active;
 
     console.log(`Current queue status: ${totalJobs} total jobs (${jobCounts.waiting} waiting, ${jobCounts.active} active)`);
