@@ -2,7 +2,7 @@ import { s3 } from '../lib/s3';
 
 export async function processFile(fileKey: string): Promise<string> {
   // Simulate transcription process
-  await new Promise(resolve => setTimeout(resolve, 2600000));
+  await new Promise(resolve => setTimeout(resolve, 260000));
 
   const transcribedText = `Transcription for file: ${fileKey}`;
 
