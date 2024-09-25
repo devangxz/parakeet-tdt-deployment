@@ -8,14 +8,18 @@ import { redis } from '../lib/redis';
 const transcriptionQueue = new Queue('transcription', { connection: redis });
 
 const RENDER_API_KEY = process.env.RENDER_API_KEY;
-const RENDER_SERVICE_ID = process.env.RENDER_SERVICE_ID;
-const RENDER_API_URL = `https://api.render.com/v1/services/${RENDER_SERVICE_ID}/scale`;
+const RENDER_WORKER_SERVICE_ID = process.env.RENDER_WORKER_SERVICE_ID;
+console.log("RENDER_WORKER_SERVICE_ID:", RENDER_WORKER_SERVICE_ID);
+
+const RENDER_SERVICE_ID_HARDCODED = 'srv-croequg8fa8c738qs1pg';
+
+const RENDER_API_URL = `https://api.render.com/v1/services/${RENDER_SERVICE_ID_HARDCODED}/scale`;
 
 async function manageWorkers() {
   try {
     console.log("Running manageWorkers", redis.options.host);
     console.log("RENDER_API_URL:", RENDER_API_URL);
-    console.log("RENDER_SERVICE_ID:", RENDER_SERVICE_ID);
+    console.log("RENDER_WORKER_SERVICE_ID:", RENDER_WORKER_SERVICE_ID);
     // const transcriptionService = new TranscriptionService();
     // const queue = transcriptionService.getQueue();
     const jobCounts = await transcriptionQueue.getJobCounts('waiting', 'active');
@@ -25,7 +29,7 @@ async function manageWorkers() {
 
     // Get current number of instances
     const currentInstancesResponse = await axios.get(
-      `https://api.render.com/v1/services/${RENDER_SERVICE_ID}`,
+      `https://api.render.com/v1/services/${RENDER_SERVICE_ID_HARDCODED}`,
       { headers: { 'Authorization': `Bearer ${RENDER_API_KEY}` } }
     );
     const currentInstances = currentInstancesResponse.data.numInstances || 1;
