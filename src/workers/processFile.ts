@@ -1,4 +1,6 @@
-import { s3 } from '../lib/s3';
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+
+import { s3Client } from "../lib/s3Client";
 
 export async function processFile(fileKey: string): Promise<string> {
   // Simulate transcription process
@@ -13,8 +15,15 @@ export async function processFile(fileKey: string): Promise<string> {
     Body: transcribedText,
   };
 
-  const uploadResult = await s3.upload(uploadParams).promise();
-  console.log('Transcription uploaded successfully:', uploadResult);
+  try {
+    const command = new PutObjectCommand(uploadParams);
+    const uploadResult = await s3Client.send(command);
+    console.log('Transcription uploaded successfully:', uploadResult);
 
-  return uploadResult.Location;
+    const s3Url = `https://${uploadParams.Bucket}.s3.${process.env.AWS_S3_REGION}.amazonaws.com/${uploadParams.Key}`;
+    return s3Url;
+  } catch (error) {
+    console.error('Error uploading transcription:', error);
+    throw error;
+  }
 };
