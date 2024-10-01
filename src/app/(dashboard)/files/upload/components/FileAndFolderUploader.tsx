@@ -4,10 +4,11 @@ import { UploadIcon } from '@radix-ui/react-icons'
 import axios from 'axios'
 import { FileUp, FolderUp } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-import React, { useState, useCallback, ChangeEvent } from 'react'
+import React, { useCallback, ChangeEvent, useEffect } from 'react'
 import Dropzone from 'react-dropzone'
 import { toast } from 'sonner'
 
+import { useUpload } from '@/app/context/UploadProvider'
 import { FILE_TYPES } from '@/constants'
 import { cn } from '@/lib/utils'
 
@@ -23,24 +24,41 @@ interface FileAndFolderUploaderProps {
 
 const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadSuccess }) => {
   const { data: session } = useSession()
-  const [uploadProgress, setUploadProgress] = useState(0)
+  const { uploadingFiles, setUploadingFiles, updateUploadProgress, clearUpload } = useUpload();
 
-  const handleFileOrFolderUpload = async (files: File[], isFolder: boolean) => {
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (uploadingFiles.length > 0) {
+        event.preventDefault()
+        event.returnValue = ''
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [uploadingFiles])
+
+  const handleFileOrFolderUpload = async (files: File[]) => {
     if (files.length === 0) return
 
-    setUploadProgress(0)
+    setUploadingFiles(files.map(file => ({ name: file.name, size: file.size })))
+    files.forEach(file => updateUploadProgress(file.name, 0))
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
       try {
         const createRes = await axios.post('/api/s3-multipart-upload/create', {
           fileInfo: {
-            name: isFolder ? `${file.webkitRelativePath}` : file.name,
+            name: file.name,
             type: file.type
           }
         })
         const { uploadId, key } = createRes.data
 
+        //TODO - put in config and reduce to 25mb
         const chunkSize = 100 * 1024 * 1024 // 100MB chunks
         const numChunks = Math.ceil(file.size / chunkSize)
         const uploadPromises = []
@@ -59,10 +77,9 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
           const uploadPromise = axios.put(partRes.data.url, blob, {
             headers: { 'Content-Type': file.type },
             onUploadProgress: (progressEvent) => {
-              const fileProgress = ((j * chunkSize + progressEvent.loaded) / file.size)
-              const overallProgress = ((i + fileProgress) / files.length) * 100
-              setUploadProgress(Math.round(overallProgress))
-            },
+              const percentCompleted = ((j * chunkSize + progressEvent.loaded) / file.size) * 100
+              updateUploadProgress(file.name, percentCompleted)
+            }
           })
           uploadPromises.push(uploadPromise)
         }
@@ -70,6 +87,8 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
         await Promise.all(uploadPromises)
 
         await axios.post('/api/s3-multipart-upload/complete', { sendBackData: { key, uploadId } })
+
+        updateUploadProgress(file.name, 100)
 
       } catch (error) {
         console.error('Error during upload process:', error)
@@ -79,17 +98,19 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
     }
 
     onUploadSuccess(true)
+    setTimeout(() => {
+      clearUpload()
+    }, 1000)
   }
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    handleFileOrFolderUpload(acceptedFiles, false)
+    handleFileOrFolderUpload(acceptedFiles)
   }, [])
 
   const isRemoteLegal = session?.user?.organizationName.toLowerCase() === 'remotelegal'
 
   return (
     <div className='bg-primary flex flex-col p-[12px] items-center justify-center rounded-[12px] border shadow-sm text-white'>
-      <p>Upload Progress: {uploadProgress}%</p>
       <Dropzone onDrop={onDrop} multiple>
         {({ getRootProps, getInputProps, isDragActive }) => (
           <div
@@ -139,7 +160,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
                         hidden
                         onChange={(event: ChangeEvent<HTMLInputElement>) =>
                           event.target.files &&
-                          handleFileOrFolderUpload(Array.from(event.target.files), false)
+                          handleFileOrFolderUpload(Array.from(event.target.files))
                         }
                         accept={FILE_TYPES.join(',')}
                       />
@@ -159,7 +180,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
                     hidden
                     onChange={(event: ChangeEvent<HTMLInputElement>) =>
                       event.target.files &&
-                      handleFileOrFolderUpload(Array.from(event.target.files), true)
+                      handleFileOrFolderUpload(Array.from(event.target.files))
                     }
                     {...({
                       webkitdirectory: 'true',
