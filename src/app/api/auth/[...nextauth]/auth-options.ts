@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import NextAuth, { NextAuthOptions } from 'next-auth'
+import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 
 import { NEXT_AUTH_SESSION_MAX_AGE } from '@/constants'
 import { signInUser } from '@/services/auth-service'
 
-const authOptions: NextAuthOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -63,7 +63,3 @@ const authOptions: NextAuthOptions = {
     signIn: '/signin',
   },
 }
-
-const handler = NextAuth(authOptions)
-
-export { handler as GET, handler as POST }

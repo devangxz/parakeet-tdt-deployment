@@ -1,3 +1,5 @@
+import axios from 'axios'
+
 import { BACKEND_URL } from '@/constants'
 import axiosInstance from '@/utils/axios'
 
@@ -108,7 +110,7 @@ const archiveFile = async ({
   docType?: string
 }) => {
   try {
-    const response = await axiosInstance.post(`${BACKEND_URL}/archive-file`, {
+    const response = await axios.post(`/api/file/archive`, {
       fileIds: fileId,
     })
     return response?.data?.message
@@ -126,7 +128,7 @@ const renameFile = async ({
   docType?: string
 }) => {
   try {
-    const response = await axiosInstance.post(`${BACKEND_URL}/file-rename`, {
+    const response = await axios.post(`/api/file/rename`, {
       fileId,
       filename,
     })

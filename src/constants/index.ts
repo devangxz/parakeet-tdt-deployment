@@ -1,6 +1,10 @@
 import config from '../../config.json'
 import faq from '../../static-content/faq.json'
 import transcriberGuide from '../../static-content/transcriber-guide.json'
+// import emailIdsDev from '../configs/email-ids-dev.json'
+// import emailIds from '../configs/email-ids.json'
+// import emailPlaceholders from '../configs/email-placeholders.json'
+// import emailTemplates from '../configs/emails.json'
 
 //signup Page
 export const NAME_LENGTH = config.nameLength
@@ -51,3 +55,16 @@ export const BASE_FARE = config.BASE_FARE
 export const MINIMUM_AUDIO_PLAYBACK_PERCENTAGE =
   config.minimum_audio_playback_percentage
 export const AUTOSAVE_INTERVAL = config.autosave_interval
+export const DEFAULT_ORDER_OPTIONS = config.default_order_options
+export const ORDER_TYPES = config.order_types
+export const FILE_UPLOAD_LIMIT_IN_HOUR = config.file_upload_limit_in_hour
+export const RATES = config.rates
+export const VERBATIM_PRICE = config.verbatim_price
+export const RUSH_PRICE = config.rush_price
+export const AUDIO_TIMECODING_PRICE = config.audio_timecoding_price
+
+// Email
+// export const EMAIL_IDS =
+//   process.env.SCB_ENVIRONMENT === 'STAGING' ? emailIdsDev : emailIds
+// export const EMAIL_PLACEHOLDERS = emailPlaceholders
+// export const EMAIL_TEMPLATES = emailTemplates
