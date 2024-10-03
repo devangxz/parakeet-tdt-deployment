@@ -1,4 +1,5 @@
 'use client'
+import axios from 'axios'
 import { Database, Settings, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -6,9 +7,7 @@ import React, { useState, useEffect } from 'react'
 
 import TeamSwitcher from '@/components/team-switcher'
 import { Separator } from '@/components/ui/separator'
-import { BACKEND_URL } from '@/constants'
 import { SidebarItemType } from '@/types/sidebar'
-import axiosInstance from '@/utils/axios'
 
 interface SidebarProps {
   sidebarItems: SidebarItemType[]
@@ -26,7 +25,7 @@ const Sidebar = ({
 
   const fetchCreditsBalance = async () => {
     try {
-      const response = await axiosInstance.get(`${BACKEND_URL}/credit-balance`)
+      const response = await axios.get(`/api/credit-balance`)
       setCreditsBalance(response.data.creditsBalance)
     } catch (err) {
       console.error('Failed to fetch credits balance:', err)
@@ -67,7 +66,7 @@ const Sidebar = ({
         >
           <Database className='h-5 w-5' />
           Credits
-          <div className='ml-auto flex items-center' test-id="credit-balance">
+          <div className='ml-auto flex items-center' test-id='credit-balance'>
             <p className='font-normal mr-1'>${creditsBalance}</p>
             <ChevronDown className='h-5 w-5 -rotate-90 font-normal' />
           </div>

@@ -1,6 +1,6 @@
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { FileWarning, FolderClosed, X } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -139,11 +139,11 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
 
   const getAllFiles = async () => {
     try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/allfiles?parentId=${folderId}&fileIds=${fileIds}`
+      const response = await axios.get(
+        `/api/all-files?parentId=${folderId}&fileIds=${fileIds}`
       )
 
-      const files = response?.data?.map(
+      const files = response?.data?.filesWithStatus?.map(
         (file: {
           fileId: string
           filename: string
@@ -175,11 +175,9 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
 
   const getAllFolders = async () => {
     try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/folders?parentId=${folderId}`
-      )
+      const response = await axios.get(`/api/folders?parentId=${folderId}`)
 
-      setAllFolders(response.data ?? [])
+      setAllFolders(response.data.folders ?? [])
     } catch (err) {
       console.error('Failed to fetch pending files:', err)
     } finally {
@@ -188,11 +186,11 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
   }
   const getParentFolders = async () => {
     try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/parent-folders?folderId=${folderId}`
+      const response = await axios.get(
+        `/api/folders/parent?folderId=${folderId}`
       )
 
-      setParentFolders(response.data ?? [])
+      setParentFolders(response.data.folderHierarchy ?? [])
     } catch (err) {
       console.error('Failed to fetch pending files:', err)
     } finally {
@@ -237,7 +235,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
     }
     setLoadingFileOrder((prev) => ({ ...prev, [fileId]: true }))
     try {
-      const response = await axiosInstance.post(`${BACKEND_URL}/order`, {
+      const response = await axios.post(`/api/order`, {
         fids: fileId,
         orderType,
       })
@@ -517,7 +515,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
 
     setBulkLoading(true)
     try {
-      const response = await axiosInstance.post(`${BACKEND_URL}/order`, {
+      const response = await axios.post(`/api/order`, {
         fids: pendingFiles.map((file) => file.id).join(','),
         orderType,
       })

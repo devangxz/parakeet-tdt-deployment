@@ -1,6 +1,6 @@
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { FileWarning } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -108,9 +108,9 @@ const FileList = ({
     }
 
     try {
-      const response = await axiosInstance.get('/files?status=pending')
+      const response = await axios.get('/api/files?status=pending')
 
-      const files = response.data.map(
+      const files = response.data.data.map(
         (file: {
           fileId: string
           filename: string
@@ -193,7 +193,7 @@ const FileList = ({
     }
     setLoadingFileOrder((prev) => ({ ...prev, [fileId]: true }))
     try {
-      const response = await axiosInstance.post(`${BACKEND_URL}/order`, {
+      const response = await axios.post(`/api/order`, {
         fids: fileId,
         orderType,
       })
@@ -225,7 +225,7 @@ const FileList = ({
 
     setBulkLoading(true)
     try {
-      const response = await axiosInstance.post(`${BACKEND_URL}/order`, {
+      const response = await axios.post(`/api/order`, {
         fids: fileIds,
         orderType,
       })

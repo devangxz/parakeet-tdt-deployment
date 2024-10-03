@@ -19,7 +19,6 @@ interface File {
 export default async function DeliveredFilesPage() {
   const session = await getServerSession(authOptions)
   const user = session?.user
-  console.log('user', user)
   const response = await getFilesByStatus(
     'delivered',
     user?.userId as number,
