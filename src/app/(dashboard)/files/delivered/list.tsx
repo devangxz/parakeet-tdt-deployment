@@ -1,14 +1,18 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios, { AxiosError } from 'axios'
-import { FileWarning } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { AxiosError } from 'axios'
+import { Session } from 'next-auth'
 import { useSession } from 'next-auth/react'
-import React, { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { ZodNumberCheck } from 'zod'
 
+import ArchiveFileDialog from './components/archive-file-dialog'
+import BulkArchiveFileDialog from './components/bulk-archive-dialog'
+import { CheckAndDownload } from './components/check-download'
 import { DataTable } from './components/data-table'
+import { orderController } from './controllers'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
 import RenameFileDialog from '@/components/file-rename-dialog'
@@ -26,11 +30,6 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 import FileAudioPlayer from '@/components/utils/FileAudioPlayer'
 import { BACKEND_URL } from '@/constants'
 import { User } from '@/types/files'
@@ -41,38 +40,34 @@ import getInitials from '@/utils/getInitials'
 
 interface File {
   id: string
-  name: string
+  filename: string
   date: string
-  duration: ZodNumberCheck
-  fileStatus: string
-  status: string
+  duration: number
+  orderType: string
+  orderId: string
   uploadedByUser: User
 }
 
-const FileList = ({
-  setUploadSuccess,
-  uploadSuccess,
-}: {
-  setUploadSuccess: (uploadSuccess: boolean) => void
-  uploadSuccess: boolean
-}) => {
-  const router = useRouter()
+export default function DeliveredFilesPage({ files }: { files: File[] }) {
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
+  const [openArchiveDialog, setOpenArchiveDialog] = useState(false)
   const { data: session } = useSession()
-  const [loadingFileOrder, setLoadingFileOrder] = useState<
-    Record<string, boolean>
-  >({})
-  const [pendingFiles, setPendingFiles] = useState<File[] | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [toggleCheckAndDownload, setToggleCheckAndDownload] =
+    useState<boolean>(false)
   const [selectedFile, setSeletedFile] = useState<{
     fileId: string
     name: string
+    orderId: string
   } | null>(null)
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
-  const [openRenameDialog, setOpenRenameDialog] = useState(false)
-  const [bulkLoading, setBulkLoading] = useState(false)
-  const [openBulkDeleteDialog, setOpenBulkDeleteDialog] = useState(false)
   const [playing, setPlaying] = useState<Record<string, boolean>>({})
+
+  const [deliveredFiles, setDeliveredFiles] = useState<File[]>(files)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [openRenameDialog, setOpenRenameDialog] = useState(false)
+  const [openBulkDeleteDialog, setOpenBulkDeleteDialog] = useState(false)
+  const [openBulkArchiveDialog, setOpenBulkArchiveDialog] = useState(false)
+  const [loadingOrder, setLoadingOrder] = useState<Record<string, boolean>>({})
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
@@ -100,7 +95,7 @@ const FileList = ({
     })
   }, [playing])
 
-  const fetchPendingFiles = async (showLoader = false) => {
+  const fetchDeliveredFiles = async (showLoader = false) => {
     if (showLoader) {
       setIsLoading(true)
     } else {
@@ -108,28 +103,29 @@ const FileList = ({
     }
 
     try {
-      const response = await axios.get('/api/files?status=pending')
+      const response = await axiosInstance.get(
+        `${BACKEND_URL}/files?status=delivered`
+      )
 
-      const files = response.data.data.map(
+      const files = response.data.map(
         (file: {
           fileId: string
           filename: string
           createdAt: string
-          duration: ZodNumberCheck
-          fileStatus: string
-          status: string
+          duration: number
+          Orders: { orderType: string; id: string; deliveredTs: string }[]
           uploadedByUser: User
         }) => ({
           id: file.fileId,
-          name: file.filename,
-          date: file.createdAt,
+          filename: file.filename,
+          date: file.Orders[0]?.deliveredTs,
           duration: file.duration,
-          fileStatus: file?.fileStatus,
-          status: file?.status,
+          orderType: file.Orders[0]?.orderType,
+          orderId: file.Orders[0]?.id,
           uploadedByUser: file.uploadedByUser,
         })
       )
-      setPendingFiles(files ?? [])
+      setDeliveredFiles(files ?? [])
       setError(null)
     } catch (err) {
       setError('an error occurred')
@@ -139,23 +135,11 @@ const FileList = ({
     }
   }
 
-  useEffect(() => {
-    fetchPendingFiles(true)
-  }, [])
-
-  useEffect(() => {
-    if (uploadSuccess) {
-      fetchPendingFiles()
-      setUploadSuccess(false)
-    }
-  }, [uploadSuccess])
-
   const [selectedFiles, setSelectedFiles] = useState<string[]>([])
 
   const handleSelectedRowsChange = (selectedRowsData: File[]) => {
     setSelectedFiles(selectedRowsData.map((file) => file.id))
   }
-
   if (isLoading) {
     return (
       <div
@@ -163,7 +147,7 @@ const FileList = ({
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          height: '20vh',
+          height: '80vh',
         }}
       >
         <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
@@ -186,61 +170,20 @@ const FileList = ({
       </div>
     )
   }
-  const orderFile = async (fileId: string, orderType: string) => {
-    if (session?.user?.status !== 'VERIFIED') {
-      router.push('/verify-email')
-      return
-    }
-    setLoadingFileOrder((prev) => ({ ...prev, [fileId]: true }))
+
+  const controller = async (
+    payload: { fileId: string; filename?: string; docType?: string },
+    type: string
+  ) => {
     try {
-      const response = await axios.post(`/api/order`, {
-        fids: fileId,
-        orderType,
-      })
-
-      if (response.status === 200) {
-        window.location.assign(
-          `/payments/invoice/${response.data.inv}?orderType=${orderType}`
-        )
-        setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
-      } else {
-        setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
-        console.error('Failed to process the order', response.data)
-      }
-    } catch (error) {
-      setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
-    }
-  }
-
-  const orderBulkFile = async (fileIds: string, orderType: string) => {
-    if (session?.user?.status !== 'VERIFIED') {
-      router.push('/verify-email')
-      return
-    }
-
-    if (fileIds.length === 0) {
-      toast.error('Please select at least one file')
-      return
-    }
-
-    setBulkLoading(true)
-    try {
-      const response = await axios.post(`/api/order`, {
-        fids: fileIds,
-        orderType,
-      })
-
-      if (response.status === 200) {
-        window.location.assign(
-          `/payments/invoice/${response.data.inv}?orderType=${orderType}`
-        )
-        setBulkLoading(false)
-      } else {
-        setBulkLoading(false)
-        console.error('Failed to process the order', response.data)
-      }
-    } catch (error) {
-      setBulkLoading(false)
+      const response = await orderController(payload, type)
+      const successToastId = toast.success(`${response}`)
+      toast.dismiss(successToastId)
+      fetchDeliveredFiles()
+    } catch (err) {
+      const errorToastId = toast.error(`Error` + err)
+      toast.dismiss(errorToastId)
+      console.log(err)
     }
   }
 
@@ -276,24 +219,10 @@ const FileList = ({
       enableHiding: false,
     },
     {
-      accessorKey: 'name',
+      accessorKey: 'filename',
       header: 'File name',
       cell: ({ row }) => (
-        <div>
-          <div className='font-medium cursor-grab flex items-center gap-2'>
-            {row.getValue('name')}
-            {row.original.fileStatus === 'DUPLICATE' && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <FileWarning size={20} />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Duplicate</p>
-                </TooltipContent>
-              </Tooltip>
-            )}{' '}
-          </div>
-        </div>
+        <div className='font-medium'>{row.getValue('filename')}</div>
       ),
     },
     {
@@ -310,9 +239,34 @@ const FileList = ({
       header: 'Duration',
       cell: ({ row }) => (
         <div className='font-medium'>
-          {row.getValue('duration')
-            ? formatDuration(row.getValue('duration'))
-            : ''}
+          {formatDuration(row.getValue('duration'))}
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'transcription',
+      header: 'Transcription',
+      cell: ({ row }) => (
+        <div className='font-medium cursor-pointer'>
+          <p
+            onClick={() => {
+              controller(
+                {
+                  fileId: row.original.id,
+                  filename: '',
+                  docType:
+                    session?.user?.organizationName.toLowerCase() ===
+                    'remotelegal'
+                      ? 'CUSTOM_FORMATTING_DOC'
+                      : 'TRANSCRIPTION_DOC',
+                },
+                'downloadFile'
+              )
+            }}
+            className='underline text-primary'
+          >
+            File
+          </p>
         </div>
       ),
     },
@@ -363,7 +317,7 @@ const FileList = ({
     enableHiding: false,
     cell: ({ row }) => (
       <div className='flex items-center'>
-        {loadingFileOrder[row.original.id] ? (
+        {loadingOrder[row.original.id] ? (
           <Button disabled variant='order' className='format-button w-[140px]'>
             Please wait
             <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
@@ -371,14 +325,17 @@ const FileList = ({
         ) : (
           <Button
             variant='order'
-            className='format-button text-black w-[140px]'
-            onClick={() =>
-              orderFile(row.original.id, session?.user?.orderType as string)
-            }
+            className='format-button'
+            onClick={() => {
+              setToggleCheckAndDownload(true)
+              setSeletedFile({
+                fileId: row?.original?.id,
+                name: row?.original?.filename,
+                orderId: row?.original?.orderId,
+              })
+            }}
           >
-            {session && session.user?.orderType !== 'TRANSCRIPTION'
-              ? 'Format'
-              : 'Transcribe'}
+            Check & Download
           </Button>
         )}
 
@@ -395,18 +352,12 @@ const FileList = ({
             >
               Download MP3
             </DropdownMenuItem>
-            {session?.user?.orderType !== 'TRANSCRIPTION' && (
-              <DropdownMenuItem
-                onClick={() => orderFile(row.original.id, 'TRANSCRIPTION')}
-              >
-                Transcribe
-              </DropdownMenuItem>
-            )}
             <DropdownMenuItem
               onClick={() => {
                 setSeletedFile({
                   fileId: row.original.id,
-                  name: row.original.name,
+                  name: row.original.filename,
+                  orderId: row.original.orderId,
                 })
                 setOpenRenameDialog(true)
               }}
@@ -414,13 +365,34 @@ const FileList = ({
               Rename
             </DropdownMenuItem>
             <DropdownMenuItem
+              onClick={() => {
+                setOpenArchiveDialog(true)
+                setSeletedFile({
+                  fileId: row?.original?.id,
+                  name: row?.original?.filename,
+                  orderId: row?.original?.orderId,
+                })
+              }}
+            >
+              Archive
+            </DropdownMenuItem>
+
+            {/* <DropdownMenuItem
+                onClick={() =>
+                  controller({ fileId: row?.original?.id }, 'editTranscription')
+                }
+              >
+                Edit Transcriptioin
+              </DropdownMenuItem> */}
+            <DropdownMenuItem
               className='text-red-500'
               onClick={() => {
-                setSeletedFile({
-                  fileId: row.original.id,
-                  name: row.original.name,
-                })
                 setOpenDeleteDialog(true)
+                setSeletedFile({
+                  fileId: row?.original?.id,
+                  name: row?.original.filename,
+                  orderId: row?.original.orderId,
+                })
               }}
             >
               Delete
@@ -439,139 +411,148 @@ const FileList = ({
     setOpenBulkDeleteDialog(true)
   }
 
+  const handleBulkArchive = async () => {
+    if (selectedFiles.length === 0) {
+      toast.error('Please select at least one file')
+      return
+    }
+    setOpenBulkArchiveDialog(true)
+  }
+
   const handleMP3Download = async (fileId: string) => {
     try {
-      setLoadingFileOrder((prev) => ({ ...prev, [fileId]: true }))
+      setLoadingOrder((prev) => ({ ...prev, [fileId]: true }))
       const response = await axiosInstance.get(
         `${BACKEND_URL}/download-mp3?fileId=${fileId}`
       )
       if (response.status === 200) {
         const data = response.data
         window.open(data.url, '_blank')
-        setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
+        setLoadingOrder((prev) => ({ ...prev, [fileId]: false }))
       }
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.message)
         toast.dismiss(errorToastId)
       }
-      setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
+      setLoadingOrder((prev) => ({ ...prev, [fileId]: false }))
     }
   }
 
   return (
-    <div className='h-full flex-1 flex-col md:flex'>
-      <div className='flex items-center justify-between space-y-2 mb-4'>
-        <div>
-          <h1 className='text-lg font-semibold md:text-lg'>
-            Uploads ({pendingFiles?.length})
-          </h1>
-        </div>
-        <div className='flex items-center'>
-          {(session?.user?.role === 'ADMIN' || session?.user?.adminAccess) && (
-            <Button
-              variant='order'
-              className='not-rounded text-black w-[140px] mr-3'
-              onClick={async () => {
-                try {
-                  if (selectedFiles.length === 0) {
-                    toast.error('Please select at least one file')
-                    return
+    <>
+      <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex bg-muted/40'>
+        <div className='flex items-center justify-between space-y-2'>
+          <div>
+            <h1 className='text-lg font-semibold md:text-lg'>
+              Delivered ({deliveredFiles?.length})
+            </h1>
+          </div>
+          <div className='flex items-center'>
+            {(session?.user?.role === 'ADMIN' ||
+              session?.user?.adminAccess) && (
+              <Button
+                variant='order'
+                className='not-rounded text-black w-[140px] mr-3'
+                onClick={async () => {
+                  try {
+                    if (selectedFiles.length === 0) {
+                      toast.error('Please select at least one file')
+                      return
+                    }
+                    await navigator.clipboard.writeText(selectedFiles.join(','))
+                    toast.success('File Ids copied to clipboard')
+                  } catch (error) {
+                    toast.error('Failed to copy file Ids')
                   }
-                  await navigator.clipboard.writeText(selectedFiles.join(','))
-                  toast.success('File Ids copied to clipboard')
-                } catch (error) {
-                  toast.error('Failed to copy file Ids')
-                }
-              }}
-            >
-              Copy file Ids
-            </Button>
-          )}
-          {bulkLoading ? (
-            <Button
-              disabled
-              variant='order'
-              className='format-button w-[140px]'
-            >
-              Please wait
-              <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-            </Button>
-          ) : (
+                }}
+              >
+                Copy file Ids
+              </Button>
+            )}
             <Button
               variant='order'
               className='format-button text-black w-[140px]'
-              onClick={() =>
-                orderBulkFile(
-                  selectedFiles.join(','),
-                  session?.user?.orderType as string
-                )
-              }
+              onClick={handleBulkArchive}
             >
-              {session && session.user?.orderType !== 'TRANSCRIPTION'
-                ? 'Format'
-                : 'Transcribe'}
+              Archive
             </Button>
-          )}
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant='order'
-                className='h-9 w-8 p-0 format-icon-button'
-              >
-                <span className='sr-only'>Open menu</span>
-                <ChevronDownIcon className='h-4 w-4' />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align='end'>
-              {session?.user?.orderType !== 'TRANSCRIPTION' && (
-                <DropdownMenuItem
-                  onClick={() =>
-                    orderBulkFile(selectedFiles.join(','), 'TRANSCRIPTION')
-                  }
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant='order'
+                  className='h-9 w-8 p-0 format-icon-button'
                 >
-                  Transcribe
+                  <span className='sr-only'>Open menu</span>
+                  <ChevronDownIcon className='h-4 w-4' />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuItem
+                  className='text-red-500'
+                  onClick={handleBulkDelete}
+                >
+                  Delete
                 </DropdownMenuItem>
-              )}
-
-              <DropdownMenuItem
-                className='text-red-500'
-                onClick={handleBulkDelete}
-              >
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
+        <DataTable
+          data={deliveredFiles ?? []}
+          columns={columns}
+          onSelectedRowsChange={handleSelectedRowsChange}
+        />
+        {selectedFile && toggleCheckAndDownload && deliveredFiles?.length && (
+          <CheckAndDownload
+            selected={selectedFile.fileId || ''}
+            orderId={selectedFile.orderId || ''}
+            files={deliveredFiles}
+            toggleCheckAndDownload={toggleCheckAndDownload}
+            setToggleCheckAndDownload={setToggleCheckAndDownload}
+            session={session as Session}
+          />
+        )}
       </div>
-
-      <DataTable
-        data={pendingFiles ?? []}
-        columns={columns as ColumnDef<File, unknown>[]}
-        onSelectedRowsChange={handleSelectedRowsChange}
-      />
       <DeleteFileDialog
         open={openDeleteDialog}
         onClose={() => setOpenDeleteDialog(false)}
         fileId={selectedFile?.fileId || ''}
         filename={selectedFile?.name || ''}
-        refetch={fetchPendingFiles}
+        refetch={fetchDeliveredFiles}
+      />
+      <ArchiveFileDialog
+        open={openArchiveDialog}
+        onClose={() => setOpenArchiveDialog(false)}
+        fileId={selectedFile?.fileId || ''}
+        controllerType={'archiveFile'}
+        controller={(fileId: string, handlertype: string) =>
+          controller({ fileId: fileId }, handlertype)
+        }
       />
       <RenameFileDialog
         open={openRenameDialog}
         onClose={() => setOpenRenameDialog(false)}
         fileId={selectedFile?.fileId || ''}
         filename={selectedFile?.name || ''}
-        refetch={fetchPendingFiles}
+        refetch={fetchDeliveredFiles}
       />
       <DeleteBulkFileModal
         open={openBulkDeleteDialog}
         onClose={() => setOpenBulkDeleteDialog(false)}
         fileIds={selectedFiles || []}
-        refetch={fetchPendingFiles}
+        refetch={fetchDeliveredFiles}
       />
-    </div>
+      <BulkArchiveFileDialog
+        open={openBulkArchiveDialog}
+        onClose={() => setOpenBulkArchiveDialog(false)}
+        fileId={selectedFiles.join(',') || ''}
+        controllerType={'archiveFile'}
+        controller={(fileId: string, handlertype: string) =>
+          controller({ fileId: fileId }, handlertype)
+        }
+      />
+    </>
   )
 }
-export default FileList

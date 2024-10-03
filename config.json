@@ -2,10 +2,7 @@
   "nameLength": 35,
   "minPasswordLength": 8,
   "maxPasswordLength": 256,
-  "userTypes": [
-    "customer",
-    "transcriber"
-  ],
+  "userTypes": ["customer", "transcriber"],
   "industries": [
     "Video",
     "Legal",
@@ -72,6 +69,19 @@
     "di": 1,
     "speakerTracking": false
   },
+  "default_order_options": {
+    "adp": 0,
+    "ts": 1,
+    "si": 1,
+    "sif": 0,
+    "sn": null,
+    "vb": 0,
+    "tmp": 1,
+    "sub": 0,
+    "fldd": 0,
+    "exd": 0,
+    "sp": "en_US"
+  },
   "BASE_FARE": 0.8,
   "pwer": {
     "high": 0.2,
@@ -95,5 +105,36 @@
   "phone_number": "+1 866 941 4131",
   "autosave_interval": 2,
   "invoice_address": "CGBiz Corporation, 44 Tehama St., San Francisco, CA 94105, United",
-  "invoice_disclaimer": "Additional charges may apply for files with non-American accents, poor audio quality, distortions, distant speakers, high background and/or ambient noise. A full refund will be issued if the additional charges are unacceptable, or if the file is untranscribable."
+  "invoice_disclaimer": "Additional charges may apply for files with non-American accents, poor audio quality, distortions, distant speakers, high background and/or ambient noise. A full refund will be issued if the additional charges are unacceptable, or if the file is untranscribable.",
+  "order_types": ["TRANSCRIPTION", "TRANSCRIPTION_FORMATTING"],
+  "file_upload_limit_in_hour": 10,
+  "rates": [
+    {
+      "name": "Automated",
+      "price": 0.1,
+      "tat": "30",
+      "option_name": "fldd",
+      "option_value": "0.2",
+      "deadline": 2,
+      "delivery_offset": 2,
+      "kue_priority": "high",
+      "type": "automated",
+      "accuracy": "80-95"
+    },
+    {
+      "name": "Manual",
+      "price": 0.8,
+      "tat": "24",
+      "option_name": "fldd",
+      "option_value": "0",
+      "deadline": 24,
+      "delivery_offset": 2,
+      "kue_priority": "medium",
+      "type": "manual",
+      "accuracy": "99"
+    }
+  ],
+  "verbatim_price": 0.5,
+  "rush_price": 1.25,
+  "audio_timecoding_price": 0
 }

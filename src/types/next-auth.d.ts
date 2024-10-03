@@ -4,7 +4,7 @@ declare module 'next-auth' {
   interface User {
     name: string
     user: string
-    userId: string
+    userId: number
     email: string
     role: string
     referralCode: string | null
