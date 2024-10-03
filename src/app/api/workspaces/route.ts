@@ -1,4 +1,4 @@
-export const cache = 'no-store'
+export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 
 import { getWorkspaces } from '@/services/team-service/get-workspaces'
