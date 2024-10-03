@@ -51,3 +51,4 @@ export const BASE_FARE = config.BASE_FARE
 export const MINIMUM_AUDIO_PLAYBACK_PERCENTAGE =
   config.minimum_audio_playback_percentage
 export const AUTOSAVE_INTERVAL = config.autosave_interval
+export const ALLOWED_META = config.allowed_meta

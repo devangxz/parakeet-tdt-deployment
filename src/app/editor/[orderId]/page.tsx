@@ -42,7 +42,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { RenderPDFDocument } from '@/components/utils'
 import { BACKEND_URL, MINIMUM_AUDIO_PLAYBACK_PERCENTAGE } from '@/constants'
 import axiosInstance from '@/utils/axios'
-import { bindShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 import { ConvertedASROutput, generateRandomColor } from '@/utils/editorUtils'
 import generateHTML from '@/utils/generateEditorHtml'
 
@@ -214,27 +213,27 @@ const playControls: PlayerControls = {
   playAt100Percent: () => { },
 }
 
-export type ShortcutControls = PlayerControls & {
-  searchWordUnderCursor: () => void // Example for extending the type
-  correctSpelling: () => void
-  insertTimestamps: () => void
-  insertSpeakerName: () => void
-  playWord: () => void
-  nextPage: () => void
-  prevPage: () => void
-}
+// export type ShortcutControls = PlayerControls & {
+//   searchWordUnderCursor: () => void // Example for extending the type
+//   correctSpelling: () => void
+//   insertTimestamps: () => void
+//   insertSpeakerName: () => void
+//   playWord: () => void
+//   nextPage: () => void
+//   prevPage: () => void
+// }
 
-const shortcutControlFunctions: ShortcutControls = {
-  ...playControls,
-  searchWordUnderCursor: () => { },
-  correctSpelling: () => { },
-  insertTimestamps: () => { },
-  insertSpeakerName: () => { },
-  playWord: () => { },
-  nextPage: () => { },
-  prevPage: () => { },
-  // You can add more functions here as needed
-}
+// const shortcutControlFunctions: ShortcutControls = {
+//   ...playControls,
+//   searchWordUnderCursor: () => { },
+//   correctSpelling: () => { },
+//   insertTimestamps: () => { },
+//   insertSpeakerName: () => { },
+//   playWord: () => { },
+//   nextPage: () => { },
+//   prevPage: () => { },
+//   // You can add more functions here as needed
+// }
 
 function Editor() {
   const [selectedSection, setSelectedSection] = useState('proceedings')
@@ -284,9 +283,9 @@ function Editor() {
     newName: '',
   })
   const [disableAudioPlayCheck, setDisableAudioPlayCheck] = useState(false)
-  const [shortcutControls, setShortcutControls] = useState<ShortcutControls>(
-    shortcutControlFunctions
-  )
+  // const [shortcutControls, setShortcutControls] = useState<ShortcutControls>(
+  //   shortcutControlFunctions
+  // )
   const [playerControls, setPlayerControls] =
     useState<PlayerControls>(playControls)
   const [step, setStep] = useState<string>('')
@@ -371,23 +370,23 @@ function Editor() {
       },
     }
 
-    setShortcutControls({
-      ...playerFunctions,
-      searchWordUnderCursor: () => { },
-      correctSpelling: () => { },
-      insertTimestamps: () => { },
-      insertSpeakerName: () => { },
-      playWord: () => { },
-      nextPage: () => { },
-      prevPage: () => { },
-    })
+    // setShortcutControls({
+    //   ...playerFunctions,
+    //   searchWordUnderCursor: () => { },
+    //   correctSpelling: () => { },
+    //   insertTimestamps: () => { },
+    //   insertSpeakerName: () => { },
+    //   playWord: () => { },
+    //   nextPage: () => { },
+    //   prevPage: () => { },
+    // })
 
     setPlayerControls(playerFunctions)
   }, [wavesurfer])
 
-  useEffect(() => {
-    bindShortcuts(shortcutControls)
-  }, [shortcutControls])
+  // useEffect(() => {
+  //   bindShortcuts(shortcutControls)
+  // }, [shortcutControls])
 
   useEffect(() => {
     let keysPressed: string[] = []

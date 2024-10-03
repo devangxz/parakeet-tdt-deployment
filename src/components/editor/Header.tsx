@@ -22,7 +22,7 @@ export default function Header({ editorModeOptions, getEditorMode, editorMode, n
     const [isShortcutConfigModalOpen, setIsShortcutConfigModalOpen] = useState(false)
     const [selectedAction, setSelectedAction] = useState<keyof DefaultShortcuts | ''>('')
     const [newShortcut, setNewShortcut] = useState<string>('')
-    const [shortcuts, setShortcuts] = useState<{ key: string, shortcut: string, originalKey: string }[]>([]);
+    const [shortcuts, setShortcuts] = useState<{ key: string, shortcut: string }[]>([]);
     const [newEditorMode, setNewEditorMode] = useState<string>('')
     const [notesOpen, setNotesOpen] = useState(false);
     const [position, setPosition] = useState({ x: 100, y: 100 });
@@ -211,7 +211,7 @@ export default function Header({ editorModeOptions, getEditorMode, editorMode, n
                                 <SelectGroup>
                                     <SelectLabel>Actions</SelectLabel>
                                     {shortcuts.map((item) => (
-                                        <SelectItem key={item.key} value={item.originalKey}>{item.key}</SelectItem>
+                                        <SelectItem key={item.key} value={item.key}>{item.key}</SelectItem>
                                     ))}
                                 </SelectGroup>
                             </SelectContent>
