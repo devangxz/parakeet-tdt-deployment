@@ -19,6 +19,7 @@ export const EMAIL_MAX_LENGTH = config.emailMaxLength
 // files
 export const FILE_TYPES = config.fileTypes
 export const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL
+export const FILE_CACHE_URL = process.env.NEXT_PUBLIC_FILE_CACHE_URL
 
 export const RUSH_ORDER_PRICE = config.rush_order_price
 export const STRICT_VERBATIUM_PRICE = config.strict_verbatium_price

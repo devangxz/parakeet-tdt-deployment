@@ -6,7 +6,7 @@ import { toast } from "sonner"
 import axiosInstance from "./axios"
 import { OrderDetails, UploadFilesType } from "@/app/editor/dev/[orderId]/page"
 import { CTMSWord } from "@/components/editor/transcriptUtils";
-import { ALLOWED_META, BACKEND_URL, MINIMUM_AUDIO_PLAYBACK_PERCENTAGE } from "@/constants"
+import { ALLOWED_META, BACKEND_URL, FILE_CACHE_URL, MINIMUM_AUDIO_PLAYBACK_PERCENTAGE } from "@/constants"
 export type ButtonLoading = {
     upload: boolean
     submit: boolean
@@ -508,11 +508,12 @@ const handleSave = async ({
     localStorage.setItem(orderDetails.fileId, JSON.stringify({ notes: notes }));
     const toastId = toast.loading(`Saving Transcription...`);
     try {
-        await axiosInstance.post(`${BACKEND_URL}/save-transcript`, {
+        console.log(FILE_CACHE_URL)
+        await axiosInstance.post(`${FILE_CACHE_URL}/save-transcript`, {
             fileId: orderDetails.fileId,
             transcript,
             step,
-            cfd: cfd,
+            cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
             ctms: updatedCtms,
             orderId: orderDetails.orderId,
         });
@@ -520,6 +521,7 @@ const handleSave = async ({
         const successToastId = toast.success(`Transcription saved successfully`);
         toast.dismiss(successToastId);
     } catch (error) {
+        console.log(error)
         toast.dismiss(toastId);
         const errorToastId = toast.error(`Error while saving transcript`);
         toast.dismiss(errorToastId);

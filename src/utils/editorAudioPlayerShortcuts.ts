@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { tinykeys } from "tinykeys";
+
 interface DefaultShortcuts {
     togglePlay: string;
     pause: string;
