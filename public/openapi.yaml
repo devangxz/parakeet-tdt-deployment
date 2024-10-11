@@ -1,0 +1,159 @@
+openapi: 3.0.0
+info:
+  title: Scribie API
+  version: 1.0.0
+  description: |
+    API for file management, transcription, and user operations.
+
+    ## Authentication
+    To use this API, you need to:
+    1. Sign up for a Scribie account.
+    2. Add a valid payment method to your account.
+    3. Obtain your API key from the dashboard.
+    4. Include your API key in the `Authorization` header of each request.
+
+    Example: `Authorization: Bearer YOUR_API_KEY`
+
+servers:
+  - url: https://api.scribie.ai/
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
+
+security:
+  - BearerAuth: []
+
+paths:
+  /files:
+    get:
+      summary: List all files for the authenticated user
+      tags:
+        - Files
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+        '401':
+          description: Unauthorized - Invalid or missing API key
+    post:
+      summary: Upload a new file or provide a URL for transcription
+      tags:
+        - Files
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                link:
+                  type: string
+                  format: uri
+                options:
+                  type: string
+                  description: JSON string of additional options
+      responses:
+        '201':
+          description: File created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+        '401':
+          description: Unauthorized - Invalid or missing API key
+
+  /file/{fileId}:
+    get:
+      summary: Get file details or download transcript
+      tags:
+        - Files
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [txt, docx, pdf, odt, vtt, srt, json]
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  metadata:
+                    type: object
+                  content:
+                    type: string
+        '401':
+          description: Unauthorized - Invalid or missing API key
+        '415':
+          description: Unsupported transcript format
+    delete:
+      summary: Delete a file
+      tags:
+        - Files
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File deleted successfully
+        '401':
+          description: Unauthorized - Invalid or missing API key
+
+  /file/{fileId}/invoice:
+    get:
+      summary: Get invoice details for a file
+      tags:
+        - Invoices
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invoice_id:
+                    type: string
+                  amount:
+                    type: number
+                  status:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+        '401':
+          description: Unauthorized - Invalid or missing API key

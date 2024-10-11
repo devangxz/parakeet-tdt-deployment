@@ -5,6 +5,7 @@ import {
   CheckIcon,
   PlusCircledIcon,
 } from '@radix-ui/react-icons'
+import axios from 'axios'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import * as React from 'react'
@@ -84,9 +85,9 @@ export default function TeamSwitcher({ className }: TeamSwitcherProps) {
     if (status !== 'authenticated' || !session?.user?.token) return
 
     try {
-      const response = await axiosInstance.get(`${BACKEND_URL}/workspaces`)
+      const response = await axios.get(`/api/workspaces`)
 
-      const fetchedTeams = response.data.s.map(
+      const fetchedTeams = response.data.data.map(
         (team: Workspaces, index: number) => ({
           label: team.teamName,
           value: String(team.internalAdminUserId),

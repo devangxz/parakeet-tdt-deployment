@@ -1,11 +1,12 @@
 import { OrderStatus } from '@prisma/client'
 
+import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 
 export async function getFilesByStatus(
   status: string,
   userId: number,
-  internalTeamUserId: number
+  internalTeamUserId: number | null
 ) {
   try {
     let files
@@ -13,7 +14,7 @@ export async function getFilesByStatus(
       userId: Number(userId),
       deletedAt: null,
     }
-    console.info(`--> getFiles ${userId}`)
+    logger.info(`--> getFiles ${userId}`)
     switch (status) {
       case 'delivered':
         files = await prisma.file.findMany({
@@ -101,13 +102,22 @@ export async function getFilesByStatus(
               },
             },
           },
+          include: {
+            Orders: {
+              select: {
+                orderType: true,
+                id: true,
+                deliveredTs: true,
+              },
+            },
+          },
           orderBy: {
             createdAt: 'desc',
           },
         })
         break
       default:
-        console.error(
+        logger.error(
           `Invalid status type ${String(status)} for user ${String(userId)}`
         )
         return {
@@ -116,7 +126,7 @@ export async function getFilesByStatus(
         }
         return
     }
-    console.info(
+    logger.info(
       `Files fetched successfully for user ${String(
         userId
       )} with status ${String(status)}`
@@ -157,10 +167,71 @@ export async function getFilesByStatus(
       data: filesWithUserDetails,
     }
   } catch (error) {
-    console.error(`Failed to fetch ${status} files:`, error)
+    logger.error(`Failed to fetch ${status} files:`, error)
     return {
       success: false,
       message: 'Failed to fetch files',
+    }
+  }
+}
+
+export async function getAllFiles(
+  parentId: number | null,
+  fileIds: string,
+  userId: number
+) {
+  try {
+    const whereClause: {
+      userId: number
+      deletedAt: null
+      parentId?: number | null | undefined
+      fileId?: { in: string[] }
+    } = {
+      userId: Number(userId),
+      deletedAt: null,
+      parentId: parentId ? Number(parentId) : undefined,
+    }
+
+    if (fileIds !== 'null' && Array.isArray(fileIds?.toString().split(','))) {
+      whereClause.fileId = {
+        in: fileIds?.toString().split(','),
+      }
+      delete whereClause['parentId']
+    }
+
+    const files = await prisma.file.findMany({
+      where: whereClause,
+      include: {
+        Orders: {
+          select: {
+            status: true,
+            orderType: true,
+            id: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+
+    const filesWithStatus = files?.map((file) => ({
+      ...file,
+      status: file.Orders.map((order) => order.status)[0] || 'NOT_ORDERED',
+      orderType: file.Orders[0]?.orderType,
+      orderId: file.Orders[0]?.id,
+    }))
+
+    logger.info(`All files fetched successfully for user ${String(userId)}`)
+    return {
+      success: true,
+      filesWithStatus,
+    }
+  } catch (error) {
+    logger.error('Failed to fetch all files', error)
+    return {
+      success: false,
+      message: 'Failed to fetch all files',
     }
   }
 }
