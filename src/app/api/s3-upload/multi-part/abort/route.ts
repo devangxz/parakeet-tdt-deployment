@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server';
 
 import { s3Client } from '@/lib/s3Client';
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
     try {
-        const { sendBackData } = await request.json();
+        const { sendBackData } = await req.json();
         const command = new AbortMultipartUploadCommand({
             Bucket: process.env.AWS_S3_BUCKET_NAME,
             Key: sendBackData.key,

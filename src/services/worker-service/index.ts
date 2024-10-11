@@ -17,10 +17,9 @@ const queues: Record<QueueName, Queue> = {
 };
 
 export class WorkerQueueService {
-  async createJob(queueName: QueueName, jobData: Record<string, unknown>): Promise<string> {
-    const jobId = `job_${Date.now()}`;
-    await queues[queueName].add(queueName, { jobId, queueName, ...jobData });
-    return jobId;
+  async createJob(queueName: QueueName, jobData: Record<string, unknown>): Promise<undefined> {
+    await queues[queueName].add(queueName, { queueName, ...jobData });
+    return;
   }
 
   getQueue(queueName: QueueName): Queue {

@@ -4,7 +4,7 @@ import { UploadIcon } from '@radix-ui/react-icons'
 import axios from 'axios'
 import { FileUp, FolderUp } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-import React, { useCallback, ChangeEvent, useEffect } from 'react'
+import React, { useState, useCallback, ChangeEvent, useEffect, useRef } from 'react'
 import Dropzone from 'react-dropzone'
 import { toast } from 'sonner'
 
@@ -22,9 +22,50 @@ interface FileAndFolderUploaderProps {
   onUploadSuccess: (success: boolean) => void
 }
 
+interface UploadPart {
+  ETag?: string;
+  PartNumber: number;
+}
+
+const SINGLE_PART_UPLOAD_LIMIT = 20 * 1024 * 1024;
+const CHUNK_SIZE = 20 * 1024 * 1024;
+
 const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadSuccess }) => {
   const { data: session } = useSession()
   const { uploadingFiles, setUploadingFiles, updateUploadProgress, clearUpload } = useUpload();
+
+  const [uploadedFiles, setUploadedFiles] = useState<Set<string>>(new Set());
+
+  const uploadedBytesRef = useRef<{ [key: string]: number }>({});
+  const eventSourceRef = useRef<EventSource | null>(null);
+
+  useEffect(() => {
+    eventSourceRef.current = new EventSource('/api/sse');
+
+    eventSourceRef.current.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data?.status === 'METADATA_EXTRACTED') {
+        updateUploadProgress(data?.result?.fileName, 100);
+        setUploadedFiles(prev => new Set(prev).add(data?.result?.fileName));
+        onUploadSuccess(true);
+      }
+    };
+
+    eventSourceRef.current.onerror = () => {
+      eventSourceRef.current?.close();
+    };
+
+    return () => {
+      eventSourceRef.current?.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (uploadedFiles.size > 0 && uploadedFiles.size === uploadingFiles.length) {
+      clearUpload();
+      setUploadedFiles(new Set());
+    }
+  }, [uploadedFiles, uploadingFiles, clearUpload, onUploadSuccess]);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -41,67 +82,104 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
     }
   }, [uploadingFiles])
 
-  const handleFileOrFolderUpload = async (files: File[]) => {
-    if (files.length === 0) return
+  const singlePartUpload = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
 
-    setUploadingFiles(files.map(file => ({ name: file.name, size: file.size })))
-    files.forEach(file => updateUploadProgress(file.name, 0))
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-      try {
-        const createRes = await axios.post('/api/s3-multipart-upload/create', {
-          fileInfo: {
-            name: file.name,
-            type: file.type
+    try {
+      await axios.post('/api/s3-upload/single-part', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const progress = (progressEvent.loaded / progressEvent.total) * 100;
+            updateUploadProgress(file.name, Math.min(progress, 99));
           }
-        })
-        const { uploadId, key } = createRes.data
+        },
+      });
+      return;
+    } catch (error) {
+      console.error(`Error in single-part upload for file ${file.name}:`, error);
+      throw error;
+    }
+  };
 
-        //TODO - put in config and reduce to 25mb
-        const chunkSize = 100 * 1024 * 1024 // 100MB chunks
-        const numChunks = Math.ceil(file.size / chunkSize)
-        const uploadPromises = []
+  const multiPartUpload = async (file: File) => {
+    try {
+      const createRes = await axios.post('/api/s3-upload/multi-part/create', {
+        fileInfo: { name: file.name, type: file.type }
+      });
+      const { uploadId, key } = createRes.data;
 
-        for (let j = 0; j < numChunks; j++) {
-          const start = j * chunkSize
-          const end = Math.min(start + chunkSize, file.size)
-          const blob = file.slice(start, end)
+      const numChunks = Math.ceil(file.size / CHUNK_SIZE);
+      const parts: UploadPart[] = [];
+      let totalUploaded = 0;
 
-          const partRes = await axios.post('/api/s3-multipart-upload/part', {
-            sendBackData: { key, uploadId },
-            partNumber: j + 1,
-            contentLength: blob.size,
-          })
+      for (let i = 0; i < numChunks; i++) {
+        const start = i * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, file.size);
+        const chunk = file.slice(start, end);
+        const chunkSize = chunk.size;
 
-          const uploadPromise = axios.put(partRes.data.url, blob, {
-            headers: { 'Content-Type': file.type },
-            onUploadProgress: (progressEvent) => {
-              const percentCompleted = ((j * chunkSize + progressEvent.loaded) / file.size) * 100
-              updateUploadProgress(file.name, percentCompleted)
-            }
-          })
-          uploadPromises.push(uploadPromise)
+        const partRes = await axios.post('/api/s3-upload/multi-part/part', {
+          sendBackData: { key, uploadId },
+          partNumber: i + 1,
+          contentLength: chunkSize,
+        });
+
+        const uploadResult = await axios.put(partRes.data.url, chunk, {
+          headers: { 'Content-Type': file.type },
+          onUploadProgress: (progressEvent) => {
+            const chunkLoaded = progressEvent.loaded;
+            totalUploaded = i * CHUNK_SIZE + chunkLoaded;
+            const overallProgress = (totalUploaded / file.size) * 100;
+            updateUploadProgress(file.name, Math.min(overallProgress, 99));
+          }
+        });
+
+        parts.push({
+          ETag: uploadResult.headers['etag'],
+          PartNumber: i + 1
+        });
+      }
+
+      const sortedParts = parts.sort((a, b) => a.PartNumber - b.PartNumber);
+      await axios.post('/api/s3-upload/multi-part/complete', {
+        sendBackData: { key, uploadId },
+        parts: sortedParts
+      });
+
+      return;
+    } catch (error) {
+      console.error(`Error in multipart upload for file ${file.name}:`, error);
+      throw error;
+    }
+  };
+
+  const handleFileOrFolderUpload = async (files: File[]) => {
+    if (files.length === 0) return;
+
+    setUploadingFiles(files.map(file => ({ name: file.name, size: file.size })));
+    files.forEach(file => {
+      updateUploadProgress(file.name, 0);
+      uploadedBytesRef.current[file.name] = 0;
+    });
+
+    for (const file of files) {
+      try {
+        if (file.size <= SINGLE_PART_UPLOAD_LIMIT) {
+          await singlePartUpload(file);
+        } else {
+          await multiPartUpload(file);
         }
-
-        await Promise.all(uploadPromises)
-
-        await axios.post('/api/s3-multipart-upload/complete', { sendBackData: { key, uploadId } })
-
-        updateUploadProgress(file.name, 100)
-
       } catch (error) {
-        console.error('Error during upload process:', error)
-        toast.error(`Error uploading ${file.name}`)
-        return
+        console.error(`Error uploading file ${file.name}:`, error);
+        toast.error(`Error uploading ${file.name}`);
+        updateUploadProgress(file.name, 0);
       }
     }
 
-    onUploadSuccess(true)
-    setTimeout(() => {
-      clearUpload()
-    }, 1000)
-  }
+    uploadedBytesRef.current = {};
+  };
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     handleFileOrFolderUpload(acceptedFiles)

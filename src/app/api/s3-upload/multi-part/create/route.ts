@@ -3,9 +3,16 @@ import { NextResponse } from 'next/server';
 
 import { s3Client } from '@/lib/s3Client';
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
     try {
-        const { fileInfo } = await request.json();
+        const userToken = req.headers.get('x-user-token');
+        const user = JSON.parse(userToken ?? '{}');
+
+        if (!["CUSTOMER", "ADMIN"].includes(user.role)) {
+            return NextResponse.json({ message: 'Action is not allowed' }, { status: 403 });
+        }
+
+        const { fileInfo } = await req.json();
         const fileName = fileInfo.name.split('/').pop();
 
         const command = new CreateMultipartUploadCommand({
