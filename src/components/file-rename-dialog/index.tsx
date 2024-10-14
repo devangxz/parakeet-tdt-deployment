@@ -1,4 +1,5 @@
 import { Cross1Icon, ReloadIcon } from '@radix-ui/react-icons'
+import axios from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -13,9 +14,6 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
-
 interface UpdateFileNameProps {
   open: boolean
   onClose: () => void
@@ -37,7 +35,7 @@ const RenameFileDialog = ({
   const renameFile = async () => {
     setUploadLoading(true)
     try {
-      await axiosInstance.post(`${BACKEND_URL}/file-rename`, {
+      await axios.post(`/api/file/rename`, {
         fileId,
         filename: newName,
       })

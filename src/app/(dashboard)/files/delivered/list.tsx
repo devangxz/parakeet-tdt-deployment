@@ -2,7 +2,7 @@
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { Session } from 'next-auth'
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
@@ -103,9 +103,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
     }
 
     try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/files?status=delivered`
-      )
+      const response = await axios.get(`/api/files?status=delivered`)
 
       const files = response.data.map(
         (file: {
@@ -422,8 +420,8 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
   const handleMP3Download = async (fileId: string) => {
     try {
       setLoadingOrder((prev) => ({ ...prev, [fileId]: true }))
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/download-mp3?fileId=${fileId}`
+      const response = await axios.get(
+        `/api/file/download-mp3?fileId=${fileId}`
       )
       if (response.status === 200) {
         const data = response.data

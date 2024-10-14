@@ -11,7 +11,9 @@ export async function middleware(req: NextRequest) {
   // Skip middleware for /api/auth* and /api/webhook*
   if (
     requestedUrl.startsWith('/api/auth') ||
-    requestedUrl.startsWith('/api/webhook')
+    requestedUrl.startsWith('/api/webhook') ||
+    requestedUrl.startsWith('/api/static-mails') ||
+    requestedUrl.startsWith('/api/cronjobs')
   ) {
     return NextResponse.next()
   }

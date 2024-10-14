@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { Dropin } from 'braintree-web-drop-in'
 import DropIn from 'braintree-web-drop-in-react'
 import { Check, MoveRight } from 'lucide-react'
@@ -105,12 +105,10 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
       setIsLoading(true)
 
       try {
-        const tokenResponse = await axiosInstance.get(
-          `${BACKEND_URL}/client-token`
-        )
+        const tokenResponse = await axios.get(`/api/payment/client-token`)
 
-        const response = await axiosInstance.get(
-          `${BACKEND_URL}/invoice/${invoiceId}?orderType=TRANSCRIPTION_FORMATTING`
+        const response = await axios.get(
+          `/api/invoice/${invoiceId}?orderType=TRANSCRIPTION_FORMATTING`
         )
 
         const fetchedFiles = response.data.files.map(
@@ -281,7 +279,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
         .then(({ nonce }: { nonce: string }) => {
           setLoadingPay(true)
           // Send the nonce to your server to process the payment
-          fetch(`${BACKEND_URL}/checkout`, {
+          fetch(`/api/payment/checkout`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -325,13 +323,10 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
   const handlePaymentMethodViaCredits = async () => {
     try {
       setLoadingPay(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/checkout-via-credits`,
-        {
-          invoiceId,
-          orderType: 'TRANSCRIPTION_FORMATTING',
-        }
-      )
+      const response = await axios.post(`/api/payment/checkout-via-credits`, {
+        invoiceId,
+        orderType: 'TRANSCRIPTION_FORMATTING',
+      })
 
       if (response.data.success) {
         const data = response.data
@@ -372,12 +367,9 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
 
     if (activeStep === 2) {
       try {
-        const response = await axiosInstance.post(
-          `${BACKEND_URL}/update-files-info`,
-          {
-            files,
-          }
-        )
+        const response = await axios.post(`/api/files/update-info`, {
+          files,
+        })
 
         if (response.data.success) {
           const tId = toast.success(`Successfully updated files information`)
@@ -400,14 +392,11 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
   const handleRushOrder = async () => {
     setRushOrderEnable((prevRushOrderEnable) => !prevRushOrderEnable)
     try {
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/update-order-options`,
-        {
-          invoiceId,
-          optionId: 'exd',
-          enabled: !rushOrderEnable ? 1 : 0,
-        }
-      )
+      const response = await axios.post(`/api/order/update-order-options`, {
+        invoiceId,
+        optionId: 'exd',
+        enabled: !rushOrderEnable ? 1 : 0,
+      })
 
       if (response.data.success) {
         const tId = toast.success(
@@ -436,13 +425,10 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
     }
     try {
       setLoadingCoupon(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/apply-discount`,
-        {
-          invoiceId,
-          couponCode,
-        }
-      )
+      const response = await axios.post(`/api/payment/apply-discount`, {
+        invoiceId,
+        couponCode,
+      })
 
       const tId = toast.success(
         `Successfully applied ${couponCode} coupon code`

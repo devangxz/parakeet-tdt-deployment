@@ -1,8 +1,5 @@
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { toast } from 'sonner'
-
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 interface UnassignFileParams {
   id: number
@@ -22,8 +19,8 @@ export const unassignmentHandler = async ({
   setLoadingFileOrder((prev) => ({ ...prev, [id]: true }))
 
   try {
-    const url = type === 'QC' ? 'unassign-file' : 'unassign-review-file'
-    await axiosInstance.post(`${BACKEND_URL}/${url}`, {
+    const url = type === 'QC' ? 'qc/unassign' : 'cf/unassign'
+    await axios.post(`/api/${url}`, {
       orderId: id,
       type,
     })

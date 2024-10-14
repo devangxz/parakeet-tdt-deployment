@@ -22,7 +22,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { BACKEND_URL } from '@/constants'
 
 const GetQuote = () => {
   const [loading, setLoading] = useState(false)
@@ -60,7 +59,7 @@ const GetQuote = () => {
           ...(values.recurringOrders ? [{ 'Recurring Orders': true }] : []),
         ],
       }
-      const response = await fetch(`${BACKEND_URL}/quote-request`, {
+      const response = await fetch(`/api/static-mails/quote-request`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +77,7 @@ const GetQuote = () => {
   }
   return (
     <div className='w-full lg:grid lg:min-h-[600px] lg:grid-cols-2 xl:min-h-[800px]'>
-      <SideImage/>
+      <SideImage />
       <div className='flex items-center justify-center py-12'>
         <div className='mx-auto grid w-[400px] gap-6'>
           <div className='grid gap-2'>

@@ -1,6 +1,7 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
+import axios from 'axios'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
@@ -8,8 +9,6 @@ import { DataTable } from './components/data-table'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 import formatDateTime from '@/utils/formatDateTime'
 
 interface Withdrawal {
@@ -46,9 +45,7 @@ export default function WithdrawalPage() {
     }
 
     try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/admin/get-pending-withdrawals`
-      )
+      const response = await axios.get(`/api/admin/get-pending-withdrawals`)
 
       if (response.data.success) {
         const withdrawals = response.data.withdrawals.map(
@@ -76,6 +73,9 @@ export default function WithdrawalPage() {
         )
         setPendingWithdrawals(withdrawals ?? [])
         setError(null)
+      } else {
+        toast.error(response.data.s)
+        setError('an error occurred')
       }
     } catch (err) {
       setError('an error occurred')
@@ -92,9 +92,7 @@ export default function WithdrawalPage() {
     }
 
     try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/admin/get-initiated-withdrawals`
-      )
+      const response = await axios.get(`/api/admin/get-initiated-withdrawals`)
 
       if (response.data.success) {
         const withdrawals = response.data.withdrawals.map(
@@ -122,6 +120,9 @@ export default function WithdrawalPage() {
         )
         setInitiatedWithdrawals(withdrawals ?? [])
         setError(null)
+      } else {
+        toast.error(response.data.s)
+        setError('an error occurred')
       }
     } catch (err) {
       setError('an error occurred')
@@ -318,12 +319,9 @@ export default function WithdrawalPage() {
     }
     try {
       setLoadingInitiateWithdrawal(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/admin/initiate-withdrawal`,
-        {
-          invoiceIds: selectedPendingWithdrawals,
-        }
-      )
+      const response = await axios.post(`/api/admin/initiate-withdrawal`, {
+        invoiceIds: selectedPendingWithdrawals,
+      })
       if (response.data.success) {
         toast.success('Successfully initiated withdrawal.')
         setLoadingInitiateWithdrawal(false)
@@ -346,12 +344,9 @@ export default function WithdrawalPage() {
     }
     try {
       setLoadingCompleteWithdrawal(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/admin/complete-withdrawal`,
-        {
-          invoiceIds: selectedInitiatedWithdrawals,
-        }
-      )
+      const response = await axios.post(`/api/admin/complete-withdrawal`, {
+        invoiceIds: selectedInitiatedWithdrawals,
+      })
       if (response.data.success) {
         toast.success('Successfully completed withdrawal.')
         setLoadingCompleteWithdrawal(false)

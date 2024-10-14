@@ -2,6 +2,7 @@
 'use client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
+import axios from 'axios'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
@@ -24,8 +25,6 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 import { getRedirectPathByRole } from '@/utils/roleRedirect'
 
 const JoinTeamForm = () => {
@@ -54,8 +53,8 @@ const JoinTeamForm = () => {
     const fetchTeamInformation = async () => {
       setIsLoading(true)
       try {
-        const response = await axiosInstance.get(
-          `${BACKEND_URL}/join-team/${params?.invite_key}`
+        const response = await axios.get(
+          `/api/team/member/join?inviteKey=${params?.invite_key}`
         )
 
         setOwnerDetails({
@@ -80,7 +79,7 @@ const JoinTeamForm = () => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setLoading(true)
-      const response = await fetch(`${BACKEND_URL}/join-team`, {
+      const response = await fetch(`/api/team/member/join`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

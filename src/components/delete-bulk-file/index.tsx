@@ -1,4 +1,5 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
+import axios from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -12,8 +13,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 interface DeleteFileDialogProps {
   open: boolean
@@ -33,7 +32,7 @@ const DeleteBulkFileModal = ({
   const handleDeleteFile = async () => {
     setDeleteLoading(true)
     try {
-      await axiosInstance.post(`${BACKEND_URL}/delete-files`, {
+      await axios.post(`/api/files/delete`, {
         fileIds,
       })
       setDeleteLoading(false)

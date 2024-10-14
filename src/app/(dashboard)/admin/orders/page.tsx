@@ -5,6 +5,7 @@ import {
   ChevronRightIcon,
 } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
+import axios from 'axios'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
@@ -92,9 +93,7 @@ export default function OrdersPage() {
     }
 
     try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/om/fetch-pending-orders`
-      )
+      const response = await axios.get(`/api/om/fetch-pending-orders`)
 
       if (response.data.success) {
         const orders = response.data.details.map(
@@ -149,6 +148,8 @@ export default function OrdersPage() {
         )
         setPendingOrders(orders ?? [])
         setError(null)
+      } else {
+        setError(response.data.message)
       }
     } catch (err) {
       setError('an error occurred')
@@ -392,16 +393,16 @@ export default function OrdersPage() {
 
   const handleDeliveryDateChanged = async (orderId: number, day: number) => {
     try {
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/om/change-delivery-date`,
-        {
-          orderId,
-          day,
-        }
-      )
+      const response = await axios.post(`/api/om/change-delivery-date`, {
+        orderId,
+        day,
+      })
 
       if (response.data.success) {
+        toast.success('Delivery date changed successfully')
         fetchPendingOrders()
+      } else {
+        toast.error(response.data.message)
       }
     } catch (err) {
       toast.error('An error occurred')

@@ -1,5 +1,5 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -15,8 +15,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 interface DialogProps {
   open: boolean
@@ -37,15 +35,20 @@ const DeliveryPreDeliveryFile = ({
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      await axiosInstance.post(`${BACKEND_URL}/om/deliver-pre-delivery-order`, {
+      const response = await axios.post(`/api/om/deliver-pre-delivery-order`, {
         orderId,
         retainEarnings: retainEarnings === 'yes',
       })
-      const successToastId = toast.success(`Successfully delivered the file`)
-      toast.dismiss(successToastId)
-      setLoading(false)
-      refetch()
-      onClose()
+      if (response.data.success) {
+        const successToastId = toast.success(`Successfully delivered the file`)
+        toast.dismiss(successToastId)
+        setLoading(false)
+        refetch()
+        onClose()
+      } else {
+        toast.error(response.data.message)
+        setLoading(false)
+      }
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.s)

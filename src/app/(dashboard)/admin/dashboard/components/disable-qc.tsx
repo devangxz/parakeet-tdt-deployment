@@ -1,6 +1,6 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -15,8 +15,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 import isValidEmail from '@/utils/isValidEmail'
 
 export default function DisableQC() {
@@ -52,18 +50,17 @@ export default function DisableQC() {
 
     try {
       setLoadingDisable(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/admin/disable-qc`,
-        {
-          email: formData.email,
-          flag: true,
-          comment: formData.comment,
-        }
-      )
-      if (response.status === 200) {
+      const response = await axios.post(`/api/admin/disable-qc`, {
+        email: formData.email,
+        flag: true,
+        comment: formData.comment,
+      })
+      if (response.data.success) {
         toast.success('Editor disabled successfully')
-        setLoadingDisable(false)
+      } else {
+        toast.error(response.data.s || 'Failed to disable Editor')
       }
+      setLoadingDisable(false)
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.s)
@@ -88,18 +85,17 @@ export default function DisableQC() {
 
     try {
       setLoading(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/admin/disable-qc`,
-        {
-          email: formData.email,
-          flag: false,
-          comment: formData.comment,
-        }
-      )
-      if (response.status === 200) {
+      const response = await axios.post(`/api/admin/disable-qc`, {
+        email: formData.email,
+        flag: false,
+        comment: formData.comment,
+      })
+      if (response.data.success) {
         toast.success('Editor enabled successfully')
-        setLoading(false)
+      } else {
+        toast.error(response.data.s || 'Failed to enable Editor')
       }
+      setLoading(false)
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.s)

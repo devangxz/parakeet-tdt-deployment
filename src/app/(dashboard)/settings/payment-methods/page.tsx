@@ -3,6 +3,7 @@
 
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
+import axios from 'axios'
 import { CreditCard } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
@@ -12,8 +13,6 @@ import { DataTable } from './components/data-table'
 import AddPaymentMethodDialog from '@/components/add-payment-method'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 interface PaymentMethod {
   id: number
@@ -46,9 +45,7 @@ const Invoice = () => {
     }
 
     try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/get-payment-methods`
-      )
+      const response = await axios.get(`/api/payment/get-payment-methods`)
 
       if (response.data.success) {
         const paymentMethods = response.data.pms.map(
@@ -175,9 +172,7 @@ const Invoice = () => {
   const handleAddPaymentMethod = async () => {
     try {
       setIsAddPaymentMethodLoading(true)
-      const tokenResponse = await axiosInstance.get(
-        `${BACKEND_URL}/client-token`
-      )
+      const tokenResponse = await axios.get(`/api/payment/client-token`)
       setClientToken(tokenResponse.data.clientToken)
       setIsAddPaymentMethodLoading(false)
       setOpenDetailsDialog(true)
@@ -190,8 +185,8 @@ const Invoice = () => {
   const handleRemovePaymentMethod = async (id: string, token: string) => {
     try {
       setLoadingFileOrder((prev) => ({ ...prev, [id]: true }))
-      const tokenResponse = await axiosInstance.post(
-        `${BACKEND_URL}/remove-payment-method`,
+      const tokenResponse = await axios.post(
+        `/api/payment/remove-payment-method`,
         {
           token,
         }

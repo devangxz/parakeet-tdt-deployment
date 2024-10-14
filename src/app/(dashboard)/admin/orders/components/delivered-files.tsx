@@ -1,6 +1,7 @@
 'use client'
 import { CalendarIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
+import axios from 'axios'
 import { format } from 'date-fns'
 import { useState, useEffect } from 'react'
 
@@ -18,9 +19,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { BACKEND_URL, HIGH_PWER, LOW_PWER } from '@/constants'
+import { HIGH_PWER, LOW_PWER } from '@/constants'
 import { cn } from '@/lib/utils'
-import axiosInstance from '@/utils/axios'
 import formatDateTime from '@/utils/formatDateTime'
 import formatDuration from '@/utils/formatDuration'
 
@@ -55,8 +55,8 @@ export default function DeliveredSection() {
 
   const fetchDeliveredOrders = async () => {
     try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/om/fetch-delivered-orders?date=${formatDate(date)}`
+      const response = await axios.get(
+        `/api/om/fetch-delivered-orders?date=${formatDate(date)}`
       )
 
       if (response.data.success) {
@@ -106,6 +106,8 @@ export default function DeliveredSection() {
         )
         setDeliveredOrders(orders ?? [])
         setError(null)
+      } else {
+        setError(response.data.message)
       }
     } catch (err) {
       setError('an error occurred')

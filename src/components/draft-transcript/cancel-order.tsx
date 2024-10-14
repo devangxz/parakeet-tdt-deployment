@@ -1,4 +1,5 @@
 import { Cross1Icon, ReloadIcon } from '@radix-ui/react-icons'
+import axios from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -12,8 +13,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
-import { BACKEND_URL, ORDER_CANCEL_PROGRESS } from '@/constants'
-import axiosInstance from '@/utils/axios'
+import { ORDER_CANCEL_PROGRESS } from '@/constants'
 
 interface CancelOrderProps {
   open: boolean
@@ -37,7 +37,7 @@ const CanceOrderDialog = ({
   const renameFile = async () => {
     setCancelLoading(true)
     try {
-      await axiosInstance.post(`${BACKEND_URL}/cancel-order/${fileId}`)
+      await axios.post(`/api/file/cancel-order`, { fileId })
       const successToastId = toast.success(
         `Successfully cancelled the order of ${filename}`
       )

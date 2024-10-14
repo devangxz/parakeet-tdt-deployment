@@ -1,5 +1,5 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -15,8 +15,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 interface DialogProps {
   open: boolean
@@ -31,14 +29,19 @@ const SetFileBonusDialog = ({ open, onClose, fileId }: DialogProps) => {
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      await axiosInstance.post(`${BACKEND_URL}/om/update-bonus`, {
+      const response = await axios.post(`/api/om/update-bonus`, {
         fileId,
         rate: Number(rate),
       })
-      const successToastId = toast.success(`Successfully updated file bonus`)
-      toast.dismiss(successToastId)
-      setLoading(false)
-      onClose()
+      if (response.data.success) {
+        const successToastId = toast.success(`Successfully updated file bonus`)
+        toast.dismiss(successToastId)
+        setLoading(false)
+        onClose()
+      } else {
+        toast.error(response.data.message)
+        setLoading(false)
+      }
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.s)

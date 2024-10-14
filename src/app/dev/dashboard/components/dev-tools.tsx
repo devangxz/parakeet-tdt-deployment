@@ -1,4 +1,5 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
+import axios from 'axios'
 import React, { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -44,11 +45,13 @@ function TemplateManagement() {
     try {
       setLoading(true)
       const templateId = formData[`fd_${operation}_templateid`]
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/${operation}MailTemplate/${templateId}`
-      )
-      if (response.status === 200) {
+      const response = await axios.post(`/api/mail-templates/${operation}`, {
+        mailId: templateId,
+      })
+      if (response.data.success) {
         toast.success(`Successfully ${operation}d template.`)
+      } else {
+        toast.error(`Failed to ${operation} template.`)
       }
     } catch (error) {
       toast.error(`Failed to ${operation} template.`)

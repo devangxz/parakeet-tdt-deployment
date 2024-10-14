@@ -1,6 +1,6 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -14,8 +14,6 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 import isValidEmail from '@/utils/isValidEmail'
 
 export default function AddLegalQC() {
@@ -31,17 +29,16 @@ export default function AddLegalQC() {
     }
     try {
       setLoading(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/admin/add-legal-qc`,
-        {
-          email: email,
-          flag: true,
-        }
-      )
-      if (response.status === 200) {
+      const response = await axios.post(`/api/admin/add-legal-qc`, {
+        email: email,
+        flag: true,
+      })
+      if (response.data.success) {
         toast.success('Successfully added to legal Editor.')
-        setLoading(false)
+      } else {
+        toast.error(response.data.s || 'Failed to add to legal Editor')
       }
+      setLoading(false)
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.s)
@@ -60,17 +57,16 @@ export default function AddLegalQC() {
     }
     try {
       setLoadingDisable(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/admin/add-legal-qc`,
-        {
-          email: email,
-          flag: false,
-        }
-      )
-      if (response.status === 200) {
+      const response = await axios.post(`/api/admin/add-legal-qc`, {
+        email: email,
+        flag: false,
+      })
+      if (response.data.success) {
         toast.success('Successfully removed from legal Editor.')
-        setLoadingDisable(false)
+      } else {
+        toast.error(response.data.s || 'Failed to remove from legal Editor')
       }
+      setLoadingDisable(false)
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.s)

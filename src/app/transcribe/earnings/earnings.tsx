@@ -1,6 +1,7 @@
 'use client'
 import { DialogClose } from '@radix-ui/react-dialog'
 import { ReloadIcon } from '@radix-ui/react-icons'
+import axios from 'axios'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState, useMemo } from 'react'
@@ -24,12 +25,10 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
-  BACKEND_URL,
   CHARGE_ON_LOW_WITHDRAWAL_AMOUNT,
   FREE_WITHDRAWAL_AMOUNT,
 } from '@/constants'
 import { Earnings } from '@/types/earnings'
-import axiosInstance from '@/utils/axios'
 import formatDateTime from '@/utils/formatDateTime'
 
 interface Bonus {
@@ -113,7 +112,7 @@ export default function EarningsPage() {
       setIsLoading(false)
     }
     try {
-      const response = await axiosInstance.get(`${BACKEND_URL}/get-earnings`)
+      const response = await axios.get(`/api/transcriber/earnings`)
       setEarnings(response.data)
     } catch (err) {
       setError('an error occurred')
@@ -128,7 +127,7 @@ export default function EarningsPage() {
 
   const fetchBonusDetails = async () => {
     try {
-      const response = await axiosInstance.get(`${BACKEND_URL}/bonus-details`)
+      const response = await axios.get(`/api/transcriber/bonus`)
       setBonuses(response.data.bonusDetails || [])
     } catch (err) {
       toast.error('Failed to load bonus details')
@@ -140,9 +139,7 @@ export default function EarningsPage() {
 
   const fetchMiscEarningsDetails = async () => {
     try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/misc-earnings-details`
-      )
+      const response = await axios.get(`/api/transcriber/misc-earnings`)
       setMiscEarnings(response.data.earningDetails || [])
     } catch (err) {
       toast.error('Failed to load misc earnings details')
@@ -167,9 +164,7 @@ export default function EarningsPage() {
   const submitWithdrawalRequest = async () => {
     const toastId = toast.loading(`Submitting Withdrawal Request...`)
     try {
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/request-withdrawal`
-      )
+      const response = await axios.post(`/api/transcriber/withdrawal`)
       toast.dismiss(toastId)
       if (response.status === 200) {
         const successToastId = toast.success(

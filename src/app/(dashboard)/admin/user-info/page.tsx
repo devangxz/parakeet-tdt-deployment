@@ -1,6 +1,6 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -22,8 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { INDUSTRIES, BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
+import { INDUSTRIES } from '@/constants'
 
 type UserData = Record<string, string | number | boolean | null>
 
@@ -41,13 +40,10 @@ export default function AdminDashboard() {
   const handleSubmit = async () => {
     try {
       setLoading(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/admin/get-user-info`,
-        {
-          i: formData,
-        }
-      )
-      if (response.status === 200) {
+      const response = await axios.post(`/api/admin/get-user-info`, {
+        id: formData,
+      })
+      if (response.data.success) {
         setUserData(response.data.details)
         const userIndustry = response.data.details['Industry'] || ''
         if (INDUSTRIES.includes(userIndustry)) {
@@ -61,6 +57,9 @@ export default function AdminDashboard() {
         }
         setInstructions(response.data.details['Spl instructions'] || '')
         toast.success('Fetched user info successfully.')
+        setLoading(false)
+      } else {
+        toast.error(response.data.s)
         setLoading(false)
       }
     } catch (error) {
@@ -77,15 +76,15 @@ export default function AdminDashboard() {
   const handleInstructions = async () => {
     try {
       setSavingInstructions(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/admin/add-instructions`,
-        {
-          i: formData,
-          instructions,
-        }
-      )
-      if (response.status === 200) {
+      const response = await axios.post(`/api/admin/add-instructions`, {
+        id: formData,
+        instructions,
+      })
+      if (response.data.success) {
         toast.success('Instructions added/modified successfully.')
+        setSavingInstructions(false)
+      } else {
+        toast.error(response.data.message)
         setSavingInstructions(false)
       }
     } catch (error) {
@@ -101,15 +100,15 @@ export default function AdminDashboard() {
       return toast.error('Please enter an industry.')
     try {
       setUpdatingIndustry(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/admin/update-industry`,
-        {
-          i: formData,
-          industry: industry === 'Other' ? otherIndustry : industry,
-        }
-      )
-      if (response.status === 200) {
+      const response = await axios.post(`/api/admin/update-industry`, {
+        id: formData,
+        industry: industry === 'Other' ? otherIndustry : industry,
+      })
+      if (response.data.success) {
         toast.success('Industry updated successfully.')
+        setUpdatingIndustry(false)
+      } else {
+        toast.error(response.data.s)
         setUpdatingIndustry(false)
       }
     } catch (error) {

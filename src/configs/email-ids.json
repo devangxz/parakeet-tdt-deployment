@@ -1,0 +1,26 @@
+{
+  "$$USER_EMAIL_ID$$": "TO BE FILLED AT RUN TIME",
+
+  "$$ADMIN_EMAIL_ID$$": "scribieai-admin@scribie.com",
+  "$$SUPPORT_EMAIL_ID$$": "Scribie Support <support@scribie.com>",
+  "$$CONTACT_EMAIL_ID$$": "contact@scribie.com",
+
+  "$$ALERT_BE_EMAIL_ID$$": "alerts-be@scribie.com",
+  "$$ALERT_EMAIL_ID$$": "alerts@scribie.com",
+
+  "$$SALES_EMAIL_ID$$": "scribie.sales@scribie.com",
+  "$$SALESTEAM_EMAIL_ID$$": "salesteam@scribie.com",
+  "$$MARKETING_EMAIL_ID$$": "marketing@scribie.com",
+  "$$DEMO_EMAIL_ID$$": "demo@scribie.com",
+  "$$JOBS_EMAIL_ID$$": "jobs@scribie.com",
+  "$$PRIVACY_EMAIL_ID$$": "privacy@scribie.com",
+
+  "$$HELLO_EMAIL_ID$$": "hello@scribie.com",
+
+  "$$PAYMENTS_EMAIL_ID$$": "payments@scribie.com",
+  "$$UPLOADS_EMAIL_ID$$": "uploads@scribie.com",
+  "$$TRANSCRIPT_EMAIL_ID$$": "transcripts@scribie.com",
+
+  "$$ADMIN_1_EMAIL_ID$$": "yukti+admin@scribie.com",
+  "$$ADMIN_2_EMAIL_ID$$": "vivian@scribie.com"
+}

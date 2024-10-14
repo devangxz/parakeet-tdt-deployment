@@ -1,5 +1,4 @@
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
+import axios from 'axios'
 
 export const listController = async (
   payload: { fileId: string; newFilename?: string },
@@ -8,9 +7,9 @@ export const listController = async (
 
 const deleteFile = async ({ fileId }: Record<string, unknown>) => {
   try {
-    const response = await axiosInstance.delete(
-      `${BACKEND_URL}/delete-file/${fileId}`
-    )
+    const response = await axios.post(`/api/files/delete`, {
+      data: { fileId: [fileId] },
+    })
     return response?.data?.message
   } catch (err) {
     throw err

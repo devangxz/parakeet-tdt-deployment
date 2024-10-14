@@ -1,5 +1,6 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
+import axios from 'axios'
 import React, { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
@@ -13,8 +14,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 interface UserInfo {
   name: string
@@ -33,10 +32,14 @@ const Page = () => {
 
   const fetchUserInfo = async (sessionId: string) => {
     try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/paypal/user-info?session_id=${sessionId}`
+      const response = await axios.get(
+        `/api/paypal/user-info?session_id=${sessionId}`
       )
-      setUserInfo(response.data.user)
+      if (response.data.success) {
+        setUserInfo(response.data.user)
+      } else {
+        toast.error('Failed to login to PayPal')
+      }
     } catch (error) {
       toast.error('Failed to login to PayPal')
     }
@@ -47,8 +50,12 @@ const Page = () => {
       if (showLoader) {
         setLoading(true)
       }
-      const response = await axiosInstance.get(`${BACKEND_URL}/paypal/id`)
-      setId(response.data.id)
+      const response = await axios.get(`/api/paypal/id`)
+      if (response.data.success) {
+        setId(response.data.id)
+      } else {
+        toast.error('Failed to login to PayPal')
+      }
       setLoading(false)
     } catch (error) {
       toast.error('Failed to login to PayPal')
@@ -61,15 +68,21 @@ const Page = () => {
       setUpdateLoading(true)
       const urlParams = new URLSearchParams(window.location.search)
       const sessionId = urlParams.get('session_id')
-      await axiosInstance.post(`${BACKEND_URL}/paypal/id`, {
+      const response = await axios.post(`/api/paypal/id`, {
         session_id: sessionId,
       })
-      toast.success('PayPal ID account updated successfully')
-      fetchPaypalID(false)
-      setIsModalOpen(false)
-      setUpdateLoading(false)
-      const newUrl = window.location.pathname
-      window.history.replaceState(null, '', newUrl)
+      if (response.data.success) {
+        toast.success('PayPal ID account updated successfully')
+        fetchPaypalID(false)
+        setIsModalOpen(false)
+        setUpdateLoading(false)
+        const newUrl = window.location.pathname
+        window.history.replaceState(null, '', newUrl)
+      } else {
+        toast.error('Failed to update to PayPal ID')
+        setIsModalOpen(false)
+        setUpdateLoading(false)
+      }
     } catch (error) {
       toast.error('Failed to update to PayPal ID')
       setIsModalOpen(false)
@@ -91,7 +104,7 @@ const Page = () => {
   const handleLogin = async () => {
     try {
       setLoginLoading(true)
-      const response = await axiosInstance.get(`${BACKEND_URL}/paypal/login`)
+      const response = await axios.get(`/api/public/paypal/login`)
       window.open(response.data.url, '_blank')
       setLoginLoading(false)
     } catch (error) {
