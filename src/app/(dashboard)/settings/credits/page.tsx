@@ -3,6 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
+import axios from 'axios'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -34,8 +35,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
-import { BACKEND_URL, MIN_CREDIT, MAX_CREDIT } from '@/constants'
-import axiosInstance from '@/utils/axios'
+import { MIN_CREDIT, MAX_CREDIT } from '@/constants'
 import formatDateTime from '@/utils/formatDateTime'
 
 interface Invoice {
@@ -77,7 +77,7 @@ const Invoice = () => {
     }
 
     try {
-      const response = await axiosInstance.get(`${BACKEND_URL}/credits`)
+      const response = await axios.get(`/api/payment/credits`)
 
       if (response.data.success) {
         setCreditsBalance(response.data.s.credits_balance)
@@ -169,13 +169,10 @@ const Invoice = () => {
   const onSubmit = async (data: z.infer<typeof FormSchema>) => {
     setIsCreditPreferenceLoading(true)
     try {
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/credits/preferences`,
-        {
-          uc: data.ucd ? 1 : 0,
-          rc: data.rtc ? 1 : 0,
-        }
-      )
+      const response = await axios.post(`/api/payment/credits/preferences`, {
+        uc: data.ucd ? 1 : 0,
+        rc: data.rtc ? 1 : 0,
+      })
       if (response.status === 200) {
         const tId = toast.success('Successfully updated credits preferences')
         toast.dismiss(tId)
@@ -235,7 +232,7 @@ const Invoice = () => {
     try {
       setIsAddCreditsLoading(true)
       const response = await fetch(
-        `${BACKEND_URL}/get-add-credits-invoice?amount=${amount}`,
+        `/api/payment/credits/get-add-credits-invoice?amount=${amount}`,
         {
           method: 'GET',
           headers: {

@@ -1,6 +1,7 @@
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
+import axios from 'axios'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
@@ -108,9 +109,7 @@ export default function ScreenPage() {
       setIsLoading(false)
     }
     try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/om/fetch-screening-orders`
-      )
+      const response = await axios.get(`/api/om/fetch-screening-orders`)
 
       if (response.data.success) {
         const orders = response.data.details.map(
@@ -169,6 +168,8 @@ export default function ScreenPage() {
         )
         setScreeningFiles(orders ?? [])
         setError(null)
+      } else {
+        setError(response.data.message)
       }
     } catch (err) {
       setError('an error occurred')

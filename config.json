@@ -104,7 +104,7 @@
   "order_cancel_progress": "60%",
   "phone_number": "+1 866 941 4131",
   "autosave_interval": 2,
-  "invoice_address": "CGBiz Corporation, 44 Tehama St., San Francisco, CA 94105, United",
+  "invoice_address": "Scribie Technologies, Inc., 44 Tehama St., San Francisco, CA 94105, United",
   "invoice_disclaimer": "Additional charges may apply for files with non-American accents, poor audio quality, distortions, distant speakers, high background and/or ambient noise. A full refund will be issued if the additional charges are unacceptable, or if the file is untranscribable.",
   "order_types": ["TRANSCRIPTION", "TRANSCRIPTION_FORMATTING"],
   "file_upload_limit_in_hour": 10,
@@ -136,5 +136,32 @@
   ],
   "verbatim_price": 0.5,
   "rush_price": 1.25,
-  "audio_timecoding_price": 0
+  "audio_timecoding_price": 0,
+  "order_status_weights": {
+    "pending": 0,
+    "transcribed": 40,
+    "qc_assigned": 60,
+    "qc_completed": 80,
+    "formatted": 100,
+    "reviewer_assigned": 90,
+    "reviewer_completed": 90,
+    "delivered": 100,
+    "cancelled": 0,
+    "refunded": 0,
+    "blocked": 0
+  },
+  "pwerRateMap": {
+    "low": 0.1,
+    "medium": 0.2,
+    "high": 1
+  },
+  "asr": {
+    "low_confidence_threshold": 0.9,
+    "pwer_threshold": 0.3,
+    "difficulty": {
+      "low": 0.1,
+      "medium": 0.15,
+      "high": 0.2
+    }
+  }
 }

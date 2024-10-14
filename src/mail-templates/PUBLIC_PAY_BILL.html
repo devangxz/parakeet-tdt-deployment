@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+  <body>
+    <p>Hello {{ fullName }},</p>
+
+    <p>
+      Thank you for paying your bill of amount ${{amount}} at
+      <a href="https://{{$$SCRIBIE_SERVER$$}}" target="_blank"
+        >{{$$SCRIBIE_SERVER$$}}</a
+      >.
+    </p>
+
+    <br />
+    With Warm Regards, <br />
+    <br />{{$$SCRIBIE_SERVER$$}} Support.
+  </body>
+</html>

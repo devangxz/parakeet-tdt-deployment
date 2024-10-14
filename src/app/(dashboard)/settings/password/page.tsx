@@ -1,7 +1,7 @@
 'use client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -19,8 +19,6 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 import { mapKeyToMessage } from '@/utils/error-util'
 const Page = () => {
   const form = useForm<z.infer<typeof formSchema>>({
@@ -36,15 +34,12 @@ const Page = () => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true)
     try {
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/update-password`,
-        {
-          payload: {
-            password: values.password,
-            newPassword: values.newpassword,
-          },
-        }
-      )
+      const response = await axios.post(`/api/user/update-password`, {
+        payload: {
+          password: values.password,
+          newPassword: values.newpassword,
+        },
+      })
       const message = mapKeyToMessage(response.data.message)
       const successToastId = toast.success(message)
       toast.dismiss(successToastId)
@@ -82,7 +77,12 @@ const Page = () => {
               <FormItem>
                 <FormLabel>Current Password</FormLabel>
                 <FormControl>
-                  <Input autoComplete='off' placeholder='Password' type='password' {...field} />
+                  <Input
+                    autoComplete='off'
+                    placeholder='Password'
+                    type='password'
+                    {...field}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

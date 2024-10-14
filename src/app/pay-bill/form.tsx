@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
+import axios from 'axios'
 import { Dropin } from 'braintree-web-drop-in'
 import DropIn from 'braintree-web-drop-in-react'
 import { useSearchParams } from 'next/navigation'
@@ -22,8 +23,6 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 interface PaymentSuccessData {
   transactionId: string
@@ -68,9 +67,7 @@ const Signin = () => {
     const fetchBraintreeToken = async () => {
       setIsLoading(true)
       try {
-        const tokenResponse = await axiosInstance.get(
-          `${BACKEND_URL}/public-client-token`
-        )
+        const tokenResponse = await axios.get(`/api/public/client-token`)
         setClientToken(tokenResponse.data.clientToken)
         setIsLoading(false)
       } catch (err) {
@@ -91,7 +88,7 @@ const Signin = () => {
         .requestPaymentMethod()
         .then(({ nonce }: { nonce: string }) => {
           setLoadingPay(true)
-          fetch(`${BACKEND_URL}/pay-bill-checkout`, {
+          fetch(`/api/public/pay-bill-checkout`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

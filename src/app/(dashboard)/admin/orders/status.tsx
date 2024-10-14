@@ -1,6 +1,6 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -27,9 +27,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { BACKEND_URL } from '@/constants'
 import { FileCost } from '@/types/files'
-import axiosInstance from '@/utils/axios'
 import formatDateTime from '@/utils/formatDateTime'
 import formatDuration from '@/utils/formatDuration'
 
@@ -84,8 +82,8 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
   const handleSearch = async () => {
     try {
       setIsLoading(true)
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/om/fetch-file-order-information?fileId=${fileId}`
+      const response = await axios.get(
+        `/api/om/fetch-file-order-information?fileId=${fileId}`
       )
 
       if (response.data.success) {
@@ -128,6 +126,8 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
         }
 
         setOrderInformation(order)
+      } else {
+        toast.error(response.data.s)
       }
     } catch (error) {
       if (error instanceof AxiosError && error.response) {

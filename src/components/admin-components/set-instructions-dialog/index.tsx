@@ -1,5 +1,5 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
@@ -15,8 +15,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 interface DialogProps {
   orderInstructions: string
@@ -37,14 +35,21 @@ const SetInstructionsDialog = ({
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      await axiosInstance.post(`${BACKEND_URL}/om/update-instructions`, {
+      const response = await axios.post(`/api/om/update-instructions`, {
         fileId,
         instructions,
       })
-      const successToastId = toast.success(`Successfully updated instructions`)
-      toast.dismiss(successToastId)
-      setLoading(false)
-      onClose()
+      if (response.data.success) {
+        const successToastId = toast.success(
+          `Successfully updated instructions`
+        )
+        toast.dismiss(successToastId)
+        setLoading(false)
+        onClose()
+      } else {
+        toast.error(response.data.message)
+        setLoading(false)
+      }
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.s)

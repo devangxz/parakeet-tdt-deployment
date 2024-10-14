@@ -1,6 +1,6 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -15,8 +15,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 import isValidEmail from '@/utils/isValidEmail'
 
 export default function AccountSuspension() {
@@ -52,18 +50,17 @@ export default function AccountSuspension() {
 
     try {
       setLoadingDisable(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/admin/suspend-account`,
-        {
-          email: formData.email,
-          flag: true,
-          comment: formData.comment,
-        }
-      )
-      if (response.status === 200) {
+      const response = await axios.post(`/api/admin/suspend-account`, {
+        email: formData.email,
+        flag: true,
+        comment: formData.comment,
+      })
+      if (response.data.success) {
         toast.success('Account suspended successfully.')
-        setLoadingDisable(false)
+      } else {
+        toast.error(response.data.s || 'Failed to suspend account')
       }
+      setLoadingDisable(false)
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.s)
@@ -88,18 +85,17 @@ export default function AccountSuspension() {
 
     try {
       setLoading(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/admin/suspend-account`,
-        {
-          email: formData.email,
-          flag: false,
-          comment: formData.comment,
-        }
-      )
-      if (response.status === 200) {
+      const response = await axios.post(`/api/admin/suspend-account`, {
+        email: formData.email,
+        flag: false,
+        comment: formData.comment,
+      })
+      if (response.data.success) {
         toast.success('Account reinstated successfully.')
-        setLoading(false)
+      } else {
+        toast.error(response.data.s || 'Failed to reinstate account')
       }
+      setLoading(false)
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.s)

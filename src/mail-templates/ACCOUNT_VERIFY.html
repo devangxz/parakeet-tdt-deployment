@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+
+<body>
+  <p>Hello {{ first_name }},</p>
+
+  <p>
+    This is an email address verification message for your newly created
+    account at
+    <a href="https://{{$$SCRIBIE_SERVER$$}}" target="_blank">{{$$SCRIBIE_SERVER$$}}</a>. Please visit the following link
+    to complete the verification.
+  </p>
+
+  <p><a href="{{url}}" target="_blank">{{ url }}</a></p>
+
+  <p>
+    Please ignore this message if you did not sign up at
+    {{$$SCRIBIE_SERVER$$}}.
+  </p>
+
+  <br />
+  Thank You,<br>{{$$SCRIBIE_SERVER$$}} Support.
+</body>
+
+</html>

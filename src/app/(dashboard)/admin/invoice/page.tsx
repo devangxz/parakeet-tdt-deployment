@@ -1,6 +1,6 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -15,8 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(false)
@@ -31,22 +29,17 @@ export default function AdminDashboard() {
   const handleSubmit = async () => {
     try {
       setLoading(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/admin/generate-invoice`,
-        {
-          data: formData,
-        }
-      )
-      if (response.status === 200) {
-        if (response.data.success) {
-          toast.success('Successfully generated invoice.')
-          setInvoiceUrl(response.data.url)
-          setLoading(false)
-          setInvoiceUrl(response.data.invoiceId)
-        } else {
-          toast.error(response.data.message)
-          setLoading(false)
-        }
+      const response = await axios.post(`/api/admin/generate-invoice`, {
+        data: formData,
+      })
+      if (response.data.success) {
+        toast.success('Successfully generated invoice.')
+        setInvoiceUrl(response.data.url)
+        setLoading(false)
+        setInvoiceUrl(response.data.invoiceId)
+      } else {
+        toast.error(response.data.message)
+        setLoading(false)
       }
     } catch (error) {
       if (error instanceof AxiosError && error.response) {

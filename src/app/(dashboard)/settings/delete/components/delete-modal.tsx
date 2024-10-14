@@ -1,5 +1,5 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { signOut } from 'next-auth/react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -15,7 +15,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
-import axiosInstance from '@/utils/axios'
 import { mapKeyToMessage } from '@/utils/error-util'
 
 interface DeleteAccountDialogProps {
@@ -29,14 +28,14 @@ const DeleteAccountDialog = ({ open, onClose }: DeleteAccountDialogProps) => {
   const handleDeleteAccount = async () => {
     setdeleteLoading(true)
     try {
-      const response = await axiosInstance.delete(
-        `delete-account?password=${password}`
+      const response = await axios.post(
+        `/api/user/delete-account?password=${password}`
       )
       setdeleteLoading(false)
       onClose()
       const message = mapKeyToMessage(response.data.message)
       const successToastId = toast.success(message)
-      toast.dismiss(successToastId) 
+      toast.dismiss(successToastId)
       signOut({ callbackUrl: process.env.NEXT_PUBLIC_SITE_URL })
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
@@ -44,9 +43,9 @@ const DeleteAccountDialog = ({ open, onClose }: DeleteAccountDialogProps) => {
         const errorToastId = toast.error(message)
         toast.dismiss(errorToastId)
       } else {
-        toast.error(`Error fetching default instructions ${error}`);
+        toast.error(`Error fetching default instructions ${error}`)
       }
-      setdeleteLoading(false);
+      setdeleteLoading(false)
     }
   }
 

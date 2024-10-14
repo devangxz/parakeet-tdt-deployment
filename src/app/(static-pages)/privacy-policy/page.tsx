@@ -18,8 +18,8 @@ export default function Page() {
             We collect personal information in a number of ways when you visit
             our site or use our service. For example, you provide us with
             personal information when you register for an account or contact us
-            by email. CGBiz Corporation automatically receives and records
-            information from your browser, including your IP address and
+            by email. Scribie Technologies, Inc. automatically receives and
+            records information from your browser, including your IP address and
             cookies. The personal information collected is used for billing,
             identification, authentication, service improvement, research, and
             contact.
@@ -32,8 +32,8 @@ export default function Page() {
           </p>
 
           <p className='text-slate-400'>
-            If you have questions or concerns about CGBiz Corporation&apos;s
-            Privacy Policy please send us a message here.
+            If you have questions or concerns about Scribie Technologies,
+            Inc.&apos;s Privacy Policy please send us a message here.
           </p>
         </div>
 
@@ -51,10 +51,15 @@ export default function Page() {
         <div className='space-y-[1rem]'>
           <p className=''>2. Information Sharing</p>
           <p className='text-slate-400'>
-            CGBiz Corporation does not sell, rent or share personal information
-            with any third parties under any circumstances. We may, however,
-            disclose personal information when we believe it violates our{' '}
-            <a href='https://scribie.com/company/terms' target='#' className='text-blue-500 underline'>
+            Scribie Technologies, Inc. does not sell, rent or share personal
+            information with any third parties under any circumstances. We may,
+            however, disclose personal information when we believe it violates
+            our{' '}
+            <a
+              href='https://scribie.com/company/terms'
+              target='#'
+              className='text-blue-500 underline'
+            >
               Terms of Service
             </a>{' '}
             or is appropriate to comply with the law, to protect our or our
@@ -70,24 +75,25 @@ export default function Page() {
         <div className='space-y-[1rem]'>
           <p className=''>3. Client Data & Storage</p>
           <p className='text-slate-400'>
-            CGBiz Corporation ensures that all the files, transcripts and data
-            remain private and confidential. Access is restricted strictly on a
-            need to know basis to our employees and contractors. All employees
-            and contractors are required to sign a Non Disclousure Agreement
-            before being allowed access to the data. Due to the sensitive nature
-            of the recordings and transcripts we take privacy very seriously and
-            make it our primary concern for all our customers.
+            Scribie Technologies, Inc. ensures that all the files, transcripts
+            and data remain private and confidential. Access is restricted
+            strictly on a need to know basis to our employees and contractors.
+            All employees and contractors are required to sign a Non Disclousure
+            Agreement before being allowed access to the data. Due to the
+            sensitive nature of the recordings and transcripts we take privacy
+            very seriously and make it our primary concern for all our
+            customers.
           </p>
         </div>
 
         <div className='space-y-[1rem]'>
           <p className=''>4. Information Security</p>
           <p className='text-slate-400'>
-            We restrict access of information to CGBiz Corporation employees,
-            contractors and agents who need to know that information in order to
-            operate, develop or improve our transcription service. These
-            individuals are bound by confidentiality obligations and may be
-            subject to discipline, including termination and criminal
+            We restrict access of information to Scribie Technologies, Inc.
+            employees, contractors and agents who need to know that information
+            in order to operate, develop or improve our transcription service.
+            These individuals are bound by confidentiality obligations and may
+            be subject to discipline, including termination and criminal
             prosecution, if they fail to meet these obligations.
           </p>
         </div>
@@ -95,7 +101,7 @@ export default function Page() {
         <div className='space-y-[1rem]'>
           <p className=''>5. Changes</p>
           <p className='text-slate-400'>
-            CGBiz Corporation will notify customers by email about any
+            Scribie Technologies, Inc. will notify customers by email about any
             significant changes in this policy. Please contact support in case
             you detect a breach of your account or any unauthorized use. You may
             also delete your account from the settings page anytime you wish.

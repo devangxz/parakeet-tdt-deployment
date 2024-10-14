@@ -1,5 +1,5 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -14,8 +14,6 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
 import { Label } from '@/components/ui/label'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 interface DialogProps {
   open: boolean
@@ -38,16 +36,21 @@ const AcceptRejectApprovalFileDialog = ({
     setLoading(true)
     if (isAccept) {
       try {
-        await axiosInstance.post(`${BACKEND_URL}/om/accept-approval-order`, {
+        const response = await axios.post(`/api/om/accept-approval-order`, {
           orderId,
         })
-        const successToastId = toast.success(
-          `Successfully accepted approval file`
-        )
-        toast.dismiss(successToastId)
-        setLoading(false)
-        refetch()
-        onClose()
+        if (response.data.success) {
+          const successToastId = toast.success(
+            `Successfully accepted approval file`
+          )
+          toast.dismiss(successToastId)
+          setLoading(false)
+          refetch()
+          onClose()
+        } else {
+          toast.error(response.data.message)
+          setLoading(false)
+        }
       } catch (error) {
         if (error instanceof AxiosError && error.response) {
           const errorToastId = toast.error(error.response?.data?.s)
@@ -59,16 +62,21 @@ const AcceptRejectApprovalFileDialog = ({
       }
     } else {
       try {
-        await axiosInstance.post(`${BACKEND_URL}/om/reject-approval-order`, {
+        const response = await axios.post(`/api/om/reject-approval-order`, {
           orderId,
         })
-        const successToastId = toast.success(
-          `Successfully rejected approval file`
-        )
-        toast.dismiss(successToastId)
-        setLoading(false)
-        refetch()
-        onClose()
+        if (response.data.success) {
+          const successToastId = toast.success(
+            `Successfully rejected approval file`
+          )
+          toast.dismiss(successToastId)
+          setLoading(false)
+          refetch()
+          onClose()
+        } else {
+          toast.error(response.data.message)
+          setLoading(false)
+        }
       } catch (error) {
         if (error instanceof AxiosError && error.response) {
           const errorToastId = toast.error(error.response?.data?.s)
