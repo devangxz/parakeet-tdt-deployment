@@ -93,7 +93,7 @@ const deleteFile = async ({
   docType?: string
 }) => {
   try {
-    const response = await axiosInstance.post(`${BACKEND_URL}/delete-files`, {
+    const response = await axios.post(`/api/files/delete`, {
       fileIds: [fileId],
     })
     return response?.data?.message
@@ -184,7 +184,7 @@ const rateFile = async ({
   rating?: number
 }) => {
   try {
-    const response = await axiosInstance.post(`${BACKEND_URL}/order-rating`, {
+    const response = await axios.post(`/api/order/rating`, {
       fileId,
       filename,
       rating,

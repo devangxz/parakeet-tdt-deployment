@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+  <body>
+    <p>Hello,</p>
+
+    <p>
+      You have been removed from {{ super_admin_name }}'s ({{ super_admin_email
+      }}) <b>{{ team_name }}</b> at
+      <a href="https://{{$$SCRIBIE_SERVER$$}}" target="_blank"
+        >{{$$SCRIBIE_SERVER$$}}</a
+      >. Please visit the following link to check.
+    </p>
+
+    <p>
+      <a href="https://{{$$SCRIBIE_SERVER$$}}/settings/teams" target="_blank"
+        >https://{{$$SCRIBIE_SERVER$$}}/settings/teams</a
+      >
+    </p>
+
+    <p>
+      Thank You,<br />
+      {{$$SCRIBIE_SERVER$$}} Support.
+    </p>
+    <hr />
+    <small
+      >This mail is not spam. You have received this mail because of team
+      activity on your account at
+      <a href="https://{{$$SCRIBIE_SERVER$$}}" target="_blank"
+        >{{$$SCRIBIE_SERVER$$}}</a
+      >.
+    </small>
+  </body>
+</html>

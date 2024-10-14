@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt'
 import { v4 as uuidv4 } from 'uuid'
 
 import prisma from '@/lib/prisma'
+import { getAWSSesInstance } from '@/lib/ses'
 import isValidEmail from '@/utils/isValidEmail'
 
 interface CreateUserData {
@@ -74,6 +75,19 @@ export async function createUser(
 
     // TODO: Implement email sending functionality
     // sendInviteEmail(email, inviteKey);
+
+    const emailData = {
+      userEmailId: email,
+    }
+
+    const templateData = {
+      first_name: firstname,
+      url: `https://${process.env.SERVER}/verify-account/${inviteKey}`,
+    }
+
+    const ses = getAWSSesInstance()
+
+    await ses.sendMail('ACCOUNT_VERIFY', emailData, templateData)
 
     return {
       success: true,

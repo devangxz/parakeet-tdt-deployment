@@ -1,6 +1,7 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
+import axios from 'axios'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -14,9 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { BACKEND_URL } from '@/constants'
 import { Team } from '@/types/teams'
-import axiosInstance from '@/utils/axios'
 
 export default function TeamsPage() {
   const { data: session } = useSession()
@@ -43,7 +42,7 @@ export default function TeamsPage() {
     }
 
     try {
-      const response = await axiosInstance.get(`${BACKEND_URL}/teams`)
+      const response = await axios.get(`/api/teams`)
 
       const teams = response.data.teams.map(
         (team: { team: { id: number; name: string; members: string[] } }) => ({
@@ -175,12 +174,9 @@ export default function TeamsPage() {
     }
     setIsCreateTeamLoading(true)
     try {
-      const responseCreateTeam = await axiosInstance.post(
-        `${BACKEND_URL}/team`,
-        {
-          name: newTeamName,
-        }
-      )
+      const responseCreateTeam = await axios.post(`/api/team/create`, {
+        name: newTeamName,
+      })
       if (responseCreateTeam.status === 200) {
         const tId = toast.success(responseCreateTeam.data.message)
         toast.dismiss(tId)
@@ -198,12 +194,9 @@ export default function TeamsPage() {
   const handleAcceptInvite = async (teamId: number) => {
     setIsAcceptInviteLoading(true)
     try {
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/accept-join-team-request`,
-        {
-          teamId,
-        }
-      )
+      const response = await axios.post(`/api/team/accept-join-request`, {
+        teamId,
+      })
       if (response.status === 200) {
         const tId = toast.success(response.data.message)
         toast.dismiss(tId)
@@ -221,12 +214,9 @@ export default function TeamsPage() {
   const handleDeclineInvite = async (teamId: number) => {
     setIsDeclineInviteLoading(true)
     try {
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/decline-join-team-request`,
-        {
-          teamId,
-        }
-      )
+      const response = await axios.post(`/api/team/decline-join-request`, {
+        teamId,
+      })
       if (response.status === 200) {
         const tId = toast.success(response.data.s)
         toast.dismiss(tId)

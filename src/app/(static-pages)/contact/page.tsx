@@ -22,7 +22,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
-import { BACKEND_URL } from '@/constants'
 
 export default function Page() {
   const [loading, setLoading] = useState(false)
@@ -78,7 +77,7 @@ export default function Page() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setLoading(true)
-      const response = await fetch(`${BACKEND_URL}/contactus`, {
+      const response = await fetch(`/api/static-mails/contactus`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,5 +1,6 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
+import axios from 'axios'
 import { Session } from 'next-auth'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
@@ -27,9 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { BACKEND_URL } from '@/constants'
 import { Team } from '@/types/teams'
-import axiosInstance from '@/utils/axios'
 import isValidEmail from '@/utils/isValidEmail'
 
 const getInitials = (name: string) => {
@@ -80,8 +79,8 @@ const TeamDetailsDialog = ({
     }
 
     try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/team-members/${selectedTeam?.id}`
+      const response = await axios.get(
+        `/api/team/members?teamId=${selectedTeam?.id}`
       )
       const teamMembers = response.data.members.team_members.map(
         (teamMember: {
@@ -131,14 +130,11 @@ const TeamDetailsDialog = ({
     }
     setIsTeamMemberAddLoading(true)
     try {
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/add-team-member`,
-        {
-          memberEmail: addTeamMemberData.memberEmail,
-          memberRole: addTeamMemberData.memberRole,
-          teamId: selectedTeam?.id,
-        }
-      )
+      const response = await axios.post(`/api/team/member/add`, {
+        memberEmail: addTeamMemberData.memberEmail,
+        memberRole: addTeamMemberData.memberRole,
+        teamId: selectedTeam?.id,
+      })
       if (response.status === 200) {
         const tId = toast.success(response.data.message)
         toast.dismiss(tId)

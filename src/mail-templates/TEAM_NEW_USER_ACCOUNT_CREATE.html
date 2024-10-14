@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+  <body>
+    <p>Hello,</p>
+
+    <p>
+      {{ user_fullname }} has invited you to join <b>{{ team_name }}</b> at
+      {{$$SCRIBIE_SERVER$$}}. Please visit the following link to accept this
+      invite.
+    </p>
+
+    <p>
+      <a
+        href="https://{{$$SCRIBIE_SERVER$$}}/join-team/{{ key }}"
+        target="_blank"
+        >https://{{$$SCRIBIE_SERVER$$}}/join-team/{{ key }}</a
+      >
+    </p>
+
+    <p>
+      Please ignore this message if you do not wish to join {{ user_firstname
+      }}'s team.
+    </p>
+
+    <p>
+      Thank You,<br />
+      {{$$SCRIBIE_SERVER$$}} Support.
+    </p>
+    <hr />
+    <small
+      >This mail is not spam. You have received this email because your contact
+      {{ user_fullname }} invited you to his/her team at {{$$SCRIBIE_SERVER$$}}.
+    </small>
+  </body>
+</html>

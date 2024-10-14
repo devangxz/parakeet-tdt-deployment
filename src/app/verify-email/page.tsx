@@ -1,14 +1,13 @@
 'use client'
 
 import { ReloadIcon } from '@radix-ui/react-icons'
+import axios from 'axios'
 import { useSession } from 'next-auth/react'
 import React, { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
 import SideImage from '@/components/side-image'
 import { Button } from '@/components/ui/button'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 const VerifyAccount = () => {
   const { data: session } = useSession()
@@ -23,9 +22,7 @@ const VerifyAccount = () => {
   const resendVerificationEmail = async () => {
     try {
       setIsLoading(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/resend-veriy-email`
-      )
+      const response = await axios.post(`/api/resend-verify-email`)
       if (response.data.success) {
         const tId = toast.success(`Successfully resend verification email!`)
         toast.dismiss(tId)

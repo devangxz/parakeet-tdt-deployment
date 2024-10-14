@@ -1,6 +1,7 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
+import axios from 'axios'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -16,8 +17,6 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 const FormSchema = z.object({
   comments: z.string(),
@@ -37,7 +36,7 @@ export function SpecialInstructions({
     const toastId = toast.loading(`Submitting.`)
     const { comments } = data
     try {
-      await axiosInstance.post(`${BACKEND_URL}/order-comments`, {
+      await axios.post(`/api/order/comments`, {
         fileId: fileId,
         comments: comments,
       })
@@ -54,8 +53,8 @@ export function SpecialInstructions({
   }
 
   useEffect(() => {
-    axiosInstance
-      .get(`/order-comments?fileId=${fileId}`)
+    axios
+      .get(`/api/order/comments?fileId=${fileId}`)
       .then(({ data }) => form.setValue('comments', data?.comments))
   }, [])
 

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { Dropin } from 'braintree-web-drop-in'
 import DropIn from 'braintree-web-drop-in-react'
 import { Check, ChevronDown, ChevronUp, MoveRight } from 'lucide-react'
@@ -41,7 +41,6 @@ import {
   STRICT_VERBATIUM_PRICE,
   FREE_PRICE,
 } from '@/constants'
-import axiosInstance from '@/utils/axios'
 import { handleBillingPaymentMethod } from '@/utils/billingPaymentHandler'
 
 interface Option {
@@ -175,12 +174,10 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
     const fetchOrderInformation = async () => {
       setIsLoading(true)
       try {
-        const tokenResponse = await axiosInstance.get(
-          `${BACKEND_URL}/client-token`
-        )
+        const tokenResponse = await axios.get(`/api/payment/client-token`)
 
-        const response = await axiosInstance.get(
-          `${BACKEND_URL}/invoice/${invoiceId}?orderType=TRANSCRIPTION`
+        const response = await axios.get(
+          `/api/invoice/${invoiceId}?orderType=TRANSCRIPTION`
         )
 
         const orderOptions = JSON.parse(response.data.invoice.options)
@@ -290,8 +287,8 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
     name: string
   ) => {
     try {
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/update-free-order-options`,
+      const response = await axios.post(
+        `/api/order/update-free-order-options`,
         {
           invoiceId,
           optionId,
@@ -349,14 +346,11 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
     setOptions(updatedOptions)
     try {
       setLoadingOrderUpdate(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/update-order-options`,
-        {
-          invoiceId,
-          optionId: updatedOptions[index].id,
-          enabled: isEnabled ? 1 : 0,
-        }
-      )
+      const response = await axios.post(`/api/order/update-order-options`, {
+        invoiceId,
+        optionId: updatedOptions[index].id,
+        enabled: isEnabled ? 1 : 0,
+      })
 
       if (response.data.success) {
         const tId = toast.success(
@@ -408,7 +402,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
         .requestPaymentMethod()
         .then(({ nonce }: { nonce: string }) => {
           setLoadingPay(true)
-          fetch(`${BACKEND_URL}/checkout`, {
+          fetch(`/api/payment/checkout`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -456,13 +450,10 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
     }
     try {
       setLoadingCoupon(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/apply-discount`,
-        {
-          invoiceId,
-          couponCode,
-        }
-      )
+      const response = await axios.post(`/api/payment/apply-discount`, {
+        invoiceId,
+        couponCode,
+      })
 
       const tId = toast.success(
         `Successfully applied ${couponCode} coupon code`
@@ -487,13 +478,10 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
   const handlePaymentMethodViaCredits = async () => {
     try {
       setLoadingPay(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/checkout-via-credits`,
-        {
-          invoiceId,
-          orderType: 'TRANSCRIPTION',
-        }
-      )
+      const response = await axios.post(`/api/payment/checkout-via-credits`, {
+        invoiceId,
+        orderType: 'TRANSCRIPTION',
+      })
 
       if (response.data.success) {
         const data = response.data

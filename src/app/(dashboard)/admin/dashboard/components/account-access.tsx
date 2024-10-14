@@ -1,6 +1,6 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useSession } from 'next-auth/react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -15,8 +15,6 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 import isValidEmail from '@/utils/isValidEmail'
 import { getRedirectPathByRole } from '@/utils/roleRedirect'
 
@@ -34,13 +32,10 @@ export default function AccountAccess() {
 
     try {
       setLoading(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/admin/access-account`,
-        {
-          email,
-        }
-      )
-      if (response.status === 200) {
+      const response = await axios.post(`/api/admin/access-account`, {
+        email,
+      })
+      if (response.data.success) {
         const data = response.data.details
         await update({
           ...session,
@@ -60,10 +55,12 @@ export default function AccountAccess() {
           },
         })
         toast.success('Sucessfully switched to user')
-        setLoading(false)
         const redirectUrl = getRedirectPathByRole(data.role)
         window.location.href = redirectUrl
+      } else {
+        toast.error(response.data.s || 'Failed to access account')
       }
+      setLoading(false)
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.s)

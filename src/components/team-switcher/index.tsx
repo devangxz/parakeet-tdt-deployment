@@ -26,9 +26,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { BACKEND_URL } from '@/constants'
 import { cn } from '@/lib/utils'
-import axiosInstance from '@/utils/axios'
 
 const initialTeams = [
   {
@@ -120,12 +118,9 @@ export default function TeamSwitcher({ className }: TeamSwitcherProps) {
 
   const handleTeamSwitch = async (team: Team) => {
     try {
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/switch-workspace`,
-        {
-          internalTeamUserId: team.value,
-        }
-      )
+      const response = await axios.post(`/api/workspaces/switch`, {
+        internalTeamUserId: team.value,
+      })
       if (response.status === 200) {
         const data = response.data.details
         await update({

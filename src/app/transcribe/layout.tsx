@@ -1,13 +1,12 @@
 'use client'
+import axios from 'axios'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 
 import Header from './components/header'
 import Sidebar, { SidebarItemType } from './components/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { BACKEND_URL } from '@/constants'
 import { Earnings } from '@/types/earnings'
-import axiosInstance from '@/utils/axios'
 
 type AllSidebarItemType = SidebarItemType & {
   type: string
@@ -22,7 +21,7 @@ export default function FilesLayout({
   const [earnings, setEarnings] = useState<Earnings | null>(null)
 
   const fetchEarnings = async () => {
-    const res = await axiosInstance.get(`${BACKEND_URL}/get-earnings`)
+    const res = await axios.get(`/api/transcriber/earnings`)
     setEarnings(res.data)
   }
 

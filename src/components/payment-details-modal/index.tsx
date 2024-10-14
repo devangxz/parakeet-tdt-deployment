@@ -10,6 +10,7 @@ import {
   Image,
   Font,
 } from '@react-pdf/renderer'
+import axios from 'axios'
 import { Session } from 'next-auth'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
@@ -29,8 +30,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
-import { BACKEND_URL, INVOICE_ADDRESS, INVOICE_DISCLAIMER } from '@/constants'
-import axiosInstance from '@/utils/axios'
+import { INVOICE_ADDRESS, INVOICE_DISCLAIMER } from '@/constants'
 import formatDateTime from '@/utils/formatDateTime'
 interface InvoicesDetailDialogProps {
   open: boolean
@@ -200,14 +200,14 @@ const InvoicePDF = ({
           </View>
           <View style={styles.tableRow}>
             <Text style={styles.customerTableCellMain}>EIN</Text>
-            <Text style={styles.customerTableCell}>33-1218751</Text>
+            <Text style={styles.customerTableCell}>99-5031138</Text>
           </View>
         </View>
       </View>
       <View style={styles.section}>
         <View style={styles.address}>
           <Text style={styles.addressLabel}>FROM:</Text>
-          <Text style={styles.fontStyle10}>CGBiz Corporation,</Text>
+          <Text style={styles.fontStyle10}>Scribie Technologies, Inc.,</Text>
           <Text>44 Tehama St.,</Text>
           <Text>San Francisco, CA 94105, United States</Text>
           <Text>payments@scribie.com</Text>
@@ -400,9 +400,7 @@ const InvoicesDetailDialog = ({
   const fetchInvoiceDetails = async () => {
     setIsInvoiceLoading(true)
     try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/invoice/${selectedInvoiceId}`
-      )
+      const response = await axios.get(`/api/invoice/${selectedInvoiceId}`)
       setInvoiceType(response.data.invoice.type)
       setInvoice({
         type: response.data.invoice.type,

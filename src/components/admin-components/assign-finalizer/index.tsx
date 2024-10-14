@@ -1,5 +1,5 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -15,8 +15,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 import isValidEmail from '@/utils/isValidEmail'
 
 interface DialogProps {
@@ -37,14 +35,19 @@ const AssignFinalizerDialog = ({ open, onClose, fileId }: DialogProps) => {
     }
     setLoading(true)
     try {
-      await axiosInstance.post(`${BACKEND_URL}/om/assign-finalizer`, {
+      const response = await axios.post(`/api/om/assign-finalizer`, {
         fileId,
         userEmail,
       })
-      const successToastId = toast.success(`Successfully assigned Finalizer`)
-      toast.dismiss(successToastId)
-      setLoading(false)
-      onClose()
+      if (response.data.success) {
+        const successToastId = toast.success(`Successfully assigned Finalizer`)
+        toast.dismiss(successToastId)
+        setLoading(false)
+        onClose()
+      } else {
+        toast.error(response.data.message)
+        setLoading(false)
+      }
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.s)

@@ -1,6 +1,6 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -8,8 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(false)
@@ -26,21 +24,16 @@ export default function AdminDashboard() {
   const handleSubmit = async () => {
     try {
       setLoading(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/admin/refund-file`,
-        {
-          fileId: refundFile.fileId,
-          amount: refundFile.amount,
-        }
-      )
-      if (response.status === 200) {
-        if (response.data.success) {
-          toast.success('Successfully refunded the file.')
-          setLoading(false)
-        } else {
-          toast.error(response.data.message)
-          setLoading(false)
-        }
+      const response = await axios.post(`/api/admin/refund-file`, {
+        fileId: refundFile.fileId,
+        amount: refundFile.amount,
+      })
+      if (response.data.success) {
+        toast.success('Successfully refunded the file.')
+        setLoading(false)
+      } else {
+        toast.error(response.data.message)
+        setLoading(false)
       }
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
@@ -56,21 +49,16 @@ export default function AdminDashboard() {
   const handleRefundInvoice = async () => {
     try {
       setLoadingRefundInvoice(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/admin/refund-invoice`,
-        {
-          invoiceId: refundInvoice.invoiceId,
-          amount: refundInvoice.amount,
-        }
-      )
-      if (response.status === 200) {
-        if (response.data.success) {
-          toast.success('Successfully refunded the invoice.')
-          setLoadingRefundInvoice(false)
-        } else {
-          toast.error(response.data.message)
-          setLoadingRefundInvoice(false)
-        }
+      const response = await axios.post(`/api/admin/refund-invoice`, {
+        invoiceId: refundInvoice.invoiceId,
+        amount: refundInvoice.amount,
+      })
+      if (response.data.success) {
+        toast.success('Successfully refunded the invoice.')
+        setLoadingRefundInvoice(false)
+      } else {
+        toast.error(response.data.message)
+        setLoadingRefundInvoice(false)
       }
     } catch (error) {
       if (error instanceof AxiosError && error.response) {

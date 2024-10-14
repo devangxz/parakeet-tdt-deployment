@@ -21,7 +21,6 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { BACKEND_URL } from '@/constants'
 
 const ResetPassword = () => {
   const params = useParams()
@@ -38,7 +37,7 @@ const ResetPassword = () => {
     try {
       setLoading(true)
       const response = await fetch(
-        `${BACKEND_URL}/forgot-password/${params?.reset_password_token}`,
+        `/api/auth/forgot-password/${params?.reset_password_token}`,
         {
           method: 'POST',
           headers: {

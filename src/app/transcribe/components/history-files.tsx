@@ -2,6 +2,7 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
+import axios from 'axios'
 import { diffWords } from 'diff'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
@@ -55,9 +56,9 @@ export default function HistoryFilesPage() {
     }
     try {
       const url = isLegalQCPage
-        ? `${BACKEND_URL}/history-qc-file?type=legal`
-        : `${BACKEND_URL}/history-qc-file?type=general`
-      const response = await axiosInstance.get(url)
+        ? `/api/qc/history?type=legal`
+        : `/api/qc/history?type=general`
+      const response = await axios.get(url)
 
       if (response.data) {
         const orders = response.data

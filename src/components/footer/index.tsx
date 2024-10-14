@@ -179,8 +179,8 @@ function Footer() {
           </div>
         </div>
         <div className='self-center mt-10 text-sm leading-6 text-center text-white max-w-full md:max-w-[75%]'>
-          © scribie. 2008-{new Date().getFullYear()} CGBiz Corporation. All
-          rights reserved.
+          © scribie. 2008-{new Date().getFullYear()} Scribie Technologies, Inc.
+          All rights reserved.
           <br />
           When you visit or interact with our sites, services or tools, we or
           our authorised service providers may use cookies for storing

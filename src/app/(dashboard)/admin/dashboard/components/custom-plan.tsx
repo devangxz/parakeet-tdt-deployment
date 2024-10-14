@@ -1,6 +1,6 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -24,8 +24,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 import isValidEmail from '@/utils/isValidEmail'
 
 export default function CustomPlan() {
@@ -90,10 +88,10 @@ export default function CustomPlan() {
     try {
       setSearchLoading(true)
       const encodedEmail = encodeURIComponent(userEmail)
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/admin/custom-plan-details?email=${encodedEmail}`
+      const response = await axios.get(
+        `/api/admin/custom-plan-details?email=${encodedEmail}`
       )
-      if (response.status === 200) {
+      if (response.data.success) {
         toast.success('Successfully get custom plan details.')
         setSearchLoading(false)
         setShowRates(true)
@@ -127,6 +125,11 @@ export default function CustomPlan() {
         }
         setOrganizationName(response.data.organizationName)
         setTemplateName(response.data.templateName)
+      } else {
+        setCustomerFound(false)
+        setSearchLoading(false)
+        setShowRates(false)
+        toast.error(`User not found. Please check user email.`)
       }
     } catch (error) {
       setCustomerFound(false)
@@ -169,19 +172,18 @@ export default function CustomPlan() {
     }
     try {
       setAddLoading(true)
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/admin/custom-plan-details`,
-        {
-          email: userEmail,
-          rates,
-        }
-      )
-      if (response.status === 200) {
+      const response = await axios.post(`/api/admin/custom-plan-details`, {
+        email: userEmail,
+        rates,
+      })
+      if (response.data.success) {
         toast.success(
           `Custom plan ${customerFound ? 'update' : 'added'} successfully!`
         )
-        setAddLoading(false)
+      } else {
+        toast.error(response.data.s || 'Failed to add custom plan')
       }
+      setAddLoading(false)
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.s)

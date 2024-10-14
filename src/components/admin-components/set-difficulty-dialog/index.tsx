@@ -1,5 +1,5 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -21,8 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 interface DialogProps {
   open: boolean
@@ -37,16 +35,21 @@ const SetFileDifficultyDialog = ({ open, onClose, fileId }: DialogProps) => {
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      await axiosInstance.post(`${BACKEND_URL}/om/update-difficulty`, {
+      const response = await axios.post(`/api/om/update-difficulty`, {
         fileId,
         difficulty: difficulty,
       })
-      const successToastId = toast.success(
-        `Successfully updated difficulty level`
-      )
-      toast.dismiss(successToastId)
-      setLoading(false)
-      onClose()
+      if (response.data.success) {
+        const successToastId = toast.success(
+          `Successfully updated difficulty level`
+        )
+        toast.dismiss(successToastId)
+        setLoading(false)
+        onClose()
+      } else {
+        toast.error(response.data.message)
+        setLoading(false)
+      }
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.s)

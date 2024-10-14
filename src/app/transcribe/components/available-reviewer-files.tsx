@@ -2,7 +2,7 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
@@ -17,9 +17,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import FileAudioPlayer from '@/components/utils/FileAudioPlayer'
-import { BACKEND_URL } from '@/constants'
 import { BaseTranscriberFile } from '@/types/files'
-import axiosInstance from '@/utils/axios'
 import formatDuration from '@/utils/formatDuration'
 import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
 
@@ -64,9 +62,9 @@ export default function AvailableFilesPage({ changeTab }: Props) {
     }
     try {
       const url = isLegalPage
-        ? `${BACKEND_URL}/available-cf-file?type=legal`
-        : `${BACKEND_URL}/available-cf-file?type=general`
-      const response = await axiosInstance.get(url)
+        ? `/api/cf/available-files?type=legal`
+        : `/api/cf/available-files?type=general`
+      const response = await axios.get(url)
 
       if (response.data) {
         const orders = response.data.map(
@@ -304,7 +302,7 @@ export default function AvailableFilesPage({ changeTab }: Props) {
   const assignmentHandler = async (id: number, orderType: string) => {
     setLoadingFileOrder((prev) => ({ ...prev, [id]: true }))
     try {
-      await axiosInstance.post(`${BACKEND_URL}/assign-cf-file`, {
+      await axios.post(`/api/cf/assign`, {
         orderId: id,
         orderType,
       })

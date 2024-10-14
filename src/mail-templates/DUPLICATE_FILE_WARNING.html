@@ -1,0 +1,44 @@
+<html>
+<head>
+    <style>
+        table {
+            width: 640px;
+            border-collapse: collapse;
+            border-spacing: 0;
+        }
+        th, td {
+            border: 1px solid #000000;
+            padding: 5px;
+        }
+        th {
+            font-weight: bold;
+            text-align: center;
+            background-color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <p>Hello,</p>
+    <p>Thank you for uploading the '<strong>{{file_name}}</strong>' at {{$$SCRIBIE_SERVER$$}}. We have detected that this file may be a duplicate of the following file(s).</p>
+    <table>
+        <tr>
+            <th>Filename</th>
+            <th>Duration</th>
+            <th>Filesize</th>
+        </tr>
+        <tr>
+            <td align="left">{{file_name}}</td>
+            <td align="center">{{duration}}</td>
+            <td align="center">{{size}}</td>
+        </tr>
+    </table>
+    <p>Please visit the following link and play the file online to check.</p>
+    <p><a target="_blank" href="https://{{$$SCRIBIE_SERVER$$}}/files/{{fileIds}}">https://{{$$SCRIBIE_SERVER$$}}/files/{{fileIds}}</a></p>
+    <p>Please delete the duplicates and re-upload this file again if this file is not a duplicate.</p>
+    <p>Please send an email to <a href="mailto:{{$$SCRIBIE_SUPPORT_EMAIL$$}}">{{$$SCRIBIE_SUPPORT_EMAIL$$}}</a> if you need any assistance or have any questions.</p>
+    <p>Thank You,<br>
+    {{$$SCRIBIE_SERVER$$}}</p>
+    <hr>
+    <small>This mail is not spam. You have received this message because you uploaded a file at <a target="_blank" href="http://{{$$SCRIBIE_SERVER$$}}">{{$$SCRIBIE_SERVER$$}}</a>.</small>
+</body>
+</html>

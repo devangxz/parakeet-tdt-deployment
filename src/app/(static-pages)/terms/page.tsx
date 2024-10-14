@@ -16,7 +16,7 @@ export default function Page() {
           <p className='text-xl font-semibold'>Welcome to Scribie</p>
           <p className='text-slate-400'>
             Thanks for using our products and services (&quot;Services&quot;).
-            The Services are provided by CGBiz Corporation
+            The Services are provided by Scribie Technologies, Inc.
             (&quot;Scribie&quot;), located at 44 Tehama St., San Francisco, CA
             94105, United States.
           </p>
@@ -155,11 +155,11 @@ export default function Page() {
         <div className='space-y-[1rem]'>
           <p className=''>4. Information Security</p>
           <p className='text-slate-400'>
-            We restrict access of information to CGBiz Corporation employees,
-            contractors and agents who need to know that information in order to
-            operate, develop or improve our transcription service. These
-            individuals are bound by confidentiality obligations and may be
-            subject to discipline, including termination and criminal
+            We restrict access of information to Scribie Technologies, Inc.
+            employees, contractors and agents who need to know that information
+            in order to operate, develop or improve our transcription service.
+            These individuals are bound by confidentiality obligations and may
+            be subject to discipline, including termination and criminal
             prosecution, if they fail to meet these obligations.
           </p>
         </div>
@@ -167,7 +167,7 @@ export default function Page() {
         <div className='space-y-[1rem]'>
           <p className=''>5. Changes</p>
           <p className='text-slate-400'>
-            CGBiz Corporation will notify customers by email about any
+            Scribie Technologies, Inc. will notify customers by email about any
             significant changes in this policy. Please contact support in case
             you detect a breach of your account or any unauthorized use. You may
             also delete your account from the settings page anytime you wish.
