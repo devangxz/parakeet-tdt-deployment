@@ -15,7 +15,6 @@ import {
   DialogClose,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { BACKEND_URL } from '@/constants'
 
 interface AddPaymentMethodDialogProps {
   open: boolean
@@ -39,7 +38,7 @@ const AddPaymentMethodDialog = ({
         .requestPaymentMethod()
         .then(({ nonce }: { nonce: string }) => {
           setIsLoading(true)
-          fetch(`${BACKEND_URL}/add-payment-method`, {
+          fetch(`/api/payment/add-payment-method`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

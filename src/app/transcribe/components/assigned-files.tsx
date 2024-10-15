@@ -2,6 +2,7 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
+import axios from 'axios'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
@@ -17,9 +18,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import FileAudioPlayer from '@/components/utils/FileAudioPlayer'
-import { BACKEND_URL } from '@/constants'
 import { BaseTranscriberFile } from '@/types/files'
-import axiosInstance from '@/utils/axios'
 import formatDuration from '@/utils/formatDuration'
 import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
 
@@ -64,9 +63,9 @@ export default function AssignedFilesPage({ changeTab }: Props) {
     }
     try {
       const url = isLegalQCPage
-        ? `${BACKEND_URL}/assigned-qc-file?type=legal`
-        : `${BACKEND_URL}/assigned-qc-file?type=general`
-      const response = await axiosInstance.get(url)
+        ? `/api/qc/assigned-files?type=legal`
+        : `/api/qc/assigned-files?type=general`
+      const response = await axios.get(url)
 
       if (response.data) {
         const orders = response.data.map(

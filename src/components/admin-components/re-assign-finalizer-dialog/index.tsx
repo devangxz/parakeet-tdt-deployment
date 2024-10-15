@@ -1,5 +1,5 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -16,8 +16,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 import isValidEmail from '@/utils/isValidEmail'
 
 interface DialogProps {
@@ -47,17 +45,22 @@ const ReassignFinalizer = ({
     }
     setLoading(true)
     try {
-      await axiosInstance.post(`${BACKEND_URL}/om/reassign-finalizer`, {
+      const response = await axios.post(`/api/om/reassign-finalizer`, {
         orderId,
         userEmail,
         retainEarnings: retainEarnings === 'yes',
         isCompleted,
       })
-      const successToastId = toast.success(`Successfully re-assigned qa`)
-      toast.dismiss(successToastId)
-      setLoading(false)
-      onClose()
-      refetch()
+      if (response.data.success) {
+        const successToastId = toast.success(`Successfully re-assigned qa`)
+        toast.dismiss(successToastId)
+        setLoading(false)
+        onClose()
+        refetch()
+      } else {
+        toast.error(response.data.message)
+        setLoading(false)
+      }
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.s)

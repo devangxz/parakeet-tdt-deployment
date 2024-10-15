@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
+import axios from 'axios'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
@@ -14,8 +15,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
 
 function HistoryFile({ history }: { history: any }) {
@@ -75,7 +74,7 @@ export default function QCPage() {
   }
 
   const fetchHistoryFiles = async () => {
-    const response = await axiosInstance.get(`${BACKEND_URL}/history-pr-file`)
+    const response = await axios.get(`/api/qc/history/pr`)
     setHistoryFiles(response.data)
   }
 

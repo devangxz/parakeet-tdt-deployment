@@ -1,12 +1,11 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
+import axios from 'axios'
 import { useState, useEffect } from 'react'
 
 import { DataTable } from '../components/data-table'
 import { Badge } from '@/components/ui/badge'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
 
 interface Withdrawals {
@@ -34,7 +33,7 @@ export default function WithdrawalsPage() {
       setIsLoading(false)
     }
     try {
-      const response = await axiosInstance.get(`${BACKEND_URL}/get-withdrawals`)
+      const response = await axios.get(`/api/transcriber/withdrawal`)
       setWithdrawals(response.data.withdrawals)
     } catch (err) {
       setError('an error occurred')

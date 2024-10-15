@@ -1,5 +1,5 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -14,8 +14,6 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
 import { Label } from '@/components/ui/label'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 interface DialogProps {
   open: boolean
@@ -30,14 +28,19 @@ const RejectFileDialog = ({ open, onClose, orderId, refetch }: DialogProps) => {
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      await axiosInstance.post(`${BACKEND_URL}/om/reject-order`, {
+      const response = await axios.post(`/api/om/reject-order`, {
         orderId,
       })
-      const successToastId = toast.success(`Successfully rejected file`)
-      toast.dismiss(successToastId)
-      setLoading(false)
-      refetch()
-      onClose()
+      if (response.data.success) {
+        const successToastId = toast.success(`Successfully rejected file`)
+        toast.dismiss(successToastId)
+        setLoading(false)
+        refetch()
+        onClose()
+      } else {
+        toast.error(response.data.message)
+        setLoading(false)
+      }
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.s)

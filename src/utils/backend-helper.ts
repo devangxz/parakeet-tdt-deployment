@@ -1,15 +1,26 @@
 import crypto from 'crypto'
 
+import paypal, {
+  RecipientType,
+  CreatePayoutRequestBody,
+  PayoutItem,
+} from '@paypal/payouts-sdk'
 import {
   TeamMemberRole,
   InvoiceType,
   InvoiceStatus,
   Role,
+  PaymentMethod,
+  QCType,
+  JobStatus,
+  WithdrawalStatus,
 } from '@prisma/client'
 
+import config from '../../config.json'
 import { DEFAULT_ORDER_OPTIONS, RATES } from '@/constants'
 import gateway from '@/lib/braintree'
 import logger from '@/lib/logger'
+import paypalClient from '@/lib/paypal'
 import prisma from '@/lib/prisma'
 
 export const getOrderOptions = async (userId: number) => {
@@ -347,6 +358,539 @@ export const getEmailDetails = async (userId: number, paidBy: number = 0) => {
       }
     }
   } catch (err) {
+    return false
+  }
+}
+
+export const getOrderStatus = async (orderId: number) => {
+  const statusWeights: { [key: string]: number } = {
+    PENDING: config.order_status_weights.pending,
+    TRANSCRIBED: config.order_status_weights.transcribed,
+    QC_ASSIGNED: config.order_status_weights.qc_assigned,
+    QC_COMPLETED: config.order_status_weights.qc_completed,
+    FORMATTED: config.order_status_weights.formatted,
+    REVIEWER_ASSIGNED: config.order_status_weights.reviewer_assigned,
+    REVIEW_COMPLETED: config.order_status_weights.reviewer_completed,
+    DELIVERED: config.order_status_weights.delivered,
+    CANCELLED: config.order_status_weights.cancelled,
+    REFUNDED: config.order_status_weights.refunded,
+    BLOCKED: config.order_status_weights.blocked,
+  }
+
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { status: true },
+    })
+
+    if (!order) {
+      return false
+    }
+
+    return statusWeights[order.status]
+  } catch (err) {
+    return false
+  }
+}
+
+export const getRefundAmount = async (fileId: string) => {
+  try {
+    const invoiceFile = await prisma.invoiceFile.findFirst({
+      where: {
+        fileId,
+      },
+    })
+
+    if (!invoiceFile) {
+      return false
+    }
+
+    const invoice = await prisma.invoice.findUnique({
+      where: {
+        invoiceId: invoiceFile.invoiceId,
+      },
+    })
+
+    if (!invoice) {
+      return false
+    }
+
+    const chargeRate = (invoice.discount / invoice.amount).toFixed(2)
+    const refundAmount = (invoiceFile.price * parseFloat(chargeRate)).toFixed(2)
+
+    return refundAmount
+  } catch (err) {
+    return false
+  }
+}
+
+export const processRefund = async (
+  transactionId: string,
+  refundAmount: number,
+  invoiceId: string,
+  refundToCredits: boolean
+) => {
+  try {
+    const invoice = await prisma.invoice.findUnique({
+      where: { invoiceId: invoiceId },
+    })
+
+    if (!invoice) {
+      logger.error(`Invoice ${invoiceId} not found`)
+      return false
+    }
+
+    const {
+      paymentMethod,
+      creditsUsed,
+      amount,
+      discount,
+      refundAmount: refundedAmount,
+    } = invoice
+    const chargedAmount = parseFloat(
+      (amount - discount - creditsUsed).toFixed(2)
+    )
+
+    let creditsRefunded = invoice.creditsRefunded
+    let result = null
+
+    if (refundAmount > 0) {
+      if (paymentMethod === PaymentMethod.CREDITS || refundToCredits) {
+        creditsRefunded += parseFloat(refundAmount.toFixed(2))
+        refundAmount = 0
+      } else if (paymentMethod === PaymentMethod.CREDITCARD) {
+        if (creditsUsed > 0 && refundedAmount + refundAmount > chargedAmount) {
+          const creditsRefund = parseFloat(
+            (refundedAmount + refundAmount - chargedAmount).toFixed(2)
+          )
+          refundAmount = parseFloat((refundAmount - creditsRefund).toFixed(2))
+          creditsRefunded += creditsRefund
+        }
+
+        if (refundAmount > 0) {
+          const transaction = await gateway.transaction.find(transactionId)
+
+          if (
+            ['submitted_for_settlement', 'authorized'].includes(
+              transaction.status
+            )
+          ) {
+            if (refundAmount == parseFloat(transaction.amount)) {
+              result = await gateway.transaction.void(transactionId)
+            } else {
+              logger.error(
+                `Cannot refund transaction ${transactionId} in ${transaction.status} state`
+              )
+              return false
+            }
+          } else if (['settled', 'settling'].includes(transaction.status)) {
+            result = await gateway.transaction.refund(
+              transactionId,
+              refundAmount.toString()
+            )
+          } else if (transaction.status === 'voided') {
+            logger.info(`Transaction already voided, ${invoiceId}`)
+          } else {
+            logger.error(`Unknown transaction status ${transaction.status}`)
+            return false
+          }
+
+          if (!result?.success) {
+            logger.error(
+              `Braintree refund failed for ${invoiceId}, amount ${refundAmount}, error: ${JSON.stringify(
+                result
+              )}`
+            )
+            return false
+          }
+        }
+      } else if (paymentMethod !== PaymentMethod.BILLING) {
+        logger.error(`Unknown payment method ${paymentMethod} for ${invoiceId}`)
+        return false
+      }
+
+      await prisma.invoice.update({
+        where: { invoiceId: invoiceId },
+        data: {
+          refundAmount: parseFloat((refundedAmount + refundAmount).toFixed(2)),
+          creditsRefunded: parseFloat(creditsRefunded.toFixed(2)),
+        },
+      })
+    }
+
+    logger.info(
+      `Refund ${refundAmount}, credits ${creditsRefunded} successful for transaction ${transactionId}, ${invoiceId}`
+    )
+    return true
+  } catch (error) {
+    logger.error(`Error processing refund: ${error}`)
+    return false
+  }
+}
+
+export const getTeamSuperAdminEmailAndTeamName = async (teamId: number) => {
+  try {
+    const team = await prisma.team.findUnique({
+      where: {
+        id: teamId,
+      },
+    })
+
+    if (!team) {
+      logger.error(`No team found with the given team ID ${teamId}`)
+      return false
+    }
+
+    const superAdmin = await prisma.user.findUnique({
+      where: {
+        id: team.owner,
+      },
+    })
+
+    return {
+      teamName: team.name,
+      superAdminEmail: superAdmin?.email,
+      superAdminFirstName: superAdmin?.firstname,
+      superAdminFullName: `${superAdmin?.firstname} ${superAdmin?.lastname}`,
+    }
+  } catch (err) {
+    return false
+  }
+}
+
+export const isTranscriberICQC = async (transcriberId: number) => {
+  try {
+    const transcriberDetail = await prisma.verifier.findFirst({
+      where: {
+        userId: transcriberId,
+        qcType: QCType.CONTRACTOR,
+      },
+    })
+
+    if (!transcriberDetail) {
+      return {
+        isICQC: false,
+        qcRate: 0,
+        cfRate: 0,
+        cfRRate: 0,
+      }
+    }
+
+    return {
+      isICQC: true,
+      qcRate: transcriberDetail.qcRate,
+      cfRate: transcriberDetail.cfRate,
+      cfRRate: transcriberDetail.cfRRate,
+    }
+  } catch (error) {
+    logger.error(
+      `failed to check if transcriber is IC QC ${transcriberId}: ${error}`
+    )
+    return {
+      isICQC: false,
+      qcRate: 0,
+      cfRate: 0,
+      cfRRate: 0,
+    }
+  }
+}
+
+export const getCustomerRate = async (userId: number) => {
+  try {
+    let customerId = userId
+
+    const user = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    })
+
+    if (!user) {
+      logger.error(`No user found for user ID ${userId}`)
+      return false
+    }
+
+    if (user.role === Role.INTERNAL_TEAM_USER) {
+      const teamSuperAdminDetails = await getTeamAdminUserDetails(userId)
+      if (!teamSuperAdminDetails) {
+        logger.error(`No team super admin found for user ID ${userId}`)
+        return false
+      }
+      customerId = teamSuperAdminDetails.userId
+    }
+
+    const userRate = await prisma.userRate.findUnique({
+      where: {
+        userId: customerId,
+      },
+    })
+
+    if (!userRate) {
+      logger.error(`No rates found for user ID ${userId}`)
+      return false
+    }
+
+    return {
+      qcRate: userRate.customFormatQcRate,
+      reviewerLowDifficultyRate: userRate.customFormatReviewRate,
+      reviewerMediumDifficultyRate:
+        userRate.customFormatMediumDifficultyReviewRate,
+      reviewerHighDifficultyRate: userRate.customFormatHighDifficultyReviewRate,
+      option: userRate.customFormatOption,
+    }
+  } catch (error) {
+    logger.error('Failed to fetch user rates:', error)
+    return false
+  }
+}
+
+export const checkExistingAssignment = async (transcriberId: number) => {
+  logger.info(`--> checkExistingAssignment ${transcriberId}`)
+
+  try {
+    const existingAssignment = await prisma.jobAssignment.findFirst({
+      where: {
+        transcriberId,
+        status: JobStatus.ACCEPTED,
+      },
+    })
+
+    if (existingAssignment) {
+      return true
+    }
+    return false
+  } catch (error) {
+    logger.error(
+      `failed to get existing assignment for ${transcriberId}: ${error}`
+    )
+    return false
+  }
+}
+
+export const getWithdrawalsBonusesAndMiscEarnings = async (
+  transcriberId: number
+) => {
+  logger.info(`--> getWithdrawalsBonusesAndMiscEarnings ${transcriberId}`)
+  try {
+    const withdrawalSum = await prisma.withdrawal.aggregate({
+      _sum: {
+        amount: true,
+      },
+      where: {
+        userId: transcriberId,
+      },
+    })
+
+    const bonusSum = await prisma.bonus.aggregate({
+      _sum: {
+        amount: true,
+      },
+      where: {
+        userId: transcriberId,
+      },
+    })
+
+    const miscEarningsSum = await prisma.miscEarnings.aggregate({
+      _sum: {
+        amount: true,
+      },
+      where: {
+        userId: transcriberId,
+      },
+    })
+
+    return {
+      withdrawals: withdrawalSum._sum.amount || 0,
+      bonuses: bonusSum._sum.amount || 0,
+      miscEarnings: miscEarningsSum._sum.amount || 0,
+    }
+  } catch (error) {
+    logger.error(
+      `failed to get withdrawals, bonuses and misc earnings for ${transcriberId}: ${error}`
+    )
+    throw new Error()
+  }
+}
+
+export const getTranscriberCreditedHours = async (transcriberId: number) => {
+  try {
+    const assignments = await prisma.jobAssignment.findMany({
+      where: {
+        transcriberId: transcriberId,
+        status: JobStatus.COMPLETED,
+      },
+      include: {
+        order: {
+          include: {
+            File: true,
+          },
+        },
+      },
+    })
+
+    const totalDuration = assignments.reduce(
+      (total, assignment) => total + (assignment.order.File?.duration || 0),
+      0
+    )
+
+    const totalWorkedHours = totalDuration / 3600
+
+    return totalWorkedHours
+  } catch (error) {
+    logger.error(`failed to get credited hours for ${transcriberId}: ${error}`)
+    return 0
+  }
+}
+
+export const getTranscriberTodayCreditedHours = async (
+  transcriberId: number
+) => {
+  logger.info(`--> getTranscriberTodayCreditedHours ${transcriberId}`)
+  const startOfDay = new Date()
+  startOfDay.setHours(0, 0, 0, 0)
+
+  const endOfDay = new Date()
+  endOfDay.setHours(23, 59, 59, 999)
+
+  try {
+    const assignments = await prisma.jobAssignment.findMany({
+      where: {
+        transcriberId: transcriberId,
+        status: JobStatus.COMPLETED,
+        completedTs: {
+          gte: startOfDay,
+          lt: endOfDay,
+        },
+      },
+      include: {
+        order: {
+          include: {
+            File: true,
+          },
+        },
+      },
+    })
+
+    const totalDuration = assignments.reduce(
+      (total, assignment) => total + (assignment.order.File?.duration || 0),
+      0
+    )
+
+    const totalWorkedHours = totalDuration / 3600
+
+    return totalWorkedHours
+  } catch (error) {
+    logger.error(
+      `failed to get today credited hours for ${transcriberId}: ${error}`
+    )
+    throw new Error()
+  }
+}
+
+export const getAssignmentEarnings = async (transcriberId: number) => {
+  logger.info(`--> getAssignmentEarnings ${transcriberId}`)
+  try {
+    const earningsSum = await prisma.jobAssignment.aggregate({
+      _sum: {
+        earnings: true,
+      },
+      where: {
+        transcriberId: transcriberId,
+        order: {
+          status: 'DELIVERED',
+        },
+      },
+    })
+
+    const earnings = earningsSum._sum.earnings || 0
+    return earnings
+  } catch (error) {
+    logger.error(
+      `failed to get assignment earnings for ${transcriberId}: ${error}`
+    )
+    throw new Error()
+  }
+}
+
+export const processTranscriberPayment = async (invoiceIds: string[]) => {
+  try {
+    let count = 0
+    const items: PayoutItem[] = []
+    for (const invoice of invoiceIds) {
+      const withdrawal = await prisma.withdrawal.findFirst({
+        where: { invoiceId: invoice },
+        include: { user: true },
+      })
+
+      if (!withdrawal) {
+        logger.warn(`${invoice} not found in masspay, skipping`)
+        continue
+      }
+
+      const to_email = withdrawal.user.email
+      const withdrawalAmount = withdrawal.amount ?? 0
+      const fee = withdrawal.fee ?? 0
+      const amount = parseFloat((withdrawalAmount - fee).toFixed(2))
+      const to_paypal_id = withdrawal.toPaypalId ?? ''
+      const status = withdrawal.status
+
+      if (status !== WithdrawalStatus.INITIATED) {
+        logger.warn(`${invoice} status is ${status} in masspay, skipping`)
+        continue
+      }
+
+      items.push({
+        recipient_wallet: 'PAYPAL',
+        receiver: to_paypal_id,
+        amount: {
+          value: amount.toString(),
+          currency: 'USD',
+        },
+        note: `Withdrawal from ${process.env.SERVER} account of ${to_email}`,
+        sender_item_id: invoice,
+      })
+
+      count++
+    }
+
+    if (count > 0) {
+      logger.info('Mass pay executed')
+
+      const requestBody: CreatePayoutRequestBody = {
+        sender_batch_header: {
+          recipient_type: 'EMAIL' as RecipientType,
+          email_message: `${process.env.SERVER} Withdrawal`,
+          note: `Withdrawal from ${process.env.SERVER} account`,
+          sender_batch_id: `batch_${Date.now()}`,
+        },
+        items,
+      }
+      const paypalPayout = new paypal.payouts.PayoutsPostRequest()
+      paypalPayout.requestBody(requestBody)
+
+      const response = await paypalClient.execute(paypalPayout)
+      logger.info(`Mass pay executed: ${JSON.stringify(response.result)}`)
+    }
+
+    return true
+  } catch (error) {
+    logger.error(`mass pay failed: ${error}`)
+    return false
+  }
+}
+
+export const checkTranscriberPayment = async (batchId: string) => {
+  try {
+    const paypalPayout = new paypal.payouts.PayoutsGetRequest(batchId)
+
+    const response = await paypalClient.execute(paypalPayout)
+    logger.info(`Got status: ${JSON.stringify(response.result)}`)
+
+    const result = response.result
+
+    return result
+  } catch (error) {
+    logger.error(`failed to get status: ${error}`)
     return false
   }
 }

@@ -1,6 +1,7 @@
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
+import axios from 'axios'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
@@ -93,9 +94,7 @@ export default function ApprovalPage() {
       setIsLoading(false)
     }
     try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/om/fetch-approval-orders`
-      )
+      const response = await axios.get(`/api/om/fetch-approval-orders`)
 
       if (response.data.success) {
         const orders = response.data.details.map(
@@ -150,6 +149,8 @@ export default function ApprovalPage() {
         )
         setApprovalFiles(orders ?? [])
         setError(null)
+      } else {
+        setError(response.data.message)
       }
     } catch (err) {
       setError('an error occurred')

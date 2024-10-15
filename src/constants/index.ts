@@ -1,10 +1,10 @@
 import config from '../../config.json'
 import faq from '../../static-content/faq.json'
 import transcriberGuide from '../../static-content/transcriber-guide.json'
-// import emailIdsDev from '../configs/email-ids-dev.json'
-// import emailIds from '../configs/email-ids.json'
-// import emailPlaceholders from '../configs/email-placeholders.json'
-// import emailTemplates from '../configs/emails.json'
+import emailIdsDev from '../configs/email-ids-dev.json'
+import emailIds from '../configs/email-ids.json'
+import emailPlaceholders from '../configs/email-placeholders.json'
+import emailTemplates from '../configs/emails.json'
 
 //signup Page
 export const NAME_LENGTH = config.nameLength
@@ -66,7 +66,7 @@ export const RUSH_PRICE = config.rush_price
 export const AUDIO_TIMECODING_PRICE = config.audio_timecoding_price
 
 // Email
-// export const EMAIL_IDS =
-//   process.env.SCB_ENVIRONMENT === 'STAGING' ? emailIdsDev : emailIds
-// export const EMAIL_PLACEHOLDERS = emailPlaceholders
-// export const EMAIL_TEMPLATES = emailTemplates
+export const EMAIL_IDS =
+  process.env.SCB_ENVIRONMENT === 'STAGING' ? emailIdsDev : emailIds
+export const EMAIL_PLACEHOLDERS = emailPlaceholders
+export const EMAIL_TEMPLATES = emailTemplates

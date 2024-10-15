@@ -1,4 +1,5 @@
 import { ReloadIcon, StarFilledIcon, StarIcon } from '@radix-ui/react-icons'
+import axios from 'axios'
 import { Session } from 'next-auth'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -13,8 +14,6 @@ import {
   DialogFooter,
   DialogHeader,
 } from '@/components/ui/dialog'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 interface FileItem {
   id: string
@@ -162,8 +161,8 @@ export function CheckAndDownload({
   }
   // Rating
   useEffect(() => {
-    axiosInstance
-      .get(`${BACKEND_URL}/order-rating?fileId=${selected}`)
+    axios
+      .get(`/api/order/rating?fileId=${selected}`)
       .then((response) => {
         localStorage.setItem('rating', response.data.rating)
         setRating(response.data.rating)

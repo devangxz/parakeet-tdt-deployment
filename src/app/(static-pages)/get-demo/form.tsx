@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { BACKEND_URL } from '@/constants'
+
 const GetDemo = () => {
   const [captcha, setCaptcha] = useState<boolean>(false)
   const [loading, setLoading] = useState(false)
@@ -45,7 +45,7 @@ const GetDemo = () => {
         return
       }
       setLoading(true)
-      const response = await fetch(`${BACKEND_URL}/demo-request`, {
+      const response = await fetch(`/api/static-mails/demo-request`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

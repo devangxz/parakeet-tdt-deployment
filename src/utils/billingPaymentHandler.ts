@@ -1,8 +1,6 @@
+import axios from 'axios'
 import { Dispatch, SetStateAction } from 'react'
 import { toast } from 'sonner'
-
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 interface PaymentSuccessData {
   transactionId: string
@@ -21,13 +19,10 @@ export const handleBillingPaymentMethod = async (
 ) => {
   try {
     setLoadingPay(true)
-    const response = await axiosInstance.post(
-      `${BACKEND_URL}/checkout-via-billing`,
-      {
-        invoiceId,
-        orderType,
-      }
-    )
+    const response = await axios.post(`/api/payment/checkout-via-billing`, {
+      invoiceId,
+      orderType,
+    })
 
     if (response.data.success) {
       const data = response.data

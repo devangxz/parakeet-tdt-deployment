@@ -15,7 +15,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
-import { BACKEND_URL } from '@/constants'
 
 interface DialogProps {
   open: boolean
@@ -54,7 +53,7 @@ const AdditionalProofreadingDialog = ({
         .requestPaymentMethod()
         .then(({ nonce }: { nonce: string }) => {
           setIsLoading(true)
-          fetch(`${BACKEND_URL}/checkout`, {
+          fetch(`/api/payment/checkout`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

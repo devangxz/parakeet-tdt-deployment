@@ -1,4 +1,5 @@
 'use client'
+import axios from 'axios'
 import {
   Ban,
   BadgeCheck,
@@ -13,8 +14,6 @@ import React, { useState, useEffect } from 'react'
 
 import TeamSwitcher from '@/components/team-switcher'
 import { Separator } from '@/components/ui/separator'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 export function SidebarNav() {
   const pathname = usePathname()
@@ -22,7 +21,7 @@ export function SidebarNav() {
 
   const fetchCreditsBalance = async () => {
     try {
-      const response = await axiosInstance.get(`${BACKEND_URL}/credit-balance`)
+      const response = await axios.get(`/api/payment/credit-balance`)
       setCreditsBalance(response.data.creditsBalance)
     } catch (err) {
       console.error('Failed to fetch credits balance:', err)

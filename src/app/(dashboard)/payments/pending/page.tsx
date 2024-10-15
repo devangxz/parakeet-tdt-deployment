@@ -2,6 +2,7 @@
 
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
+import axios from 'axios'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -16,8 +17,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 import formatDateTime from '@/utils/formatDateTime'
 
 interface Invoice {
@@ -45,9 +44,7 @@ const Invoice = () => {
   const fetchPendingInvoices = async () => {
     setIsLoading(true)
     try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/pending-invoices`
-      )
+      const response = await axios.get(`/api/invoice/pending`)
 
       const invoices = response.data.data.map(
         (invoice: { id: string; amt: number; ts: string; t: string }) => ({
@@ -207,9 +204,7 @@ const Invoice = () => {
   const payAddCredits = async (id: string) => {
     try {
       setLoadingFileOrder((prev) => ({ ...prev, [id]: true }))
-      const tokenResponse = await axiosInstance.get(
-        `${BACKEND_URL}/client-token`
-      )
+      const tokenResponse = await axios.get(`/api/payment/client-token`)
       setClientToken(tokenResponse.data.clientToken)
       setLoadingFileOrder((prev) => ({ ...prev, [id]: false }))
       setOpenDetailsDialog(true)
@@ -222,9 +217,7 @@ const Invoice = () => {
   const payAdditionalCharge = async (id: string) => {
     try {
       setLoadingFileOrder((prev) => ({ ...prev, [id]: true }))
-      const tokenResponse = await axiosInstance.get(
-        `${BACKEND_URL}/client-token`
-      )
+      const tokenResponse = await axios.get(`/api/payment/client-token`)
       setClientToken(tokenResponse.data.clientToken)
       setLoadingFileOrder((prev) => ({ ...prev, [id]: false }))
       setOpenAdditionalProofreadingDialog(true)
@@ -236,12 +229,9 @@ const Invoice = () => {
 
   const deleteInvoice = async (id: string) => {
     try {
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/delete-invoice`,
-        {
-          invoiceId: id,
-        }
-      )
+      const response = await axios.post(`/api/invoice/delete`, {
+        invoiceId: id,
+      })
       if (response.status === 200) {
         const tId = toast.success(response.data.s)
         toast.dismiss(tId)

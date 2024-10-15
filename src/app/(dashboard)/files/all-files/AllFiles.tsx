@@ -537,8 +537,8 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
   const handleMP3Download = async (fileId: string) => {
     try {
       setLoadingFileOrder((prev) => ({ ...prev, [fileId]: true }))
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/download-mp3?fileId=${fileId}`
+      const response = await axios.get(
+        `/api/file/download-mp3?fileId=${fileId}`
       )
       if (response.status === 200) {
         const data = response.data

@@ -1,7 +1,7 @@
 'use client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -29,14 +29,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 import { mapKeyToMessage } from '@/utils/error-util'
 const Page = () => {
-  // const { data: session } = useSession()
   const [loadingOptions, setLoadingOptions] = useState(false)
   const [loadingEmail, setLoadingEmail] = useState(false)
-  // const [loadingSwitchAccount, setloadingSwitchAccount] = useState(false)
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -64,12 +60,9 @@ const Page = () => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoadingOptions(true)
     try {
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/settings-personalinfo`,
-        {
-          payload: values,
-        }
-      )
+      const response = await axios.post(`/api/user/personal-info`, {
+        payload: values,
+      })
       const message = mapKeyToMessage(response.data.message)
       const successToastId = toast.success(message)
       toast.dismiss(successToastId)
@@ -93,12 +86,9 @@ const Page = () => {
     e.preventDefault()
     setLoadingEmail(true)
     try {
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/settings-secondaryEmail`,
-        {
-          payload: values,
-        }
-      )
+      const response = await axios.post(`/api/user/secondary-email`, {
+        payload: values,
+      })
       const message = mapKeyToMessage(response.data.message)
       const successToastId = toast.success(message)
       toast.dismiss(successToastId)
@@ -136,8 +126,8 @@ const Page = () => {
 
   // Personal info
   useEffect(() => {
-    axiosInstance
-      .get(`${BACKEND_URL}/settings-personalinfo`)
+    axios
+      .get(`/api/user/personal-info`)
       .then((response) => {
         const payload = response.data.info
         const data = {
@@ -262,7 +252,11 @@ const Page = () => {
                 <FormItem>
                   <FormLabel>State</FormLabel>
                   <FormControl>
-                    <Input placeholder='Your State' {...field} value={field.value || ''} />
+                    <Input
+                      placeholder='Your State'
+                      {...field}
+                      value={field.value || ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -275,7 +269,11 @@ const Page = () => {
                 <FormItem>
                   <FormLabel>City</FormLabel>
                   <FormControl>
-                    <Input placeholder='Your City' {...field} value={field.value || ''}/>
+                    <Input
+                      placeholder='Your City'
+                      {...field}
+                      value={field.value || ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -288,7 +286,11 @@ const Page = () => {
                 <FormItem>
                   <FormLabel>Address1</FormLabel>
                   <FormControl>
-                    <Input placeholder='Enter your address' {...field} value={field.value || ''}/>
+                    <Input
+                      placeholder='Enter your address'
+                      {...field}
+                      value={field.value || ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -301,7 +303,11 @@ const Page = () => {
                 <FormItem>
                   <FormLabel>Address2</FormLabel>
                   <FormControl>
-                    <Input placeholder='Enter your address' {...field} value={field.value || ''}/>
+                    <Input
+                      placeholder='Enter your address'
+                      {...field}
+                      value={field.value || ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -314,7 +320,11 @@ const Page = () => {
                 <FormItem>
                   <FormLabel>Postal code</FormLabel>
                   <FormControl>
-                    <Input placeholder='Enter postal code' {...field} value={field.value || ''}/>
+                    <Input
+                      placeholder='Enter postal code'
+                      {...field}
+                      value={field.value || ''}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

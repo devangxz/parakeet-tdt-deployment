@@ -20,7 +20,6 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { BACKEND_URL } from '@/constants'
 
 const ForgotPassword = () => {
   const [loading, setLoading] = useState(false)
@@ -34,7 +33,7 @@ const ForgotPassword = () => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setLoading(true)
-      const response = await fetch(`${BACKEND_URL}/forgot-password`, {
+      const response = await fetch(`/api/auth/forgot-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -60,7 +59,7 @@ const ForgotPassword = () => {
   return (
     <>
       <div className='w-full lg:grid lg:min-h-[600px] lg:grid-cols-2 xl:min-h-[800px]'>
-        <SideImage/>
+        <SideImage />
         <div className='flex items-center justify-center py-12'>
           <div className='mx-auto grid w-[350px] gap-6'>
             <div className='grid gap-2 text-left'>

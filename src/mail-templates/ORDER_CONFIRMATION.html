@@ -1,0 +1,122 @@
+<html>
+
+<body>
+  Hello,<br />
+  <br />
+  Thank you for ordering the transcript(s) at
+  <a target="_blank" href="https://{{$$SCRIBIE_SERVER$$}}">{{$$SCRIBIE_SERVER$$}}</a>. Your order has been received and
+  is being processed. Please visit the
+  following link to monitor the progress. <br />
+  <br />
+
+  <a target="_blank" href="{{file_url}}"> {{file_url}} </a><br />
+
+  <br />
+  The details of the order are as follows. <br />
+  <br />
+    <table
+      style="border-collapse: collapse; border-spacing: 0"
+      width="550"
+      cellpadding="0"
+      cellspacing="0"
+    >
+      <tr
+        style="background-color: #f2f2f2; font-weight: bold"
+        align="center"
+        bgcolor="#f2f2f2"
+      >
+        <td
+          style="border: 1px solid #cccccc; text-align: center; padding: 5px"
+          align="center"
+          cellpadding="5"
+          border="1"
+        >
+          Transcript Type
+        </td>
+        <td
+          style="border: 1px solid #cccccc; text-align: center; padding: 5px"
+          align="center"
+          cellpadding="5"
+          border="1"
+        >
+          Transaction Id
+        </td>
+        <td
+          style="border: 1px solid #cccccc; text-align: center; padding: 5px"
+          align="center"
+          cellpadding="5"
+          border="1"
+        >
+          Invoice Number
+        </td>
+      </tr>
+      <tr>
+        <td
+          style="border: 1px solid #cccccc; text-align: center; padding: 5px"
+          align="center"
+          cellpadding="5"
+          border="1"
+        >
+          {{rate_name}}
+        </td>
+        <td
+          style="border: 1px solid #cccccc; text-align: center; padding: 5px"
+          align="center"
+          cellpadding="5"
+          border="1"
+        >
+          {{transaction_id}}
+        </td>
+        <td
+          style="border: 1px solid #cccccc; text-align: center; padding: 5px"
+          align="center"
+          cellpadding="5"
+          border="1"
+        >
+          <p>{{invoice_id}}</p>
+        </td>
+      </tr>
+    </table>
+  <br />
+
+  <table style="border-collapse: collapse; border-spacing: 0" width="550" cellpadding="0" cellspacing="0">
+    <tr style="background-color: #f2f2f2; font-weight: bold" align="center" bgcolor="#f2f2f2">
+      <td style="border: 1px solid #cccccc; text-align: center; padding: 5px" align="center" cellpadding="5" border="1">
+        Sl.
+      </td>
+      <td style="border: 1px solid #cccccc; text-align: center; padding: 5px" align="center" cellpadding="5" border="1"
+        width="400">
+        File Name
+      </td>
+      <td style="border: 1px solid #cccccc; text-align: center; padding: 5px" align="center" cellpadding="5" border="1"
+        width="130">
+        Delivery Date
+      </td>
+      <td style="border: 1px solid #cccccc; text-align: center; padding: 5px" align="center" cellpadding="5" border="1">
+        Amount
+      </td>
+    </tr>
+
+    {{files}}
+  </table>
+
+  <br />
+  <b>Additional Notes: </b> <br />
+  <ul>
+    <li>All amounts are in USD.</li>
+    <li>{{disclaimer}}</li>
+  </ul>
+  <br />
+  <b style="color: red">New:</b> Add account credits of $500 or more and get
+  free extra credits!
+  <a href="https://{{$$SCRIBIE_SERVER$$}}/account/settings#credits">Learn more</a>. <br />
+  <br />
+  Email {{$$SCRIBIE_SUPPORT_EMAIL$$}} for any assistance or questions. <br />
+  <br />
+  Thank you for choosing {{$$SCRIBIE_SERVER$$}}. <br />
+  <br />
+  
+  Thank You,<br>{{$$SCRIBIE_SERVER$$}} Support.
+</body>
+
+</html>

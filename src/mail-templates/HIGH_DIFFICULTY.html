@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+  <body>
+    <p>Hello,</p>
+
+    <p>
+      Unfortunately, we are unable to offer our base rates for this file due to
+      the following issue(s):
+    </p>
+    <p>{{issues}}</p>
+    <p>
+      The best rate we can offer for this file is ${{ final_rate }}/min. Please
+      pay
+      <b>${{ total }}</b> from the link below if this is acceptable.
+    </p>
+    <br />
+    <b>Accept:</b><br />
+    <a target="_blank" href="{{ payment_url }}">{{ payment_url }}</a><br />
+    <br />
+    <b>Decline:</b><br />
+    <a target="_blank" href="{{ file_url }}">{{ file_url }}</a><br />
+    <br />
+    <p>
+      Please note that this updated rate is based on our assessment of the time
+      and effort required to transcribe this file by our transcribers and is
+      final.
+    </p>
+    <p>
+      Please refer to our Terms of Service for more details:
+      <a href="https://{{ server_root }}/company/terms"
+        >https://{{ server_root }}/company/terms</a
+      >
+    </p>
+    <br />
+    <p>Sincerely,<br />Scribie Support.</p>
+    <hr />
+  </body>
+</html>

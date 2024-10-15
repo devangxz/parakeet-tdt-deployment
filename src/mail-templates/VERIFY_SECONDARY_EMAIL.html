@@ -1,0 +1,30 @@
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            padding: 20px;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <p>Hello,</p>
+        <p>Please visit the following link to verify your email address as a secondary email address on <a href="https://{{$$SCRIBIE_SERVER$$}}">{{$$SCRIBIE_SERVER$$}}</a>.</p>
+        <p><a href="https://{{$$SCRIBIE_SERVER$$}}/verify-account/{{verificationKey}}">`https://{{$$SCRIBIE_SERVER$$}}/verify-account/{{verificationKey}}`,</a></p>
+        <p>If you do not have an account on {{$$SCRIBIE_SERVER$$}} then please ignore this message.</p>
+        <p>"{{$$SCRIBIE_THANK_YOU$$}}"</p>
+        <hr>
+        <p class="footer">This mail is not spam. You have received this mail because it was added as a secondary email address to your <a href="https://{{$$SCRIBIE_SERVER$$}}/verify-account/{{verificationKey}}">{{$$SCRIBIE_SERVER$$}}</a> account.</p>
+    </div>
+</body>
+</html>

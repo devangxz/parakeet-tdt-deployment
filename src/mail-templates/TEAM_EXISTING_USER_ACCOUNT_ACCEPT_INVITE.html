@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+  <body>
+    <p>Hello {{ owner_firstname }},</p>
+
+    <p>
+      {{ member_name }} has accepted your invite to join your
+      <b>{{ team_name }}</b> at
+      <a href="https://{{$$SCRIBIE_SERVER$$}}" target="_blank"
+        >{{$$SCRIBIE_SERVER$$}}</a
+      >. Please visit the following link to check.
+    </p>
+
+    <p>
+      <a target="_blank" href="https://{{$$SCRIBIE_SERVER$$}}/settings/teams"
+        >https://{{$$SCRIBIE_SERVER$$}}/settings/teams</a
+      >
+    </p>
+
+    <p>
+      Thank You,<br />
+      {{$$SCRIBIE_SERVER$$}} Support.
+    </p>
+    <hr />
+    <small
+      >This mail is not spam. You have received this mail because of team
+      activity on your account at
+      <a href="https://{{$$SCRIBIE_SERVER$$}}" target="_blank"
+        >{{$$SCRIBIE_SERVER$$}}</a
+      >.
+    </small>
+  </body>
+</html>

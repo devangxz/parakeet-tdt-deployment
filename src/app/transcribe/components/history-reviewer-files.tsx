@@ -2,6 +2,7 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
+import axios from 'axios'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 
@@ -13,12 +14,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { BACKEND_URL } from '@/constants'
 import { BaseTranscriberFile } from '@/types/files'
-import axiosInstance from '@/utils/axios'
 import formatDuration from '@/utils/formatDuration'
 import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
-
 interface File extends BaseTranscriberFile {
   qc_cost: number
   jobId: number
@@ -39,9 +37,9 @@ export default function HistoryFilesPage() {
     }
     try {
       const url = isLegalPage
-        ? `${BACKEND_URL}/history-cf-file?type=legal`
-        : `${BACKEND_URL}/history-cf-file?type=general`
-      const response = await axiosInstance.get(url)
+        ? `/api/cf/history?type=legal`
+        : `/api/cf/history?type=general`
+      const response = await axios.get(url)
 
       if (response.data) {
         const orders = response.data

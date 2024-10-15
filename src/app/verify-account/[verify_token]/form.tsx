@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
+import axios from 'axios'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -28,8 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 const ResetPassword = () => {
   const params = useParams()
@@ -48,8 +47,8 @@ const ResetPassword = () => {
     const fetchTeamInformation = async () => {
       setIsLoading(true)
       try {
-        const response = await axiosInstance.get(
-          `${BACKEND_URL}/verify-account/${params?.verify_token}`
+        const response = await axios.post(
+          `/api/auth/verify-account/${params?.verify_token}`
         )
         if (!response.data.success) {
           setInvalidToken(true)
@@ -81,7 +80,7 @@ const ResetPassword = () => {
     try {
       setLoading(true)
       const response = await fetch(
-        `${BACKEND_URL}/update-source/${params?.verify_token}`,
+        `/api/auth/update-source/${params?.verify_token}`,
         {
           method: 'POST',
           headers: {

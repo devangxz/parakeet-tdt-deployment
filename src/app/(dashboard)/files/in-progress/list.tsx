@@ -333,9 +333,7 @@ export default function InprogressFilesPage({ files }: ListProps) {
     setSeletedFile({ fileId, name: filename })
     setLoadingCancelOrder((prev) => ({ ...prev, [fileId]: true }))
     try {
-      const data = await axiosInstance.get(
-        `${BACKEND_URL}/cancel-order/${fileId}`
-      )
+      const data = await axios.get(`/api/file/cancel-order?fileId=${fileId}`)
       if (data.status === 200) {
         const responseData = data.data
         if (!responseData.success) {
@@ -357,8 +355,8 @@ export default function InprogressFilesPage({ files }: ListProps) {
   const handleMP3Download = async (fileId: string) => {
     try {
       setLoadingCancelOrder((prev) => ({ ...prev, [fileId]: true }))
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/download-mp3?fileId=${fileId}`
+      const response = await axios.get(
+        `/api/file/download-mp3?fileId=${fileId}`
       )
       if (response.status === 200) {
         const data = response.data

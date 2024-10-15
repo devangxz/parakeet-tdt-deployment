@@ -1,4 +1,5 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
+import axios from 'axios'
 import { Session } from 'next-auth'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -23,9 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { BACKEND_URL } from '@/constants'
 import { Team } from '@/types/teams'
-import axiosInstance from '@/utils/axios'
 
 interface ChangeRoleDialogProps {
   open: boolean
@@ -56,14 +55,11 @@ const ChangeRoleDialog = ({
   const handleRoleUpdate = async () => {
     setIsTeamMemberRoleChangeLoading(true)
     try {
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/team/member/role`,
-        {
-          memberEmail: selectedTeamMember?.email,
-          memberRole: updatedTeamMemberRole,
-          teamId: selectedTeam?.id,
-        }
-      )
+      const response = await axios.post(`/api/team/member/role`, {
+        memberEmail: selectedTeamMember?.email,
+        memberRole: updatedTeamMemberRole,
+        teamId: selectedTeam?.id,
+      })
       if (response.status === 200) {
         const tId = toast.success(response.data.message)
         toast.dismiss(tId)
