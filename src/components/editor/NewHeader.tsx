@@ -18,7 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { BACKEND_URL } from '@/constants';
+import { BACKEND_URL, FILE_CACHE_URL } from '@/constants';
 import axiosInstance from '@/utils/axios';
 import DefaultShortcuts, { ShortcutControls, setShortcut, getAllShortcuts, useShortcuts } from '@/utils/editorAudioPlayerShortcuts';
 import { replaceTextHandler, searchAndSelect } from '@/utils/editorUtils';
@@ -260,9 +260,8 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
                     speakers.add(match[1]);
                 }
 
-                const response = await axiosInstance.get(`${BACKEND_URL}/get-speaker-names?fileId=${orderDetails.fileId}`);
-                const { speakerNamesList } = response.data;
-
+                const response = await axios.get(`/api/editor/get-speaker-names?fileId=${orderDetails.fileId}`);
+                const speakerNamesList = response.data;
                 // Update the speakerName state
                 const newSpeakerNames: Record<string, string> = {};
                 const maxSpeakers = Math.max(speakers.size, speakerNamesList.length);
@@ -330,7 +329,7 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
     const updateSpeakerName = async () => {
         const toastId = toastInstance.loading('Updating speaker names...')
         try {
-            await axiosInstance.post(`${BACKEND_URL}/update-speaker-name`, {
+            await axios.post("/api/editor/update-speaker-name", {
                 speakerName: speakerName,
                 fileId: orderDetails.fileId,
             })
@@ -341,6 +340,7 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
                 setIsSubmitModalOpen(true)
             }
         } catch (error) {
+            console.log(error)
             toastInstance.dismiss(toastId)
             toastInstance.error('Failed to update speaker names')
         }
@@ -358,7 +358,7 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
     const revertTranscript = async () => {
         const toastId = toastInstance.loading('Reverting transcript...')
         try {
-            await axiosInstance.post(`${BACKEND_URL}/revert-transcript`, {
+            await axiosInstance.post(`${FILE_CACHE_URL}/revert-transcript`, {
                 fileId: orderDetails.fileId,
                 type: 'QC'
             })

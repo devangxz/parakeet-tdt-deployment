@@ -1,6 +1,7 @@
 'use client'
 
 import { ClockIcon, Cross1Icon, ReloadIcon, TextAlignLeftIcon, ThickArrowLeftIcon, ThickArrowRightIcon } from '@radix-ui/react-icons'
+import axios from 'axios'
 import { Change, diffWords } from 'diff'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -45,8 +46,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { RenderPDFDocument } from '@/components/utils'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 import {
   ConvertedASROutput,
@@ -424,7 +423,7 @@ function EditorPage() {
       if (!spellcheckValue.length) {
         toastId = toast.loading('Running spellcheck...')
         const transcript = quillRef?.current?.getEditor().getText();
-        const response = await axiosInstance.post(`${BACKEND_URL}/spellcheck`, { transcript })
+        const response = await axios.post(`/api/editor/spellcheck`, { transcript })
         setSpellCheckValue(response.data.misspelledWords.filter((word: { word: string, suggestions: string[] }) => word.suggestions.length > 0))
         searchAndSelectInstance(response.data.misspelledWords[0].word)
         toast.dismiss(toastId)

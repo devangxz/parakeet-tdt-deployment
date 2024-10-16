@@ -12,3 +12,5 @@ declare module 'tinykeys' {
         keyBindings: Record<string, (event: KeyboardEvent) => void>
     ): () => void;
 }
+
+declare module 'simple-spellchecker';

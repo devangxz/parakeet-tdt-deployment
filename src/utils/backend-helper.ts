@@ -1,5 +1,7 @@
 import crypto from 'crypto'
+import { Readable } from 'stream'
 
+import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import paypal, {
   RecipientType,
   CreatePayoutRequestBody,
@@ -892,5 +894,145 @@ export const checkTranscriberPayment = async (batchId: string) => {
   } catch (error) {
     logger.error(`failed to get status: ${error}`)
     return false
+  }
+}
+
+const s3Client = new S3Client({
+  region: process.env.AWS_S3_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID ?? '',
+    secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY ?? '',
+  },
+})
+
+const bucketName = process.env.AWS_S3_BUCKET_NAME ?? ''
+
+export async function fileExistsInS3(key: string): Promise<boolean> {
+  logger.info(`Checking if file exists in S3: ${key}`)
+  const command = new GetObjectCommand({
+    Bucket: bucketName,
+    Key: key,
+  })
+
+  try {
+    await s3Client.send(command)
+    logger.info(`File exists in S3: ${key}`)
+    return true
+  } catch (error) {
+    if (error instanceof Error && error.name === 'NoSuchKey') {
+      logger.info(`File does not exist in S3: ${key}`)
+      return false
+    }
+    logger.error(`Error checking if file exists in S3: ${key}, ${String(error)}`)
+    throw error
+  }
+}
+
+export async function uploadToS3(
+  key: string,
+  body: Buffer | Readable | string,
+  contentType = 'text/plain'
+): Promise<void> {
+  const uploadParams = {
+    Bucket: bucketName,
+    Key: key,
+    Body: body,
+    ContentType: contentType,
+  }
+
+  logger.info(`Uploading file to S3: ${key}`)
+
+  try {
+    const command = new PutObjectCommand(uploadParams)
+    await s3Client.send(command)
+    logger.info(`File uploaded successfully to S3: ${key}`)
+  } catch (error) {
+    logger.error(`Error uploading file to S3: ${key}, ${String(error)}`)
+    throw error
+  }
+}
+
+export async function downloadFromS3(key: string): Promise<Buffer | string> {
+  const downloadParams = {
+    Bucket: bucketName,
+    Key: key,
+  }
+
+  logger.info(`Downloading file from S3: ${key}`)
+
+  try {
+    const command = new GetObjectCommand(downloadParams)
+    const response = await s3Client.send(command)
+    const { Body } = response
+
+    if (Body instanceof Readable) {
+      const data = await new Promise<Buffer>((resolve, reject) => {
+        const chunks: Buffer[] = []
+        Body.on('data', (chunk) => chunks.push(chunk))
+        Body.on('end', () => resolve(Buffer.concat(chunks)))
+        Body.on('error', reject)
+      })
+      logger.info(`File downloaded successfully from S3: ${key}`)
+      return data
+    }
+    throw new Error('Failed to download file: Invalid body stream')
+  } catch (error) {
+    logger.error(`Error downloading file from S3: ${key}, ${String(error)}`)
+    throw error
+  }
+}
+
+export async function deleteFileVersionFromS3(key: string, versionId: string): Promise<boolean> {
+  const deleteParams = {
+    Bucket: bucketName,
+    Key: key,
+    VersionId: versionId
+  }
+
+  logger.info(`Deleting file version from S3: ${key}, version: ${versionId}`)
+
+  try {
+    const command = new DeleteObjectCommand(deleteParams)
+    await s3Client.send(command)
+    logger.info(`File version deleted successfully from S3: ${key}, version: ${versionId}`)
+    return true
+  } catch (error) {
+    if (error instanceof Error && error.name === 'NotFound') {
+      logger.warn(`File version not found in S3: ${key}, version: ${versionId}`)
+      return false
+    }
+    logger.error(`Error deleting file version from S3: ${key}, version: ${versionId}, ${String(error)}`)
+    throw error
+  }
+}
+
+export async function getFileVersionFromS3(key: string, versionId: string): Promise<Buffer> {
+  const downloadParams = {
+    Bucket: bucketName,
+    Key: key,
+    VersionId: versionId
+  }
+
+  logger.info(`Downloading file version from S3: ${key}, version: ${versionId}`)
+
+  try {
+    const command = new GetObjectCommand(downloadParams)
+    const response = await s3Client.send(command)
+    const { Body } = response
+
+    if (Body instanceof Readable) {
+      const data = await new Promise<Buffer>((resolve, reject) => {
+        const chunks: Buffer[] = []
+        Body.on('data', (chunk) => chunks.push(chunk))
+        Body.on('end', () => resolve(Buffer.concat(chunks)))
+        Body.on('error', reject)
+      })
+      logger.info(`File version downloaded successfully from S3: ${key}, version: ${versionId}`)
+      return data
+    }
+    throw new Error('Failed to download file version: Invalid body stream')
+  } catch (error) {
+    logger.error(`Error downloading file version from S3: ${key}, version: ${versionId}, ${String(error)}`)
+    throw error
   }
 }

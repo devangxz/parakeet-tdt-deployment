@@ -183,5 +183,9 @@
       "medium": 0.15,
       "high": 0.2
     }
+  },
+  "job_timeout_multiplier": 4,
+  "qc": {
+    "diff_change_pc_threshold": 0
   }
 }

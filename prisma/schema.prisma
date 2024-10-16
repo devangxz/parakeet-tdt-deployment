@@ -74,6 +74,7 @@ model User {
   Bonus                     Bonus[]
   MiscEarnings              MiscEarnings[]
   FrequentTerms             FrequentTerms?
+  FileVersion               FileVersion[]
 
   @@index([role])
   @@index([email])
@@ -129,6 +130,7 @@ model File {
   Orders                    Order[]
   InvoiceFile               InvoiceFile[]
   fileStatus                FileStatus    @default(NONE) @map("file_status")
+  FileVersion               FileVersion[]
 
   @@index([userId])
   @@index([fileId])
@@ -577,6 +579,20 @@ model FrequentTerms {
   @@map("scb_frequent_terms")
 }
 
+model FileVersion {
+  id          Int             @id @default(autoincrement())
+  fileId      String          @map("file_id")
+  commitHash  String          @map("commit_hash")
+  s3VersionId String?         @map("s3_version_id")
+  userId      Int             @map("user_id")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @default(now()) @map("updated_at")
+  tag          FileTag         @default(AUTO)
+  file File @relation(fields: [fileId], references: [fileId])
+  user User @relation(fields: [userId], references: [id])
+  @@map("scb_file_versions")
+}
+
 //  ███████ ███    ██ ██    ██ ███    ███ ███████
 //  ██      ████   ██ ██    ██ ████  ████ ██
 //  █████   ██ ██  ██ ██    ██ ██ ████ ██ ███████
@@ -797,4 +813,13 @@ enum BonusType {
   DAILY
   MONTHLY
   FILE
+}
+
+enum FileTag {
+  AUTO
+  QC_EDIT
+  QC_DELIVERED
+  CUSTOMER_EDIT
+  CUSTOMER_DELIVERED
+  OM_EDIT
 }

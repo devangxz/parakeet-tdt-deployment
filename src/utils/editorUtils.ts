@@ -362,13 +362,14 @@ const reportHandler = async (reportDetails: { reportComment: string; reportOptio
         report: true,
     }))
     try {
-        await axiosInstance.post(`${BACKEND_URL}/report-file`, {
+        await axios.post(`/api/editor/report-file`, {
             ...reportDetails,
             orderId: orderId,
         })
         setReportModalOpen(false)
         setReportDetails({ reportComment: '', reportOption: '' })
     } catch (error) {
+        console.log(error)
         toast.error('Failed to report file')
     } finally {
         setButtonLoading((prevButtonLoading) => ({
@@ -443,9 +444,7 @@ const fetchFileDetails = async ({
     setCtms,
 }: FetchFileDetailsParams) => {
     try {
-        const orderRes = await axiosInstance.get(
-            `${BACKEND_URL}/order-details?orderId=${params?.orderId}`
-        )
+        const orderRes = await axios.get(`/api/editor/order-details?orderId=${params?.orderId}`)
         setOrderDetails(orderRes.data)
         setCfd(orderRes.data.cfd)
         const cfStatus = ['FORMATTED', 'REVIEWER_ASSIGNED', 'REVIEW_COMPLETED']
@@ -464,12 +463,14 @@ const fetchFileDetails = async ({
         setStep(step)
         setDownloadableType(step === 'QC' ? 'text' : 'marking')
         const transcriptRes = await axiosInstance.get(
-            `${BACKEND_URL}/fetch-transcript?fileId=${orderRes.data.fileId}&step=${step}&orderId=${orderRes.data.orderId}`
+            `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.data.fileId}&step=${step}&orderId=${orderRes.data.orderId}` //step will be used later when cf editor is implemented
         )
+        console.log(transcriptRes)
         setTranscript(transcriptRes.data.result.transcript)
         setCtms(transcriptRes.data.result.ctms)
         return orderRes.data
     } catch (error) {
+        console.log(error)
         toast.error('Failed to fetch file details')
     }
 }
@@ -589,6 +590,7 @@ const handleSubmit = async ({
     if (!orderDetails || !orderDetails.orderId || !step) return;
     const toastId = toast.loading(`Submitting Transcription...`);
     checkTranscriptForAllowedMeta(quill);
+    const transcript = quill.getText() || '';
     try {
         setButtonLoading((prevButtonLoading) => ({
             ...prevButtonLoading,
@@ -615,16 +617,13 @@ const handleSubmit = async ({
             const formData = new FormData();
             formData.append('file', fileToUpload.renamedFile);
 
-            const queryString = `fileId=${orderDetails.fileId}&orderId=${orderDetails.orderId}&mode=${editorMode.toLowerCase()}`;
-
-            await axiosInstance.post(
-                `${BACKEND_URL}/submit-qc?${queryString}`,
-                formData,
-                {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                    },
-                }
+            await axios.post(
+                `${BACKEND_URL}/submit-qc`, {
+                fileId: orderDetails.fileId,
+                orderId: orderDetails.orderId,
+                mode: editorMode.toLowerCase(),
+                transcript,
+            }
             );
         }
 
@@ -670,7 +669,7 @@ const getFrequentTermsHandler = async (
     setButtonLoading(prev => ({ ...prev, frequentTerms: true }));
 
     try {
-        const { data } = await axiosInstance.get(`${BACKEND_URL}/frequent-terms/${userId}`);
+        const { data } = await axios.get(`/api/editor/frequent-terms/${userId}`);
         if (data) {
             setFrequentTermsData(data);
             setFrequentTermsModalOpen(true);
