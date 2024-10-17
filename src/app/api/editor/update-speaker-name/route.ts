@@ -27,6 +27,7 @@ export async function POST(req: Request) {
         });
 
         if (!invoiceFile) {
+            logger.error(`Invoice not found for file ${fileId}`)
             return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
         }
 
@@ -49,6 +50,7 @@ export async function POST(req: Request) {
         });
 
         if (!currentInvoice) {
+            logger.error(`Invoice not found for file ${fileId}`)
             throw new Error('Invoice not found');
         }
 

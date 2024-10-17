@@ -25,6 +25,14 @@ import logger from '@/lib/logger'
 import paypalClient from '@/lib/paypal'
 import prisma from '@/lib/prisma'
 
+const s3Client = new S3Client({
+  region: process.env.AWS_S3_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID ?? '',
+    secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY ?? '',
+  },
+})
+
 export const getOrderOptions = async (userId: number) => {
   let options = DEFAULT_ORDER_OPTIONS
   try {
@@ -896,14 +904,6 @@ export const checkTranscriberPayment = async (batchId: string) => {
     return false
   }
 }
-
-const s3Client = new S3Client({
-  region: process.env.AWS_S3_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID ?? '',
-    secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY ?? '',
-  },
-})
 
 const bucketName = process.env.AWS_S3_BUCKET_NAME ?? ''
 

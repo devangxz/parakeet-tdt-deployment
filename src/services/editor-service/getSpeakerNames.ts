@@ -13,6 +13,7 @@ export default async function getSpeakerNames(fileId: string) {
         });
 
         if (!invoiceFile) {
+            logger.error(`Invoice not found for file ${fileId}`)
             return {
                 success: false,
                 message: `Invoice not found`
@@ -29,6 +30,7 @@ export default async function getSpeakerNames(fileId: string) {
         });
 
         if (!invoice) {
+            logger.error(`Invoice not found for file ${fileId}`)
             return {
                 success: false,
                 message: `Invoice not found`

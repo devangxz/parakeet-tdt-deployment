@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const transcriberId = user?.userId
 
     if (!orderId || !transcriberId) {
-        logger.error(``)
+        logger.error(`Missing orderId or transcriberId for order ${orderId}`)
         return NextResponse.json({ message: 'Missing orderId or transcriberId' }, { status: 400 });
     }
 

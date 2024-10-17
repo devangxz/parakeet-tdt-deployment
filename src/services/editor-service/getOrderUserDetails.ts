@@ -41,6 +41,7 @@ async function getOrderUserDetails(
         });
 
         if (!order) {
+            logger.error(`Order not found for ${orderId}`)
             throw new Error('Order not found');
         }
         // Get template details
