@@ -4,9 +4,10 @@ import logger from '@/lib/logger';
 import getSpeakerNames from '@/services/editor-service/getSpeakerNames';
 
 export async function GET(request: Request) {
+    let fileId: null | string = ''
     try {
         const { searchParams } = new URL(request.url);
-        const fileId = searchParams.get('fileId');
+        fileId = searchParams.get('fileId');
 
         if (!fileId) {
             return NextResponse.json({ error: 'File ID is required' }, { status: 400 });
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
         return NextResponse.json(speakerNamesList);
 
     } catch (error) {
-        logger.error(error);
+        logger.error(`error getting speaker name for file ${fileId}: ${error}`);
         return NextResponse.json({ error: 'Failed to fetch speaker names' }, { status: 500 });
     }
 }

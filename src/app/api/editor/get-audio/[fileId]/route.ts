@@ -1,17 +1,10 @@
 import { Readable } from 'stream';
 
-import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { NextRequest, NextResponse } from 'next/server';
 
 import logger from '@/lib/logger';
-
-const s3Client = new S3Client({
-    region: process.env.AWS_S3_REGION,
-    credentials: {
-        accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID ?? '',
-        secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY ?? '',
-    },
-})
+import s3Client from '@/lib/s3-client';
 
 export async function GET(
     request: NextRequest,
