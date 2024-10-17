@@ -1,5 +1,8 @@
+import path from 'path';
+
 import { CreateMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from 'next/server';
+import { v4 as uuidv4 } from 'uuid';
 
 import { s3Client } from '@/lib/s3Client';
 
@@ -13,12 +16,18 @@ export async function POST(req: Request) {
         }
 
         const { fileInfo } = await req.json();
-        const fileName = fileInfo.name.split('/').pop();
+
+        const fileKey = uuidv4() + path.extname(fileInfo.originalName);
 
         const command = new CreateMultipartUploadCommand({
             Bucket: process.env.AWS_S3_BUCKET_NAME,
-            Key: fileName,
+            Key: fileKey,
             ContentType: fileInfo.type,
+            Metadata: {
+                type: 'ORIGINAL_FILE',
+                user_id: user?.userId?.toString(),
+                file_name: path.parse(fileInfo.originalName).name
+            }
         });
         const data = await s3Client.send(command);
         return NextResponse.json({

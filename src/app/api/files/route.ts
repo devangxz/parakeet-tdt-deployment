@@ -4,6 +4,11 @@ import { NextResponse } from 'next/server'
 
 import { getFilesByStatus } from '@/services/file-service/get-files'
 
+// BigInt serializer
+const serializeBigInt = <T>(obj: T): T => JSON.parse(JSON.stringify(obj, (_, value) =>
+  typeof value === 'bigint' ? value.toString() : value
+));
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
@@ -24,7 +29,10 @@ export async function GET(req: Request) {
       user.internalTeamUserId
     )
 
-    const response = NextResponse.json(files)
+    // Serialize BigInt values
+    const serializedFiles = serializeBigInt(files);
+
+    const response = NextResponse.json(serializedFiles)
     response.headers.delete('x-user-token')
     return response
   } catch (error) {

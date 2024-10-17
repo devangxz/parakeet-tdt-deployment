@@ -42,7 +42,6 @@ const UploadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =
     const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
     const latestProgressRef = useRef<Record<string, number>>({});
 
-    // Debounced function to update state
     const debouncedSetUploadProgress = useCallback(
         debounce(() => {
             setUploadProgress(prevProgress => ({
@@ -62,21 +61,26 @@ const UploadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =
         setUploadingFiles([]);
         setUploadProgress({});
         latestProgressRef.current = {};
+        sessionStorage.removeItem('uploadingFiles');
+        sessionStorage.removeItem('uploadProgress');
     }, []);
 
     useEffect(() => {
-        const storedFiles = localStorage.getItem('uploadingFiles');
-        const storedProgress = localStorage.getItem('uploadProgress');
-        if (storedFiles) setUploadingFiles(JSON.parse(storedFiles));
-        if (storedProgress) {
+        const storedFiles = sessionStorage.getItem('uploadingFiles');
+        const storedProgress = sessionStorage.getItem('uploadProgress');
+
+        if (storedFiles && storedProgress) {
+            setUploadingFiles(JSON.parse(storedFiles));
             setUploadProgress(JSON.parse(storedProgress));
             latestProgressRef.current = JSON.parse(storedProgress);
         }
     }, []);
 
     useEffect(() => {
-        localStorage.setItem('uploadingFiles', JSON.stringify(uploadingFiles));
-        localStorage.setItem('uploadProgress', JSON.stringify(uploadProgress));
+        if (uploadingFiles.length > 0) {
+            sessionStorage.setItem('uploadingFiles', JSON.stringify(uploadingFiles));
+            sessionStorage.setItem('uploadProgress', JSON.stringify(uploadProgress));
+        }
     }, [uploadingFiles, uploadProgress]);
 
     return (

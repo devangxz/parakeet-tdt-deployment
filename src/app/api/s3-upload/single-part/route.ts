@@ -1,5 +1,8 @@
+import path from 'path';
+
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from 'next/server';
+import { v4 as uuidv4 } from 'uuid';
 
 import { s3Client } from '@/lib/s3Client';
 import { WORKER_QUEUE_NAMES, workerQueueService } from '@/services/worker-service';
@@ -17,20 +20,25 @@ export async function POST(req: Request) {
         }
 
         const buffer = await file.arrayBuffer();
-        const fileName = file.name;
+        const fileKey = uuidv4() + path.extname(file.name);
 
         const uploadParams = {
             Bucket: process.env.AWS_S3_BUCKET_NAME,
-            Key: fileName,
+            Key: fileKey,
             Body: Buffer.from(buffer),
             ContentType: file.type,
+            Metadata: {
+                type: 'ORIGINAL_FILE',
+                user_id: user?.userId?.toString(),
+                file_name: path.parse(file.name).name
+            }
         };
 
         const command = new PutObjectCommand(uploadParams);
         const result = await s3Client.send(command);
 
         // Create audio video conversion job
-        await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, { fileKey: fileName, user });
+        await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, { fileKey });
 
         return NextResponse.json({ message: 'File uploaded successfully', result }, { status: 200 });
     } catch (error) {

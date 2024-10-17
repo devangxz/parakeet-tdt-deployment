@@ -8,7 +8,7 @@ import { performLLMMarking } from './performLLMMarking';
 import { redis } from '../lib/redis';
 import { WORKER_QUEUE_NAMES, QueueName } from '../services/worker-service';
 
-// const WEBHOOK_URL = `${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook`;
+// const WEBHOOK_URL = `${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook/worker`;
 
 const createWorker = (queueName: QueueName, processFunction: (job: Job) => Promise<unknown>) => new Worker(queueName, async (job) => {
     try {
@@ -24,8 +24,8 @@ const createWorker = (queueName: QueueName, processFunction: (job: Job) => Promi
 
 // Create workers for each queue
 const audioVideoConversionWorker = createWorker(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, async (job) => {
-    const { fileKey, user } = job.data;
-    return await convertAudioVideo(fileKey, user);
+    const { fileKey } = job.data;
+    return await convertAudioVideo(fileKey);
 });
 
 const automaticSpeechRecognitionWorker = createWorker(WORKER_QUEUE_NAMES.AUTOMATIC_SPEECH_RECOGNITION, async (job) => {

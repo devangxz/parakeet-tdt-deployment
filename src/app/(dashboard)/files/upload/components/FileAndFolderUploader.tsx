@@ -9,8 +9,24 @@ import Dropzone from 'react-dropzone'
 import { toast } from 'sonner'
 
 import { useUpload } from '@/app/context/UploadProvider'
-import { FILE_TYPES } from '@/constants'
 import { cn } from '@/lib/utils'
+
+const ALLOWED_FILE_TYPES = [
+  'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/x-ms-wma',
+  'video/x-ms-wmv', 'video/x-msvideo', 'video/x-flv', 'video/mpeg',
+  'video/mp4', 'audio/mp4', 'video/x-m4v', 'video/quicktime',
+  'audio/ogg', 'video/ogg', 'video/webm', 'audio/aiff',
+  'audio/x-aiff', 'audio/amr', 'video/3gpp', 'audio/3gpp',
+  'video/mp2t', 'audio/aac', 'video/x-matroska', 'video/mxf',
+  'audio/opus', 'audio/flac'
+];
+
+const FILE_EXTENSIONS = [
+  '.mp3', '.wav', '.wma', '.wmv', '.avi', '.flv', '.mpg', '.mpeg',
+  '.mp4', '.m4a', '.m4v', '.mov', '.ogg', '.webm', '.aif', '.aiff',
+  '.amr', '.3gp', '.3ga', '.mts', '.ogv', '.aac', '.mkv', '.mxf',
+  '.opus', '.flac'
+];
 
 interface CustomInputAttributes
   extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -45,8 +61,8 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
     eventSourceRef.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data?.status === 'METADATA_EXTRACTED') {
-        updateUploadProgress(data?.result?.fileName, 100);
-        setUploadedFiles(prev => new Set(prev).add(data?.result?.fileName));
+        updateUploadProgress(data?.fileNameWithExtension, 100);
+        setUploadedFiles(prev => new Set(prev).add(data?.fileNameWithExtension));
         onUploadSuccess(true);
       }
     };
@@ -106,7 +122,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
   const multiPartUpload = async (file: File) => {
     try {
       const createRes = await axios.post('/api/s3-upload/multi-part/create', {
-        fileInfo: { name: file.name, type: file.type }
+        fileInfo: { type: file.type, originalName: file.name }
       });
       const { uploadId, key } = createRes.data;
 
@@ -155,16 +171,29 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
     }
   };
 
-  const handleFileOrFolderUpload = async (files: File[]) => {
-    if (files.length === 0) return;
+  const isFileAllowed = (file: File): boolean => {
+    const fileType = file.type.toLowerCase();
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    return ALLOWED_FILE_TYPES.includes(fileType) || FILE_EXTENSIONS.includes(fileExtension);
+  };
 
-    setUploadingFiles(files.map(file => ({ name: file.name, size: file.size })));
-    files.forEach(file => {
+  const handleFileOrFolderUpload = async (files: File[]) => {
+    const allowedFiles = files.filter(isFileAllowed);
+    const rejectedFiles = files.filter(file => !isFileAllowed(file));
+
+    if (rejectedFiles.length > 0) {
+      toast.error(`${rejectedFiles.length} file(s) were rejected due to unsupported file type.`);
+    }
+
+    if (allowedFiles.length === 0) return;
+
+    setUploadingFiles(allowedFiles.map(file => ({ name: file.name, size: file.size })));
+    allowedFiles.forEach(file => {
       updateUploadProgress(file.name, 0);
       uploadedBytesRef.current[file.name] = 0;
     });
 
-    for (const file of files) {
+    for (const file of allowedFiles) {
       try {
         if (file.size <= SINGLE_PART_UPLOAD_LIMIT) {
           await singlePartUpload(file);
@@ -189,7 +218,11 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
 
   return (
     <div className='bg-primary flex flex-col p-[12px] items-center justify-center rounded-[12px] border shadow-sm text-white'>
-      <Dropzone onDrop={onDrop} multiple>
+      <Dropzone
+        onDrop={onDrop}
+        multiple
+        accept={Object.fromEntries(ALLOWED_FILE_TYPES.map(type => [type, FILE_EXTENSIONS]))}
+      >
         {({ getRootProps, getInputProps, isDragActive }) => (
           <div
             {...getRootProps({
@@ -225,7 +258,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
                   Drag & drop files or folders here or use the options below.
                   <br />
                   <span className='text-xs'>
-                    mp3, wav, wma, wmv, avi, flv, mpeg, m4a supported.
+                    Supported formats: {FILE_EXTENSIONS.join(', ')}
                   </span>
                 </div>
                 <div className='flex gap-4 mt-4 font-semibold text-indigo-600 leading-[133%]'>
@@ -240,7 +273,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
                           event.target.files &&
                           handleFileOrFolderUpload(Array.from(event.target.files))
                         }
-                        accept={FILE_TYPES.join(',')}
+                        accept={FILE_EXTENSIONS.join(',')}
                       />
                       <label
                         data-testid='file-uploader'

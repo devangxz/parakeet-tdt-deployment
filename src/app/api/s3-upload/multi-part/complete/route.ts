@@ -6,9 +6,6 @@ import { WORKER_QUEUE_NAMES, workerQueueService } from '@/services/worker-servic
 
 export async function POST(req: Request) {
     try {
-        const userToken = req.headers.get('x-user-token');
-        const user = JSON.parse(userToken ?? '{}');
-
         const { sendBackData, parts } = await req.json();
 
         // Ensure parts are sorted by PartNumber
@@ -23,7 +20,7 @@ export async function POST(req: Request) {
         await s3Client.send(command);
 
         // Create audio video conversion job
-        await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, { fileKey: sendBackData.key, user });
+        await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, { fileKey: sendBackData.key });
 
         return NextResponse.json({ success: true });
     } catch (error) {

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { verifyJwt } from '@/lib/jwt';
 import { rateLimiter } from '@/lib/rateLimiter';
-import { redis } from '@/lib/redis';
 
 export async function POST(request: NextRequest) {
     // Apply rate limiting
@@ -33,16 +32,14 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
         }
 
-        const { status, result } = body;
+        const { status } = body;
 
         // Verify that the status in the JWT match the payload
         if (decoded.status !== status) {
             return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
         }
 
-        if (status === 'METADATA_EXTRACTED') {
-            await redis.publish('file-events', JSON.stringify({ status, result }));
-        } else if (status === 'completed') {
+        if (status === 'completed') {
             // Update your database or send a notification to the user
         } else if (status === 'failed') {
             // Handle the error, update your database, or notify the user
