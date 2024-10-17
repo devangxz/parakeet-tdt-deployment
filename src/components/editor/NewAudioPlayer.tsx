@@ -84,7 +84,6 @@ export default function NewAudioPlayer({ fileId, getAudioPlayer }: { fileId: str
     const [currentTime, setCurrentTime] = useState('00:00')
     const [audioDuration, setAudioDuration] = useState(0)
     const audioPlayer = useRef<HTMLAudioElement>(null);
-    const [audioUrl, setAudioUrl] = useState('')
     const [waveformUrl, setWaveformUrl] = useState('')
     const [isPlayerLoaded, setIsPlayerLoaded] = useState(false)
 
@@ -92,23 +91,20 @@ export default function NewAudioPlayer({ fileId, getAudioPlayer }: { fileId: str
 
     useShortcuts(shortcutControls as ShortcutControls);
 
-    const fetchAudioFile = async () => {
+    const fetchWaveform = async () => {
         try {
-            const response = await axiosInstance.get(`${BACKEND_URL}/get-audio/${fileId}`, { responseType: 'blob' })
-            const url = URL.createObjectURL(response.data)
-            setAudioUrl(url)
             const res = await axiosInstance.get(`${BACKEND_URL}/get-waveform/${fileId}`, { responseType: 'blob' })
             const waveformUrl = URL.createObjectURL(res.data)
             setWaveformUrl(waveformUrl)
             setIsPlayerLoaded(true)
         } catch (error) {
-            toast.error('Failed to play audio.')
+            toast.error('Failed to load waveform.')
         }
     }
 
     useEffect(() => {
         if (!fileId) return
-        fetchAudioFile()
+        fetchWaveform()
     }, [fileId])
 
     useEffect(() => {
@@ -123,7 +119,7 @@ export default function NewAudioPlayer({ fileId, getAudioPlayer }: { fileId: str
         return () => {
             audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
         };
-    }, [audioPlayer]);
+    }, [audioPlayer, getAudioPlayer]);
 
     const seekTo = (value: number) => {
         if (!audioPlayer.current) return;
@@ -151,14 +147,23 @@ export default function NewAudioPlayer({ fileId, getAudioPlayer }: { fileId: str
         }
     }
 
-    const audio = audioPlayer.current;
-    audio?.addEventListener('timeupdate', () => {
-        const currentTime = formatTime(audio.currentTime)
-        setCurrentTime(currentTime)
-        const playedPercentage =
-            (audio.currentTime / audio.duration) * 100
-        setCurrentValue(playedPercentage)
-    })
+    useEffect(() => {
+        const audio = audioPlayer.current;
+        if (!audio) return;
+
+        const handleTimeUpdate = () => {
+            const currentTime = formatTime(audio.currentTime)
+            setCurrentTime(currentTime)
+            const playedPercentage = (audio.currentTime / audio.duration) * 100
+            setCurrentValue(playedPercentage)
+        };
+
+        audio.addEventListener('timeupdate', handleTimeUpdate);
+
+        return () => {
+            audio.removeEventListener('timeupdate', handleTimeUpdate);
+        };
+    }, []);
 
     return (
         <div className='mb-3 h-1/3 relative overflow-hidden'>
@@ -175,7 +180,7 @@ export default function NewAudioPlayer({ fileId, getAudioPlayer }: { fileId: str
             </div>
             <div className='h-[55%] bg-white border border-gray-200 rounded-b-2xl px-3'>
                 <div className='w-full mt-2'>
-                    <audio ref={audioPlayer} className='hidden' src={audioUrl}></audio>
+                    <audio ref={audioPlayer} className='hidden' src={`/api/editor/get-audio/${fileId}`}></audio>
                     <Slider
                         step={0.01}
                         min={0}
