@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import { Readable } from 'stream'
 
 import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import paypal, {
   RecipientType,
   CreatePayoutRequestBody,
@@ -1034,5 +1035,32 @@ export async function getFileVersionFromS3(key: string, versionId: string): Prom
   } catch (error) {
     logger.error(`Error downloading file version from S3: ${key}, version: ${versionId}, ${String(error)}`)
     throw error
+  }
+}
+
+export async function getSignedURLFromS3(
+  key: string,
+  expires: number = 900,
+  filename?: string,
+  customBucketName?: string
+): Promise<string> {
+  const encodedFilename = encodeURIComponent(filename ?? '');
+  logger.info(`Generating signed URL for S3 object: ${key}`);
+
+  const command = new GetObjectCommand({
+    Bucket: customBucketName || bucketName,
+    Key: key,
+    ResponseContentDisposition: `attachment; filename=${encodedFilename}`,
+  });
+
+  try {
+    const signedUrl = await getSignedUrl(s3Client, command, {
+      expiresIn: expires,
+    });
+    logger.info(`Signed URL generated successfully for: ${key}`);
+    return signedUrl;
+  } catch (error) {
+    logger.error(`Error generating signed URL for ${key}: ${String(error)}`);
+    throw error;
   }
 }

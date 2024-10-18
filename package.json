@@ -53,6 +53,8 @@
     "@tanstack/react-table": "^8.0.13",
     "@types/next": "^9.0.0",
     "@types/react-google-recaptcha": "^2.1.9",
+    "assemblyai": "^4.7.1",
+    "aws-sdk": "^2.1691.0",
     "axios": "^1.6.8",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",

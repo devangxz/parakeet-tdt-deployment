@@ -23,6 +23,11 @@ const audioVideoConversionWorker = createWorker(WORKER_QUEUE_NAMES.AUDIO_VIDEO_C
     return await convertAudioVideo(fileKey, userEmailId);
 });
 
+const automaticSpeechRecognitionWorker = createWorker(WORKER_QUEUE_NAMES.AUTOMATIC_SPEECH_RECOGNITION, async (job) => {
+    const { fileId } = job.data;
+    return await performASR(fileId);
+});
+
 logger.info('All workers started');
 
 export { audioVideoConversionWorker };
