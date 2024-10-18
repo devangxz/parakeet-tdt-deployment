@@ -19,6 +19,7 @@ export const EMAIL_MAX_LENGTH = config.emailMaxLength
 // files
 export const FILE_TYPES = config.fileTypes
 export const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL
+export const FILE_CACHE_URL = process.env.NEXT_PUBLIC_FILE_CACHE_URL
 
 export const RUSH_ORDER_PRICE = config.rush_order_price
 export const STRICT_VERBATIUM_PRICE = config.strict_verbatium_price
@@ -55,6 +56,7 @@ export const BASE_FARE = config.BASE_FARE
 export const MINIMUM_AUDIO_PLAYBACK_PERCENTAGE =
   config.minimum_audio_playback_percentage
 export const AUTOSAVE_INTERVAL = config.autosave_interval
+export const ALLOWED_META = config.allowed_meta
 export const DEFAULT_ORDER_OPTIONS = config.default_order_options
 export const ORDER_TYPES = config.order_types
 export const FILE_UPLOAD_LIMIT_IN_HOUR = config.file_upload_limit_in_hour

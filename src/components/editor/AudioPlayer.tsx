@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import WaveSurfer from 'wavesurfer.js'
 
-import { PlayerControls } from '../../app/editor/dev/[orderId]/page';
+import { PlayerControls } from '../../app/editor/[orderId]/page';
 import 'rc-slider/assets/index.css';
 import { BACKEND_URL } from '@/constants'
 import axiosInstance from '@/utils/axios'

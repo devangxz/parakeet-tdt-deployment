@@ -1,12 +1,14 @@
 'use client'
 
-import { ArrowLeftIcon, CaretDownIcon, Cross1Icon } from '@radix-ui/react-icons'
+import { ArrowLeftIcon, CaretDownIcon, Cross1Icon, PlusIcon } from '@radix-ui/react-icons'
 import axios from 'axios';
 import Image from "next/image";
-import { KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import ReactQuill from 'react-quill';
 import { toast as toastInstance } from 'sonner'
 
+import ConfigureShortcutsDialog from './ConfigureShortcutsDialog';
+import ShortcutsReferenceDialog from './ShortcutsReferenceDialog';
 import { Checkbox } from '../ui/checkbox';
 import { Textarea } from '../ui/textarea';
 import { OrderDetails } from '@/app/editor/dev/[orderId]/page';
@@ -16,22 +18,28 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useToast } from "@/components/ui/use-toast"
-import { BACKEND_URL } from '@/constants';
+import { BACKEND_URL, FILE_CACHE_URL } from '@/constants';
 import axiosInstance from '@/utils/axios';
-import DefaultShortcuts, { getAllShortcuts, setShortcut } from '@/utils/editorAudioPlayerShortcuts';
+import DefaultShortcuts, { ShortcutControls, setShortcut, getAllShortcuts, useShortcuts } from '@/utils/editorAudioPlayerShortcuts';
+import { replaceTextHandler, searchAndSelect } from '@/utils/editorUtils';
 
-export default function NewHeader({ editorModeOptions, getEditorMode, editorMode, notes, setNotes, quillRef, orderDetails, audioPlayer }: { editorModeOptions: string[], getEditorMode: (editorMode: string) => void, editorMode: string, notes: string, setNotes: React.Dispatch<React.SetStateAction<string>>, quillRef: React.RefObject<ReactQuill> | undefined, orderDetails: OrderDetails, audioPlayer: HTMLAudioElement | null }) {
-    const [isShortcutReferenceModalOpen, setIsShortcutReferenceModalOpen] = useState(false)
-    const [isShortcutConfigModalOpen, setIsShortcutConfigModalOpen] = useState(false)
-    const [selectedAction, setSelectedAction] = useState<keyof DefaultShortcuts | ''>('')
-    const [newShortcut, setNewShortcut] = useState<string>('')
-    const [shortcuts, setShortcuts] = useState<{ key: string, shortcut: string, originalKey: string }[]>([]);
+type NewHeaderProps = {
+    editorModeOptions: string[];
+    getEditorMode: (editorMode: string) => void;
+    editorMode: string;
+    notes: string;
+    setNotes: React.Dispatch<React.SetStateAction<string>>;
+    quillRef: React.RefObject<ReactQuill> | undefined;
+    orderDetails: OrderDetails;
+    audioPlayer: HTMLAudioElement | null;
+    submitting: boolean;
+    setIsSubmitModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+};
+
+export default function NewHeader({ editorModeOptions, getEditorMode, editorMode, notes, setNotes, quillRef, orderDetails, audioPlayer, submitting, setIsSubmitModalOpen }: NewHeaderProps) {
     const [newEditorMode, setNewEditorMode] = useState<string>('')
     const [notesOpen, setNotesOpen] = useState(false);
+    const [shortcuts, setShortcuts] = useState<{ key: string, shortcut: string }[]>([]);
     const [position, setPosition] = useState({ x: 100, y: 100 });
     const [findAndReplaceOpen, setFindAndReplaceOpen] = useState(false);
     const [findText, setFindText] = useState('');
@@ -40,12 +48,76 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
     const [matchCase, setMatchCase] = useState(false);
     const [videoUrl, setVideoUrl] = useState('');
     const [videoPlayerOpen, setVideoPlayerOpen] = useState(false);
+    const [revertTranscriptOpen, setRevertTranscriptOpen] = useState(false);
+    const [isSpeakerNameModalOpen, setIsSpeakerNameModalOpen] = useState(false);
+    const [speakerName, setSpeakerName] = useState<{ [key: string]: string } | null>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
+    const [autoCapitalize, setAutoCapitalize] = useState(true);
+    const autoCapitalizeRef = useRef(autoCapitalize);
+    const previousEditorContentRef = useRef('');
+    const [isShortcutsReferenceModalOpen, setIsShortcutsReferenceModalOpen] = useState(false);
+    const [isConfigureShortcutsModalOpen, setIsConfigureShortcutsModalOpen] = useState(false);
 
-    const { toast } = useToast()
     useEffect(() => {
         setShortcuts(getAllShortcuts());
-    }, [])
+    }, []);
+
+    const updateShortcut = (action: keyof DefaultShortcuts, newShortcut: string) => {
+        setShortcut(action, newShortcut);
+        setShortcuts(getAllShortcuts());
+    };
+
+    const replaceTextInstance = (findText: string, replaceText: string, replaceAll = false) => {
+        if (!quillRef?.current) return;
+        const quill = quillRef.current.getEditor();
+        replaceTextHandler(quill, findText, replaceText, replaceAll, matchCase, toastInstance);
+    };
+
+    const searchAndSelectInstance = (searchText: string) => {
+        if (!quillRef?.current) return;
+        const quill = quillRef.current.getEditor();
+        searchAndSelect(quill, searchText, matchCase, lastSearchIndex, setLastSearchIndex, toastInstance);
+    };
+
+    useEffect(() => {
+        autoCapitalizeRef.current = autoCapitalize;
+    }, [autoCapitalize]);
+
+    const shortcutControls = useMemo(() => {
+        const controls: Partial<ShortcutControls> = {
+            findNextOccurrenceOfString: () => {
+                if (!findAndReplaceOpen) {
+                    setFindAndReplaceOpen(true);
+                } else if (findText) {
+                    searchAndSelectInstance(findText);
+                }
+            },
+            findThePreviousOccurrenceOfString: () => {
+                if (!findAndReplaceOpen) {
+                    setFindAndReplaceOpen(true);
+                } else if (findText) {
+                    searchAndSelectInstance(findText);
+                }
+            },
+            replaceNextOccurrenceOfString: () => {
+                if (!findAndReplaceOpen) {
+                    setFindAndReplaceOpen(true);
+                } else if (findText && replaceText) {
+                    replaceTextInstance(findText, replaceText);
+                }
+            },
+            replaceAllOccurrencesOfString: () => {
+                if (!findAndReplaceOpen) {
+                    setFindAndReplaceOpen(true);
+                } else if (findText && replaceText) {
+                    replaceTextInstance(findText, replaceText, true);
+                }
+            },
+        };
+        return controls as ShortcutControls;
+    }, [findAndReplaceOpen, findText, replaceText]);
+
+    useShortcuts(shortcutControls);
 
     useEffect(() => {
         const syncVideoWithAudio = () => {
@@ -83,137 +155,56 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
         }
     }
 
-    const searchAndSelect = (searchText: string) => {
-        if (!quillRef) return;
-        const quill = quillRef.current?.getEditor()
-        if (!quill) return
+    const handleAutoCapitalize = useCallback((
+        delta: { ops: { insert?: string | object; delete?: number; retain?: number; attributes?: { [key: string]: unknown } }[] },
+        oldDelta: { ops: { insert?: string | object; delete?: number; retain?: number; attributes?: { [key: string]: unknown } }[] },
+        source: 'api' | 'user' | 'silent'
+    ) => {
+        if (!quillRef?.current || !autoCapitalizeRef.current || source !== 'user') return;
 
-        const text = quill.getText()
-        const currentSelection = quill.getSelection()
-        let startIndex = 0
+        const quill = quillRef.current.getEditor();
+        const newText = quill.getText();
+        if (newText === previousEditorContentRef.current) return;
 
-        const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase();
+        const change = delta.ops[0];
 
-        // Check if the current selection matches the search text and adjust the start index accordingly
-        if (currentSelection) {
-            const selectionText = text.substr(currentSelection.index, currentSelection.length);
-            if ((matchCase && selectionText === searchText) || (!matchCase && selectionText.toLowerCase() === effectiveSearchText)) {
-                startIndex = currentSelection.index + searchText.length
-            } else {
-                startIndex = lastSearchIndex + 1
+        const shouldCapitalize = (index: number): boolean =>
+            index === 0 || (index > 0 && /[.!?]\s$/.test(newText.slice(0, index)));
+
+        const capitalizeChar = (index: number): void => {
+            const char = newText[index];
+            if (/^[a-zA-Z]$/.test(char) && char !== char.toUpperCase()) {
+                quill.deleteText(index, 1);
+                quill.insertText(index, char.toUpperCase(), quill.getFormat());
+                quill.setSelection(index + 1, 0);
             }
-        }
-
-        let index = matchCase ? text.indexOf(searchText, startIndex) : text.toLowerCase().indexOf(effectiveSearchText, startIndex);
-
-        // If not found from the current position, start from the beginning
-        if (index === -1 && startIndex !== 0) {
-            startIndex = 0
-            index = matchCase ? text.indexOf(searchText, startIndex) : text.toLowerCase().indexOf(effectiveSearchText, startIndex);
-        }
-
-        if (index !== -1) {
-            // Select the found text
-            quill.setSelection(index, searchText.length)
-            setLastSearchIndex(index)
-        } else {
-            // If text is not found, reset the search
-            setLastSearchIndex(-1)
-            toastInstance.error('Text not found')
-        }
-    }
-
-    const replaceTextHandler = (searchText: string, replaceWith: string, replaceAll = false) => {
-        if (!quillRef) return;
-        const quill = quillRef.current?.getEditor();
-        if (!quill) return;
-
-        const text = quill.getText();
-        let startIndex = 0;
-        let replaced = false;
-
-        const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase();
-        const textToSearch = matchCase ? text : text.toLowerCase();
-
-        const replace = (index: number) => {
-            quill.deleteText(index, searchText.length);
-            quill.insertText(index, replaceWith);
-            quill.setSelection(index, replaceWith.length);
-            replaced = true;
         };
 
-        if (replaceAll) {
-            while (startIndex <= text.length) {
-                const index = textToSearch.indexOf(effectiveSearchText, startIndex);
-                if (index === -1) break;
-                replace(index);
-                startIndex = index + replaceWith.length;
+        if ('insert' in change || ('retain' in change && newText.length > previousEditorContentRef.current.length)) {
+            const insertIndex = 'retain' in change ? change.retain || 0 : 0;
+            if (shouldCapitalize(insertIndex)) {
+                capitalizeChar(insertIndex);
             }
-        } else {
-            const index = textToSearch.indexOf(effectiveSearchText, startIndex);
-            if (index !== -1) {
-                replace(index);
+        } else if ('delete' in change) {
+            const deleteIndex = 'retain' in change ? change.retain || 0 : 0;
+            if (deleteIndex > 0 && shouldCapitalize(deleteIndex)) {
+                capitalizeChar(deleteIndex);
             }
         }
 
-        if (!replaced) {
-            toastInstance.error('Text not found');
-        }
-    }
+        previousEditorContentRef.current = newText;
+    }, [quillRef]);
 
-    const handleShortcutConfigSave = () => {
-        const toastStyle = {
-            background: '#FAE7E7',
-            color: '#F06868',
-            borderColor: '#F17A7A'
-        }
-        if (selectedAction === '' || newShortcut === '') {
-            toast({
-                title: selectedAction === '' ? "Please select an action" : "Please enter a shortcut",
-                style: toastStyle,
+    useEffect(() => {
+        if (!quillRef?.current) return;
 
-            })
-            return;
-        }
+        const quill = quillRef.current.getEditor();
+        quill.on('text-change', handleAutoCapitalize);
 
-        for (let i = 0; i < shortcuts.length; i++) {
-            const item = shortcuts[i];
-            if (item.shortcut.toUpperCase() === newShortcut.toUpperCase()) {
-                toast({
-                    title: `This shortcut is already in use for ${item.key}`,
-                    style: toastStyle,
-                })
-                return;
-            }
-        }
-        setShortcut(selectedAction, newShortcut);
-        setIsShortcutConfigModalOpen(false);
-        setSelectedAction('');
-        setNewShortcut('');
-    }
-
-    const handleShortcutConfigKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-        e.preventDefault();
-
-        // Gather the key pressed and any modifiers
-        const { key, ctrlKey, shiftKey, altKey, metaKey, code } = e;
-
-        // Build the combination string, excluding the name of the modifier if the corresponding modifier key was not pressed
-        let combination = '';
-        if (ctrlKey) combination += 'Ctrl+';
-        if (shiftKey) combination += 'Shift+';
-        if (altKey) combination += 'Alt+';
-        if (metaKey) combination += 'Command+';
-        if (key !== 'Control' && key !== 'Shift' && key !== 'Alt' && key !== 'Meta') {
-            if (altKey) {
-                combination += code.replace('Key', '');
-            } else {
-                combination += key;
-            }
-        }
-
-        setNewShortcut(combination);
-    }
+        return () => {
+            quill.off('text-change', handleAutoCapitalize);
+        };
+    }, [quillRef, handleAutoCapitalize]);
 
     const handleDragChange = (e: React.MouseEvent<HTMLDivElement | HTMLVideoElement>) => {
         e.preventDefault();
@@ -239,6 +230,10 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
         setNotes(text)
     }
 
+    const toggleAutoCapitalize = () => {
+        setAutoCapitalize(!autoCapitalize)
+    }
+
     const toggleNotes = () => {
         setNotesOpen(!notesOpen);
     }
@@ -246,6 +241,52 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
     const toggleFindAndReplace = () => {
         setFindAndReplaceOpen(!findAndReplaceOpen);
     }
+
+    const toggleRevertTranscript = () => {
+        setRevertTranscriptOpen(!revertTranscriptOpen);
+    }
+
+    const toggleSpeakerName = async () => {
+        // Extract unique speakers from the transcript
+        try {
+            if (quillRef && quillRef.current && !speakerName) {
+                const quill = quillRef.current.getEditor();
+                const text = quill.getText();
+                const speakerRegex = /\d{1,2}:\d{2}:\d{2}\.\d\s+(S\d+):/g;
+                const speakers = new Set<string>();
+                let match;
+
+                while ((match = speakerRegex.exec(text)) !== null) {
+                    speakers.add(match[1]);
+                }
+
+                const response = await axios.get(`/api/editor/get-speaker-names?fileId=${orderDetails.fileId}`);
+                const speakerNamesList = response.data;
+                // Update the speakerName state
+                const newSpeakerNames: Record<string, string> = {};
+                const maxSpeakers = Math.max(speakers.size, speakerNamesList.length);
+
+                for (let i = 0; i < maxSpeakers; i++) {
+                    const speaker = Array.from(speakers)[i] || `S${i + 1}`;
+                    if (speakerNamesList && speakerNamesList[i] && (speakerNamesList[i].fn || speakerNamesList[i].ln)) {
+                        const { fn, ln } = speakerNamesList[i];
+                        newSpeakerNames[speaker] = `${fn} ${ln}`.trim();
+                    } else {
+                        newSpeakerNames[speaker] = `Speaker ${i + 1}`;
+                    }
+                }
+
+                setSpeakerName(prevState => ({
+                    ...prevState,
+                    ...newSpeakerNames
+                }));
+
+            }
+            setIsSpeakerNameModalOpen(!isSpeakerNameModalOpen);
+        } catch (error) {
+            toastInstance.error('An error occurred while opening the speaker name modal')
+        }
+    };
 
     const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const text = e.target.value
@@ -258,15 +299,15 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
     }
 
     const findHandler = () => {
-        searchAndSelect(findText);
+        searchAndSelectInstance(findText);
     }
 
     const replaceOneHandler = () => {
-        replaceTextHandler(findText, replaceText);
+        replaceTextInstance(findText, replaceText);
     }
 
     const replaceAllHandler = () => {
-        replaceTextHandler(findText, replaceText, true);
+        replaceTextInstance(findText, replaceText, true);
     }
 
     const handleToggleVideo = async () => {
@@ -280,6 +321,61 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
         }
         toastInstance.dismiss(toastId)
     }
+
+    const handleSpeakerNameChange = (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
+        setSpeakerName(prev => ({ ...prev, [key]: e.target.value }))
+    }
+
+    const updateSpeakerName = async () => {
+        const toastId = toastInstance.loading('Updating speaker names...')
+        try {
+            await axios.post("/api/editor/update-speaker-name", {
+                speakerName: speakerName,
+                fileId: orderDetails.fileId,
+            })
+            toastInstance.dismiss(toastId)
+            toastInstance.success('Speaker names updated successfully')
+            setIsSpeakerNameModalOpen(false)
+            if (submitting) {
+                setIsSubmitModalOpen(true)
+            }
+        } catch (error) {
+            console.log(error)
+            toastInstance.dismiss(toastId)
+            toastInstance.error('Failed to update speaker names')
+        }
+    }
+
+    const addSpeakerName = async () => {
+        if (!speakerName) return
+        const newKey = `S${Object.keys(speakerName).length + 1}`;
+        setSpeakerName(prev => ({
+            ...prev,
+            [newKey]: 'Speaker ' + (Object.keys(speakerName).length + 1)
+        }));
+    }
+
+    const revertTranscript = async () => {
+        const toastId = toastInstance.loading('Reverting transcript...')
+        try {
+            await axiosInstance.post(`${FILE_CACHE_URL}/revert-transcript`, {
+                fileId: orderDetails.fileId,
+                type: 'QC'
+            })
+            toastInstance.success('Transcript reverted successfully')
+            window.location.reload();
+            return;
+        } catch (error) {
+            toastInstance.dismiss(toastId)
+            toastInstance.error('Failed to revert transcript')
+        }
+    }
+
+    useEffect(() => {
+        if (submitting) {
+            toggleSpeakerName()
+        }
+    }, [submitting])
 
     return <header className="bg-white px-16 flex justify-between items-center py-5 shadow">
         <div>
@@ -303,11 +399,16 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
                             <CaretDownIcon />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
-                            <DropdownMenuItem onClick={() => setIsShortcutReferenceModalOpen(true)}>Shortcuts Reference</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setIsShortcutConfigModalOpen(true)}>Configure Shortcuts</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setIsShortcutsReferenceModalOpen(true)}>Shortcuts Reference</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setIsConfigureShortcutsModalOpen(true)}>Configure Shortcuts</DropdownMenuItem>
+                            <DropdownMenuItem onClick={toggleRevertTranscript}>Revert Transcript</DropdownMenuItem>
                             <DropdownMenuItem onClick={handleToggleVideo}>Toggle Video</DropdownMenuItem>
                             <DropdownMenuItem onClick={toggleNotes}>Notes</DropdownMenuItem>
                             <DropdownMenuItem onClick={toggleFindAndReplace}>Find and Replace</DropdownMenuItem>
+                            <DropdownMenuItem onClick={toggleSpeakerName}>Speaker Names</DropdownMenuItem>
+                            <DropdownMenuItem onClick={toggleAutoCapitalize}>
+                                {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
+                            </DropdownMenuItem>
                             <DialogTrigger asChild>
                                 {/* <DropdownMenuItem>Change Editor Mode</DropdownMenuItem> */}
                             </DialogTrigger>
@@ -335,58 +436,77 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
 
             </div>
         </div>
-        <Dialog open={isShortcutReferenceModalOpen} onOpenChange={setIsShortcutReferenceModalOpen}>
-            <DialogContent>
+
+        <ShortcutsReferenceDialog isShortcutsReferenceModalOpen={isShortcutsReferenceModalOpen} setIsShortcutsReferenceModalOpen={setIsShortcutsReferenceModalOpen} shortcuts={shortcuts} setShortcuts={setShortcuts} />
+        <ConfigureShortcutsDialog isConfigureShortcutsModalOpen={isConfigureShortcutsModalOpen} setIsConfigureShortcutsModalOpen={setIsConfigureShortcutsModalOpen} shortcuts={shortcuts} updateShortcut={updateShortcut} />
+
+        <Dialog open={isSpeakerNameModalOpen} onOpenChange={setIsSpeakerNameModalOpen}>
+            <DialogContent className="max-w-4xl w-2/4">
                 <DialogHeader>
-                    <DialogTitle>Shortcuts Reference</DialogTitle>
+                    <DialogTitle>Speaker Names</DialogTitle>
                     <DialogDescription>
-                        Reference to all your shortcuts.
+                        Please enter the speaker names below
                     </DialogDescription>
-                    <ScrollArea className="max-h-[500px] rounded-md border p-4">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Action</TableHead>
-                                    <TableHead>Shortcuts</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {shortcuts.map((item) => (
-                                    <TableRow key={item.key}>
-                                        <TableCell className="font-medium">{item.key}</TableCell>
-                                        <TableCell>{item.shortcut.toUpperCase()}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </ScrollArea>
                 </DialogHeader>
+
+                <div className="space-y-4">
+                    {speakerName && Object.entries(speakerName).map(([key, value], index) => (
+                        <div key={key} className="flex items-center justify-start space-x-2">
+                            <Label htmlFor={key}>{key}:</Label>
+                            <Input
+                                id={key}
+                                value={value}
+                                onChange={(e) => handleSpeakerNameChange(e, key)}
+                                className="w-4/5"
+                            />
+                            {index === Object.entries(speakerName).length - 1 && (
+                                <button onClick={addSpeakerName} title='Add Speaker' className="ml-2 text-red-500 font-bold">
+                                    <PlusIcon />
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                </div>
+
+                <div className="space-y-4 mt-4">
+                    <p className="text-sm text-gray-500">Please follow the rules below to determine the speaker name, in order:</p>
+                    <ol className="list-decimal list-inside text-sm text-gray-500 space-y-1">
+                        <li>The name as spoken in the audio if the customer instruction is present.</li>
+                        <li>The name as mentioned in the customer instructions.</li>
+                        <li>If the customer instructions (CI) explicitly stated that we should use the names they listed in the CI instead of the names mentioned in the audio, then that CI should be followed.</li>
+                        <li>Leave blank otherwise. Do <strong>NOT</strong> use Interviewer/Interviewee or any other format unless specified explicitly by the customer.</li>
+                    </ol>
+                    <p className="text-sm font-semibold">Customer Instructions:</p>
+                    <p className="text-sm text-gray-500 italic">
+                        {/* Add actual customer instructions here if available */}
+                        No specific instructions provided.
+                    </p>
+                </div>
+
+                <div className="mt-6 flex justify-between">
+                    <Button variant="outline" onClick={() => setIsSpeakerNameModalOpen(false)}>
+                        Close
+                    </Button>
+                    <Button onClick={updateSpeakerName}>Update</Button>
+                </div>
             </DialogContent>
         </Dialog>
-        <Dialog open={isShortcutConfigModalOpen} onOpenChange={setIsShortcutConfigModalOpen}>
+
+        <Dialog open={revertTranscriptOpen} onOpenChange={setRevertTranscriptOpen}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Configure Shortcuts</DialogTitle>
+                    <DialogTitle>Revert Transcript</DialogTitle>
                     <DialogDescription>
-                        Configure all your shortcuts.
+                        Please confirm that the transcript has to be reverted to the original version.
                     </DialogDescription>
                     <div className='h-2'></div>
-                    <div className='flex flex-col h-36 justify-between'>
-                        <Select value={selectedAction} onValueChange={(value) => setSelectedAction(value as keyof DefaultShortcuts)}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select an action" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectGroup>
-                                    <SelectLabel>Actions</SelectLabel>
-                                    {shortcuts.map((item) => (
-                                        <SelectItem key={item.key} value={item.originalKey}>{item.key}</SelectItem>
-                                    ))}
-                                </SelectGroup>
-                            </SelectContent>
-                        </Select>
-                        <Input value={newShortcut} onKeyDown={handleShortcutConfigKeyDown} type='text' placeholder='Enter a shortcut' />
-                        <Button onClick={handleShortcutConfigSave}>Save</Button>
+                    <div className='flex justify-center items-center text-center text-red-500'>
+                        All edits made will be discarded. This action is irreversible and cannot be un-done. If you have made any changes, then we recommend that you save the current version by copy pasting it into a new document before reverting.
+                    </div>
+                    <div className='h-2' />
+                    <div className='flex justify-end'>
+                        <Button className='mr-2' variant="destructive" onClick={revertTranscript}>Revert</Button>
+                        <Button variant="outline" onClick={() => setRevertTranscriptOpen(false)}>Cancel</Button>
                     </div>
                 </DialogHeader>
             </DialogContent>

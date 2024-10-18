@@ -1,11 +1,12 @@
 'use client'
 
 //import { diffWords } from 'diff'
-import React, { useRef, useState, useEffect, useCallback } from 'react'
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 
 import { LineData, CTMSWord, WordData } from './transcriptUtils'
+import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 import { ConvertedASROutput, } from '@/utils/editorUtils'
 
 // TODO:  Add valid values (start, end, duration, speaker) for the changed words.
@@ -150,6 +151,89 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
             currentPosition++ // +1 for the newline
         }
     }, [lines, duration, audioPlayer])
+
+    const handlePlayAudioAtCursorPositionShortcut = useCallback(() => {
+        const quill = quillRef.current?.getEditor();
+        if (!quill) return;
+
+        const currentSelection = quill.getSelection();
+        if (!currentSelection) return;
+
+        const text = quill.getText();
+        const cursorPosition = currentSelection.index;
+
+        let wordStart = cursorPosition;
+        let wordEnd = cursorPosition;
+
+        while (wordStart > 0 && text[wordStart - 1] !== ' ' && text[wordStart - 1] !== '\n') {
+            wordStart--;
+        }
+
+        while (wordEnd < text.length && text[wordEnd] !== ' ' && text[wordEnd] !== '\n') {
+            wordEnd++;
+        }
+
+        quill.setSelection(wordStart, wordEnd - wordStart);
+        handleEditorClick();
+    }, [handleEditorClick]);
+
+    const insertTimestampBlankAtCursorPosition = useCallback(() => {
+        if (!audioPlayer || !quillRef.current) return;
+
+        const quill = quillRef.current.getEditor();
+        const currentTime = audioPlayer.currentTime;
+
+        const hours = Math.floor(currentTime / 3600);
+        const minutes = Math.floor((currentTime % 3600) / 60);
+        const seconds = Math.floor(currentTime % 60);
+        const milliseconds = Math.floor((currentTime % 1) * 10);
+
+        const formattedTime = ` [${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds}] ____`;
+
+        const cursorPosition = quill.getSelection()?.index || 0;
+        quill.insertText(cursorPosition, formattedTime);
+        // quill.formatText(cursorPosition, formattedTime.length, { color: 'red' });
+
+        quill.setSelection(cursorPosition + formattedTime.length, 0);
+    }, [audioPlayer]);
+
+    const insertTimestampAndSpeakerInitialAtStartOfCurrentLine = useCallback(() => {
+        if (!audioPlayer || !quillRef.current) return;
+
+        const quill = quillRef.current.getEditor();
+        const currentTime = audioPlayer.currentTime;
+
+        const hours = Math.floor(currentTime / 3600);
+        const minutes = Math.floor((currentTime % 3600) / 60);
+        const seconds = Math.floor(currentTime % 60);
+        const milliseconds = Math.floor((currentTime % 1) * 100);
+
+        const formattedTime = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds} `;
+
+        const currentSelection = quill.getSelection();
+
+        let paragraphStart = currentSelection ? currentSelection.index : 0;
+        while (paragraphStart > 0 && quill.getText(paragraphStart - 1, 1) !== '\n') {
+            paragraphStart--;
+        }
+
+        quill.insertText(paragraphStart, formattedTime, 'user');
+
+        if (currentSelection) {
+            quill.setSelection(currentSelection.index + formattedTime.length, currentSelection.length);
+        }
+    }, [audioPlayer]);
+
+    const shortcutControls = useMemo(() => {
+        const controls: Partial<ShortcutControls> = {
+            playAudioAtCursorPosition: handlePlayAudioAtCursorPositionShortcut,
+            insertTimestampBlankAtCursorPosition,
+            insertTimestampAndSpeakerInitialAtStartOfCurrentLine,
+        };
+        return controls as ShortcutControls;
+    }, [handlePlayAudioAtCursorPositionShortcut, insertTimestampBlankAtCursorPosition, insertTimestampAndSpeakerInitialAtStartOfCurrentLine]);
+
+    useShortcuts(shortcutControls);
 
     const handleTimeUpdate = () => {
         if (!audioPlayer || disableGoToWord) return;
