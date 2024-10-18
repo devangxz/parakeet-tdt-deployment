@@ -4,8 +4,6 @@ import * as path from 'path';
 import { Readable } from 'stream';
 
 import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
-import ffmpegPath from '@ffmpeg-installer/ffmpeg';
-import ffprobePath from '@ffprobe-installer/ffprobe';
 import ffmpeg from 'fluent-ffmpeg';
 
 import logger from '../lib/logger';
@@ -13,9 +11,11 @@ import prisma from '../lib/prisma';
 import { s3Client } from '../lib/s3Client';
 import { getAWSSesInstance } from '../lib/ses';
 
-const ffmpegPathToUse = process.env.FFMPEG_PATH || ffmpegPath.path;
-ffmpeg.setFfmpegPath(ffmpegPathToUse);
-ffmpeg.setFfprobePath(ffprobePath.path);
+const ffmpegPath = process.env.FFMPEG_PATH;
+const ffprobePath = process.env.FFPROBE_PATH;
+
+if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
+if (ffprobePath) ffmpeg.setFfprobePath(ffprobePath);
 
 const DURATION_DIFF = 0.5;
 const ERROR_CODES = {
