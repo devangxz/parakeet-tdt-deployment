@@ -4,6 +4,7 @@ import { CreateMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 
+import logger from '@/lib/logger';
 import { s3Client } from '@/lib/s3Client';
 
 export async function POST(req: Request) {
@@ -35,6 +36,7 @@ export async function POST(req: Request) {
             key: data.Key,
         });
     } catch (error) {
+        logger.error(`Error aborting multipart upload: ${error}.`);
         return NextResponse.json({ error: (error as Error).message }, { status: 500 });
     }
 }

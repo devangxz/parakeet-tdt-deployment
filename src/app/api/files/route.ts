@@ -3,11 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 
 import { getFilesByStatus } from '@/services/file-service/get-files'
-
-// BigInt serializer
-const serializeBigInt = <T>(obj: T): T => JSON.parse(JSON.stringify(obj, (_, value) =>
-  typeof value === 'bigint' ? value.toString() : value
-));
+import serializeBigInt from '@/utils/serializeBigInt'
 
 export async function GET(req: Request) {
   try {
@@ -29,7 +25,6 @@ export async function GET(req: Request) {
       user.internalTeamUserId
     )
 
-    // Serialize BigInt values
     const serializedFiles = serializeBigInt(files);
 
     const response = NextResponse.json(serializedFiles)

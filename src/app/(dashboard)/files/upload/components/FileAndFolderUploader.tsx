@@ -2,13 +2,14 @@
 
 import { UploadIcon } from '@radix-ui/react-icons'
 import axios from 'axios'
-import { FileUp, FolderUp } from 'lucide-react'
+import { FolderUp } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import React, { useState, useCallback, ChangeEvent, useEffect, useRef } from 'react'
 import Dropzone from 'react-dropzone'
 import { toast } from 'sonner'
 
 import { useUpload } from '@/app/context/UploadProvider'
+import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE } from '@/constants'
 import { cn } from '@/lib/utils'
 
 const ALLOWED_FILE_TYPES = [
@@ -42,9 +43,6 @@ interface UploadPart {
   ETag?: string;
   PartNumber: number;
 }
-
-const SINGLE_PART_UPLOAD_LIMIT = 20 * 1024 * 1024;
-const CHUNK_SIZE = 20 * 1024 * 1024;
 
 const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadSuccess }) => {
   const { data: session } = useSession()
@@ -114,8 +112,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
       });
       return;
     } catch (error) {
-      console.error(`Error in single-part upload for file ${file.name}:`, error);
-      throw error;
+      toast.error('An error occurred during file upload. Please try again.');
     }
   };
 
@@ -126,13 +123,13 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
       });
       const { uploadId, key } = createRes.data;
 
-      const numChunks = Math.ceil(file.size / CHUNK_SIZE);
+      const numChunks = Math.ceil(file.size / MULTI_PART_UPLOAD_CHUNK_SIZE);
       const parts: UploadPart[] = [];
       let totalUploaded = 0;
 
       for (let i = 0; i < numChunks; i++) {
-        const start = i * CHUNK_SIZE;
-        const end = Math.min(start + CHUNK_SIZE, file.size);
+        const start = i * MULTI_PART_UPLOAD_CHUNK_SIZE;
+        const end = Math.min(start + MULTI_PART_UPLOAD_CHUNK_SIZE, file.size);
         const chunk = file.slice(start, end);
         const chunkSize = chunk.size;
 
@@ -146,7 +143,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
           headers: { 'Content-Type': file.type },
           onUploadProgress: (progressEvent) => {
             const chunkLoaded = progressEvent.loaded;
-            totalUploaded = i * CHUNK_SIZE + chunkLoaded;
+            totalUploaded = i * MULTI_PART_UPLOAD_CHUNK_SIZE + chunkLoaded;
             const overallProgress = (totalUploaded / file.size) * 100;
             updateUploadProgress(file.name, Math.min(overallProgress, 99));
           }
@@ -166,8 +163,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
 
       return;
     } catch (error) {
-      console.error(`Error in multipart upload for file ${file.name}:`, error);
-      throw error;
+      toast.error('An error occurred during file upload. Please try again.');
     }
   };
 
@@ -250,7 +246,6 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
             ) : (
               <div className='flex flex-col items-center justify-center gap-4 sm:px-5'>
                 <div className='flex gap-3 text-base font-medium leading-6'>
-                  <FileUp />
                   <FolderUp />
                   <div>Upload files or folders</div>
                 </div>

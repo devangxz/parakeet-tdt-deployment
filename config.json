@@ -163,5 +163,7 @@
       "medium": 0.15,
       "high": 0.2
     }
-  }
+  },
+  "single_part_upload_limit": 20971520,
+  "multi_part_upload_chunk_size": 20971520
 }

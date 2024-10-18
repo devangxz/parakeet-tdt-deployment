@@ -68,3 +68,7 @@ export const EMAIL_IDS =
   process.env.SCB_ENVIRONMENT === 'STAGING' ? emailIdsDev : emailIds
 export const EMAIL_PLACEHOLDERS = emailPlaceholders
 export const EMAIL_TEMPLATES = emailTemplates
+
+// Upload
+export const SINGLE_PART_UPLOAD_LIMIT = config.single_part_upload_limit
+export const MULTI_PART_UPLOAD_CHUNK_SIZE = config.multi_part_upload_chunk_size

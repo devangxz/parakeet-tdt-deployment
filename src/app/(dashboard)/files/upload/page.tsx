@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { useState } from 'react'
 
 import FileAndFolderUploader from './components/FileAndFolderUploader'
 import AllUploads from './list'
@@ -33,12 +33,10 @@ const Dashboard = () => {
         </Tabs>
       </div>
 
-      <Suspense fallback={<div>Loading...</div>}>
-        <AllUploads
-          setUploadSuccess={setUploadSuccess}
-          uploadSuccess={uploadSuccess}
-        />
-      </Suspense>
+      <AllUploads
+        setUploadSuccess={setUploadSuccess}
+        uploadSuccess={uploadSuccess}
+      />
     </main>
   )
 }

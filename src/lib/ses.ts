@@ -10,9 +10,9 @@ import {
   DeleteTemplateCommand,
 } from '@aws-sdk/client-ses'
 
-import { EMAIL_TEMPLATES, EMAIL_IDS, EMAIL_PLACEHOLDERS } from '@/constants'
-import logger from '@/lib/logger'
-import { getEmailDetails } from '@/utils/backend-helper'
+import logger from './logger'
+import { EMAIL_TEMPLATES, EMAIL_IDS, EMAIL_PLACEHOLDERS } from '../constants'
+import { getEmailDetails } from '../utils/backend-helper'
 
 interface EmailDataInterface {
   userEmailId: string

@@ -8,25 +8,24 @@ import ffmpegPath from '@ffmpeg-installer/ffmpeg';
 import ffprobePath from '@ffprobe-installer/ffprobe';
 import ffmpeg from 'fluent-ffmpeg';
 
+import logger from '../lib/logger';
 import prisma from '../lib/prisma';
 import { s3Client } from '../lib/s3Client';
+import { getAWSSesInstance } from '../lib/ses';
 
 ffmpeg.setFfmpegPath(ffmpegPath.path);
 ffmpeg.setFfprobePath(ffprobePath.path);
 
 const DURATION_DIFF = 0.5;
-// const ERROR_CODES = {
-//     DURATION_DIFF_ERROR: { code: 'DURATION_DIFF_ERROR', httpCode: 400 }
-// };
+const ERROR_CODES = {
+    DURATION_DIFF_ERROR: { code: 'DURATION_DIFF_ERROR', httpCode: 400 }
+};
 
-export async function convertAudioVideo(fileKey: string): Promise<string> {
-    console.log(`Processing file: ${fileKey}`);
+export async function convertAudioVideo(fileKey: string, userEmailId: string): Promise<string> {
+    logger.info(`Processing file: ${fileKey}`);
     const startTime = Date.now();
 
     try {
-        console.time(`[${fileKey}] Total processing time`);
-
-        console.time(`[${fileKey}] S3 download and save`);
         const { Body } = await s3Client.send(new GetObjectCommand({
             Bucket: process.env.AWS_S3_BUCKET_NAME!,
             Key: fileKey,
@@ -34,21 +33,16 @@ export async function convertAudioVideo(fileKey: string): Promise<string> {
 
         const tempFilePath = path.join(os.tmpdir(), path.basename(fileKey));
         await saveStreamToFile(Body as Readable, tempFilePath);
-        console.timeEnd(`[${fileKey}] S3 download and save`);
 
-        console.time(`[${fileKey}] File conversion and S3 operations`);
         const fileId = (path.parse(fileKey)).name;
-        await convertToMp3Mp4(tempFilePath, fileKey, fileId);
-        console.timeEnd(`[${fileKey}] File conversion and S3 operations`);
+        await convertToMp3Mp4(tempFilePath, fileKey, fileId, userEmailId);
 
         fs.unlinkSync(tempFilePath);
 
-        console.timeEnd(`[${fileKey}] Total processing time`);
         const endTime = Date.now();
-        console.log(`[${fileKey}] Processing completed. Total time: ${(endTime - startTime) / 1000} seconds`);
-        return fileId;
+        logger.info(`[${fileKey}] Processing completed. Total time: ${(endTime - startTime) / 1000} seconds`); return fileId;
     } catch (error) {
-        console.error(`Error processing file ${fileKey}:`, error);
+        logger.error(`Error processing file ${fileKey}: ${error}`);
         throw error;
     }
 }
@@ -80,7 +74,7 @@ async function getMetadataWithFFmpeg(filePath: string): Promise<number> {
     });
 }
 
-async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: string): Promise<void> {
+async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: string, userEmailId: string): Promise<void> {
     const fileExt = path.extname(originalKey).toLowerCase();
     const baseName = path.parse(originalKey).name;
     const mp3Key = `${baseName}.mp3`;
@@ -125,7 +119,7 @@ async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: st
                         await deleteFromS3(originalKey);
                     }
 
-                    await validateDuration(mp3Path, fileId);
+                    await validateDuration(mp3Path, fileId, userEmailId);
 
                     // Clean up temp files
                     fs.unlinkSync(mp3Path);
@@ -135,12 +129,12 @@ async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: st
 
                     resolve();
                 } catch (err) {
-                    console.error('Error in S3 operations:', err);
+                    logger.error(`Error in S3 operations: ${err}`);
                     reject(err);
                 }
             })
             .catch((err) => {
-                console.error('Error during conversion:', err);
+                logger.error(`Error during conversion: ${err}`);
                 reject(err);
             });
     });
@@ -161,7 +155,7 @@ function convertFile(input: string, output: string, format: 'mp3' | 'mp4'): Prom
     });
 }
 
-async function validateDuration(filePath: string, fileId: string): Promise<void> {
+async function validateDuration(filePath: string, fileId: string, userEmailId: string): Promise<void> {
     const duration = await getMetadataWithFFmpeg(filePath);
 
     const file = await prisma.file.findUnique({
@@ -170,10 +164,17 @@ async function validateDuration(filePath: string, fileId: string): Promise<void>
     });
 
     if (file && Math.abs(file.duration - duration) > DURATION_DIFF) {
-        // await MailService.sendMail('DURATION_DIFFERENCE_FLAGGED');
-        // logger.info(
-        //     `File flagged for duration difference::${ERROR_CODES.DURATION_DIFF_ERROR.code}::${ERROR_CODES.DURATION_DIFF_ERROR.httpCode}`
-        // );
+        const ses = getAWSSesInstance();
+
+        const emailData = {
+            userEmailId: userEmailId || '',
+        }
+
+        await ses.sendMail('DURATION_DIFFERENCE_FLAGGED', emailData, {});
+
+        logger.info(
+            `${fileId} - File flagged for duration difference::${ERROR_CODES.DURATION_DIFF_ERROR.code}::${ERROR_CODES.DURATION_DIFF_ERROR.httpCode}`
+        );
     }
 }
 

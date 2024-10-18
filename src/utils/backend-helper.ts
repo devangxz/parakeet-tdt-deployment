@@ -17,11 +17,11 @@ import {
 } from '@prisma/client'
 
 import config from '../../config.json'
-import { DEFAULT_ORDER_OPTIONS, RATES } from '@/constants'
-import gateway from '@/lib/braintree'
-import logger from '@/lib/logger'
-import paypalClient from '@/lib/paypal'
-import prisma from '@/lib/prisma'
+import { DEFAULT_ORDER_OPTIONS, RATES } from '../constants'
+import gateway from '../lib/braintree'
+import logger from '../lib/logger'
+import paypalClient from '../lib/paypal'
+import prisma from '../lib/prisma'
 
 export const getOrderOptions = async (userId: number) => {
   let options = DEFAULT_ORDER_OPTIONS

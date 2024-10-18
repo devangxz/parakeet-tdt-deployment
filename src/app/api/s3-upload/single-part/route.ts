@@ -4,6 +4,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 
+import logger from '@/lib/logger';
 import { s3Client } from '@/lib/s3Client';
 import { WORKER_QUEUE_NAMES, workerQueueService } from '@/services/worker-service';
 
@@ -37,12 +38,14 @@ export async function POST(req: Request) {
         const command = new PutObjectCommand(uploadParams);
         const result = await s3Client.send(command);
 
+        logger.info(`File uploaded successfully. File ID: ${fileKey}`);
+
         // Create audio video conversion job
-        await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, { fileKey });
+        await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, { fileKey, userEmailId: user.email });
 
         return NextResponse.json({ message: 'File uploaded successfully', result }, { status: 200 });
     } catch (error) {
-        console.error('Error uploading file:', error);
+        logger.error(`Error aborting multipart upload: ${error}.`);
         return NextResponse.json({ error: 'Error uploading file' }, { status: 500 });
     }
 }
