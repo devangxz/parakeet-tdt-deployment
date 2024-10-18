@@ -4,6 +4,8 @@ import { Inter } from 'next/font/google'
 import { Toaster } from 'sonner'
 
 import AuthProvider from './context/AuthProvider'
+import UploadProvider from './context/UploadProvider'
+import UploadProgress from '@/app/(dashboard)/files/upload/components/UploadProgress'
 import { ThemeProvider } from '@/components/theme-provider'
 import { cn } from '@/lib/utils'
 
@@ -28,15 +30,18 @@ export default function RootLayout({
     <html lang={locale} className={inter.className}>
       <body className={cn(`bg-background`)}>
         <AuthProvider>
-          <ThemeProvider
-            attribute='class'
-            defaultTheme='light'
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-            <Toaster richColors position='top-center' />
-          </ThemeProvider>
+          <UploadProvider>
+            <ThemeProvider
+              attribute='class'
+              defaultTheme='light'
+              enableSystem
+              disableTransitionOnChange
+            >
+              {children}
+              <Toaster richColors position='top-center' />
+              <UploadProgress />
+            </ThemeProvider>
+          </UploadProvider>
         </AuthProvider>
       </body>
     </html>

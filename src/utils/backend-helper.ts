@@ -19,11 +19,11 @@ import {
 } from '@prisma/client'
 
 import config from '../../config.json'
-import { DEFAULT_ORDER_OPTIONS, RATES } from '@/constants'
-import gateway from '@/lib/braintree'
-import logger from '@/lib/logger'
-import paypalClient from '@/lib/paypal'
-import prisma from '@/lib/prisma'
+import { DEFAULT_ORDER_OPTIONS, RATES } from '../constants'
+import gateway from '../lib/braintree'
+import logger from '../lib/logger'
+import paypalClient from '../lib/paypal'
+import prisma from '../lib/prisma'
 
 const s3Client = new S3Client({
   region: process.env.AWS_S3_REGION,

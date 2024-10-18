@@ -184,6 +184,8 @@
       "high": 0.2
     }
   },
+  "single_part_upload_limit": 20971520,
+  "multi_part_upload_chunk_size": 20971520,
   "job_timeout_multiplier": 4,
   "qc": {
     "diff_change_pc_threshold": 0
