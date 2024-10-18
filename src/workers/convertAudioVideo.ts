@@ -13,7 +13,8 @@ import prisma from '../lib/prisma';
 import { s3Client } from '../lib/s3Client';
 import { getAWSSesInstance } from '../lib/ses';
 
-ffmpeg.setFfmpegPath(ffmpegPath.path);
+const ffmpegPathToUse = process.env.FFMPEG_PATH || ffmpegPath.path;
+ffmpeg.setFfmpegPath(ffmpegPathToUse);
 ffmpeg.setFfprobePath(ffprobePath.path);
 
 const DURATION_DIFF = 0.5;
