@@ -10,7 +10,7 @@
     "prepare": "husky install",
     "precommit": "lint-staged",
     "build-worker": "tsc -P tsconfig.worker.json",
-    "start-worker": "node dist/workers/index.js",
+    "start-worker": "node dist/src/workers/index.js",
     "build-manage-workers": "tsc -P tsconfig.worker.json",
     "start-manage-workers": "node dist/scripts/manageWorkers.js",
     "dev-worker": "ts-node -P tsconfig.worker.json src/workers/index.ts",
