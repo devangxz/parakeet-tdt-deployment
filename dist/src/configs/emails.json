@@ -1,0 +1,293 @@
+{
+    "ORDER_CONFIRMATION": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": ["$$CONTACT_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai Transcript Order Confirmation",
+        "HTML": "ORDER_CONFIRMATION.html",
+        "TEXT": ""
+    },
+    "RESET_PASSWORD": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": ["$$CONTACT_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai Password Reset",
+        "HTML": "RESET_PASSWORD.html",
+        "TEXT": ""
+    },
+    "ACCOUNT_VERIFY": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": ["$$CONTACT_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai Email Verification",
+        "HTML": "ACCOUNT_VERIFY.html",
+        "TEXT": ""
+    },
+    "TEAM_NEW_USER_ACCOUNT_CREATE": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$", "$$ADMIN_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": ["$$CONTACT_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai Team Invite",
+        "HTML": "TEAM_NEW_USER_ACCOUNT_CREATE.html",
+        "TEXT": ""
+    },
+    "TEAM_EXISTING_USER_ACCOUNT_INVITE": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$", "$$ADMIN_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": ["$$CONTACT_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai Team Invite",
+        "HTML": "TEAM_EXISTING_USER_ACCOUNT_INVITE.html",
+        "TEXT": ""
+    },
+    "TEAM_EXISTING_USER_ACCOUNT_ACCEPT_INVITE": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$", "$$ADMIN_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": ["$$CONTACT_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai Team Member Added",
+        "HTML": "TEAM_EXISTING_USER_ACCOUNT_ACCEPT_INVITE.html",
+        "TEXT": ""
+    },
+    "TEAM_EXISTING_USER_ACCOUNT_DECLINE_INVITE": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$", "$$ADMIN_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": ["$$CONTACT_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai Team Member Declined",
+        "HTML": "TEAM_EXISTING_USER_ACCOUNT_DECLINE_INVITE.html",
+        "TEXT": ""
+    },
+    "TEAM_MEMBER_REMOVE": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$", "$$ADMIN_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": ["$$CONTACT_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai Team Membership Removed",
+        "HTML": "REMOVE_TEAM_MEMBER.html",
+        "TEXT": ""
+    },
+    "ADD_CREDITS": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": ["$$CONTACT_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai Credits Added to Your Scribie Account",
+        "HTML": "ADD_CREDITS.html",
+        "TEXT": ""
+    },
+    "DURATION_DIFFERENCE_FLAGGED": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$", "$$ADMIN_EMAIL_ID$$"],
+        "CC": [],
+        "BCC": ["$$CONTACT_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai Duration Difference Flagged for Your File",
+        "HTML": "",
+        "TEXT": "Your file has been flagged for a duration difference. Please review the details."
+    },
+    "CONVERSION_ERROR": {
+        "FROM": "$$ALERT_BE_EMAIL_ID$$",
+        "TO": ["$$SUPPORT_EMAIL_ID$$"],
+        "CC": [],
+        "BCC": ["$$CONTACT_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai Error During File Conversion",
+        "HTML": "CONVERSION_ERROR.html",
+        "TEXT": ""
+    },
+    "QC_ASSIGNMENT": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": [],
+        "SUBJECT": "Scribie.ai Editor File Assigned",
+        "HTML": "QC_ASSIGNMENT.html",
+        "TEXT": ""
+    },
+    "REVIEWER_ASSIGNMENT": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": [],
+        "SUBJECT": "Scribie.ai Finalizer File Assigned",
+        "HTML": "REVIEWER_ASSIGNMENT.html",
+        "TEXT": ""
+    },
+    "QC_JOB_TIMEOUT": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": [],
+        "SUBJECT": "Scribie.ai Editor File Timedout",
+        "HTML": "QC_JOB_TIMEOUT.html",
+        "TEXT": ""
+    },
+    "REVIEW_JOB_TIMEOUT": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": [],
+        "SUBJECT": "Scribie.ai Finalizer File Rejected",
+        "HTML": "REVIEW_JOB_TIMEOUT.html",
+        "TEXT": ""
+    },
+    "WITHDRAWAL": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": [],
+        "SUBJECT": "Scribie.ai WITHDRAWAL",
+        "HTML": "WITHDRAWAL.html",
+        "TEXT": ""
+    },
+    "DUPLICATE_FILE_WARNING": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": ["$$CONTACT_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai Warning Duplicate File",
+        "HTML": "DUPLICATE_FILE_WARNING.html",
+        "TEXT": ""
+    },
+    "ALERT_SW_MAIL": {
+        "FROM": "$$ALERT_BE_EMAIL_ID$$",
+        "TO": ["$$ADMIN_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai TO BE FILLED IN CODE",
+        "HTML": "",
+        "TEXT": "TO BE FILLED IN CODE"
+    },
+    "ALERT_FUNCTION_MAIL": {
+        "FROM": "$$ALERT_EMAIL_ID$$",
+        "TO": ["$$ADMIN_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai TO BE FILLED IN CODE",
+        "HTML": "",
+        "TEXT": "TO BE FILLED IN CODE"
+    },
+    "WITHDRAWAL_COMPLETE": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": [],
+        "SUBJECT": "Withdrawal Complete",
+        "HTML": "WITHDRAWAL_COMPLETE.html",
+        "TEXT": ""
+    },
+    "VERIFY_SECONDARY_EMAIL": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": [],
+        "BCC": [],
+        "SUBJECT": "Scribie.ai Verify Secondary Email",
+        "HTML": "VERIFY_SECONDARY_EMAIL.html",
+        "TEXT": ""
+    },
+    "QUOTE_REQUEST": {
+        "FROM": "$$ADMIN_EMAIL_ID$$",
+        "TO": ["$$HELLO_EMAIL_ID$$"],
+        "CC": [],
+        "BCC": [],
+        "SUBJECT": "Scribie.ai Quote Request",
+        "HTML": "QUOTE_REQUEST.html",
+        "TEXT": ""
+    },
+    "DEMO_REQUEST": {
+        "FROM": "$$CONTACT_EMAIL_ID$$",
+        "TO": ["$$ADMIN_EMAIL_ID$$"],
+        "CC": [],
+        "BCC": [],
+        "SUBJECT": "Scribie.ai Demo Request",
+        "HTML": "DEMO_REQUEST.html",
+        "TEXT": ""
+    },
+    "CONTACT": {
+        "FROM": "$$CONTACT_EMAIL_ID$$",
+        "TO": ["$$ADMIN_EMAIL_ID$$"],
+        "CC": [],
+        "BCC": [],
+        "SUBJECT": "Scribie.ai CONTACT",
+        "HTML": "CONTACT.html",
+        "TEXT": ""
+    },
+    "HIGH_DIFFICULTY": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": ["$$CONTACT_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai [Action Required] Transcript Order Additional Charge",
+        "HTML": "HIGH_DIFFICULTY.html",
+        "TEXT": ""
+    },
+    "UNASSIGN_FILE": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": [],
+        "SUBJECT": "Scribie.ai Editor File Unassigned",
+        "HTML": "UNASSIGN_FILE.html"
+    },
+    "TRANSCRIBER_SUBMIT": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": [],
+        "SUBJECT": "Scribie.ai Editor Assignment Submitted",
+        "HTML": "TRANSCRIBER_SUBMIT.html",
+        "TEXT": ""
+    },
+    "ORDER_PROCESSED": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": [],
+        "SUBJECT": "Scribie.ai Order Processed",
+        "HTML": "ORDER_PROCESSED.html",
+        "TEXT": ""
+    },
+    "TRANSCRIPT_CANCEL_ORDER": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": [],
+        "SUBJECT": "Scribie.ai Order Cancelled",
+        "HTML": "TRANSCRIPT_CANCEL_ORDER.html",
+        "TEXT": ""
+    },
+    "DAILY_BONUS": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": ["$$CONTACT_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai Daily Bonus Earnings Credit",
+        "HTML": "DAILY_BONUS.html",
+        "TEXT": ""
+    },
+    "SEND_INSTRUCTIONS": {
+        "FROM": "$$ALERT_BE_EMAIL_ID$$",
+        "TO": ["$$SUPPORT_EMAIL_ID$$"],
+        "CC": [],
+        "BCC": ["$$CONTACT_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai Send Instructions",
+        "HTML": "SEND_INSTRUCTIONS.html",
+        "TEXT": ""
+    },
+    "PUBLIC_PAY_BILL": {
+        "FROM": "$$SUPPORT_EMAIL_ID$$",
+        "TO": ["$$USER_EMAIL_ID$$"],
+        "CC": ["$$SUPPORT_EMAIL_ID$$"],
+        "BCC": ["$$CONTACT_EMAIL_ID$$"],
+        "SUBJECT": "Successfully paid bill",
+        "HTML": "PUBLIC_PAY_BILL.html",
+        "TEXT": ""
+    },
+    "BILLING_ALERT": {
+        "FROM": "$$ALERT_BE_EMAIL_ID$$",
+        "TO": ["$$SUPPORT_EMAIL_ID$$"],
+        "CC": [],
+        "BCC": ["$$CONTACT_EMAIL_ID$$"],
+        "SUBJECT": "Scribie.ai Billing Alert",
+        "HTML": "BILLING_ALERT.html",
+        "TEXT": ""
+    }
+}
