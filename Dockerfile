@@ -1,7 +1,7 @@
 # Use an official Node.js runtime as the base image
 FROM node:18-bullseye
 
-# Install FFmpeg
+# Install FFmpeg and FFprobe
 RUN apt-get update && apt-get install -y ffmpeg
 
 # Set the working directory in the container
@@ -16,8 +16,9 @@ RUN npm ci
 # Copy the rest of the application code
 COPY . .
 
-# Set environment variable to use system-wide ffmpeg
+# Set environment variables for ffmpeg and ffprobe paths
 ENV FFMPEG_PATH=/usr/bin/ffmpeg
+ENV FFPROBE_PATH=/usr/bin/ffprobe
 
 # Generate Prisma client
 RUN npx prisma generate
