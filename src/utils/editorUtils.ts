@@ -669,7 +669,7 @@ const getFrequentTermsHandler = async (
     setButtonLoading(prev => ({ ...prev, frequentTerms: true }));
 
     try {
-        const { data } = await axios.get(`/api/editor/frequent-terms/${userId}`);
+        const { data } = await axios.get(`/api/editor/frequent-terms`);
         if (data) {
             setFrequentTermsData(data);
             setFrequentTermsModalOpen(true);
