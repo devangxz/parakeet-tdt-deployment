@@ -16,6 +16,9 @@ RUN npm ci
 # Copy the rest of the application code
 COPY . .
 
+# Set environment variable to use system-wide ffmpeg
+ENV FFMPEG_PATH=/usr/bin/ffmpeg
+
 # Generate Prisma client
 RUN npx prisma generate
 
