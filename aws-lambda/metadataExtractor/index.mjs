@@ -10,7 +10,10 @@ import { S3Client, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s
 
 const s3Client = new S3Client();
 
-const WEBHOOK_URL = process.env.WEBHOOK_URL;
+const WEBHOOK_URLS = {
+    STAGING: process.env.STAGING_WEBHOOK_URL,
+    DEV: process.env.DEV_WEBHOOK_URL,
+};
 
 const ALLOWED_FILE_TYPES = [
     'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/x-ms-wma',
@@ -61,7 +64,9 @@ export const handler = async (event) => {
             };
         }
 
+        const uploadEnvironment = s3Metadata.upload_environment;
         const userId = s3Metadata.user_id;
+        const teamUserId = s3Metadata.team_user_id;
         const fileName = s3Metadata.file_name;
 
         const fileExtension = objectKey.split('.').pop();
@@ -87,10 +92,11 @@ export const handler = async (event) => {
             fileId: parse(objectKey).name,
             fileType: ContentType,
             timeTakenToExtractMetadata: processingTimeInSeconds,
-            userId: userId
+            userId,
+            teamUserId,
         };
 
-        await sendWebhook(webhookData);
+        await sendWebhook(webhookData, uploadEnvironment);
 
         return {
             statusCode: 200,
@@ -182,7 +188,9 @@ const runFFprobe = (filePath) => new Promise((resolve, reject) => {
     });
 });
 
-const sendWebhook = (data) => new Promise((resolve, reject) => {
+const sendWebhook = (data, environment) => new Promise((resolve, reject) => {
+    const WEBHOOK_URL = WEBHOOK_URLS[environment];
+
     if (!WEBHOOK_URL) {
         console.error('WEBHOOK_URL is not set in environment variables');
         return resolve();
