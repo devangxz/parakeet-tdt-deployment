@@ -1,229 +1,282 @@
-// import { FileTag, Order, OrderStatus } from '@prisma/client'
-// import { diffWords } from 'diff'
+import { File, InputFileType, JobStatus, JobType, Order, OrderStatus, ReportMode, ReportOption } from '@prisma/client'
+import axios from 'axios'
 
-// import config from '../../../config.json'
-// import { FILE_CACHE_URL } from '@/constants'
-// import logger from '@/lib/logger'
-// import prisma from '@/lib/prisma'
-// import axiosInstance from '@/utils/axios'
-// import { getFileVersionFromS3 } from '@/utils/backend-helper'
-// import getCustomerTranscript from '@/utils/getCustomerTranscript'
+import { FILE_CACHE_URL } from '@/constants'
+import logger from '@/lib/logger'
+import prisma from '@/lib/prisma'
+import { getAWSSesInstance } from '@/lib/ses'
+import calculateTranscriberCost from '@/utils/caculateTranscriberCost'
+import getCustomerTranscript from '@/utils/getCustomerTranscript'
+import isPredeliveryEligible from '@/utils/isPredeliveryEligible'
+import qualityCriteriaPassed from '@/utils/qualityCriteriaPassed'
 
-// async function qualityCriteriaPassed(
-//     fileId: string,
-// ): Promise<{ result: boolean; details: string }> {
-//     logger.info(`--> qualityCriteriaPassed ${fileId}`);
+type OrderWithFileData = Order & {
+    File: File | null;
+} | null;
 
-//     // Calculate the diff will be between the <fileId>_asr.txt and the <fileId>_qc.txt.
+async function deliver(order: Order, transcriberId: number) {
+    logger.info(`--> deliver ${order.id} ${order.fileId}`);
+    await prisma.order.update({
+        where: { id: order.id },
+        data: {
+            deliveredTs: new Date(),
+            deliveredBy: transcriberId,
+            status: OrderStatus.DELIVERED,
+        }
+    });
+    const file = await prisma.file.findUnique({ where: { fileId: order.fileId } });
 
-//     const ASRFileVersion = await prisma.fileVersion.findFirst({
-//         where: {
-//             fileId,
-//             tag: FileTag.AUTO
-//         },
-//         select: {
-//             s3VersionId: true
-//         }
-//     })
+    const templateData = {
+        transcript_name: file?.filename || '',
+        check_and_download: `https://${process.env.SERVER}/files/all-files/?ids=${file?.fileId}`,
+    };
 
-//     if (!ASRFileVersion || !ASRFileVersion.s3VersionId) {
-//         throw new Error(`File version for ASR not found for file ${fileId}`);
-//     }
+    const user = await prisma.user.findUnique({
+        where: {
+            id: order.userId,
+        },
+        select: {
+            email: true,
+        },
+    });
 
-//     const filename = `${fileId}.txt`;
-//     const asrData = (await getFileVersionFromS3(filename, ASRFileVersion?.s3VersionId)).toString();
-//     if (!asrData) {
-//         throw new Error('Transcript not found');
-//     }
+    const userEmail = user?.email || ''
 
-//     const QCFileVersion = await prisma.fileVersion.findFirst({
-//         where: {
-//             fileId,
-//             tag: FileTag.QC_DELIVERED
-//         },
-//         select: {
-//             s3VersionId: true
-//         }
-//     })
+    const ses = getAWSSesInstance()
 
-//     if (!QCFileVersion || !QCFileVersion.s3VersionId) {
-//         throw new Error(`File version for QC not found for file ${fileId}`);
-//     }
+    await ses.sendMail('ORDER_PROCESSED', { userEmailId: userEmail }, templateData)
 
-//     const qcData = (await getFileVersionFromS3(filename, QCFileVersion?.s3VersionId)).toString();
+    logger.info(`<-- deliver ${order.id} ${order.fileId}`);
+}
 
-//     if (!qcData) {
-//         throw new Error('Transcript not found');
-//     }
+async function preDeliver(order: Order, transcriberId: number) {
+    logger.info(`--> preDeliver ${order.id} ${order.fileId}`);
+    await prisma.order.update({
+        where: { id: order.id },
+        data: {
+            deliveredTs: new Date(),
+            deliveredBy: transcriberId,
+            status: OrderStatus.PRE_DELIVERED,
+        },
 
-//     const diff = diffWords(asrData, qcData);
+    });
+    logger.info(`<-- preDeliver ${order.id} ${order.fileId}`);
+}
 
-//     let totalAdditions = 0;
-//     let totalRemovals = 0;
-//     diff.forEach((change: { added?: boolean; removed?: boolean }) => {
-//         if (change.added) {
-//             totalAdditions += 1;
-//         } else if (change.removed) {
-//             totalRemovals += 1;
-//         }
-//     });
+async function preDeliverIfConfigured(
+    order: Order,
+    transcriberId: number,
+): Promise<boolean> {
+    logger.info(`--> preDeliverIfConfigured ${order.id} ${order.fileId}`);
 
-//     const totalChanges = totalAdditions + totalRemovals;
-//     const totalWords = asrData.split(' ').length;
-//     const percentChange = (totalChanges / totalWords) * 100;
-//     logger.info(
-//         `Total changes: ${totalChanges} = ${totalAdditions} additions + ${totalRemovals} removals` +
-//         `\nTotal words: ${totalWords}` +
-//         `\nPercent change: ${percentChange.toFixed(2)}% - diff_change_pc_threshold : ${config.qc.diff_change_pc_threshold}%`,
-//     );
-//     let qcPassed = false;
-//     let details = '';
-//     if (percentChange < config.qc.diff_change_pc_threshold) {
-//         qcPassed = false;
-//         details = `Differences between asr and qc file ${percentChange} < Difference Change Threshold ${config.qc.diff_change_pc_threshold}`;
-//     } else {
-//         qcPassed = true;
-//         details = `Differences between asr and qc file ${percentChange} > Difference Change Threshold ${config.qc.diff_change_pc_threshold}`;
-//     }
-//     logger.info(`<-- qualityCriteriaPassed ${fileId} - ${qcPassed}`);
-//     return { result: qcPassed, details: details };
-// }
+    if (
+        (await isPredeliveryEligible(String(order.userId))) == true
+    ) {
+        logger.info('Order is marked for pre-delivery check');
+        await preDeliver(order, transcriberId);
+        logger.info(`<-- preDeliverIfConfigured ${order.id} ${order.fileId}`);
+        return true;
+    }
+    logger.info(`<-- preDeliverIfConfigured ${order.id} ${order.fileId}`);
+    return false;
+}
 
-// const calculateTranscriberCost = async (order: any, transcriberId: number) => {
-//     const duration = +(order.File.duration / 3600).toFixed(2);
-//     const pwerLevel: 'high' | 'medium' | 'low' =
-//         order.pwer <= config.pwerRateMap.low
-//             ? 'low'
-//             : order.pwer <= config.pwerRateMap.medium
-//                 ? 'medium'
-//                 : 'high';
-//     let rate = 0;
-//     const transcriptionRates = config.transcriber_rates;
-//     const userRates = await helper.getCustomerRate(order.userId);
-//     const qcStatuses = [OrderStatus.QC_ASSIGNED, OrderStatus.TRANSCRIBED];
-//     const reviewStatuses = [
-//         OrderStatus.QC_COMPLETED,
-//         OrderStatus.REVIEWER_ASSIGNED,
-//         OrderStatus.FORMATTED,
-//         OrderStatus.REVIEW_COMPLETED,
-//         OrderStatus.FINALIZER_ASSIGNED,
-//     ];
-//     const iCQC = await JobTable.isTranscriberICQC(transcriberId);
+const assignFileToReviewer = async (
+    orderId: number,
+    fileId: string,
+    transcriberId: number,
+    inputFile: InputFileType,
+    changeOrderStatus: boolean = true,
+    userEmail: string
+) => {
+    logger.info(`--> assignFileToReviewer ${orderId} ${transcriberId}`);
+    try {
+        await prisma.$transaction(async (prisma) => {
+            if (changeOrderStatus) {
+                await prisma.order.update({
+                    where: { id: orderId },
+                    data: {
+                        status: OrderStatus.REVIEWER_ASSIGNED,
+                    },
+                });
+            }
 
-//     if (qcStatuses.includes(order.status)) {
-//         rate = iCQC.isICQC
-//             ? iCQC.qcRate
-//             : userRates && userRates.option?.toLocaleLowerCase() === 'legal'
-//                 ? transcriptionRates.legal_qc[pwerLevel]
-//                 : transcriptionRates.general_qc[pwerLevel];
-//     } else if (reviewStatuses.includes(order.status)) {
-//         rate = iCQC.isICQC
-//             ? iCQC.cfRRate
-//             : userRates
-//                 ? (pwerLevel === 'high'
-//                     ? userRates.reviewerHighDifficultyRate
-//                     : pwerLevel === 'medium'
-//                         ? userRates.reviewerMediumDifficultyRate
-//                         : userRates.reviewerLowDifficultyRate) * 60
-//                 : 0;
-//     }
+            await prisma.jobAssignment.create({
+                data: {
+                    orderId,
+                    type: JobType.REVIEW,
+                    transcriberId: transcriberId,
+                    inputFile: inputFile,
+                },
+            });
+        });
 
-//     const totalRate = rate + order.rateBonus;
-//     const cost = +(totalRate * duration).toFixed(2);
+        const templateData = {
+            fileId,
+        };
 
-//     return {
-//         cost,
-//         rate: rate.toFixed(2),
-//     };
-// };
+        const ses = getAWSSesInstance()
+        await ses.sendMail('REVIEWER_ASSIGNMENT', { userEmailId: userEmail }, templateData)
 
-// export async function submitFile(orderId: number, transcriberId: number, transcript: string) {
-//     try {
+        logger.info(`--> assignFileToReviewer ${orderId} ${transcriberId}`);
+        return true;
+    } catch (error) {
+        logger.error(`--> assignFileToReviewer ` + error);
+        return false;
+    }
+}
 
-//         const order = await prisma.order.findUnique({
-//             where: {
-//                 id: orderId,
-//             },
-//             include: {
-//                 File: true,
-//             },
-//         })
+async function completeQCJob(order: Order, transcriberId: number) {
+    logger.info(`--> completeQCJob ${transcriberId}`);
+    await prisma.$transaction(async (prisma) => {
+        const orderWithFileData = await prisma.order.findUnique({
+            where: { id: order.id },
+            include: {
+                File: true,
+            },
+        });
 
-//         if (!order) {
-//             logger.error(`No order found with the given order ID ${orderId}`)
-//             return {
-//                 success: false,
-//                 message: 'Order not found',
-//             }
-//         }
+        const qcCost = await calculateTranscriberCost(
+            orderWithFileData as OrderWithFileData,
+            transcriberId,
+        );
+        await prisma.jobAssignment.updateMany({
+            where: {
+                orderId: order.id,
+                transcriberId,
+                type: JobType.QC,
+                status: JobStatus.ACCEPTED,
+            },
+            data: {
+                status: JobStatus.COMPLETED,
+                earnings: qcCost.cost,
+                completedTs: new Date(),
+            },
+        });
+        await prisma.order.update({ where: { id: order.id }, data: { status: OrderStatus.QC_COMPLETED } });
+        const user = await prisma.user.findFirst({ where: { id: transcriberId } })
+        const userEmail = user?.email || ''
 
-//         await axiosInstance.post(`${FILE_CACHE_URL}/save-transcript`, {
-//             body: JSON.stringify({
-//                 fileId: order.fileId,
-//                 transcript: transcript,
-//                 userId: transcriberId
-//             })
-//         })
+        await assignFileToReviewer(
+            order.id,
+            order.fileId,
+            transcriberId,
+            InputFileType.LLM_OUTPUT,
+            false,
+            userEmail,
+        );
 
-//         const customerTranscript = await getCustomerTranscript(
-//             order.fileId,
-//             transcript,
-//         );
+        logger.info(`sending TRANSCRIBER_SUBMIT mail to ${userEmail} for user ${transcriberId}`)
 
-//         await axiosInstance.post(`${FILE_CACHE_URL}/save-transcript`, {
-//             method: 'POST',
-//             body: JSON.stringify({
-//                 fileId: order.fileId,
-//                 transcript: customerTranscript,
-//                 userId: order.userId,
-//             })
-//         })
+        const templateData = {
+            file_id: order.fileId,
+        };
+        const ses = getAWSSesInstance()
+        await ses.sendMail('TRANSCRIBER_SUBMIT', { userEmailId: userEmail }, templateData)
 
-//         const testResult = await qualityCriteriaPassed(order.fileId);
+    });
 
-//         if (testResult.result === false) {
-//             logger.info(`Quality Criteria failed ${order.fileId}`);
-
-//             const qcCost = await calculateTranscriberCost(order, transcriberId);
-
-//             await prisma.$transaction(async (prisma) => {
-//                 await OrderTable.update(order.id, {
-//                     reportMode: ReportMode.AUTO,
-//                     reportOption: ReportOption.AUTO_DIFF_BELOW_THRESHOLD,
-//                     reportComment: testResult.details,
-//                     status: OrderStatus.SUBMITTED_FOR_APPROVAL,
-//                 });
-//                 // QC's Earnings is not updated here. It will be updated only when the OM approves
-//                 await prisma.jobAssignment.updateMany({
-//                     where: {
-//                         orderId: order.id,
-//                         transcriberId,
-//                         type: JobType.QC,
-//                         status: JobStatus.ACCEPTED,
-//                     },
-//                     data: {
-//                         status: JobStatus.SUBMITTED_FOR_APPROVAL,
-//                         earnings: qcCost.cost,
-//                         completedTs: new Date(),
-//                     },
-//                 });
-//             });
-//             logger.info(
-//                 `<-- OrderTranscriptionFlow:submitQC - OrderStatus.SUBMITTED_FOR_APPROVAL`,
-//             );
-//             return;
-//         }
-
-//     } catch (error) {
-//         logger.error(`Failed to fetch ${status} files:`, error)
-//         return {
-//             success: false,
-//             message: 'Failed to fetch files',
-//         }
-//     }
-
-// }
+    logger.info(`<-- completeQCJob ${transcriberId}`);
+}
 
 export async function submitFile(orderId: number, transcriberId: number, transcript: string) {
-    console.log(orderId, transcriberId, transcript)
+    try {
+
+        const order = await prisma.order.findUnique({
+            where: {
+                id: orderId,
+            },
+            include: {
+                File: true,
+            },
+        })
+
+        if (!order) {
+            logger.error(`No order found with the given order ID ${orderId}`)
+            return {
+                success: false,
+                message: 'Order not found',
+            }
+        }
+
+        await axios.post(`${FILE_CACHE_URL}/save-transcript`, {
+            fileId: order.fileId,
+            transcript: transcript,
+            userId: transcriberId
+
+        }, {
+            headers: {
+                'x-api-key': process.env.SCRIBIE_API_KEY
+            }
+        });
+
+        const customerTranscript = await getCustomerTranscript(
+            order.fileId,
+            transcript,
+        );
+
+        await axios.post(`${FILE_CACHE_URL}/save-transcript`, {
+            fileId: order.fileId,
+            transcript: customerTranscript,
+            userId: order.userId
+
+        }, {
+            headers: {
+                'x-api-key': process.env.SCRIBIE_API_KEY
+            }
+        });
+
+        const testResult = await qualityCriteriaPassed(order.fileId);
+
+        if (testResult.result === false) {
+            logger.info(`Quality Criteria failed ${order.fileId}`);
+
+            const qcCost = await calculateTranscriberCost(order, transcriberId);
+
+            await prisma.$transaction(async (prisma) => {
+                await prisma.order.update({
+                    where: {
+                        id: order.id,
+                    },
+                    data: {
+                        reportMode: ReportMode.AUTO,
+                        reportOption: ReportOption.AUTO_DIFF_BELOW_THRESHOLD,
+                        reportComment: testResult.details,
+                        status: OrderStatus.SUBMITTED_FOR_APPROVAL,
+                    }
+                });
+                // QC's Earnings is not updated here. It will be updated only when the OM approves
+                await prisma.jobAssignment.updateMany({
+                    where: {
+                        orderId: order.id,
+                        transcriberId,
+                        type: JobType.QC,
+                        status: JobStatus.ACCEPTED,
+                    },
+                    data: {
+                        status: JobStatus.SUBMITTED_FOR_APPROVAL,
+                        earnings: qcCost.cost,
+                        completedTs: new Date(),
+                    },
+                });
+            });
+            logger.info(
+                `<-- OrderTranscriptionFlow:submitQC - OrderStatus.SUBMITTED_FOR_APPROVAL`,
+            );
+            return;
+        }
+
+        await completeQCJob(order, transcriberId);
+        if ((await preDeliverIfConfigured(order, transcriberId)) === false) {
+            await deliver(order, transcriberId);
+        }
+
+    } catch (error) {
+        logger.error(`Failed to fetch ${status} files:`, error)
+        return {
+            success: false,
+            message: 'Failed to fetch files',
+        }
+    }
+
 }

@@ -1,11 +1,11 @@
 import { OrderStatus, ReportMode, ReportOption } from ".prisma/client";
 import { AssemblyAI, Word } from "assemblyai";
+import axios from "axios";
 
 import config from "../../config.json";
 import { FILE_CACHE_URL } from "@/constants";
 import logger from "@/lib/logger";
 import prisma from "@/lib/prisma";
-import axiosInstance from "@/utils/axios";
 import { getSignedURLFromS3 } from "@/utils/backend-helper";
 import getFormattedTranscript, { convertASRArray } from "@/utils/getFormattedTranscript";
 
@@ -78,10 +78,14 @@ export async function performASR(fileId: string): Promise<void> {
 
         logger.info(`ASRElapsedTime ${ASRElapsedTime}`);
 
-        await axiosInstance.post(`${FILE_CACHE_URL}/save-transcript`, {
+        await axios.post(`${FILE_CACHE_URL}/save-transcript`, {
             fileId: fileId,
             transcript: transcript,
             ctms: ctms,
+        }, {
+            headers: {
+                'x-api-key': process.env.SCRIBIE_API_KEY
+            }
         });
 
         // 2. Calculate PWER

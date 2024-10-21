@@ -190,5 +190,7 @@
   "qc": {
     "diff_change_pc_threshold": 0
   },
-  "aws_signed_url_expiration": 600
+  "aws_signed_url_expiration": 600,
+  "transcript_part_length": 10000,
+  "llm": "gpt-4-turbo-preview"
 }
