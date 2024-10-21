@@ -116,7 +116,7 @@ model File {
   bitRate                   Float?        @map("bit_rate")
   sampleRate                Float?        @map("sample_rate")
   downloadCount             Int           @default(0) @map("download_count") @db.SmallInt
-  filesize                  Int
+  filesize                  BigInt
   archived                  Boolean       @default(false)
   uploadedBy                Int           @map("uploaded_by")
   parentId                  Int?          @map("parent_id")
@@ -822,4 +822,7 @@ enum FileTag {
   CUSTOMER_EDIT
   CUSTOMER_DELIVERED
   OM_EDIT
+  REV_EDIT
+  REV_DELIVERED
+  LLM
 }

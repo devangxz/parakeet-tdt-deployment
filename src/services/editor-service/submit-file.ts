@@ -1,130 +1,21 @@
-import { File, InputFileType, JobStatus, JobType, Order, OrderStatus, ReportMode, ReportOption } from '@prisma/client'
+import { File, InputFileType, JobStatus, JobType, Order, OrderStatus, OrderType, ReportMode, ReportOption } from '@prisma/client'
 import axios from 'axios'
 
+import deliver from '../file-service/deliver'
+import preDeliverIfConfigured from '../file-service/pre-deliver-if-configured'
+import assignFileToReviewer from '../transcribe-service/assign-file-to-review'
+import { WORKER_QUEUE_NAMES, workerQueueService } from '../worker-service'
 import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
-import calculateTranscriberCost from '@/utils/caculateTranscriberCost'
+import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 import getCustomerTranscript from '@/utils/getCustomerTranscript'
-import isPredeliveryEligible from '@/utils/isPredeliveryEligible'
 import qualityCriteriaPassed from '@/utils/qualityCriteriaPassed'
 
 type OrderWithFileData = Order & {
     File: File | null;
 } | null;
-
-async function deliver(order: Order, transcriberId: number) {
-    logger.info(`--> deliver ${order.id} ${order.fileId}`);
-    await prisma.order.update({
-        where: { id: order.id },
-        data: {
-            deliveredTs: new Date(),
-            deliveredBy: transcriberId,
-            status: OrderStatus.DELIVERED,
-        }
-    });
-    const file = await prisma.file.findUnique({ where: { fileId: order.fileId } });
-
-    const templateData = {
-        transcript_name: file?.filename || '',
-        check_and_download: `https://${process.env.SERVER}/files/all-files/?ids=${file?.fileId}`,
-    };
-
-    const user = await prisma.user.findUnique({
-        where: {
-            id: order.userId,
-        },
-        select: {
-            email: true,
-        },
-    });
-
-    const userEmail = user?.email || ''
-
-    const ses = getAWSSesInstance()
-
-    await ses.sendMail('ORDER_PROCESSED', { userEmailId: userEmail }, templateData)
-
-    logger.info(`<-- deliver ${order.id} ${order.fileId}`);
-}
-
-async function preDeliver(order: Order, transcriberId: number) {
-    logger.info(`--> preDeliver ${order.id} ${order.fileId}`);
-    await prisma.order.update({
-        where: { id: order.id },
-        data: {
-            deliveredTs: new Date(),
-            deliveredBy: transcriberId,
-            status: OrderStatus.PRE_DELIVERED,
-        },
-
-    });
-    logger.info(`<-- preDeliver ${order.id} ${order.fileId}`);
-}
-
-async function preDeliverIfConfigured(
-    order: Order,
-    transcriberId: number,
-): Promise<boolean> {
-    logger.info(`--> preDeliverIfConfigured ${order.id} ${order.fileId}`);
-
-    if (
-        (await isPredeliveryEligible(String(order.userId))) == true
-    ) {
-        logger.info('Order is marked for pre-delivery check');
-        await preDeliver(order, transcriberId);
-        logger.info(`<-- preDeliverIfConfigured ${order.id} ${order.fileId}`);
-        return true;
-    }
-    logger.info(`<-- preDeliverIfConfigured ${order.id} ${order.fileId}`);
-    return false;
-}
-
-const assignFileToReviewer = async (
-    orderId: number,
-    fileId: string,
-    transcriberId: number,
-    inputFile: InputFileType,
-    changeOrderStatus: boolean = true,
-    userEmail: string
-) => {
-    logger.info(`--> assignFileToReviewer ${orderId} ${transcriberId}`);
-    try {
-        await prisma.$transaction(async (prisma) => {
-            if (changeOrderStatus) {
-                await prisma.order.update({
-                    where: { id: orderId },
-                    data: {
-                        status: OrderStatus.REVIEWER_ASSIGNED,
-                    },
-                });
-            }
-
-            await prisma.jobAssignment.create({
-                data: {
-                    orderId,
-                    type: JobType.REVIEW,
-                    transcriberId: transcriberId,
-                    inputFile: inputFile,
-                },
-            });
-        });
-
-        const templateData = {
-            fileId,
-        };
-
-        const ses = getAWSSesInstance()
-        await ses.sendMail('REVIEWER_ASSIGNMENT', { userEmailId: userEmail }, templateData)
-
-        logger.info(`--> assignFileToReviewer ${orderId} ${transcriberId}`);
-        return true;
-    } catch (error) {
-        logger.error(`--> assignFileToReviewer ` + error);
-        return false;
-    }
-}
 
 async function completeQCJob(order: Order, transcriberId: number) {
     logger.info(`--> completeQCJob ${transcriberId}`);
@@ -157,14 +48,15 @@ async function completeQCJob(order: Order, transcriberId: number) {
         const user = await prisma.user.findFirst({ where: { id: transcriberId } })
         const userEmail = user?.email || ''
 
-        await assignFileToReviewer(
-            order.id,
-            order.fileId,
-            transcriberId,
-            InputFileType.LLM_OUTPUT,
-            false,
-            userEmail,
-        );
+        if (order.orderType === OrderType.TRANSCRIPTION_FORMATTING) {
+            await assignFileToReviewer(
+                order.id,
+                order.fileId,
+                transcriberId,
+                InputFileType.LLM_OUTPUT,
+                false,
+            );
+        }
 
         logger.info(`sending TRANSCRIBER_SUBMIT mail to ${userEmail} for user ${transcriberId}`)
 
@@ -228,7 +120,9 @@ export async function submitFile(orderId: number, transcriberId: number, transcr
 
         const testResult = await qualityCriteriaPassed(order.fileId);
 
-        if (testResult.result === false) {
+        console.log(testResult, '<------')
+
+        if (!testResult.result) {
             logger.info(`Quality Criteria failed ${order.fileId}`);
 
             const qcCost = await calculateTranscriberCost(order, transcriberId);
@@ -267,15 +161,19 @@ export async function submitFile(orderId: number, transcriberId: number, transcr
         }
 
         await completeQCJob(order, transcriberId);
-        if ((await preDeliverIfConfigured(order, transcriberId)) === false) {
-            await deliver(order, transcriberId);
-        }
 
+        if (order.orderType === OrderType.TRANSCRIPTION_FORMATTING) {
+            await workerQueueService.createJob(WORKER_QUEUE_NAMES.LLM_MARKING, { orderId: order.id, fileId: order.fileId });
+        } else {
+            if ((await preDeliverIfConfigured(order, transcriberId)) === false) {
+                await deliver(order, transcriberId);
+            }
+        }
     } catch (error) {
-        logger.error(`Failed to fetch ${status} files:`, error)
+        logger.error(`Failed to submit file ${error}`)
         return {
             success: false,
-            message: 'Failed to fetch files',
+            message: `Failed to submit file ${error}`,
         }
     }
 

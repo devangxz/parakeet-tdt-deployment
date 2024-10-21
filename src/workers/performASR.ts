@@ -3,11 +3,12 @@ import { AssemblyAI, Word } from "assemblyai";
 import axios from "axios";
 
 import config from "../../config.json";
-import { FILE_CACHE_URL } from "@/constants";
-import logger from "@/lib/logger";
-import prisma from "@/lib/prisma";
-import { getSignedURLFromS3 } from "@/utils/backend-helper";
-import getFormattedTranscript, { convertASRArray } from "@/utils/getFormattedTranscript";
+import { FILE_CACHE_URL } from "../constants";
+import logger from "../lib/logger";
+import prisma from "../lib/prisma";
+import { redis } from '../lib/redis'
+import { getSignedURLFromS3 } from "../utils/backend-helper";
+import getFormattedTranscript, { convertASRArray } from "../utils/getFormattedTranscript";
 
 function calculatePWER(words: Word[]): number {
     logger.info('--> ASRAssemblyAI:calculatePWER');
@@ -118,7 +119,23 @@ export async function performASR(fileId: string): Promise<void> {
             });
         }
     } catch (error) {
-        console.error('Error uploading transcription:', error);
-        throw error;
+        const allRetryCounts = JSON.parse(await redis.get('ASR_RETRY_COUNT') || '{}')
+
+        if (!allRetryCounts[fileId]) {
+            await redis.set('ASR_RETRY_COUNT', JSON.stringify({ [fileId]: 1 }), 'EX', 3600)
+            await performASR(fileId)
+            return;
+        }
+
+        const retryCount: number = allRetryCounts[fileId]
+
+        if (retryCount >= 3) {
+            logger.error(`Error transcribing file ${fileId} ${error}`);
+            throw error;
+        } else {
+            await redis.set('ASR_RETRY_COUNT', JSON.stringify({ ...allRetryCounts, [fileId]: retryCount + 1 }), 'EX', 3600)
+            await performASR(fileId)
+        }
+
     }
 };

@@ -809,7 +809,7 @@ function EditorPage() {
               onClick={() => {
                 if (!quillRef?.current) return;
                 const quill = quillRef.current.getEditor();
-                handleSubmit({ orderDetails, step, editorMode, fileToUpload, setButtonLoading, getPlayedPercentage, router, quill })
+                handleSubmit({ orderDetails, step, editorMode, setButtonLoading, getPlayedPercentage, router, quill })
                 setSubmitting(false)
                 setIsSubmitModalOpen(false)
               }}

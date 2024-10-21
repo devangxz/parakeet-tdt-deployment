@@ -29,7 +29,7 @@ export async function POST() {
             const fileExists = await fileExistsInS3(`${file.fileId}.mp3`)
 
             if (fileExists) {
-                await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, { fileId: file.fileId });
+                await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUTOMATIC_SPEECH_RECOGNITION, { fileId: file.fileId });
             }
         }
 

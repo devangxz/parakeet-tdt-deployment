@@ -13,6 +13,7 @@ import {
   getCreditsPreferences,
   applyCredits,
 } from '@/utils/backend-helper'
+import serializeBigInt from '@/utils/serializeBigInt'
 
 export async function GET(
   request: NextRequest,
@@ -124,7 +125,7 @@ export async function GET(
       })
       logger.info(`Invoice details fetched for ${invoiceId}`)
 
-      return NextResponse.json({
+      const responseData = {
         invoice: { ...invoice, user: invoiceUser },
         files: filesWithInvoiceInfo,
         templates: templates,
@@ -135,7 +136,11 @@ export async function GET(
         },
         paidByUser,
         isBillingEnabledForCustomer,
-      })
+      }
+
+      const serializedData = serializeBigInt(responseData)
+
+      return NextResponse.json(serializedData)
     } else {
       const templates = await prisma.template.findMany({
         where: {
@@ -144,7 +149,7 @@ export async function GET(
       })
       logger.info(`Invoice details fetched for ${invoiceId}`)
 
-      return NextResponse.json({
+      const responseData = {
         invoice: { ...invoice, user: invoiceUser },
         files: filesWithInvoiceInfo,
         templates: templates,
@@ -155,7 +160,12 @@ export async function GET(
         },
         paidByUser,
         isBillingEnabledForCustomer,
-      })
+      }
+
+      // Serialize the response data to handle BigInt values
+      const serializedData = serializeBigInt(responseData)
+
+      return NextResponse.json(serializedData)
     }
   } catch (error) {
     logger.error(`Error fetching invoice details ${invoiceId}`, error)

@@ -538,11 +538,6 @@ type HandleSubmitParams = {
     orderDetails: OrderDetails;
     step: string;
     editorMode: string;
-    fileToUpload: {
-        renamedFile: File | null;
-        originalFile: File | null;
-        isUploaded?: boolean;
-    };
     setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>;
     getPlayedPercentage: () => number;
     router: {
@@ -574,14 +569,16 @@ const checkTranscriptForAllowedMeta = (quill: Quill) => {
         }
     }
 
-    throw new Error(error?.message);
+    if (error?.message) {
+        throw new Error(error.message);
+    }
+
 };
 
 const handleSubmit = async ({
     orderDetails,
     step,
     editorMode,
-    fileToUpload,
     setButtonLoading,
     getPlayedPercentage,
     router,
@@ -591,6 +588,7 @@ const handleSubmit = async ({
     const toastId = toast.loading(`Submitting Transcription...`);
     checkTranscriptForAllowedMeta(quill);
     const transcript = quill.getText() || '';
+
     try {
         setButtonLoading((prevButtonLoading) => ({
             ...prevButtonLoading,
@@ -601,31 +599,12 @@ const handleSubmit = async ({
             throw new Error(`MAPPNM`); //Stands for "Minimum Audio Playback Percentage Not Met"
         }
 
-        if (step === 'CF') {
-            await axiosInstance.post(
-                `${BACKEND_URL}/submit-review`,
-                {
-                    fileId: orderDetails.fileId,
-                    orderId: orderDetails.orderId,
-                    mode: editorMode.toLowerCase(),
-                }
-            );
-        } else {
-            if (!fileToUpload.isUploaded || !fileToUpload.renamedFile)
-                throw new Error('UF');
-
-            const formData = new FormData();
-            formData.append('file', fileToUpload.renamedFile);
-
-            await axios.post(
-                `${BACKEND_URL}/submit-qc`, {
-                fileId: orderDetails.fileId,
-                orderId: orderDetails.orderId,
-                mode: editorMode.toLowerCase(),
-                transcript,
-            }
-            );
-        }
+        await axios.post(`/api/editor/submit`, {
+            fileId: orderDetails.fileId,
+            orderId: orderDetails.orderId,
+            mode: editorMode.toLowerCase(),
+            transcript,
+        });
 
         toast.dismiss(toastId);
         const successToastId = toast.success(

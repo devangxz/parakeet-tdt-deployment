@@ -14,3 +14,12 @@ declare module 'tinykeys' {
 }
 
 declare module 'simple-spellchecker';
+
+declare module 'openai/resources/index.mjs' {
+    export interface ChatCompletionMessageParam {
+        // Add any known properties here
+        role: 'system' | 'user' | 'assistant';
+        content: string;
+        // Add other properties as needed
+    }
+}

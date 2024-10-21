@@ -78,7 +78,7 @@ export const processPayment = async (
         const fileExists = await fileExistsInS3(`${fileId}.mp3`)
 
         if (fileExists) {
-          await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, { fileId });
+          await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUTOMATIC_SPEECH_RECOGNITION, { fileId });
         }
         // TODO: add order service
         // await OrderService.add(order.id, OrderTrigger.CREATE_ORDER)

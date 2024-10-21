@@ -31,8 +31,8 @@ const automaticSpeechRecognitionWorker = createWorker(WORKER_QUEUE_NAMES.AUTOMAT
 });
 
 const LLMWorker = createWorker(WORKER_QUEUE_NAMES.LLM_MARKING, async (job) => {
-    const { fileId } = job.data;
-    return await markTranscript(fileId);
+    const { fileId, orderId } = job.data;
+    return await markTranscript(orderId, fileId);
 });
 
 logger.info('All workers started');

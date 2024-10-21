@@ -1,16 +1,17 @@
 import { JobStatus, JobType, OrderStatus } from "@prisma/client";
 import axios from "axios";
 import OpenAI from 'openai';
-import { ChatCompletionMessageParam } from "openai/resources/index.mjs";
+import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 import config from '../../config.json';
-import { FILE_CACHE_URL } from "@/constants";
-import logger from "@/lib/logger";
-import prisma from "@/lib/prisma";
-import { getAWSSesInstance } from "@/lib/ses";
-import { downloadFromS3 } from "@/utils/backend-helper";
-import breakTranscript from "@/utils/breakTranscript";
-import { removeTimestamps } from "@/utils/transcriptUtils";
+import { FILE_CACHE_URL } from "../constants";
+import logger from "../lib/logger";
+import prisma from "../lib/prisma";
+import { redis } from "../lib/redis";
+import { getAWSSesInstance } from "../lib/ses";
+import { downloadFromS3 } from "../utils/backend-helper";
+import breakTranscript from "../utils/breakTranscript";
+import { removeTimestamps } from "../utils/transcriptUtils";
 
 async function makeLLMCall(
     transcriptPart: string,
@@ -266,10 +267,38 @@ async function formatTranscript(
         const endTime = Date.now();
         llmTimeTaken = (endTime - startTime) / 1000;
 
+        const order = await prisma.order.findUnique({
+            where: {
+                fileId,
+            },
+            include: {
+                user: true
+            }
+        })
+
+        if (!order) {
+            throw new Error(`Order not found for order`)
+        }
+
+        const assignment = await prisma.jobAssignment.findFirst({
+            where: {
+                orderId: order.id,
+                type: JobType.REVIEW,
+                status: JobStatus.ACCEPTED,
+            },
+        })
+
+        if (!assignment) {
+            throw new Error(`Assignment not found for order ${order.id} type REVIEW status ACCEPTED`)
+        }
+
+        const reviewerId = assignment.transcriberId
+
         await axios.post(`${FILE_CACHE_URL}/save-transcript`, {
             fileId: fileId,
             transcript: transcript,
             isCF: true,
+            userId: reviewerId,
         }, {
             headers: {
                 'x-api-key': process.env.SCRIBIE_API_KEY
@@ -286,11 +315,12 @@ async function formatTranscript(
     };
 }
 
-export async function markTranscript(orderId: number) {
+export async function markTranscript(orderId: number, fileId: string) {
     try {
         const order = await prisma.order.findUnique({
             where: {
-                id: orderId,
+                fileId,
+                id: orderId
             },
             include: {
                 File: true,
@@ -325,8 +355,23 @@ export async function markTranscript(orderId: number) {
             }
         });
     } catch (error) {
-        logger.error(
-            `Error doing markings for order ${orderId} ${(error as Error).toString()}`,
-        );
+        const allRetryCounts = JSON.parse(await redis.get('LLM_RETRY_COUNT') || '{}')
+
+        if (!allRetryCounts[orderId]) {
+            await redis.set('LLM_RETRY_COUNT', JSON.stringify({ [orderId]: 1 }), 'EX', 3600)
+            await markTranscript(orderId, fileId)
+            return;
+        }
+
+        const retryCount: number = allRetryCounts[orderId]
+
+        if (retryCount >= 3) {
+            logger.error(`Error transcribing file ${orderId} ${error}`);
+            throw error;
+        } else {
+            await redis.set('LLM_RETRY_COUNT', JSON.stringify({ ...allRetryCounts, [orderId]: retryCount + 1 }), 'EX', 3600)
+            await markTranscript(orderId, fileId)
+        }
+
     }
 }

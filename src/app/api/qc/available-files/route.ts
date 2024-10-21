@@ -7,6 +7,7 @@ import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { isTranscriberICQC } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
+import serializeBigInt from '@/utils/serializeBigInt'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -85,9 +86,9 @@ export async function GET(request: Request) {
         return (b.rateBonus || 0) - (a.rateBonus || 0)
       })
     }
-
+    const serializedData = serializeBigInt(qcFiles)
     logger.info(`Available QC files fetched successfully`)
-    return NextResponse.json(qcFiles)
+    return NextResponse.json(serializedData)
   } catch (error) {
     logger.error(error)
     return NextResponse.json(
