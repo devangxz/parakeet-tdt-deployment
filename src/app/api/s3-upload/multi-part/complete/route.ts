@@ -1,3 +1,5 @@
+import path from 'path';
+
 import { CompleteMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from 'next/server';
 
@@ -24,8 +26,12 @@ export async function POST(req: Request) {
 
         logger.info(`File uploaded successfully. File ID: ${sendBackData.key}`);
 
+        const fileExtension = path.extname(sendBackData.key).toLowerCase();
+
         // Create audio video conversion job
-        await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, { fileKey: sendBackData.key, userEmailId: user.email });
+        if (fileExtension !== '.docx') { // Check for remote legal docx files
+            await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, { fileKey: sendBackData.key, userEmailId: user.email });
+        }
 
         return NextResponse.json({ success: true });
     } catch (error) {

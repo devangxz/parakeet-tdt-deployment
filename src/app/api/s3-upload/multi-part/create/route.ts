@@ -2,31 +2,33 @@ import path from 'path';
 
 import { CreateMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from 'next/server';
-import { v4 as uuidv4 } from 'uuid';
 
 import logger from '@/lib/logger';
 import { s3Client } from '@/lib/s3Client';
+import { requireCustomer } from '@/utils/checkRoles';
 
 export async function POST(req: Request) {
     try {
         const userToken = req.headers.get('x-user-token');
         const user = JSON.parse(userToken ?? '{}');
 
-        if (!["CUSTOMER", "ADMIN"].includes(user.role)) {
+        if (!requireCustomer(user)) {
             return NextResponse.json({ message: 'Action is not allowed' }, { status: 403 });
         }
 
         const { fileInfo } = await req.json();
 
-        const fileKey = uuidv4() + path.extname(fileInfo.originalName);
+        const fileKey = fileInfo.fileId + path.extname(fileInfo.originalName);
 
         const command = new CreateMultipartUploadCommand({
             Bucket: process.env.AWS_S3_BUCKET_NAME,
             Key: fileKey,
             ContentType: fileInfo.type,
             Metadata: {
+                upload_environment: process.env.UPLOAD_ENVIRONMENT || 'STAGING',
                 type: 'ORIGINAL_FILE',
                 user_id: user?.userId?.toString(),
+                team_user_id: user?.internalTeamUserId?.toString() || user?.userId?.toString(),
                 file_name: path.parse(fileInfo.originalName).name
             }
         });

@@ -4,12 +4,13 @@ import { UploadIcon } from '@radix-ui/react-icons'
 import axios from 'axios'
 import { FolderUp } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-import React, { useState, useCallback, ChangeEvent, useEffect, useRef } from 'react'
+import React, { useState, ChangeEvent, useEffect, useRef } from 'react'
 import Dropzone from 'react-dropzone'
 import { toast } from 'sonner'
+import { v4 as uuidv4 } from 'uuid'
 
 import { useUpload } from '@/app/context/UploadProvider'
-import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE } from '@/constants'
+import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, ORG_REMOTELEGAL, ORG_REMOTELEGAL_FOLDER } from '@/constants'
 import { cn } from '@/lib/utils'
 
 const ALLOWED_FILE_TYPES = [
@@ -44,6 +45,14 @@ interface UploadPart {
   PartNumber: number;
 }
 
+interface FileWithId {
+  name: string;
+  size: number;
+  type: string;
+  fileId: string;
+  file: File;
+}
+
 const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadSuccess }) => {
   const { data: session } = useSession()
   const { uploadingFiles, setUploadingFiles, updateUploadProgress, clearUpload } = useUpload();
@@ -52,6 +61,8 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
 
   const uploadedBytesRef = useRef<{ [key: string]: number }>({});
   const eventSourceRef = useRef<EventSource | null>(null);
+
+  const isRemoteLegal = session?.user?.organizationName.toLocaleLowerCase() === ORG_REMOTELEGAL.toLocaleLowerCase();
 
   useEffect(() => {
     eventSourceRef.current = new EventSource('/api/sse');
@@ -96,9 +107,10 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
     }
   }, [uploadingFiles])
 
-  const singlePartUpload = async (file: File) => {
+  const singlePartUpload = async (file: FileWithId) => {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', file.file);
+    formData.append('fileId', file.fileId);
 
     try {
       await axios.post('/api/s3-upload/single-part', formData, {
@@ -110,16 +122,15 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
           }
         },
       });
-      return;
     } catch (error) {
-      toast.error('An error occurred during file upload. Please try again.');
+      throw new Error('An error occurred during file upload.');
     }
   };
 
-  const multiPartUpload = async (file: File) => {
+  const multiPartUpload = async (file: FileWithId) => {
     try {
       const createRes = await axios.post('/api/s3-upload/multi-part/create', {
-        fileInfo: { type: file.type, originalName: file.name }
+        fileInfo: { type: file.type, originalName: file.name, fileId: file.fileId }
       });
       const { uploadId, key } = createRes.data;
 
@@ -130,7 +141,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
       for (let i = 0; i < numChunks; i++) {
         const start = i * MULTI_PART_UPLOAD_CHUNK_SIZE;
         const end = Math.min(start + MULTI_PART_UPLOAD_CHUNK_SIZE, file.size);
-        const chunk = file.slice(start, end);
+        const chunk = file.file.slice(start, end);
         const chunkSize = chunk.size;
 
         const partRes = await axios.post('/api/s3-upload/multi-part/part', {
@@ -167,50 +178,110 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
     }
   };
 
+  const uploadFile = async (file: FileWithId) => {
+    updateUploadProgress(file.name, 0);
+    uploadedBytesRef.current[file.name] = 0;
+
+    if (file.size <= SINGLE_PART_UPLOAD_LIMIT) {
+      await singlePartUpload(file);
+    } else {
+      await multiPartUpload(file);
+    }
+
+    if (isRemoteLegal && file.name.toLowerCase().endsWith('.docx')) {
+      updateUploadProgress(file.name, 100);
+      setUploadedFiles(prev => new Set(prev).add(file.name));
+    }
+  };
+
   const isFileAllowed = (file: File): boolean => {
     const fileType = file.type.toLowerCase();
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+
+    if (isRemoteLegal && fileExtension === '.docx') {
+      return true;
+    }
+
     return ALLOWED_FILE_TYPES.includes(fileType) || FILE_EXTENSIONS.includes(fileExtension);
   };
 
   const handleFileOrFolderUpload = async (files: File[]) => {
-    const allowedFiles = files.filter(isFileAllowed);
-    const rejectedFiles = files.filter(file => !isFileAllowed(file));
+    let filesToUpload: FileWithId[] = [];
 
-    if (rejectedFiles.length > 0) {
-      toast.error(`${rejectedFiles.length} file(s) were rejected due to unsupported file type.`);
+    if (isRemoteLegal) {
+      const remoteLegalFiles = files.filter(file => {
+        const pathSegments = file.webkitRelativePath.split('/');
+        return pathSegments.length > 1 && pathSegments[1].toLowerCase() === ORG_REMOTELEGAL_FOLDER.toLowerCase();
+      });
+
+      if (remoteLegalFiles.length === 0) {
+        toast.error("No 'Scribie' folder found or the folder is empty.");
+        return;
+      }
+
+      const mp3File = remoteLegalFiles.find(file => file.name.toLowerCase().endsWith('.mp3'));
+      const docxFile = remoteLegalFiles.find(file => file.name.toLowerCase().endsWith('.docx'));
+
+      if (!mp3File || !docxFile) {
+        toast.error("Both MP3 and DOCX files are required in the 'Scribie' folder.");
+        return;
+      }
+
+      const commonFileId = uuidv4();
+      filesToUpload = [
+        {
+          name: mp3File.name,
+          size: mp3File.size,
+          type: mp3File.type,
+          fileId: commonFileId,
+          file: mp3File
+        },
+        {
+          name: docxFile.name,
+          size: docxFile.size,
+          type: docxFile.type,
+          fileId: commonFileId,
+          file: docxFile
+        }
+      ];
+
+    } else {
+      const allowedFiles = files.filter(isFileAllowed);
+      const rejectedFiles = files.filter(file => !isFileAllowed(file));
+
+      if (rejectedFiles.length > 0) {
+        toast.error(`${rejectedFiles.length} file(s) were rejected due to unsupported file type.`);
+      }
+
+      if (allowedFiles.length === 0) return;
+
+      filesToUpload = allowedFiles.map(file => ({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        fileId: uuidv4(),
+        file: file
+      }));
     }
 
-    if (allowedFiles.length === 0) return;
+    setUploadingFiles(filesToUpload.map(file => ({ name: file.name, size: file.size })));
 
-    setUploadingFiles(allowedFiles.map(file => ({ name: file.name, size: file.size })));
-    allowedFiles.forEach(file => {
-      updateUploadProgress(file.name, 0);
-      uploadedBytesRef.current[file.name] = 0;
-    });
-
-    for (const file of allowedFiles) {
+    for (const file of filesToUpload) {
       try {
-        if (file.size <= SINGLE_PART_UPLOAD_LIMIT) {
-          await singlePartUpload(file);
-        } else {
-          await multiPartUpload(file);
-        }
+        await uploadFile(file);
       } catch (error) {
-        console.error(`Error uploading file ${file.name}:`, error);
         toast.error(`Error uploading ${file.name}`);
         updateUploadProgress(file.name, 0);
       }
     }
 
     uploadedBytesRef.current = {};
+    onUploadSuccess(true);
   };
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    handleFileOrFolderUpload(acceptedFiles)
-  }, [])
-
-  const isRemoteLegal = session?.user?.organizationName.toLowerCase() === 'remotelegal'
+  const onDrop = (acceptedFiles: File[]) => {
+    handleFileOrFolderUpload(acceptedFiles);
+  };
 
   return (
     <div className='bg-primary flex flex-col p-[12px] items-center justify-center rounded-[12px] border shadow-sm text-white'>
@@ -247,10 +318,10 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
               <div className='flex flex-col items-center justify-center gap-4 sm:px-5'>
                 <div className='flex gap-3 text-base font-medium leading-6'>
                   <FolderUp />
-                  <div>Upload files or folders</div>
+                  <div>Upload {!isRemoteLegal && 'files or'} folders</div>
                 </div>
                 <div className='text-xs self-stretch mt-3.5 leading-5 text-center max-md:mr-1 max-md:max-w-full'>
-                  Drag & drop files or folders here or use the options below.
+                  Drag & drop {!isRemoteLegal && 'files or'} folders here or use the options below.
                   <br />
                   <span className='text-xs'>
                     Supported formats: {FILE_EXTENSIONS.join(', ')}
