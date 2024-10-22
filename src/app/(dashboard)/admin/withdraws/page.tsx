@@ -2,6 +2,7 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
 import axios from 'axios'
+import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
@@ -9,6 +10,7 @@ import { DataTable } from './components/data-table'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
+import { ADMIN_EMAILS } from '@/constants'
 import formatDateTime from '@/utils/formatDateTime'
 
 interface Withdrawal {
@@ -23,6 +25,8 @@ interface Withdrawal {
 }
 
 export default function WithdrawalPage() {
+  const { data: session } = useSession()
+
   const [pendingWithdrawals, setPendingWithdrawals] = useState<
     Withdrawal[] | null
   >(null)
@@ -137,24 +141,20 @@ export default function WithdrawalPage() {
   }, [])
 
   const [selectedPendingWithdrawals, setSelectedPendingWithdrawals] = useState<
-    string[]
+    Withdrawal[]
   >([])
 
   const [selectedInitiatedWithdrawals, setSelectedInitiatedWithdrawals] =
-    useState<string[]>([])
+    useState<Withdrawal[]>([])
 
   const handleSelectedRowsChange = (selectedRowsData: Withdrawal[]) => {
-    setSelectedPendingWithdrawals(
-      selectedRowsData.map((withdrawal) => withdrawal.invoiceId)
-    )
+    setSelectedPendingWithdrawals(selectedRowsData)
   }
 
   const handleSelectedInitiatedRowsChange = (
     selectedRowsData: Withdrawal[]
   ) => {
-    setSelectedInitiatedWithdrawals(
-      selectedRowsData.map((withdrawal) => withdrawal.invoiceId)
-    )
+    setSelectedInitiatedWithdrawals(selectedRowsData)
   }
 
   if (isLoading || isInitiatedLoading) {
@@ -320,13 +320,14 @@ export default function WithdrawalPage() {
     try {
       setLoadingInitiateWithdrawal(true)
       const response = await axios.post(`/api/admin/initiate-withdrawal`, {
-        invoiceIds: selectedPendingWithdrawals,
+        invoiceIds: selectedPendingWithdrawals.map((w) => w.invoiceId),
       })
       if (response.data.success) {
         toast.success('Successfully initiated withdrawal.')
         setLoadingInitiateWithdrawal(false)
         fetchPendingWithdrawals()
         fetchInitiatedWithdrawals()
+        setSelectedPendingWithdrawals([])
       } else {
         toast.error(response.data.message || 'Failed to initiate withdrawal.')
         setLoadingInitiateWithdrawal(false)
@@ -345,12 +346,13 @@ export default function WithdrawalPage() {
     try {
       setLoadingCompleteWithdrawal(true)
       const response = await axios.post(`/api/admin/complete-withdrawal`, {
-        invoiceIds: selectedInitiatedWithdrawals,
+        invoiceIds: selectedInitiatedWithdrawals.map((w) => w.invoiceId),
       })
       if (response.data.success) {
         toast.success('Successfully completed withdrawal.')
         setLoadingCompleteWithdrawal(false)
         fetchInitiatedWithdrawals()
+        setSelectedInitiatedWithdrawals([])
       } else {
         toast.error(response.data.message || 'Failed to complete withdrawal.')
         setLoadingCompleteWithdrawal(false)
@@ -363,95 +365,120 @@ export default function WithdrawalPage() {
 
   return (
     <>
-      <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex bg-muted/40'>
-        <div className='flex items-center justify-between space-y-2'>
-          <div className='flex items-center gap-5'>
+      {session?.user?.role !== 'ADMIN' ||
+      !ADMIN_EMAILS.includes(session?.user?.email ?? '') ? (
+        <>
+          <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex bg-muted/40'>
             <h1 className='text-lg font-semibold md:text-lg'>
-              Pending Withdrawals ({pendingWithdrawals?.length})
-            </h1>{' '}
-            <br />
-            <p>
-              Total: $
-              {pendingWithdrawals
-                ?.reduce((sum, withdrawal) => sum + withdrawal.amount, 0)
-                .toFixed(2) ?? 0}
-            </p>
+              You are not authorized to access this page
+            </h1>
           </div>
-          <div className='flex items-center space-x-2'>
-            {loadingInitiateWithdrawal ? (
-              <Button
-                disabled
-                variant='order'
-                className='w-[160px] not-rounded'
-              >
-                Please wait
-                <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-              </Button>
-            ) : (
-              <Button
-                variant='order'
-                className='not-rounded w-[160px]'
-                onClick={() => {
-                  handleInitiatePayment()
-                }}
-              >
-                Initiated Payment
-              </Button>
-            )}
+        </>
+      ) : (
+        <>
+          <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex bg-muted/40'>
+            <div className='flex items-center justify-between space-y-2'>
+              <div className='flex items-center gap-5'>
+                <h1 className='text-lg font-semibold md:text-lg'>
+                  Pending Withdrawals ({pendingWithdrawals?.length})
+                </h1>{' '}
+                <br />
+                <p>
+                  Total: $
+                  {pendingWithdrawals
+                    ?.reduce((sum, withdrawal) => sum + withdrawal.amount, 0)
+                    .toFixed(2) ?? 0}
+                </p>
+                <p>
+                  Selected: $
+                  {selectedPendingWithdrawals
+                    .reduce((sum, withdrawal) => sum + withdrawal.amount, 0)
+                    .toFixed(2)}
+                </p>
+              </div>
+              <div className='flex items-center space-x-2'>
+                {loadingInitiateWithdrawal ? (
+                  <Button
+                    disabled
+                    variant='order'
+                    className='w-[160px] not-rounded'
+                  >
+                    Please wait
+                    <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+                  </Button>
+                ) : (
+                  <Button
+                    variant='order'
+                    className='not-rounded w-[160px]'
+                    onClick={() => {
+                      handleInitiatePayment()
+                    }}
+                  >
+                    Initiated Payment
+                  </Button>
+                )}
+              </div>
+            </div>
+            <DataTable
+              data={pendingWithdrawals ?? []}
+              columns={columns}
+              onSelectedRowsChange={handleSelectedRowsChange}
+            />
           </div>
-        </div>
-        <DataTable
-          data={pendingWithdrawals ?? []}
-          columns={columns}
-          onSelectedRowsChange={handleSelectedRowsChange}
-        />
-      </div>
-      <div className='bg-muted/40'>
-        <Separator className='mb-5' />
-      </div>
-      <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex bg-muted/40'>
-        <div className='flex items-center justify-between space-y-2'>
-          <div className='flex items-center gap-5'>
-            <h1 className='text-lg font-semibold md:text-lg'>
-              Initiated Withdrawals ({initiatedWithdrawals?.length})
-            </h1>{' '}
-            <br />
-            <p>
-              Total: $
-              {initiatedWithdrawals
-                ?.reduce((sum, withdrawal) => sum + withdrawal.amount, 0)
-                .toFixed(2) ?? 0}
-            </p>
+          <div className='bg-muted/40'>
+            <Separator className='mb-5' />
           </div>
-          <div className='flex items-center space-x-2'>
-            {loadingCompleteWithdrawal ? (
-              <Button
-                disabled
-                variant='order'
-                className='w-[160px] not-rounded'
-              >
-                Please wait
-                <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-              </Button>
-            ) : (
-              <Button
-                variant='order'
-                className='not-rounded w-[160px]'
-                onClick={() => {
-                  handleCompletePayment()
-                }}
-              >
-                Complete Payment
-              </Button>
-            )}
+          <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex bg-muted/40'>
+            <div className='flex items-center justify-between space-y-2'>
+              <div className='flex items-center gap-5'>
+                <h1 className='text-lg font-semibold md:text-lg'>
+                  Initiated Withdrawals ({initiatedWithdrawals?.length})
+                </h1>{' '}
+                <br />
+                <p>
+                  Total: $
+                  {initiatedWithdrawals
+                    ?.reduce((sum, withdrawal) => sum + withdrawal.amount, 0)
+                    .toFixed(2) ?? 0}
+                </p>
+                <p>
+                  Selected: $
+                  {selectedInitiatedWithdrawals
+                    .reduce((sum, withdrawal) => sum + withdrawal.amount, 0)
+                    .toFixed(2)}
+                </p>
+              </div>
+              <div className='flex items-center space-x-2'>
+                {loadingCompleteWithdrawal ? (
+                  <Button
+                    disabled
+                    variant='order'
+                    className='w-[160px] not-rounded'
+                  >
+                    Please wait
+                    <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+                  </Button>
+                ) : (
+                  <Button
+                    variant='order'
+                    className='not-rounded w-[160px]'
+                    onClick={() => {
+                      handleCompletePayment()
+                    }}
+                  >
+                    Complete Payment
+                  </Button>
+                )}
+              </div>
+            </div>
+            <DataTable
+              data={initiatedWithdrawals ?? []}
+              columns={initiatedColumns}
+              onSelectedRowsChange={handleSelectedInitiatedRowsChange}
+            />
           </div>
-        </div>
-        <DataTable
-          data={initiatedWithdrawals ?? []}
-          columns={initiatedColumns}
-          onSelectedRowsChange={handleSelectedInitiatedRowsChange}
-        />
-      </div>
+        </>
+      )}
     </>
   )
 }

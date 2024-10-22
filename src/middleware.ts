@@ -13,7 +13,8 @@ export async function middleware(req: NextRequest) {
     requestedUrl.startsWith('/api/auth') ||
     requestedUrl.startsWith('/api/webhook') ||
     requestedUrl.startsWith('/api/static-mails') ||
-    requestedUrl.startsWith('/api/cronjobs')
+    requestedUrl.startsWith('/api/cronjobs') ||
+    requestedUrl.startsWith('/api/public')
   ) {
     return NextResponse.next()
   }
@@ -60,6 +61,7 @@ export async function middleware(req: NextRequest) {
   const isCustomer = token.role === 'CUSTOMER'
   const isAdmin = token.role === 'ADMIN'
   const isReviewer = token.role === 'REVIEWER'
+  const isOm = token.role === 'OM'
 
   const url = req.nextUrl.pathname
 
@@ -71,7 +73,7 @@ export async function middleware(req: NextRequest) {
   }
 
   if (url.startsWith('/admin')) {
-    if (!isAdmin) {
+    if (!isAdmin && !isOm) {
       const redirectUrl = getRedirectPathByRole(token.role as string)
       return NextResponse.redirect(new URL(redirectUrl, req.url))
     }

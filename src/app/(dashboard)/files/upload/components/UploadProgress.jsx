@@ -10,6 +10,7 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/comp
 
 const UploadProgressItem = ({ file, progress }) => {
     const fileExtension = file.name.split('.').pop().toLowerCase();
+    
     const getFileIcon = (ext) => {
         switch (ext.toLowerCase()) {
             // Audio files
@@ -41,6 +42,8 @@ const UploadProgressItem = ({ file, progress }) => {
                 return '🎞️'; // Film frames icon
             case 'opus':
                 return '🔊'; // Speaker icon
+            case 'docx':
+                return '📄'; // Document icon
 
             // Default case
             default:
@@ -98,6 +101,7 @@ const UploadProgressItem = ({ file, progress }) => {
         </div>
     );
 };
+
 const UploadProgress = () => {
     const { uploadingFiles, uploadProgress } = useUpload();
     const [isExpanded, setIsExpanded] = useState(true);

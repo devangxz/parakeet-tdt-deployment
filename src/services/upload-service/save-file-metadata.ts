@@ -15,19 +15,21 @@ interface Metadata {
     fullPath?: string;
     risData?: string;
     userId: string;
+    teamUserId: string;
 };
 
 const saveFileMetadata = async (metadata: Metadata): Promise<void> => {
     const fileSize = BigInt(Math.floor(metadata?.fileSize ?? 0));
     const duration = Math.floor(Number(metadata?.duration?.toFixed(2) ?? 0));
     const userId = Number(metadata?.userId);
+    const teamUserId = Number(metadata?.teamUserId);
 
     let isDuplicate = false;
     try {
         const existingFile = await prisma.file.findFirst({
             where: {
                 filename: metadata?.fileName,
-                userId: userId,
+                userId: teamUserId,
                 NOT: {
                     fileId: metadata?.fileId,
                 },
@@ -40,7 +42,7 @@ const saveFileMetadata = async (metadata: Metadata): Promise<void> => {
     }
 
     const fileData = {
-        userId,
+        userId: teamUserId,
         filename: metadata?.fileName ?? '',
         fileId: metadata?.fileId ?? '',
         duration: duration,
@@ -59,7 +61,7 @@ const saveFileMetadata = async (metadata: Metadata): Promise<void> => {
         await prisma.file.findMany({
             where: {
                 filename: metadata?.fileName,
-                userId: userId,
+                userId: teamUserId,
                 NOT: {
                     fileId: metadata?.fileId,
                 },

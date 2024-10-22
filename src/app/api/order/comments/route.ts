@@ -5,8 +5,6 @@ import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 
 export async function GET(req: NextRequest) {
-  const userToken = req.headers.get('x-user-token')
-  const user = JSON.parse(userToken ?? '{}')
   const searchParams = req.nextUrl.searchParams
   const fileId = searchParams.get('fileId')
 
@@ -15,9 +13,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const userId = user?.userId
     const order = await prisma.order.findFirst({
-      where: { fileId: fileId as string, userId: userId },
+      where: { fileId: fileId as string },
       select: { comments: true },
     })
     if (!order) {
