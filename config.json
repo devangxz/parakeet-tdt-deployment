@@ -2,10 +2,7 @@
   "nameLength": 35,
   "minPasswordLength": 8,
   "maxPasswordLength": 256,
-  "userTypes": [
-    "customer",
-    "transcriber"
-  ],
+  "userTypes": ["customer", "transcriber"],
   "industries": [
     "Video",
     "Legal",
@@ -123,10 +120,7 @@
     "background conversation",
     "overlapping conversation"
   ],
-  "order_types": [
-    "TRANSCRIPTION",
-    "TRANSCRIPTION_FORMATTING"
-  ],
+  "order_types": ["TRANSCRIPTION", "TRANSCRIPTION_FORMATTING"],
   "file_upload_limit_in_hour": 10,
   "rates": [
     {
@@ -184,6 +178,7 @@
       "high": 0.2
     }
   },
+  "adminEmails": ["yukti@scribie.com", "bireswar@scribie.com"],
   "single_part_upload_limit": 20971520,
   "multi_part_upload_chunk_size": 20971520,
   "org_remotelegal": "REMOTELEGAL",

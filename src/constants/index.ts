@@ -64,6 +64,7 @@ export const RATES = config.rates
 export const VERBATIM_PRICE = config.verbatim_price
 export const RUSH_PRICE = config.rush_price
 export const AUDIO_TIMECODING_PRICE = config.audio_timecoding_price
+export const ADMIN_EMAILS = config.adminEmails
 
 // Email
 export const EMAIL_IDS =
