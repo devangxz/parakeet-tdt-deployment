@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { Session } from "next-auth";
 import Quill from 'quill';
 import { toast } from "sonner"
@@ -5,7 +6,7 @@ import { toast } from "sonner"
 import axiosInstance from "./axios"
 import { OrderDetails, UploadFilesType } from "@/app/editor/dev/[orderId]/page"
 import { CTMSWord } from "@/components/editor/transcriptUtils";
-import { BACKEND_URL } from "@/constants"
+import { ALLOWED_META, BACKEND_URL, FILE_CACHE_URL, MINIMUM_AUDIO_PLAYBACK_PERCENTAGE } from "@/constants"
 export type ButtonLoading = {
     upload: boolean
     submit: boolean
@@ -14,6 +15,7 @@ export type ButtonLoading = {
     regenDocx: boolean
     mp3: boolean
     download: boolean
+    frequentTerms: boolean
 }
 
 const usableColors = [
@@ -360,13 +362,14 @@ const reportHandler = async (reportDetails: { reportComment: string; reportOptio
         report: true,
     }))
     try {
-        await axiosInstance.post(`${BACKEND_URL}/report-file`, {
+        await axios.post(`/api/editor/report-file`, {
             ...reportDetails,
             orderId: orderId,
         })
         setReportModalOpen(false)
         setReportDetails({ reportComment: '', reportOption: '' })
     } catch (error) {
+        console.log(error)
         toast.error('Failed to report file')
     } finally {
         setButtonLoading((prevButtonLoading) => ({
@@ -441,9 +444,7 @@ const fetchFileDetails = async ({
     setCtms,
 }: FetchFileDetailsParams) => {
     try {
-        const orderRes = await axiosInstance.get(
-            `${BACKEND_URL}/order-details?orderId=${params?.orderId}`
-        )
+        const orderRes = await axios.get(`/api/editor/order-details?orderId=${params?.orderId}`)
         setOrderDetails(orderRes.data)
         setCfd(orderRes.data.cfd)
         const cfStatus = ['FORMATTED', 'REVIEWER_ASSIGNED', 'REVIEW_COMPLETED']
@@ -462,12 +463,14 @@ const fetchFileDetails = async ({
         setStep(step)
         setDownloadableType(step === 'QC' ? 'text' : 'marking')
         const transcriptRes = await axiosInstance.get(
-            `${BACKEND_URL}/fetch-transcript?fileId=${orderRes.data.fileId}&step=${step}&orderId=${orderRes.data.orderId}`
+            `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.data.fileId}&step=${step}&orderId=${orderRes.data.orderId}` //step will be used later when cf editor is implemented
         )
+        console.log(transcriptRes)
         setTranscript(transcriptRes.data.result.transcript)
         setCtms(transcriptRes.data.result.ctms)
         return orderRes.data
     } catch (error) {
+        console.log(error)
         toast.error('Failed to fetch file details')
     }
 }
@@ -506,11 +509,12 @@ const handleSave = async ({
     localStorage.setItem(orderDetails.fileId, JSON.stringify({ notes: notes }));
     const toastId = toast.loading(`Saving Transcription...`);
     try {
-        await axiosInstance.post(`${BACKEND_URL}/save-transcript`, {
+        console.log(FILE_CACHE_URL)
+        await axiosInstance.post(`${FILE_CACHE_URL}/save-transcript`, {
             fileId: orderDetails.fileId,
             transcript,
             step,
-            cfd: cfd,
+            cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
             ctms: updatedCtms,
             orderId: orderDetails.orderId,
         });
@@ -518,6 +522,7 @@ const handleSave = async ({
         const successToastId = toast.success(`Transcription saved successfully`);
         toast.dismiss(successToastId);
     } catch (error) {
+        console.log(error)
         toast.dismiss(toastId);
         const errorToastId = toast.error(`Error while saving transcript`);
         toast.dismiss(errorToastId);
@@ -540,10 +545,36 @@ type HandleSubmitParams = {
     };
     setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>;
     getPlayedPercentage: () => number;
-    MINIMUM_AUDIO_PLAYBACK_PERCENTAGE: number;
     router: {
         push: (path: string) => void;
     };
+    quill: Quill;
+};
+
+const checkTranscriptForAllowedMeta = (quill: Quill) => {
+    if (!quill) return null;
+
+    const text = quill.getText();
+    const regex = /\[([^\]]+)\](?!\s+____)/g;
+    let match;
+    let error = null;
+
+    while ((match = regex.exec(text)) !== null) {
+        const content = match[1];
+        if (!ALLOWED_META.includes(content.toLowerCase())) {
+            const index = match.index;
+            const length = match[0].length;
+
+            quill.setSelection(index, length);
+            quill.scrollIntoView();
+
+            error = { message: 'IMT' };
+
+            break;
+        }
+    }
+
+    throw new Error(error?.message);
 };
 
 const handleSubmit = async ({
@@ -553,11 +584,13 @@ const handleSubmit = async ({
     fileToUpload,
     setButtonLoading,
     getPlayedPercentage,
-    MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
     router,
+    quill,
 }: HandleSubmitParams) => {
     if (!orderDetails || !orderDetails.orderId || !step) return;
     const toastId = toast.loading(`Submitting Transcription...`);
+    checkTranscriptForAllowedMeta(quill);
+    const transcript = quill.getText() || '';
     try {
         setButtonLoading((prevButtonLoading) => ({
             ...prevButtonLoading,
@@ -584,16 +617,13 @@ const handleSubmit = async ({
             const formData = new FormData();
             formData.append('file', fileToUpload.renamedFile);
 
-            const queryString = `fileId=${orderDetails.fileId}&orderId=${orderDetails.orderId}&mode=${editorMode.toLowerCase()}`;
-
-            await axiosInstance.post(
-                `${BACKEND_URL}/submit-qc?${queryString}`,
-                formData,
-                {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                    },
-                }
+            await axios.post(
+                `${BACKEND_URL}/submit-qc`, {
+                fileId: orderDetails.fileId,
+                orderId: orderDetails.orderId,
+                mode: editorMode.toLowerCase(),
+                transcript,
+            }
             );
         }
 
@@ -616,6 +646,8 @@ const handleSubmit = async ({
             case 'UF':
                 errorText = `Please upload a file before submitting`;
                 break;
+            case 'IMT':
+                errorText = `Invalid meta found in transcript. Please remove the meta from the transcript.`;
             // Add more cases as needed
         }
         const errorToastId = toast.error(errorText);
@@ -625,6 +657,35 @@ const handleSubmit = async ({
             ...prevButtonLoading,
             submit: false,
         }));
+    }
+};
+
+const getFrequentTermsHandler = async (
+    userId: string,
+    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
+    setFrequentTermsData: React.Dispatch<React.SetStateAction<{ autoGenerated: string; edited: string }>>,
+    setFrequentTermsModalOpen: React.Dispatch<React.SetStateAction<boolean>>
+) => {
+    setButtonLoading(prev => ({ ...prev, frequentTerms: true }));
+
+    try {
+        const { data } = await axios.get(`/api/editor/frequent-terms`);
+        if (data) {
+            setFrequentTermsData(data);
+            setFrequentTermsModalOpen(true);
+        } else {
+            throw new Error('No frequent terms data found');
+        }
+    } catch (error) {
+        const errorMessage = axios.isAxiosError(error)
+            ? error.response?.data.error
+                ? error.response.data.error
+                : 'Failed to get frequent terms'
+            : 'An unexpected error occurred';
+
+        toast.error(errorMessage);
+    } finally {
+        setButtonLoading(prev => ({ ...prev, frequentTerms: false }));
     }
 };
 
@@ -769,6 +830,89 @@ const playCurrentParagraphTimestamp = (
     setTimeout(() => setDisableGoToWord(false), 100);
 };
 
+const searchAndSelect = (quill: Quill, searchText: string, matchCase: boolean, lastSearchIndex: number, setLastSearchIndex: (index: number) => void, toastInstance: { error: (msg: string) => void }) => {
+    if (!quill) return;
+
+    const text = quill.getText();
+    const currentSelection = quill.getSelection();
+    let startIndex = 0;
+
+    const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase();
+
+    // Check if the current selection matches the search text and adjust the start index accordingly
+    if (currentSelection) {
+        const selectionText = text.substr(currentSelection.index, currentSelection.length);
+        if ((matchCase && selectionText === searchText) || (!matchCase && selectionText.toLowerCase() === effectiveSearchText)) {
+            startIndex = currentSelection.index + searchText.length;
+        } else {
+            startIndex = lastSearchIndex + 1;
+        }
+    }
+
+    let index = matchCase ? text.indexOf(searchText, startIndex) : text.toLowerCase().indexOf(effectiveSearchText, startIndex);
+
+    // If not found from the current position, start from the beginning
+    if (index === -1 && startIndex !== 0) {
+        startIndex = 0;
+        index = matchCase ? text.indexOf(searchText, startIndex) : text.toLowerCase().indexOf(effectiveSearchText, startIndex);
+    }
+
+    if (index !== -1) {
+        // Select the found text
+        quill.setSelection(index, searchText.length);
+        setLastSearchIndex(index);
+    } else {
+        // If text is not found, reset the search
+        setLastSearchIndex(-1);
+        toastInstance.error('Text not found');
+    }
+};
+
+const replaceTextHandler = (quill: Quill, searchText: string, replaceWith: string, replaceAll: boolean, matchCase: boolean, toastInstance: { error: (msg: string) => void }) => {
+    if (!quill) return;
+
+    let replaced = false;
+    const text = quill.getText();
+    const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase();
+    const textToSearch = matchCase ? text : text.toLowerCase();
+
+    const replace = (index: number) => {
+        quill.deleteText(index, searchText.length);
+        quill.insertText(index, replaceWith);
+        replaced = true;
+    };
+
+    if (replaceAll) {
+        let startIndex = 0;
+        let index = textToSearch.indexOf(effectiveSearchText, startIndex);
+        while (index !== -1) {
+            replace(index);
+            startIndex = index + replaceWith.length;
+            // Update textToSearch to reflect changes made by replacement
+            const updatedText = quill.getText();
+            const updatedTextToSearch = matchCase ? updatedText : updatedText.toLowerCase();
+            index = updatedTextToSearch.indexOf(effectiveSearchText, startIndex);
+        }
+    } else {
+        const currentSelection = quill.getSelection();
+        if (currentSelection && currentSelection.length > 0) {
+            const selectedText = quill.getText(currentSelection.index, currentSelection.length);
+            if ((matchCase && selectedText === searchText) || (!matchCase && selectedText.toLowerCase() === effectiveSearchText)) {
+                replace(currentSelection.index);
+            }
+        } else {
+            const index = textToSearch.indexOf(effectiveSearchText);
+            if (index !== -1) {
+                replace(index);
+            }
+        }
+    }
+
+    if (!replaced) {
+        toastInstance.error('Text not found');
+    }
+};
+
 export {
     generateRandomColor,
     convertBlankToSeconds,
@@ -788,8 +932,11 @@ export {
     fetchFileDetails,
     handleSave,
     handleSubmit,
+    getFrequentTermsHandler,
     adjustTimestamps,
     playCurrentParagraphTimestamp,
-    navigateAndPlayBlanks
+    navigateAndPlayBlanks,
+    searchAndSelect,
+    replaceTextHandler
 };
 export type { ConvertedASROutput };

@@ -106,6 +106,20 @@
   "autosave_interval": 2,
   "invoice_address": "Scribie Technologies, Inc., 44 Tehama St., San Francisco, CA 94105, United",
   "invoice_disclaimer": "Additional charges may apply for files with non-American accents, poor audio quality, distortions, distant speakers, high background and/or ambient noise. A full refund will be issued if the additional charges are unacceptable, or if the file is untranscribable.",
+  "allowed_meta": [
+    "chuckle",
+    "laughter",
+    "pause",
+    "noise",
+    "music",
+    "applause",
+    "vocalization",
+    "video playback",
+    "automated voice",
+    "foreign language",
+    "background conversation",
+    "overlapping conversation"
+  ],
   "order_types": ["TRANSCRIPTION", "TRANSCRIPTION_FORMATTING"],
   "file_upload_limit_in_hour": 10,
   "rates": [
@@ -164,5 +178,11 @@
       "high": 0.2
     }
   },
-  "adminEmails": ["yukti@scribie.com", "bireswar@scribie.com"]
+  "adminEmails": ["yukti@scribie.com", "bireswar@scribie.com"],
+  "single_part_upload_limit": 20971520,
+  "multi_part_upload_chunk_size": 20971520,
+  "job_timeout_multiplier": 4,
+  "qc": {
+    "diff_change_pc_threshold": 0
+  }
 }
