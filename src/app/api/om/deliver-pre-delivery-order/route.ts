@@ -1,9 +1,13 @@
-import { FileTag } from '@prisma/client'
+import { FileTag, OrderType } from '@prisma/client'
 import { NextRequest, NextResponse } from 'next/server'
 
+import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import deliver from '@/services/file-service/deliver'
+import axiosInstance from '@/utils/axios'
+import { uploadToS3 } from '@/utils/backend-helper'
+import getCustomerTranscript from '@/utils/getCustomerTranscript'
 
 export async function POST(req: NextRequest) {
   const userToken = req.headers.get('x-user-token')
@@ -34,25 +38,58 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    const fileVersion = await prisma.fileVersion.findFirst({
-      where: {
-        fileId: orderInformation.fileId,
-        tag: FileTag.CF_OM_DELIVERED,
-        userId: omId,
-      },
-      orderBy: {
-        updatedAt: 'desc',
-      },
-    })
+    if (order?.orderType === OrderType.TRANSCRIPTION_FORMATTING) {
+      const fileVersion = await prisma.fileVersion.findFirst({
+        where: {
+          fileId: orderInformation.fileId,
+          tag: FileTag.CF_OM_DELIVERED,
+          userId: omId,
+        },
+        orderBy: {
+          updatedAt: 'desc',
+        },
+      })
 
-    await prisma.fileVersion.create({
-      data: {
-        fileId: orderInformation.fileId,
-        tag: FileTag.CF_CUSTOMER_DELIVERED,
-        userId: order?.userId,
-        s3VersionId: fileVersion?.s3VersionId,
-      }
-    })
+      await prisma.fileVersion.create({
+        data: {
+          fileId: orderInformation.fileId,
+          tag: FileTag.CF_CUSTOMER_DELIVERED,
+          userId: order?.userId,
+          s3VersionId: fileVersion?.s3VersionId,
+        }
+      })
+    }
+
+    if (order?.orderType === OrderType.TRANSCRIPTION) {
+      const transcriptRes = await axiosInstance.get(`${FILE_CACHE_URL}/fetch-transcript?fileId=${orderInformation.fileId}&orderId=${orderInformation.id}&userId=${omId}`, {
+        headers: {
+          'x-api-key': process.env.SCRIBIE_API_KEY
+        }
+      })
+
+      const transcript = transcriptRes.data.result.transcript;
+      const customerTranscript = await getCustomerTranscript(orderInformation.fileId, transcript);
+
+      const { VersionId } = await uploadToS3(`${orderInformation.fileId}.txt`, customerTranscript);
+
+      const fileVersion = await prisma.fileVersion.findFirst({
+        where: {
+          fileId: orderInformation.fileId,
+          tag: FileTag.CUSTOMER_DELIVERED,
+        }
+      })
+
+      console.log(VersionId)
+
+      await prisma.fileVersion.update({
+        where: {
+          id: fileVersion?.id
+        },
+        data: {
+          s3VersionId: VersionId
+        }
+      })
+    }
 
     await deliver(orderInformation, omId)
 

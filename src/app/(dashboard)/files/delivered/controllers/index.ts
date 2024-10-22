@@ -21,17 +21,22 @@ const downloadPDFFile = async ({
   docType?: string
 }) => {
   try {
-    const response = await axiosInstance.get(`/api/order/file-pdf-signed-url?fileId=${fileId}&docType=${docType}`)
-    const url = response?.data?.signedUrl
-    if (url) {
-      window.location.href = url
-    } else {
-      console.error('No URL provided for PDF download.')
-      throw new Error('No URL provided for PDF download.')
-    }
-    return response?.data?.message
+    const response = await axios.get(`/api/order/file-pdf-signed-url?fileId=${fileId}&docType=${docType}`, {
+      responseType: 'blob'
+    });
+    const fileBlob = new Blob([response.data], { type: 'application/pdf' });
+    const downloadUrl = window.URL.createObjectURL(fileBlob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `${fileId}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+    return 'PDF file downloaded successfully';
   } catch (err) {
-    throw err
+    console.error('Error downloading PDF file:', err);
+    throw new Error('Failed to download PDF file');
   }
 }
 

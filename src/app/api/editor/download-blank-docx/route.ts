@@ -27,21 +27,6 @@ export async function GET(req: NextRequest) {
             `--> downloadBlankDocx ${fileId} ${type} ${orgName} ${templateName}`,
         );
 
-        const fileVersion = await prisma.fileVersion.findFirst({
-            where: {
-                fileId,
-                tag: FileTag.CF_REV_SUBMITTED,
-            },
-            select: {
-                s3VersionId: true,
-            },
-        });
-
-        if (!fileVersion || !fileVersion.s3VersionId) {
-            logger.error(`File version not found for ${fileId}`);
-            return NextResponse.json({ error: 'File version not found' }, { status: 404 });
-        }
-
         const order = await prisma.order.findUnique({
             where: {
                 fileId,
@@ -54,6 +39,22 @@ export async function GET(req: NextRequest) {
         }
 
         if (order.status === OrderStatus.FINALIZER_ASSIGNED) {
+
+            const fileVersion = await prisma.fileVersion.findFirst({
+                where: {
+                    fileId,
+                    tag: FileTag.CF_REV_SUBMITTED,
+                },
+                select: {
+                    s3VersionId: true,
+                },
+            });
+
+            if (!fileVersion || !fileVersion.s3VersionId) {
+                logger.error(`File version not found for ${fileId}`);
+                return NextResponse.json({ error: 'File version not found' }, { status: 404 });
+            }
+
             const fileBuffer = await getFileVersionFromS3(`${fileId}.docx`, fileVersion?.s3VersionId);
             return new NextResponse(fileBuffer, {
                 status: 200,
@@ -63,7 +64,12 @@ export async function GET(req: NextRequest) {
                 },
             });
         } else if (order.status === OrderStatus.REVIEWER_ASSIGNED) {
-            const response = await axios.get(`${FILE_CACHE_URL}/get-cf-docx/${fileId}?type=${type}&orgName=${orgName.toLowerCase()}&templateName=${templateName}&userId=${userId}`, { responseType: 'arraybuffer' });
+            const response = await axios.get(`${FILE_CACHE_URL}/get-cf-docx/${fileId}?type=${type}&orgName=${orgName.toLowerCase()}&templateName=${templateName}&userId=${userId}`, {
+                responseType: 'arraybuffer',
+                headers: {
+                    'x-api-key': process.env.SCRIBIE_API_KEY
+                }
+            });
             const fileBuffer = Buffer.from(response.data);
             return new NextResponse(fileBuffer, {
                 status: 200,

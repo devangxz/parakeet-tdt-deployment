@@ -372,8 +372,12 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
     }
 
     useEffect(() => {
-        if (submitting) {
+        console.log(submitting, orderDetails.status)
+        if (submitting && orderDetails.status === 'QC_ASSIGNED') {
             toggleSpeakerName()
+        }
+        if (submitting && orderDetails.status !== 'QC_ASSIGNED') {
+            setIsSubmitModalOpen(true)
         }
     }, [submitting])
 

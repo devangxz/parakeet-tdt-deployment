@@ -611,7 +611,7 @@ function EditorPage() {
             Report
           </Button>
           {editorMode === 'Editor' ||
-            (step === 'QC' && (
+            ((step === 'QC' || session?.user?.role === 'OM') && (
               <Button
                 onClick={() => handleSave({ getEditorText, orderDetails, notes, step, cfd, updatedCtms, setButtonLoading })}
                 // disabled={buttonLoading.save}
