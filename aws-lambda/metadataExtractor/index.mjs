@@ -11,6 +11,7 @@ import { S3Client, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s
 const s3Client = new S3Client();
 
 const WEBHOOK_URLS = {
+    PROD: process.env.PROD_WEBHOOK_URL,
     STAGING: process.env.STAGING_WEBHOOK_URL,
     DEV: process.env.DEV_WEBHOOK_URL,
 };
