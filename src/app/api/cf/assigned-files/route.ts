@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
+import serializeBigInt from '@/utils/serializeBigInt'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -80,7 +81,8 @@ export async function GET(request: Request) {
     }
 
     logger.info(`Assigned CF files fetched successfully for ${transcriberId}`)
-    return NextResponse.json(assignedCFFiles)
+    const serializedData = serializeBigInt(assignedCFFiles)
+    return NextResponse.json(serializedData)
   } catch (error) {
     logger.error('Error fetching assigned CF files', error)
     return NextResponse.json({ error: 'Failed to fetch assigned CF files' })

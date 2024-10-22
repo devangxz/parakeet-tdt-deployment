@@ -58,7 +58,7 @@ async function completeQCJob(order: Order, transcriberId: number) {
             );
         }
 
-        logger.info(`sending TRANSCRIBER_SUBMIT mail to ${userEmail} for user ${transcriberId}`)
+        logger.info(`sending TRANSCRIBER_SUBMIT mail for submitting QC file ${order.fileId} to ${userEmail} for user ${transcriberId}`)
 
         const templateData = {
             file_id: order.fileId,
@@ -71,8 +71,20 @@ async function completeQCJob(order: Order, transcriberId: number) {
     logger.info(`<-- completeQCJob ${transcriberId}`);
 }
 
-export async function submitFile(orderId: number, transcriberId: number, transcript: string) {
+export async function submitQCFile(orderId: number, transcriberId: number, transcript: string) {
     try {
+
+        const assignment = await prisma.jobAssignment.findFirst({
+            where: {
+                orderId,
+                transcriberId,
+                type: JobType.QC
+            }
+        })
+
+        if (!assignment) {
+            logger.error(`Unauthorized try to submit a QC file by user ${transcriberId} for order ${orderId}`)
+        }
 
         const order = await prisma.order.findUnique({
             where: {
@@ -119,8 +131,6 @@ export async function submitFile(orderId: number, transcriberId: number, transcr
         });
 
         const testResult = await qualityCriteriaPassed(order.fileId);
-
-        console.log(testResult, '<------')
 
         if (!testResult.result) {
             logger.info(`Quality Criteria failed ${order.fileId}`);
@@ -170,10 +180,10 @@ export async function submitFile(orderId: number, transcriberId: number, transcr
             }
         }
     } catch (error) {
-        logger.error(`Failed to submit file ${error}`)
+        logger.error(`Failed to submit order ${orderId}: ${error}`)
         return {
             success: false,
-            message: `Failed to submit file ${error}`,
+            message: `Failed to submit order ${orderId}: ${error}`,
         }
     }
 

@@ -22,7 +22,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip'
 import 'rc-slider/assets/index.css';
-import { BACKEND_URL } from '@/constants'
+import { FILE_CACHE_URL } from '@/constants'
 import axiosInstance from '@/utils/axios'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 
@@ -93,7 +93,7 @@ export default function NewAudioPlayer({ fileId, getAudioPlayer }: { fileId: str
 
     const fetchWaveform = async () => {
         try {
-            const res = await axiosInstance.get(`${BACKEND_URL}/get-waveform/${fileId}`, { responseType: 'blob' })
+            const res = await axiosInstance.get(`${FILE_CACHE_URL}/get-waveform/${fileId}`, { responseType: 'blob' })
             const waveformUrl = URL.createObjectURL(res.data)
             setWaveformUrl(waveformUrl)
             setIsPlayerLoaded(true)

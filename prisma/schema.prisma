@@ -582,7 +582,7 @@ model FrequentTerms {
 model FileVersion {
   id          Int             @id @default(autoincrement())
   fileId      String          @map("file_id")
-  commitHash  String          @map("commit_hash")
+  commitHash  String?          @map("commit_hash")
   s3VersionId String?         @map("s3_version_id")
   userId      Int?            @map("user_id")
   createdAt   DateTime        @default(now()) @map("created_at")
@@ -822,7 +822,9 @@ enum FileTag {
   CUSTOMER_EDIT
   CUSTOMER_DELIVERED
   OM_EDIT
-  REV_EDIT
-  REV_DELIVERED
+  CF_REV_EDIT
+  CF_REV_SUBMITTED
+  CF_FINALIZER_SUBMITTED
+  CF_CUSTOMER_DELIVERED
   LLM
 }

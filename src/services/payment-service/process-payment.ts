@@ -79,6 +79,8 @@ export const processPayment = async (
 
         if (fileExists) {
           await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUTOMATIC_SPEECH_RECOGNITION, { fileId });
+        } else {
+          logger.error(`file ${fileId}.mp3 does not exist in s3, not creating an ASR job`)
         }
         // TODO: add order service
         // await OrderService.add(order.id, OrderTrigger.CREATE_ORDER)

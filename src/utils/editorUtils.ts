@@ -296,7 +296,7 @@ const uploadTextFile = async (fileToUpload: { renamedFile: File | null }, orderD
     }
 }
 
-const uploadFile = async (fileToUpload: { renamedFile: File | null }, setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>, session: Session | null, setFileToUpload: React.Dispatch<React.SetStateAction<{ renamedFile: File | null, originalFile: File | null, isUploaded?: boolean }>>) => {
+const uploadFile = async (fileToUpload: { renamedFile: File | null }, setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>, session: Session | null, setFileToUpload: React.Dispatch<React.SetStateAction<{ renamedFile: File | null, originalFile: File | null, isUploaded?: boolean }>>, fileId: string) => {
     const file = fileToUpload.renamedFile
     if (!file) return toast.error('Please select a file to upload.')
 
@@ -311,17 +311,17 @@ const uploadFile = async (fileToUpload: { renamedFile: File | null }, setButtonL
     const formData = new FormData()
     formData.append('file', file)
     try {
-        await axiosInstance.post(`${BACKEND_URL}/upload-docx`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-                Authorization: `Bearer ${session.user.token}`,
-            },
-        })
+        await axios.post(`/api/editor/upload-docx?fileId=${fileId}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
         toast.success('File uploaded successfully')
+        setFileToUpload({ renamedFile: null, originalFile: null, isUploaded: true })
     } catch (uploadError) {
+        console.log(uploadError)
         toast.error('Failed to upload file')
+        setFileToUpload({ renamedFile: null, originalFile: null, isUploaded: false })
     } finally {
-        setFileToUpload({ renamedFile: null, originalFile: null })
         setButtonLoading((prevButtonLoading) => ({
             ...prevButtonLoading,
             upload: false,
@@ -344,7 +344,7 @@ const handleFilesUpload = async (payload: UploadFilesType, orderDetailsId: strin
             return
         }
         const file = payload.files[0]
-        const renamedFile = new File([file], `${orderDetailsId}_cf.docx`, {
+        const renamedFile = new File([file], `${orderDetailsId}.docx`, {
             type: file.type,
         })
         setFileToUpload({ renamedFile, originalFile: file })
@@ -447,7 +447,7 @@ const fetchFileDetails = async ({
         const orderRes = await axios.get(`/api/editor/order-details?orderId=${params?.orderId}`)
         setOrderDetails(orderRes.data)
         setCfd(orderRes.data.cfd)
-        const cfStatus = ['FORMATTED', 'REVIEWER_ASSIGNED', 'REVIEW_COMPLETED']
+        const cfStatus = ['FORMATTED', 'REVIEWER_ASSIGNED', 'REVIEW_COMPLETED', 'FINALIZER_ASSIGNED', 'FINALIZER_COMPLETED']
         let step = 'QC'
         if (cfStatus.includes(orderRes.data.status)) {
             step = 'CF'
@@ -538,6 +538,11 @@ type HandleSubmitParams = {
     orderDetails: OrderDetails;
     step: string;
     editorMode: string;
+    fileToUpload: {
+        renamedFile: File | null;
+        originalFile: File | null;
+        isUploaded?: boolean;
+    };
     setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>;
     getPlayedPercentage: () => number;
     router: {
@@ -579,6 +584,7 @@ const handleSubmit = async ({
     orderDetails,
     step,
     editorMode,
+    fileToUpload,
     setButtonLoading,
     getPlayedPercentage,
     router,
@@ -586,10 +592,10 @@ const handleSubmit = async ({
 }: HandleSubmitParams) => {
     if (!orderDetails || !orderDetails.orderId || !step) return;
     const toastId = toast.loading(`Submitting Transcription...`);
-    checkTranscriptForAllowedMeta(quill);
     const transcript = quill.getText() || '';
 
     try {
+        checkTranscriptForAllowedMeta(quill);
         setButtonLoading((prevButtonLoading) => ({
             ...prevButtonLoading,
             submit: true,
@@ -599,12 +605,24 @@ const handleSubmit = async ({
             throw new Error(`MAPPNM`); //Stands for "Minimum Audio Playback Percentage Not Met"
         }
 
-        await axios.post(`/api/editor/submit`, {
-            fileId: orderDetails.fileId,
-            orderId: orderDetails.orderId,
-            mode: editorMode.toLowerCase(),
-            transcript,
-        });
+        if (step === 'CF') {
+
+            if (!fileToUpload.isUploaded)
+                throw new Error('UF');
+
+            await axios.post(`/api/editor/submit-review`, {
+                fileId: orderDetails.fileId,
+                orderId: orderDetails.orderId,
+                mode: editorMode.toLowerCase(),
+            });
+        } else {
+            await axios.post(`${BACKEND_URL}/submit-qc`, {
+                fileId: orderDetails.fileId,
+                orderId: orderDetails.orderId,
+                mode: editorMode.toLowerCase(),
+                transcript,
+            });
+        }
 
         toast.dismiss(toastId);
         const successToastId = toast.success(

@@ -933,7 +933,7 @@ export async function uploadToS3(
   key: string,
   body: Buffer | Readable | string,
   contentType = 'text/plain'
-): Promise<void> {
+): Promise<{ VersionId?: string }> {
   const uploadParams = {
     Bucket: bucketName,
     Key: key,
@@ -945,8 +945,9 @@ export async function uploadToS3(
 
   try {
     const command = new PutObjectCommand(uploadParams)
-    await s3Client.send(command)
+    const response = await s3Client.send(command)
     logger.info(`File uploaded successfully to S3: ${key}`)
+    return response; // This will contain the version ID
   } catch (error) {
     logger.error(`Error uploading file to S3: ${key}, ${String(error)}`)
     throw error

@@ -67,6 +67,7 @@ export const updateOrderAndCreateJobAssignment = async (
         },
       })
     })
+    logger.info(`FInalize file assigned to ${transcriberId}`)
   } catch (error) {
     logger.error(`failed to create job assignment ${orderId}: ${error}`)
     throw new Error()

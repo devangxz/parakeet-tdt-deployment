@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 
 import logger from '@/lib/logger'
-import { submitFile } from '@/services/editor-service/submit-file'
+import { submitQCFile } from '@/services/editor-service/submit-qc-file'
 
 export async function POST(req: Request) {
     let fileId = ''
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
             )
         }
 
-        await submitFile(orderId, transcriberId, transcript)
+        await submitQCFile(orderId, transcriberId, transcript)
         logger.info(`QC submitted for file ${fileId} by ${transcriberId}`)
         return NextResponse.json({ message: 'QC submitted' })
     } catch (error) {

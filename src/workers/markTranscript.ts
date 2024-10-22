@@ -289,7 +289,7 @@ async function formatTranscript(
         })
 
         if (!assignment) {
-            throw new Error(`Assignment not found for order ${order.id} type REVIEW status ACCEPTED`)
+            throw new Error(`Assignment not found for file ${order.fileId} type REVIEW status ACCEPTED`)
         }
 
         const reviewerId = assignment.transcriberId

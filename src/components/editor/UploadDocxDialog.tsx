@@ -61,7 +61,7 @@ const UploadDocxDialog = ({ orderDetails, setButtonLoading, buttonLoading, setFi
             <DialogClose asChild>
                 <Button
                     disabled={buttonLoading.upload}
-                    onClick={uploadFile.bind(null, fileToUpload, setButtonLoading, session, setFileToUpload)}
+                    onClick={uploadFile.bind(null, fileToUpload, setButtonLoading, session, setFileToUpload, orderDetails.fileId)}
                 >
                     {' '}
                     {buttonLoading.upload && (

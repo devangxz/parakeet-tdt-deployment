@@ -7,6 +7,7 @@ import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { isTranscriberICQC } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
+import serializeBigInt from '@/utils/serializeBigInt'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -85,7 +86,8 @@ export async function GET(request: Request) {
     }
 
     logger.info(`Available CF files fetched successfully`)
-    return NextResponse.json(cfFiles)
+    const serializedData = serializeBigInt(cfFiles)
+    return NextResponse.json(serializedData)
   } catch (error) {
     logger.error(error)
     return NextResponse.json({ error: 'Failed to fetch available CF files' })
