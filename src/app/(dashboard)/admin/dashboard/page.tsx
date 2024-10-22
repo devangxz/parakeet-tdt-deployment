@@ -1,3 +1,6 @@
+'use client'
+import { useSession } from 'next-auth/react'
+
 import AccountAccess from './components/account-access'
 import AccountSuspension from './components/account-suspension'
 import AddCredits from './components/add-credits'
@@ -10,26 +13,33 @@ import DisableQC from './components/disable-qc'
 import EnableCustomFormattingBonus from './components/enable-custom-format-bonus'
 import EnableCustomFormattingReview from './components/enable-custom-format-review'
 import EnablePreDelivery from './components/enable-pre-delivery'
+import TransferCredits from './components/transfer-credits'
 import TransferFiles from './components/transfer-files'
 
-export default async function AdminDashboard() {
+export default function AdminDashboard() {
+  const { data: session } = useSession()
   return (
     <>
       <div className='h-full flex-1 flex-col space-y-8 p-5 md:flex bg-muted/40'>
         <h1 className='text-lg font-semibold md:text-lg'>Admin Dashboard</h1>
         <AccountAccess />
-        <AddCredits />
-        <Coupon />
-        <TransferFiles />
-        <CustomPlan />
-        <DisableQC />
-        <AccountSuspension />
-        <ChangePaypalEmail />
-        <AddLegalQC />
-        <EnableCustomFormattingReview />
-        <EnablePreDelivery />
-        <EnableCustomFormattingBonus />
-        <AddMiscEarnings />
+        {session?.user?.role === 'ADMIN' && (
+          <>
+            <AddCredits />
+            <Coupon />
+            <TransferFiles />
+            <CustomPlan />
+            <DisableQC />
+            <AccountSuspension />
+            <ChangePaypalEmail />
+            <AddLegalQC />
+            <EnableCustomFormattingReview />
+            <EnablePreDelivery />
+            <EnableCustomFormattingBonus />
+            <AddMiscEarnings />
+            <TransferCredits />
+          </>
+        )}
       </div>
     </>
   )

@@ -163,5 +163,6 @@
       "medium": 0.15,
       "high": 0.2
     }
-  }
+  },
+  "adminEmails": ["yukti@scribie.com", "bireswar@scribie.com"]
 }
