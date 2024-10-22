@@ -1,6 +1,5 @@
 import { FileTag, JobStatus, JobType, Order, OrderStatus, OrderType } from "@prisma/client";
 
-import preDeliverIfConfigured from "../file-service/pre-deliver-if-configured";
 import logger from "@/lib/logger";
 import prisma from "@/lib/prisma";
 import { sendTemplateMail } from "@/lib/ses";
@@ -76,7 +75,17 @@ export async function submitFinalize(
                 data: { status: OrderStatus.FINALIZING_COMPLETED },
             });
         });
-        preDeliverIfConfigured(order, transcriberId);
+
+        await prisma.order.update({
+            where: { id: order.id },
+            data: {
+                deliveredTs: new Date(),
+                deliveredBy: transcriberId,
+                status: OrderStatus.PRE_DELIVERED,
+                updatedAt: new Date(),
+            },
+        })
+
         const templateData = {
             file_id: order.fileId,
         };

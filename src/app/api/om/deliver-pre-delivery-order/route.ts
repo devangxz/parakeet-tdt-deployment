@@ -1,3 +1,4 @@
+import { FileTag } from '@prisma/client'
 import { NextRequest, NextResponse } from 'next/server'
 
 import logger from '@/lib/logger'
@@ -26,6 +27,32 @@ export async function POST(req: NextRequest) {
       logger.error(`Order not found for ${orderId}`)
       return NextResponse.json({ success: false, message: 'Order not found' })
     }
+
+    const order = await prisma.order.findUnique({
+      where: {
+        id: Number(orderId)
+      }
+    })
+
+    const fileVersion = await prisma.fileVersion.findFirst({
+      where: {
+        fileId: orderInformation.fileId,
+        tag: FileTag.CF_OM_DELIVERED,
+        userId: omId,
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    })
+
+    await prisma.fileVersion.create({
+      data: {
+        fileId: orderInformation.fileId,
+        tag: FileTag.CF_CUSTOMER_DELIVERED,
+        userId: order?.userId,
+        s3VersionId: fileVersion?.s3VersionId,
+      }
+    })
 
     await deliver(orderInformation, omId)
 

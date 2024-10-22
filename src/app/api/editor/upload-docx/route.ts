@@ -40,6 +40,10 @@ export async function POST(req: Request) {
       tag = FileTag.CF_FINALIZER_SUBMITTED;
     }
 
+    if (order?.status === OrderStatus.PRE_DELIVERED) {
+      tag = FileTag.CF_OM_DELIVERED;
+    }
+
     const fileVersion = await prisma.fileVersion.findFirst({
       where: {
         userId: transcriberId,
@@ -50,8 +54,6 @@ export async function POST(req: Request) {
         updatedAt: 'desc'
       }
     });
-
-    console.log(fileVersion)
 
     if (!fileVersion || !fileVersion.s3VersionId) {
       await prisma.fileVersion.create({

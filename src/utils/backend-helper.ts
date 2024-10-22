@@ -1065,3 +1065,32 @@ export async function getSignedURLFromS3(
     throw error;
   }
 }
+
+export async function getFileVersionSignedURLFromS3(
+  key: string,
+  versionId: string,
+  expires: number = 900,
+  filename?: string,
+  customBucketName?: string
+): Promise<string> {
+  const encodedFilename = encodeURIComponent(filename ?? '');
+  logger.info(`Generating signed URL for S3 object version: ${key}, version: ${versionId}`);
+
+  const command = new GetObjectCommand({
+    Bucket: customBucketName || bucketName,
+    Key: key,
+    VersionId: versionId,
+    ResponseContentDisposition: `attachment; filename=${encodedFilename}`,
+  });
+
+  try {
+    const signedUrl = await getSignedUrl(s3Client, command, {
+      expiresIn: expires,
+    });
+    logger.info(`Signed URL generated successfully for: ${key}, version: ${versionId}`);
+    return signedUrl;
+  } catch (error) {
+    logger.error(`Error generating signed URL for ${key}, version: ${versionId}: ${String(error)}`);
+    throw error;
+  }
+}

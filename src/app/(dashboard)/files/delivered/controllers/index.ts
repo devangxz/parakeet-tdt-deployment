@@ -21,9 +21,7 @@ const downloadPDFFile = async ({
   docType?: string
 }) => {
   try {
-    const response = await axiosInstance.get(
-      `${BACKEND_URL}/file-pdf-signed-url?fileId=${fileId}&docType=${docType}`
-    )
+    const response = await axiosInstance.get(`/api/order/file-pdf-signed-url?fileId=${fileId}&docType=${docType}`)
     const url = response?.data?.signedUrl
     if (url) {
       window.location.href = url
@@ -46,9 +44,7 @@ const downloadFile = async ({
   docType?: string
 }) => {
   try {
-    const response = await axiosInstance.get(
-      `${BACKEND_URL}/file-docx-signed-url?fileId=${fileId}&docType=${docType}`
-    )
+    const response = await axios.get(`/api/order/file-docx-signed-url?fileId=${fileId}&docType=${docType}`)
     const url = response?.data?.signedUrl
     if (url) {
       window.location.href = url

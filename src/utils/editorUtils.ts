@@ -114,8 +114,8 @@ const downloadBlankDocx = async ({ orderDetails, downloadableType, setButtonLoad
         download: true,
     }))
     try {
-        const response = await axiosInstance.get(
-            `${BACKEND_URL}/download-blank-docx?fileId=${orderDetails.fileId}&type=${downloadableType}&orgName=${orderDetails.orgName}&templateName=${orderDetails.templateName}`,
+        const response = await axios.get(
+            `/api/editor/download-blank-docx?fileId=${orderDetails.fileId}&type=${downloadableType}&orgName=${orderDetails.orgName}&templateName=${orderDetails.templateName}`,
             { responseType: 'blob' }
         )
         const url = window.URL.createObjectURL(new Blob([response.data]))
@@ -129,6 +129,7 @@ const downloadBlankDocx = async ({ orderDetails, downloadableType, setButtonLoad
         const successToastId = toast.success(`File downloaded successfully`)
         toast.dismiss(successToastId)
     } catch (error) {
+        console.log(error)
         toast.dismiss(toastId)
         toast.error('Error downloading file')
     } finally {
@@ -616,7 +617,7 @@ const handleSubmit = async ({
                 mode: editorMode.toLowerCase(),
             });
         } else {
-            await axios.post(`${BACKEND_URL}/submit-qc`, {
+            await axios.post(`/api/editor/submit-qc`, {
                 fileId: orderDetails.fileId,
                 orderId: orderDetails.orderId,
                 mode: editorMode.toLowerCase(),

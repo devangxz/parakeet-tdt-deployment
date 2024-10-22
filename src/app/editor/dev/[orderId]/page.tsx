@@ -251,11 +251,16 @@ function EditorPage() {
       return
     }
 
+    console.log(session)
+
     if (
       session.user.role !== 'QC' &&
       session.user.role !== 'REVIEWER' &&
-      session.user.role !== 'ADMIN'
+      session.user.role !== 'ADMIN' &&
+      session.user.role !== 'OM'
     ) {
+      console.log(session)
+
       router.replace('/') //TODO: Redirect to another page
       return
     }

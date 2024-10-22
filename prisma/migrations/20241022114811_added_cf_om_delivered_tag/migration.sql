@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "FileTag" ADD VALUE 'CF_OM_DELIVERED';
