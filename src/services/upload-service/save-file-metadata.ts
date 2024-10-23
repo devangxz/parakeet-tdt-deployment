@@ -19,7 +19,7 @@ interface Metadata {
 };
 
 const saveFileMetadata = async (metadata: Metadata): Promise<void> => {
-    const fileSize = BigInt(Math.floor(metadata?.fileSize ?? 0));
+    const fileSize = Math.floor(metadata?.fileSize ?? 0).toString();
     const duration = Math.floor(Number(metadata?.duration?.toFixed(2) ?? 0));
     const userId = Number(metadata?.userId);
     const teamUserId = Number(metadata?.teamUserId);
