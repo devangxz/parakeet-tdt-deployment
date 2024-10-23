@@ -8,7 +8,7 @@ import Editor from "./Editor";
 import { TabsContent } from "./Tabs";
 import { Textarea } from "../ui/textarea";
 import { OrderDetails } from "@/app/editor/[fileId]/page";
-import { CTMSWord } from "@/app/editor/test/transcriptUtils";
+import { CTMSWord } from "@/components/editor/transcriptUtils";
 import { ConvertedASROutput } from "@/utils/editorUtils";
 
 export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, getCtms, disableGoToWord, orderDetails }: { transcript: string, ctms: ConvertedASROutput[], audioPlayer: HTMLAudioElement | null, audioDuration: number, getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void, getCtms: (ctms: CTMSWord[]) => void, disableGoToWord: boolean, orderDetails: OrderDetails }) => (

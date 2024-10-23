@@ -76,31 +76,27 @@ const processAddedWords = (
   nextWordStart: number,
   startIndex: number,
   prevSpeaker: string
-): CTMSWord[] => {
-  return words.map((word, i) => {
-    const timing = interpolateNewWordTiming(
-      prevWordEnd,
-      nextWordStart,
-      words.length,
-      i
-    )
-    return createCtmWordForAddedWord(word, timing, startIndex + i, prevSpeaker)
-  })
-}
+): CTMSWord[] => words.map((word, i) => {
+  const timing = interpolateNewWordTiming(
+    prevWordEnd,
+    nextWordStart,
+    words.length,
+    i
+  )
+  return createCtmWordForAddedWord(word, timing, startIndex + i, prevSpeaker)
+})
 
 const processUnchangedWords = (
   words: string[],
   startIndex: number,
   existingCtmsWords: WordData[]
-): CTMSWord[] => {
-  return words.map((word, i) =>
-    createCtmWordForUnchangedWord(
-      word,
-      startIndex + i,
-      existingCtmsWords[i]?.ctms
-    )
+): CTMSWord[] => words.map((word, i) =>
+  createCtmWordForUnchangedWord(
+    word,
+    startIndex + i,
+    existingCtmsWords[i]?.ctms
   )
-}
+)
 
 export const updateContent = (
   quillContent: string,

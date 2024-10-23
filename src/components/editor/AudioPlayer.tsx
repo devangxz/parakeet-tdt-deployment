@@ -79,7 +79,7 @@ const createShortcutControls = (audioPlayer: React.RefObject<HTMLAudioElement>):
     },
 });
 
-export default function NewAudioPlayer({ fileId, getAudioPlayer }: { fileId: string, getAudioPlayer?: (audioPlayer: HTMLAudioElement | null) => void }) {
+export default function AudioPlayer({ fileId, getAudioPlayer }: { fileId: string, getAudioPlayer?: (audioPlayer: HTMLAudioElement | null) => void }) {
     const [currentValue, setCurrentValue] = useState(0)
     const [currentTime, setCurrentTime] = useState('00:00')
     const [audioDuration, setAudioDuration] = useState(0)
