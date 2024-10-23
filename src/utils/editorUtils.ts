@@ -213,29 +213,30 @@ const downloadEditorTextFile = async (orderDetails: OrderDetails, setButtonLoadi
     }
 }
 
-const downloadMP3 = async (orderDetails: OrderDetails, setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>) => {
-    setButtonLoading((prevButtonLoading) => ({
-        ...prevButtonLoading,
-        mp3: true,
-    }))
+const downloadMP3 = async (orderDetails: OrderDetails) => {
+    const toastId = toast.loading('Downloading MP3...')
     try {
-        const response = await axiosInstance.get(
-            `${BACKEND_URL}/download-mp3?fileId=${orderDetails.fileId}`
+        const response = await axios.get(
+            `/api/editor/download-mp3?fileId=${orderDetails.fileId}`,
+            { responseType: 'blob' }
         )
         if (response.status === 200) {
-            const data = response.data
-            window.open(data.url, '_blank')
+            const blob = new Blob([response.data], { type: 'audio/mpeg' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${orderDetails.fileId}.mp3`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
         }
 
-        const successToastId = toast.success(`MP3 downloaded successfully`)
-        toast.dismiss(successToastId)
+        toast.dismiss(toastId)
+        toast.success(`MP3 downloaded successfully`)
     } catch (error) {
+        toast.dismiss(toastId)
         toast.error('Error downloading mp3')
-    } finally {
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            mp3: false,
-        }))
     }
 }
 

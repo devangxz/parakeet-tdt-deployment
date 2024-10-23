@@ -27,7 +27,6 @@ import {
 import renderTitleInputs from '@/components/editor/TitleInputs'
 import { CTMSWord } from '@/components/editor/transcriptUtils'
 import UploadDocxDialog from '@/components/editor/UploadDocxDialog'
-import UploadTextFile from '@/components/editor/UploadTextFile'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -50,9 +49,6 @@ import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcu
 import {
   ConvertedASROutput,
   updatePlayedPercentage,
-  downloadEditorDocxFile,
-  downloadEditorTextFile,
-  downloadMP3,
   regenDocx,
   convertSecondsToTimestamp,
   fetchFileDetails,
@@ -528,17 +524,6 @@ function EditorPage() {
             <>
               {editorMode === 'Manual' && (
                 <>
-                  <Button
-                    disabled={buttonLoading.mp3}
-                    onClick={downloadMP3.bind(null, orderDetails, setButtonLoading)}
-                    className='mr-2'
-                  >
-                    {' '}
-                    {buttonLoading.mp3 && (
-                      <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                    )}{' '}
-                    Download MP3
-                  </Button>
                   {orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === 'PRE_DELIVERED' ? (
                     <Button onClick={() => downloadBlankDocx({ orderDetails, downloadableType: "markings", setButtonLoading })}>
                       Download DOCX
@@ -554,34 +539,6 @@ function EditorPage() {
             </>
           )}
 
-          {step === 'QC' && session?.user?.role !== 'CUSTOMER' && (
-            <>
-              <Button
-                disabled={buttonLoading.download}
-                onClick={downloadEditorTextFile.bind(null, orderDetails, setButtonLoading)}
-              >
-                {' '}
-                {buttonLoading.download && (
-                  <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                )}{' '}
-                Download Text File
-              </Button>
-
-              <UploadTextFile orderDetails={orderDetails} setFileToUpload={setFileToUpload} fileToUpload={fileToUpload} buttonLoading={buttonLoading} setButtonLoading={setButtonLoading} session={session} />
-
-              <Button
-                disabled={buttonLoading.download || !fileToUpload.isUploaded}
-                onClick={downloadEditorDocxFile.bind(null, orderDetails, setButtonLoading)}
-                className='ml-2'
-              >
-                {' '}
-                {buttonLoading.download && (
-                  <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                )}{' '}
-                Download Docx File
-              </Button>
-            </>
-          )}
           {editorMode === 'Editor' && step !== 'QC' && (
             <Button
               variant='outline'

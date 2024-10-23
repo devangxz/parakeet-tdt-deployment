@@ -13,6 +13,7 @@ export async function POST(req: NextRequest) {
         orderId = Number(body.orderId);
         const formattingOptions = body.formattingOptions;
         const existingOptions = body.existingOptions;
+        const newTemplateId = body.newTemplateId;
 
         if (!orderId) {
             logger.error(`Missing orderId parameter`);
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
             ts: formattingOptions.timeCoding ? 1 : 0,
             sif: formattingOptions.speakerTracking ? 1 : 0,
             si: formattingOptions.nameFormat === 'initials' ? 0 : 1,
+            tmp: newTemplateId,
         }
 
         await prisma.invoice.update({

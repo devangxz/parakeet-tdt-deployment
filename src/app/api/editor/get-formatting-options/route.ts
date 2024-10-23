@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
     try {
         const searchParams = req.nextUrl.searchParams;
         orderId = Number(searchParams.get('orderId'));
+        const DEFAULT_TEMPLATE = { name: 'Scribie Single Line Spaced', id: 1 };
 
         if (!orderId) {
             logger.error(`Missing orderId parameter`);
@@ -54,8 +55,25 @@ export async function GET(req: NextRequest) {
         }
 
         const options = JSON.parse(invoice.options ?? '{}');
+        const templateId = options.tmp || null;
 
-        return NextResponse.json(options);
+        if (!templateId) {
+            logger.error(`Template not found for file ${order.fileId}`);
+            return NextResponse.json({ error: 'Template not found' }, { status: 404 });
+        }
+
+        const allPublicTemplates = await prisma.template.findMany({
+            where: {
+                userId: {
+                    equals: null
+                }
+            },
+            select: { name: true, id: true },
+        });
+
+        const currentTemplate = allPublicTemplates.find((template) => template.id === templateId);
+
+        return NextResponse.json({ options, templates: allPublicTemplates, currentTemplate: (currentTemplate ? currentTemplate : DEFAULT_TEMPLATE) });
     } catch (err) {
         logger.error(
             `An error occurred while fetching order option for order ${orderId}: ${(err as Error).message}`

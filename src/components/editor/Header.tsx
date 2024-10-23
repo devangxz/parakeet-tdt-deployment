@@ -19,11 +19,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select"
 import { BACKEND_URL, FILE_CACHE_URL } from '@/constants';
 import axiosInstance from '@/utils/axios';
 import DefaultShortcuts, { ShortcutControls, setShortcut, getAllShortcuts, useShortcuts } from '@/utils/editorAudioPlayerShortcuts';
-import { replaceTextHandler, searchAndSelect } from '@/utils/editorUtils';
-
+import { downloadMP3, replaceTextHandler, searchAndSelect } from '@/utils/editorUtils';
 type NewHeaderProps = {
     editorModeOptions: string[];
     getEditorMode: (editorMode: string) => void;
@@ -65,21 +65,24 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
         speakerTracking: true,
         nameFormat: 'initials'
     })
+    const [allPublicTemplates, setAllPublicTemplates] = useState<{ name: string, id: string }[]>([])
+    const [currentTemplate, setCurrentTemplate] = useState('1')
 
     const [existingOptions, setExistingOptions] = useState<string>('')
 
     const getFormattingOptions = async () => {
         try {
             const response = await axios.get(`/api/editor/get-formatting-options?orderId=${orderDetails.orderId}`)
-            const options = response.data
+            const { options, templates, currentTemplate } = response.data
             setFormattingOptions({
                 timeCoding: options.ts === 1,
                 speakerTracking: options.sif === 1,
                 nameFormat: options.si === 0 ? 'initials' : 'full-names'
             })
+            setAllPublicTemplates(templates.map((temp: { name: string, id: number }) => ({ ...temp, id: temp.id.toString() })))
+            setCurrentTemplate(currentTemplate.id.toString())
             setExistingOptions(JSON.stringify(options))
         } catch (error) {
-            console.log(error)
             toastInstance.error('Failed to fetch formatting options')
         }
     }
@@ -405,10 +408,12 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
 
     const handleFormattingOptionChange = async () => {
         const toastId = toastInstance.loading('Updating formatting options...')
+        console.log(+currentTemplate)
         try {
             await axios.post(`/api/editor/set-formatting-options`, {
                 orderId: orderDetails.orderId,
                 formattingOptions,
+                newTemplateId: +currentTemplate,
                 existingOptions: JSON.parse(existingOptions)
             })
             toastInstance.dismiss(toastId)
@@ -458,12 +463,11 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
                             <DropdownMenuItem onClick={toggleNotes}>Notes</DropdownMenuItem>
                             <DropdownMenuItem onClick={toggleFindAndReplace}>Find and Replace</DropdownMenuItem>
                             <DropdownMenuItem onClick={toggleSpeakerName}>Speaker Names</DropdownMenuItem>
+                            <DropdownMenuItem onClick={downloadMP3.bind(null, orderDetails)}>Download MP3</DropdownMenuItem>
                             <DropdownMenuItem onClick={toggleAutoCapitalize}>
                                 {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setIsFormattingOptionsModalOpen(true)}>
-                                Formatting Options
-                            </DropdownMenuItem>
+                            {session?.user?.role === 'CUSTOMER' && <DropdownMenuItem onClick={() => setIsFormattingOptionsModalOpen(true)}>Formatting Options</DropdownMenuItem>}
                             <DialogTrigger asChild>
                                 {/* <DropdownMenuItem>Change Editor Mode</DropdownMenuItem> */}
                             </DialogTrigger>
@@ -612,6 +616,26 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
                             <Label htmlFor="full-names">Full Names</Label>
                         </div>
                     </RadioGroup>
+                    <div className="space-y-2">
+                        <Label htmlFor="template">Template</Label>
+                        <Select
+                            value={currentTemplate}
+                            onValueChange={(value) =>
+                                setCurrentTemplate(value)
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a template" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {allPublicTemplates.map((template) => (
+                                    <SelectItem key={template.id} value={template.id}>
+                                        {template.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
                 <DialogFooter>
                     <Button onClick={() => setIsFormattingOptionsModalOpen(false)}>Close</Button>
@@ -620,21 +644,23 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
             </DialogContent>
         </Dialog>
 
-        {notesOpen && <div
-            className="fixed bg-white z-[1000] overflow-auto py-4 px-4 rounded-lg shadow-lg overflow-y-hidden border"
-            style={{ top: `${position.y}px`, left: `${position.x}px`, width: '500px', height: '400px', resize: 'both' }}
-        >
-            <div onMouseDown={handleDragChange} className='cursor-move border-b flex justify-between items-center pb-2'>
-                <p className='text-lg font-semibold'>Notes</p>
-                <button onClick={toggleNotes} className='cursor-pointer hover:bg-gray-100 p-2 rounded-lg'><Cross1Icon /> </button>
+        {
+            notesOpen && <div
+                className="fixed bg-white z-[1000] overflow-auto py-4 px-4 rounded-lg shadow-lg overflow-y-hidden border"
+                style={{ top: `${position.y}px`, left: `${position.x}px`, width: '500px', height: '400px', resize: 'both' }}
+            >
+                <div onMouseDown={handleDragChange} className='cursor-move border-b flex justify-between items-center pb-2'>
+                    <p className='text-lg font-semibold'>Notes</p>
+                    <button onClick={toggleNotes} className='cursor-pointer hover:bg-gray-100 p-2 rounded-lg'><Cross1Icon /> </button>
+                </div>
+                <Textarea
+                    placeholder='Start typing...'
+                    className='h-5/6 resize-none mt-5'
+                    value={notes}
+                    onChange={handleNotesChange}
+                />
             </div>
-            <Textarea
-                placeholder='Start typing...'
-                className='h-5/6 resize-none mt-5'
-                value={notes}
-                onChange={handleNotesChange}
-            />
-        </div>}
+        }
 
         <div
             className={` ${!videoPlayerOpen ? 'hidden' : ''} fixed bg-white z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-transparent`}
@@ -658,36 +684,38 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
             </div>
         </div>
 
-        {findAndReplaceOpen && <div
-            className="fixed bg-white z-[1000] overflow-auto py-4 px-4 rounded-lg shadow-lg overflow-y-hidden border"
-            style={{ top: `${position.y}px`, left: `${position.x}px`, width: '500px', }}
-        >
-            <div onMouseDown={handleDragChange} className='cursor-move border-b flex justify-between items-center pb-2'>
-                <p className='text-lg font-semibold'>Find and Replace</p>
-                <button onClick={toggleFindAndReplace} className='cursor-pointer hover:bg-gray-100 p-2 rounded-lg'><Cross1Icon /></button>
+        {
+            findAndReplaceOpen && <div
+                className="fixed bg-white z-[1000] overflow-auto py-4 px-4 rounded-lg shadow-lg overflow-y-hidden border"
+                style={{ top: `${position.y}px`, left: `${position.x}px`, width: '500px', }}
+            >
+                <div onMouseDown={handleDragChange} className='cursor-move border-b flex justify-between items-center pb-2'>
+                    <p className='text-lg font-semibold'>Find and Replace</p>
+                    <button onClick={toggleFindAndReplace} className='cursor-pointer hover:bg-gray-100 p-2 rounded-lg'><Cross1Icon /></button>
+                </div>
+                <div className='mt-5'>
+                    <Input
+                        placeholder='Find...'
+                        className='mb-4'
+                        value={findText}
+                        onChange={handleFindChange}
+                    />
+                    <Input
+                        placeholder='Replace with...'
+                        value={replaceText}
+                        onChange={handleReplaceChange}
+                    />
+                </div>
+                <div className='flex items-center mt-4'>
+                    <Button className='mr-2' onClick={findHandler}>Find</Button>
+                    <Button className='mr-2' onClick={replaceOneHandler}>Replace Once</Button>
+                    <Button className='mr-2' onClick={replaceAllHandler}>Replace All</Button>
+                    <Label className="flex items-center space-x-2">
+                        <Checkbox checked={matchCase} onCheckedChange={(checked) => setMatchCase(checked === true)} />
+                        <span>Match case</span>
+                    </Label>
+                </div>
             </div>
-            <div className='mt-5'>
-                <Input
-                    placeholder='Find...'
-                    className='mb-4'
-                    value={findText}
-                    onChange={handleFindChange}
-                />
-                <Input
-                    placeholder='Replace with...'
-                    value={replaceText}
-                    onChange={handleReplaceChange}
-                />
-            </div>
-            <div className='flex items-center mt-4'>
-                <Button className='mr-2' onClick={findHandler}>Find</Button>
-                <Button className='mr-2' onClick={replaceOneHandler}>Replace Once</Button>
-                <Button className='mr-2' onClick={replaceAllHandler}>Replace All</Button>
-                <Label className="flex items-center space-x-2">
-                    <Checkbox checked={matchCase} onCheckedChange={(checked) => setMatchCase(checked === true)} />
-                    <span>Match case</span>
-                </Label>
-            </div>
-        </div>}
+        }
     </header >;
 }
