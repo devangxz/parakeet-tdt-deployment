@@ -85,8 +85,6 @@ export async function POST(req: NextRequest) {
             qcTranscript,
         );
 
-        console.log(customerTranscript)
-
         const { VersionId } = await uploadToS3(`${order.fileId}.txt`, customerTranscript);
 
         const customerEditVersion = await prisma.fileVersion.findFirst({

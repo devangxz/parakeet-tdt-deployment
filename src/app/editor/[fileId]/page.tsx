@@ -10,12 +10,12 @@ import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
 import ActionButton from '@/components/editor/ActionButton'
+import AudioPlayer from '@/components/editor/AudioPlayer'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
 import DownloadDocxDialog from '@/components/editor/DownloadDocxDialog'
 import FrequentTermsDialog from '@/components/editor/FrequentTermsDialog'
-import NewAudioPlayer from '@/components/editor/NewAudioPlayer'
-import NewHeader from '@/components/editor/NewHeader'
+import Header from '@/components/editor/Header'
 import ReportDialog from '@/components/editor/ReportDialog'
 import SectionSelector from '@/components/editor/SectionSelector'
 import { DiffTabComponent, EditorTabComponent, InfoTabComponent, SpeakerNameTabComponent } from '@/components/editor/TabComponents'
@@ -505,7 +505,7 @@ function EditorPage() {
 
   return (
     <div className='bg-[#F7F5FF] h-screen flex flex-col'>
-      <NewHeader
+      <Header
         editorMode={editorMode}
         editorModeOptions={editorModeOptions}
         getEditorMode={getEditorMode}
@@ -646,7 +646,7 @@ function EditorPage() {
             className={`${step !== 'QC' && editorMode === 'Editor' ? 'w-1/2' : 'w-3/4'
               } flex flex-col justify-between`}
           >
-            <NewAudioPlayer
+            <AudioPlayer
               fileId={orderDetails.fileId}
               getAudioPlayer={getAudioPlayer}
             />
