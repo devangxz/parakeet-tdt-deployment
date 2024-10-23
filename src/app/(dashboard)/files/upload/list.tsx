@@ -32,9 +32,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import FileAudioPlayer from '@/components/utils/FileAudioPlayer'
-import { BACKEND_URL } from '@/constants'
 import { User } from '@/types/files'
-import axiosInstance from '@/utils/axios'
 import formatDateTime from '@/utils/formatDateTime'
 import formatDuration from '@/utils/formatDuration'
 import getInitials from '@/utils/getInitials'
@@ -77,27 +75,10 @@ const FileList = ({
     [key: string]: string
   }>({})
 
-  const getAudioUrl = async (fileId: string) => {
-    try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/get-audio/${fileId}`,
-        { responseType: 'blob' }
-      ) // Replace with your file name
-      const url = URL.createObjectURL(response.data)
-      return url
-    } catch (error) {
-      toast.error('Failed to play audio.')
-    }
-  }
-
   useEffect(() => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    getAudioUrl(fileId).then((url) => {
-      if (url) {
-        setCurrentlyPlayingFileUrl({ [fileId]: url })
-      }
-    })
+    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
   }, [playing])
 
   const fetchPendingFiles = async (showLoader = false) => {

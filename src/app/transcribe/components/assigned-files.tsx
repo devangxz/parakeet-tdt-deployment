@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 
 import { DataTable } from './data-table'
 import { unassignmentHandler } from './unassignmentHandler'
-import { determinePwerLevel, getAudioUrl } from './utils'
+import { determinePwerLevel } from './utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -48,11 +48,7 @@ export default function AssignedFilesPage({ changeTab }: Props) {
   useEffect(() => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    getAudioUrl({ fileId }).then((url) => {
-      if (url) {
-        setCurrentlyPlayingFileUrl({ [fileId]: url })
-      }
-    })
+    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
   }, [playing])
 
   const fetchFiles = async (showLoader = false) => {
@@ -308,7 +304,7 @@ export default function AssignedFilesPage({ changeTab }: Props) {
                 )
               } else {
                 window.open(
-                  `/editor/${row.original.orderId}`,
+                  `/editor/${row.original.fileId}`,
                   '_blank',
                   'noopener,noreferrer'
                 )

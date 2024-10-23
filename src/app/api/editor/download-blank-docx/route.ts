@@ -1,4 +1,4 @@
-import { FileTag, OrderStatus } from '@prisma/client';
+import { FileTag, OrderStatus, OrderType } from '@prisma/client';
 import axios from 'axios';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -71,6 +71,30 @@ export async function GET(req: NextRequest) {
                 }
             });
             const fileBuffer = Buffer.from(response.data);
+            return new NextResponse(fileBuffer, {
+                status: 200,
+                headers: {
+                    'Content-Disposition': `attachment; filename="${fileId}.docx"`,
+                    'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                },
+            });
+        } else if (order.status === OrderStatus.PRE_DELIVERED && order.orderType === OrderType.TRANSCRIPTION_FORMATTING) {
+            const fileVersion = await prisma.fileVersion.findFirst({
+                where: {
+                    fileId,
+                    tag: FileTag.CF_FINALIZER_SUBMITTED,
+                },
+                select: {
+                    s3VersionId: true,
+                },
+            });
+
+            if (!fileVersion || !fileVersion.s3VersionId) {
+                logger.error(`File version not found for ${fileId}`);
+                return NextResponse.json({ error: 'File version not found' }, { status: 404 });
+            }
+
+            const fileBuffer = await getFileVersionFromS3(`${fileId}.docx`, fileVersion?.s3VersionId);
             return new NextResponse(fileBuffer, {
                 status: 200,
                 headers: {

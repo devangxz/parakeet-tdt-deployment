@@ -6,6 +6,7 @@ import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 
 import { LineData, CTMSWord, WordData } from './transcriptUtils'
+import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 import { ConvertedASROutput, } from '@/utils/editorUtils'
 
@@ -13,7 +14,7 @@ import { ConvertedASROutput, } from '@/utils/editorUtils'
 // TODO: Test if a new line is added with TS + speaker name
 // TODO: A meta text is added, this should have empty ctm
 // TODO: Problem with updates near punctuation marks
-export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, getCtms, disableGoToWord }: { transcript: string, ctms: ConvertedASROutput[], audioPlayer: HTMLAudioElement | null, duration: number, getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void, getCtms: (ctms: CTMSWord[]) => void, disableGoToWord: boolean }) {
+export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, getCtms, disableGoToWord, orderDetails }: { transcript: string, ctms: ConvertedASROutput[], audioPlayer: HTMLAudioElement | null, duration: number, getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void, getCtms: (ctms: CTMSWord[]) => void, disableGoToWord: boolean, orderDetails: OrderDetails }) {
     const quillRef = useRef<ReactQuill>(null)
     const [lines, setLines] = useState<LineData[]>([])
     const [newCtms, setNewCtms] = useState<CTMSWord[]>([])
@@ -329,6 +330,7 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
                 value={{ ops: content }}
                 onChange={handleContentChange}
                 className='h-full'
+                readOnly={(orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === "REVIEWER_ASSIGNED")}
             />
         </>
 

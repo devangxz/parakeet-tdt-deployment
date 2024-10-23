@@ -5,7 +5,7 @@ import { ChangeEvent } from "react";
 
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "../ui/dialog";
-import { OrderDetails } from "@/app/editor/dev/[orderId]/page";
+import { OrderDetails } from "@/app/editor/[fileId]/page";
 import { ButtonLoading, handleTextFilesUpload, uploadTextFile } from "@/utils/editorUtils";
 
 type UploadTextFileProps = {

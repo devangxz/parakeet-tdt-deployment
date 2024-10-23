@@ -26,9 +26,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import FileAudioPlayer from '@/components/utils/FileAudioPlayer'
-import { BACKEND_URL, HIGH_PWER, LOW_PWER } from '@/constants'
+import { HIGH_PWER, LOW_PWER } from '@/constants'
 import { FileCost } from '@/types/files'
-import axiosInstance from '@/utils/axios'
 import formatDateTime from '@/utils/formatDateTime'
 import formatDuration from '@/utils/formatDuration'
 
@@ -62,27 +61,11 @@ export default function OrdersPage() {
     [key: string]: string
   }>({})
 
-  const getAudioUrl = async (fileId: string) => {
-    try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/get-audio/${fileId}`,
-        { responseType: 'blob' }
-      )
-      const url = URL.createObjectURL(response.data)
-      return url
-    } catch (error) {
-      toast.error('Failed to play audio.')
-    }
-  }
-
   useEffect(() => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    getAudioUrl(fileId).then((url) => {
-      if (url) {
-        setCurrentlyPlayingFileUrl({ [fileId]: url })
-      }
-    })
+    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
+
   }, [playing])
 
   const fetchPendingOrders = async (showLoader = false) => {
@@ -240,8 +223,8 @@ export default function OrdersPage() {
                   {row.original.pwer > HIGH_PWER
                     ? 'HIGH'
                     : row.original.pwer < LOW_PWER
-                    ? 'LOW'
-                    : 'MEDIUM'}
+                      ? 'LOW'
+                      : 'MEDIUM'}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>

@@ -3,6 +3,7 @@
 import { ArrowLeftIcon, CaretDownIcon, Cross1Icon, PlusIcon } from '@radix-ui/react-icons'
 import axios from 'axios';
 import Image from "next/image";
+import { useSession } from 'next-auth/react'
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import ReactQuill from 'react-quill';
 import { toast as toastInstance } from 'sonner'
@@ -11,9 +12,9 @@ import ConfigureShortcutsDialog from './ConfigureShortcutsDialog';
 import ShortcutsReferenceDialog from './ShortcutsReferenceDialog';
 import { Checkbox } from '../ui/checkbox';
 import { Textarea } from '../ui/textarea';
-import { OrderDetails } from '@/app/editor/dev/[orderId]/page';
+import { OrderDetails } from '@/app/editor/[fileId]/page';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose, DialogFooter } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -57,6 +58,37 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
     const previousEditorContentRef = useRef('');
     const [isShortcutsReferenceModalOpen, setIsShortcutsReferenceModalOpen] = useState(false);
     const [isConfigureShortcutsModalOpen, setIsConfigureShortcutsModalOpen] = useState(false);
+    const { data: session } = useSession()
+    const [isFormattingOptionsModalOpen, setIsFormattingOptionsModalOpen] = useState(false);
+    const [formattingOptions, setFormattingOptions] = useState({
+        timeCoding: true,
+        speakerTracking: true,
+        nameFormat: 'initials'
+    })
+
+    const [existingOptions, setExistingOptions] = useState<string>('')
+
+    const getFormattingOptions = async () => {
+        try {
+            const response = await axios.get(`/api/editor/get-formatting-options?orderId=${orderDetails.orderId}`)
+            const options = response.data
+            setFormattingOptions({
+                timeCoding: options.ts === 1,
+                speakerTracking: options.sif === 1,
+                nameFormat: options.si === 0 ? 'initials' : 'full-names'
+            })
+            setExistingOptions(JSON.stringify(options))
+        } catch (error) {
+            console.log(error)
+            toastInstance.error('Failed to fetch formatting options')
+        }
+    }
+
+    useEffect(() => {
+        if (orderDetails.orderId) {
+            getFormattingOptions()
+        }
+    }, [orderDetails.orderId])
 
     useEffect(() => {
         setShortcuts(getAllShortcuts());
@@ -371,8 +403,24 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
         }
     }
 
+    const handleFormattingOptionChange = async () => {
+        const toastId = toastInstance.loading('Updating formatting options...')
+        try {
+            await axios.post(`/api/editor/set-formatting-options`, {
+                orderId: orderDetails.orderId,
+                formattingOptions,
+                existingOptions: JSON.parse(existingOptions)
+            })
+            toastInstance.dismiss(toastId)
+            toastInstance.success('Formatting options updated successfully')
+            window.location.reload() // Refresh the page after success
+        } catch (error) {
+            toastInstance.dismiss(toastId)
+            toastInstance.error('Failed to update formatting options')
+        }
+    }
+
     useEffect(() => {
-        console.log(submitting, orderDetails.status)
         if (submitting && orderDetails.status === 'QC_ASSIGNED') {
             toggleSpeakerName()
         }
@@ -405,13 +453,16 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
                         <DropdownMenuContent>
                             <DropdownMenuItem onClick={() => setIsShortcutsReferenceModalOpen(true)}>Shortcuts Reference</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setIsConfigureShortcutsModalOpen(true)}>Configure Shortcuts</DropdownMenuItem>
-                            <DropdownMenuItem onClick={toggleRevertTranscript}>Revert Transcript</DropdownMenuItem>
+                            {session?.user?.role !== 'CUSTOMER' && <DropdownMenuItem onClick={toggleRevertTranscript}>Revert Transcript</DropdownMenuItem>}
                             <DropdownMenuItem onClick={handleToggleVideo}>Toggle Video</DropdownMenuItem>
                             <DropdownMenuItem onClick={toggleNotes}>Notes</DropdownMenuItem>
                             <DropdownMenuItem onClick={toggleFindAndReplace}>Find and Replace</DropdownMenuItem>
                             <DropdownMenuItem onClick={toggleSpeakerName}>Speaker Names</DropdownMenuItem>
                             <DropdownMenuItem onClick={toggleAutoCapitalize}>
                                 {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setIsFormattingOptionsModalOpen(true)}>
+                                Formatting Options
                             </DropdownMenuItem>
                             <DialogTrigger asChild>
                                 {/* <DropdownMenuItem>Change Editor Mode</DropdownMenuItem> */}
@@ -513,6 +564,59 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
                         <Button variant="outline" onClick={() => setRevertTranscriptOpen(false)}>Cancel</Button>
                     </div>
                 </DialogHeader>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog open={isFormattingOptionsModalOpen} onOpenChange={setIsFormattingOptionsModalOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Formatting Options</DialogTitle>
+                    <DialogDescription className='text-center text-red-500'>
+                        These options discard all changes made and reverts the transcript to the delivered version. Please set these options before making any edits.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="flex items-center space-x-2">
+                        <Checkbox
+                            id="time-coding"
+                            checked={formattingOptions.timeCoding}
+                            onCheckedChange={(checked) =>
+                                setFormattingOptions(prev => ({ ...prev, timeCoding: checked as boolean }))
+                            }
+                        />
+                        <Label htmlFor="time-coding">Time-coding</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox
+                            id="speaker-tracking"
+                            checked={formattingOptions.speakerTracking}
+                            onCheckedChange={(checked) =>
+                                setFormattingOptions(prev => ({ ...prev, speakerTracking: checked as boolean }))
+                            }
+                        />
+                        <Label htmlFor="speaker-tracking">Speaker Tracking</Label>
+                    </div>
+                    <RadioGroup
+                        value={formattingOptions.nameFormat}
+                        onValueChange={(value) =>
+                            setFormattingOptions(prev => ({ ...prev, nameFormat: value }))
+                        }
+                        className="pl-6 space-y-2"
+                    >
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="initials" id="initials" />
+                            <Label htmlFor="initials">Initials</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="full-names" id="full-names" />
+                            <Label htmlFor="full-names">Full Names</Label>
+                        </div>
+                    </RadioGroup>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => setIsFormattingOptionsModalOpen(false)}>Close</Button>
+                    <Button type="submit" onClick={handleFormattingOptionChange}>Apply</Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
 

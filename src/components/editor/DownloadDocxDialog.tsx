@@ -4,7 +4,7 @@ import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { OrderDetails } from "@/app/editor/dev/[orderId]/page";
+import { OrderDetails } from "@/app/editor/[fileId]/page";
 import { ButtonLoading, downloadBlankDocx } from "@/utils/editorUtils";
 
 type DownloadDocxDialogProps = {

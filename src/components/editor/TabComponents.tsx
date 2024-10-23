@@ -1,23 +1,44 @@
 import { ReloadIcon } from "@radix-ui/react-icons";
 import { Change } from "diff";
 import ReactQuill from "react-quill";
+import { toast } from "sonner";
 
 import Diff from './Diff';
 import Editor from "./Editor";
 import { TabsContent } from "./Tabs";
 import { Textarea } from "../ui/textarea";
-import { OrderDetails } from "@/app/editor/dev/[orderId]/page";
+import { OrderDetails } from "@/app/editor/[fileId]/page";
 import { CTMSWord } from "@/app/editor/test/transcriptUtils";
 import { ConvertedASROutput } from "@/utils/editorUtils";
 
-export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, getCtms, disableGoToWord }: { transcript: string, ctms: ConvertedASROutput[], audioPlayer: HTMLAudioElement | null, audioDuration: number, getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void, getCtms: (ctms: CTMSWord[]) => void, disableGoToWord: boolean }) => (
+export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, getCtms, disableGoToWord, orderDetails }: { transcript: string, ctms: ConvertedASROutput[], audioPlayer: HTMLAudioElement | null, audioDuration: number, getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void, getCtms: (ctms: CTMSWord[]) => void, disableGoToWord: boolean, orderDetails: OrderDetails }) => (
     <TabsContent className='h-[86%] mt-0' value='transcribe'>
+
         <div className='bg-white border border-gray-200 border-t-0 rounded-b-2xl px-5 py-5 h-[99%] relative'>
-            {!transcript && <div className="flex items-center justify-center h-[99%]">
-                <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                <span>Loading...</span>
-            </div>}
-            {transcript && <Editor disableGoToWord={disableGoToWord} getQuillRef={getQuillRef} transcript={transcript} ctms={ctms} audioPlayer={audioPlayer} duration={audioDuration} getCtms={getCtms} />}
+            {!transcript && (
+                <div className="flex items-center justify-center h-[99%]">
+                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                    <span>Loading...</span>
+                </div>
+            )}
+            {transcript && (
+                <Editor
+                    orderDetails={orderDetails}
+                    disableGoToWord={disableGoToWord}
+                    getQuillRef={getQuillRef}
+                    transcript={transcript}
+                    ctms={ctms}
+                    audioPlayer={audioPlayer}
+                    duration={audioDuration}
+                    getCtms={getCtms}
+                />
+            )}
+            {(orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === 'REVIEWER_ASSIGNED') && (
+                <div
+                    className="absolute inset-0 z-10 bg-transparent"
+                    onClick={() => toast.error("Text editing is not allowed in this step")}
+                ></div>
+            )}
         </div>
     </TabsContent>
 )

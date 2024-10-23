@@ -37,8 +37,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import FileAudioPlayer from '@/components/utils/FileAudioPlayer'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 import formatDateTime from '@/utils/formatDateTime'
 import formatDuration from '@/utils/formatDuration'
 
@@ -110,27 +108,10 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
   const [allFiles, setAllFiles] = useState<AllFile[] | null>(null)
   const [isAllFilesLoading, setIsAllFilesLoading] = useState(true)
 
-  const getAudioUrl = async (fileId: string) => {
-    try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/get-audio/${fileId}`,
-        { responseType: 'blob' }
-      )
-      const url = URL.createObjectURL(response.data)
-      return url
-    } catch (error) {
-      toast.error('Failed to play audio.')
-    }
-  }
-
   useEffect(() => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    getAudioUrl(fileId).then((url) => {
-      if (url) {
-        setCurrentlyPlayingFileUrl({ [fileId]: url })
-      }
-    })
+    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
   }, [playing])
 
   useEffect(() => {
@@ -456,19 +437,19 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
                   </DropdownMenuItem>
                   {getStatus(row.original.status)?.label !==
                     'Draft Transcript' && (
-                    <DropdownMenuItem
-                      className='text-red-500'
-                      onClick={() => {
-                        setSeletedFile({
-                          fileId: row.original.id,
-                          name: row.original.name,
-                        })
-                        setOpenDeleteDialog(true)
-                      }}
-                    >
-                      Delete
-                    </DropdownMenuItem>
-                  )}
+                      <DropdownMenuItem
+                        className='text-red-500'
+                        onClick={() => {
+                          setSeletedFile({
+                            fileId: row.original.id,
+                            name: row.original.name,
+                          })
+                          setOpenDeleteDialog(true)
+                        }}
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

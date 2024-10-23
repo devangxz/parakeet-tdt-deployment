@@ -1,8 +1,5 @@
 import axios from 'axios'
 
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
-
 export const orderController = async (
   payload: { fileId: string; filename?: string; docType?: string },
   type: string
@@ -49,17 +46,33 @@ const downloadFile = async ({
   docType?: string
 }) => {
   try {
-    const response = await axios.get(`/api/order/file-docx-signed-url?fileId=${fileId}&docType=${docType}`)
-    const url = response?.data?.signedUrl
-    if (url) {
-      window.location.href = url
+    if (docType === 'TRANSCRIPTION_DOC') {
+      const response = await axios.get(`/api/order/file-docx-signed-url?fileId=${fileId}&docType=${docType}`, {
+        responseType: 'blob'
+      });
+      const fileBlob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      const downloadUrl = window.URL.createObjectURL(fileBlob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `${fileId}.docx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+      return 'DOCX file downloaded successfully';
     } else {
-      console.error('No URL provided for download.')
-      throw 'No URL provided for download.'
+      const response = await axios.get(`/api/order/file-docx-signed-url?fileId=${fileId}&docType=${docType}`);
+      const url = response?.data?.signedUrl;
+      if (url) {
+        window.open(url, '_blank');
+      } else {
+        console.error('No URL provided for download.');
+        throw 'No URL provided for download.';
+      }
+      return response?.data?.message;
     }
-    return response?.data?.message
   } catch (err) {
-    throw err
+    throw new Error('Failed to download file');
   }
 }
 
@@ -71,18 +84,20 @@ const downloadTxt = async ({
   docType?: string
 }) => {
   try {
-    const response = await axiosInstance.get(
-      `${BACKEND_URL}/download-txt?fileId=${fileId}`
-    )
-    const url = response?.data?.url
-    if (url) {
-      window.open(url, '_blank')
-    } else {
-      throw 'Fail to download txt file'
-    }
+    const response = await axios.get(`/api/order/download-txt?fileId=${fileId}`, { responseType: 'blob' })
+    const fileBlob = new Blob([response.data], { type: 'text/plain' });
+    const downloadUrl = window.URL.createObjectURL(fileBlob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = `${fileId}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
     return 'Txt file downloaded successfully'
   } catch (err) {
-    throw err
+    console.error('Error downloading TXT file:', err);
+    throw new Error('Failed to download TXT file');
   }
 }
 
@@ -150,8 +165,8 @@ const downloadSubtitle = async ({
 }) => {
   try {
     const ext = docType?.toLowerCase()
-    const response = await axiosInstance.get(
-      `${BACKEND_URL}/download-subtitle?fileId=${fileId}&docType=${docType}`,
+    const response = await axios.get(
+      `/api/order/download-subtitle?fileId=${fileId}&docType=${docType}`,
       {
         headers: {
           Accept: 'text/plain',

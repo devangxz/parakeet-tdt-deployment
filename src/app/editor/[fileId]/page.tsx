@@ -64,6 +64,7 @@ import {
   playCurrentParagraphTimestamp,
   replaceTextHandler,
   searchAndSelect,
+  downloadBlankDocx,
 } from '@/utils/editorUtils'
 
 export type OrderDetails = {
@@ -246,21 +247,9 @@ function EditorPage() {
   useEffect(() => {
     if (!session || !session.user) return
 
-    if (!process.env.NEXT_PUBLIC_DEV_EDITOR_TESTER?.split(',').includes(session?.user?.email)) {
-      router.push(`/editor/${params?.orderId}`)
-      return
-    }
+    const ALLOWED_ROLES = ['QC', 'REVIEWER', 'ADMIN', 'OM', 'CUSTOMER']
 
-    console.log(session)
-
-    if (
-      session.user.role !== 'QC' &&
-      session.user.role !== 'REVIEWER' &&
-      session.user.role !== 'ADMIN' &&
-      session.user.role !== 'OM'
-    ) {
-      console.log(session)
-
+    if (!ALLOWED_ROLES.includes(session.user.role)) {
       router.replace('/') //TODO: Redirect to another page
       return
     }
@@ -531,25 +520,33 @@ function EditorPage() {
       <div className='flex justify-between px-16 my-5'>
         <div className='flex'>
           <p className='inline-block font-semibold'>{orderDetails.filename}</p>
-          <strong className={`text-red-600 ml-2 ${orderDetails.remainingTime === '0' ? 'animate-pulse' : ''}`}>{timeoutCount}</strong>
+          {session?.user?.role !== 'CUSTOMER' && <strong className={`text-red-600 ml-2 ${orderDetails.remainingTime === '0' ? 'animate-pulse' : ''}`}>{timeoutCount}</strong>}
         </div>
         <div className='inline-flex'>
-          <Button
-            disabled={buttonLoading.mp3}
-            onClick={downloadMP3.bind(null, orderDetails, setButtonLoading)}
-            className='mr-2'
-          >
-            {' '}
-            {buttonLoading.mp3 && (
-              <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-            )}{' '}
-            Download MP3
-          </Button>
+
           {step !== 'QC' && (
             <>
               {editorMode === 'Manual' && (
                 <>
-                  <DownloadDocxDialog orderDetails={orderDetails} downloadableType={downloadableType} setButtonLoading={setButtonLoading} buttonLoading={buttonLoading} setDownloadableType={setDownloadableType} />
+                  <Button
+                    disabled={buttonLoading.mp3}
+                    onClick={downloadMP3.bind(null, orderDetails, setButtonLoading)}
+                    className='mr-2'
+                  >
+                    {' '}
+                    {buttonLoading.mp3 && (
+                      <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                    )}{' '}
+                    Download MP3
+                  </Button>
+                  {orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === 'PRE_DELIVERED' ? (
+                    <Button onClick={() => downloadBlankDocx({ orderDetails, downloadableType: "markings", setButtonLoading })}>
+                      Download DOCX
+                    </Button>
+                  )
+                    :
+                    <DownloadDocxDialog orderDetails={orderDetails} downloadableType={downloadableType} setButtonLoading={setButtonLoading} buttonLoading={buttonLoading} setDownloadableType={setDownloadableType} />
+                  }
 
                   <UploadDocxDialog orderDetails={orderDetails} setButtonLoading={setButtonLoading} buttonLoading={buttonLoading} setFileToUpload={setFileToUpload} fileToUpload={fileToUpload} session={session} />
                 </>
@@ -557,7 +554,7 @@ function EditorPage() {
             </>
           )}
 
-          {step === 'QC' && (
+          {step === 'QC' && session?.user?.role !== 'CUSTOMER' && (
             <>
               <Button
                 disabled={buttonLoading.download}
@@ -599,17 +596,16 @@ function EditorPage() {
               Regenerate Document
             </Button>
           )}
-          <ReportDialog reportModalOpen={reportModalOpen} setReportModalOpen={setReportModalOpen} reportDetails={reportDetails} setReportDetails={setReportDetails} orderDetails={orderDetails} buttonLoading={buttonLoading} setButtonLoading={setButtonLoading} />
-          {/* <Button onClick={handleSpellcheck} className='ml-2'>
-            Spellcheck
-          </Button> */}
-          <Button
-            onClick={() => setReportModalOpen(true)}
-            className='ml-2'
-            variant='destructive'
-          >
-            Report
-          </Button>
+          {session?.user?.role !== 'CUSTOMER' && <>
+            <ReportDialog reportModalOpen={reportModalOpen} setReportModalOpen={setReportModalOpen} reportDetails={reportDetails} setReportDetails={setReportDetails} orderDetails={orderDetails} buttonLoading={buttonLoading} setButtonLoading={setButtonLoading} />
+            <Button
+              onClick={() => setReportModalOpen(true)}
+              className='ml-2'
+              variant='destructive'
+            >
+              Report
+            </Button>
+          </>}
           {editorMode === 'Editor' ||
             ((step === 'QC' || session?.user?.role === 'OM') && (
               <Button
@@ -625,12 +621,12 @@ function EditorPage() {
                 Save
               </Button>
             ))}
-          <Button
+          {session?.user?.role !== 'CUSTOMER' && <Button
             onClick={() => setSubmitting(true)}
             className='ml-2'
           >
             Submit
-          </Button>
+          </Button>}
         </div>
       </div>
       <div className='flex flex-col items-center h-4/5'>
@@ -750,7 +746,7 @@ function EditorPage() {
                     </TabsList>
                   </div>
 
-                  <EditorTabComponent transcript={transcript} ctms={ctms} audioPlayer={audioPlayer} audioDuration={audioDuration} getQuillRef={getQuillRef} getCtms={getCtms} disableGoToWord={disableGoToWord} />
+                  <EditorTabComponent orderDetails={orderDetails} transcript={transcript} ctms={ctms} audioPlayer={audioPlayer} audioDuration={audioDuration} getQuillRef={getQuillRef} getCtms={getCtms} disableGoToWord={disableGoToWord} />
 
                   <SpeakerNameTabComponent />
 
@@ -788,7 +784,7 @@ function EditorPage() {
           )}
         </div>
       </div>
-      <div className='self-end px-16 mb-5 mt-7'>
+      {session?.user?.role !== 'CUSTOMER' && <div className='self-end px-16 mb-5 mt-7'>
         <FrequentTermsDialog frequentTermsModalOpen={frequentTermsModalOpen} setFrequentTermsModalOpen={setFrequentTermsModalOpen} frequentTermsData={frequentTermsData} />
 
         <Button
@@ -801,7 +797,7 @@ function EditorPage() {
           )}{' '}
           Frequent Terms
         </Button>
-      </div>
+      </div>}
 
       <Dialog open={isSubmitModalOpen} onOpenChange={setIsSubmitModalOpen}>
         <DialogContent>

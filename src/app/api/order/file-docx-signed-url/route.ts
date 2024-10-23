@@ -1,6 +1,8 @@
 import { FileTag } from '@prisma/client'
+import axios from 'axios'
 import { NextRequest, NextResponse } from 'next/server'
 
+import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getFileVersionSignedURLFromS3 } from '@/utils/backend-helper'
@@ -13,8 +15,6 @@ export async function GET(req: NextRequest) {
         const userToken = req.headers.get('x-user-token')
         const user = JSON.parse(userToken ?? '{}')
         const userId = user?.userId
-
-        console.log(fileId, userId)
 
         if (docType === "CUSTOM_FORMATTING_DOC") {
             const fileVersion = await prisma.fileVersion.findFirst({
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
             })
 
             if (!fileVersion?.s3VersionId) {
-                logger.error(`File version not found for ${fileId}`)
+                logger.error(`File versiona not found for ${fileId}`)
                 return NextResponse.json({ success: false, message: 'File version not found' }, { status: 404 })
             }
 
@@ -39,12 +39,28 @@ export async function GET(req: NextRequest) {
                 message: 'Downloaded Successfully',
                 signedUrl,
             })
+        } else if (docType === 'TRANSCRIPTION_DOC') {
+            const response = await axios.get(`${FILE_CACHE_URL}/get-tr-docx/${fileId}?type=${docType}&userId=${userId}`, {
+                headers: {
+                    'x-api-key': process.env.SCRIBIE_API_KEY
+                },
+                responseType: 'arraybuffer'
+            })
+            const docxbuffer = Buffer.from(response.data, 'binary')
+
+            return new NextResponse(docxbuffer, {
+                status: 200,
+                headers: {
+                    'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'Content-Disposition': `attachment; filename="${fileId}.docx"`
+                }
+            })
         }
     } catch (error) {
         logger.error(`Failed to send docx file ${error}`)
         return NextResponse.json({
             success: false,
             message: 'An error occurred. Please try again after some time.',
-        })
+        }, { status: 500 })
     }
 }

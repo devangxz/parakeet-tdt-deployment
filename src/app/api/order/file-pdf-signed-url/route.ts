@@ -13,10 +13,24 @@ export async function GET(req: NextRequest) {
         const user = JSON.parse(userToken ?? '{}')
         const userId = user?.userId
 
-        console.log(fileId, userId)
-
         if (docType === "CUSTOM_FORMATTING_DOC") {
             const response = await axios.get(`${FILE_CACHE_URL}/get-cf-pdf/${fileId}?type=${docType}&userId=${userId}`, {
+                headers: {
+                    'x-api-key': process.env.SCRIBIE_API_KEY
+                },
+                responseType: 'arraybuffer'
+            })
+            const pdfBuffer = Buffer.from(response.data, 'binary')
+
+            return new NextResponse(pdfBuffer, {
+                status: 200,
+                headers: {
+                    'Content-Type': 'application/pdf',
+                    'Content-Disposition': `attachment; filename="${fileId}.pdf"`
+                }
+            })
+        } else if (docType === 'TRANSCRIPTION_DOC') {
+            const response = await axios.get(`${FILE_CACHE_URL}/get-tr-pdf/${fileId}?type=${docType}&userId=${userId}`, {
                 headers: {
                     'x-api-key': process.env.SCRIBIE_API_KEY
                 },

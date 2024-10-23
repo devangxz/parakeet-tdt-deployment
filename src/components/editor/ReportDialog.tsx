@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader } from "../ui/di
 import { Label } from "../ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Textarea } from "../ui/textarea";
-import { OrderDetails } from "@/app/editor/dev/[orderId]/page";
+import { OrderDetails } from "@/app/editor/[fileId]/page";
 import { ButtonLoading, reportHandler } from "@/utils/editorUtils";
 
 interface ReportDialogProps {

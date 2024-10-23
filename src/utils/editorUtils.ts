@@ -4,7 +4,7 @@ import Quill from 'quill';
 import { toast } from "sonner"
 
 import axiosInstance from "./axios"
-import { OrderDetails, UploadFilesType } from "@/app/editor/dev/[orderId]/page"
+import { OrderDetails, UploadFilesType } from "@/app/editor/[fileId]/page"
 import { CTMSWord } from "@/components/editor/transcriptUtils";
 import { ALLOWED_META, BACKEND_URL, FILE_CACHE_URL, MINIMUM_AUDIO_PLAYBACK_PERCENTAGE } from "@/constants"
 export type ButtonLoading = {
@@ -129,7 +129,6 @@ const downloadBlankDocx = async ({ orderDetails, downloadableType, setButtonLoad
         const successToastId = toast.success(`File downloaded successfully`)
         toast.dismiss(successToastId)
     } catch (error) {
-        console.log(error)
         toast.dismiss(toastId)
         toast.error('Error downloading file')
     } finally {
@@ -304,6 +303,7 @@ const uploadFile = async (fileToUpload: { renamedFile: File | null }, setButtonL
     if (!session?.user?.token) {
         return
     }
+    const toastId = toast.loading('Uploading File...')
     setButtonLoading((prevButtonLoading) => ({
         ...prevButtonLoading,
         upload: true,
@@ -316,10 +316,11 @@ const uploadFile = async (fileToUpload: { renamedFile: File | null }, setButtonL
             headers: { 'Content-Type': 'multipart/form-data' },
         });
 
+        toast.dismiss(toastId)
         toast.success('File uploaded successfully')
         setFileToUpload({ renamedFile: null, originalFile: null, isUploaded: true })
     } catch (uploadError) {
-        console.log(uploadError)
+        toast.dismiss(toastId)
         toast.error('Failed to upload file')
         setFileToUpload({ renamedFile: null, originalFile: null, isUploaded: false })
     } finally {
@@ -370,7 +371,6 @@ const reportHandler = async (reportDetails: { reportComment: string; reportOptio
         setReportModalOpen(false)
         setReportDetails({ reportComment: '', reportOption: '' })
     } catch (error) {
-        console.log(error)
         toast.error('Failed to report file')
     } finally {
         setButtonLoading((prevButtonLoading) => ({
@@ -445,7 +445,7 @@ const fetchFileDetails = async ({
     setCtms,
 }: FetchFileDetailsParams) => {
     try {
-        const orderRes = await axios.get(`/api/editor/order-details?orderId=${params?.orderId}`)
+        const orderRes = await axios.get(`/api/editor/order-details?fileId=${params?.fileId}`)
         setOrderDetails(orderRes.data)
         setCfd(orderRes.data.cfd)
         const cfStatus = ['FORMATTED', 'REVIEWER_ASSIGNED', 'REVIEW_COMPLETED', 'FINALIZER_ASSIGNED', 'FINALIZER_COMPLETED']
@@ -466,12 +466,11 @@ const fetchFileDetails = async ({
         const transcriptRes = await axiosInstance.get(
             `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.data.fileId}&step=${step}&orderId=${orderRes.data.orderId}` //step will be used later when cf editor is implemented
         )
-        console.log(transcriptRes)
+
         setTranscript(transcriptRes.data.result.transcript)
         setCtms(transcriptRes.data.result.ctms)
         return orderRes.data
     } catch (error) {
-        console.log(error)
         toast.error('Failed to fetch file details')
     }
 }
@@ -510,7 +509,6 @@ const handleSave = async ({
     localStorage.setItem(orderDetails.fileId, JSON.stringify({ notes: notes }));
     const toastId = toast.loading(`Saving Transcription...`);
     try {
-        console.log(FILE_CACHE_URL)
         await axiosInstance.post(`${FILE_CACHE_URL}/save-transcript`, {
             fileId: orderDetails.fileId,
             transcript,
@@ -523,7 +521,6 @@ const handleSave = async ({
         const successToastId = toast.success(`Transcription saved successfully`);
         toast.dismiss(successToastId);
     } catch (error) {
-        console.log(error)
         toast.dismiss(toastId);
         const errorToastId = toast.error(`Error while saving transcript`);
         toast.dismiss(errorToastId);
@@ -596,7 +593,9 @@ const handleSubmit = async ({
     const transcript = quill.getText() || '';
 
     try {
-        checkTranscriptForAllowedMeta(quill);
+        if (orderDetails.status === 'QC_ASSIGNED') {
+            checkTranscriptForAllowedMeta(quill);
+        }
         setButtonLoading((prevButtonLoading) => ({
             ...prevButtonLoading,
             submit: true,
@@ -760,7 +759,6 @@ const adjustTimestamps = (
 ) => {
     if (!quill) return;
 
-    console.log(selection)
     if (!selection) {
         toast.error("Please select text to adjust timestamps.");
         return;
