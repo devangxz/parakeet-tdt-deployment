@@ -6,6 +6,7 @@ import { Readable } from 'stream';
 import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import ffmpeg from 'fluent-ffmpeg';
 
+import { DURATION_DIFF, ERROR_CODES } from '../constants';
 import logger from '../lib/logger';
 import prisma from '../lib/prisma';
 import { s3Client } from '../lib/s3Client';
@@ -17,13 +18,25 @@ const ffprobePath = process.env.FFPROBE_PATH;
 if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
 if (ffprobePath) ffmpeg.setFfprobePath(ffprobePath);
 
-const DURATION_DIFF = 0.5;
-const ERROR_CODES = {
-    DURATION_DIFF_ERROR: { code: 'DURATION_DIFF_ERROR', httpCode: 400 }
+const CONVERSION_RETRY_CONFIG = {
+    maxAttempts: 3,
+    initialDelayMs: 1000,
+    backoffMultiplier: 2
 };
 
-export async function convertAudioVideo(fileKey: string, userEmailId: string): Promise<string> {
-    logger.info(`Processing file: ${fileKey}`);
+const VIDEO_EXTENSIONS = [
+    '.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv',
+    '.webm', '.mpg', '.mpeg', '.m4v', '.3gp',
+    '.mts', '.mp2t', '.ogv', '.mxf'
+];
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const calculateBackoffDelay = (attempt: number): number =>
+    CONVERSION_RETRY_CONFIG.initialDelayMs * Math.pow(CONVERSION_RETRY_CONFIG.backoffMultiplier, attempt - 1);
+
+export async function convertAudioVideo(fileKey: string, userEmailId: string, fileName: string): Promise<string> {
+    logger.info(`Starting processing for file: ${fileKey}`);
     const startTime = Date.now();
 
     try {
@@ -36,12 +49,13 @@ export async function convertAudioVideo(fileKey: string, userEmailId: string): P
         await saveStreamToFile(Body as Readable, tempFilePath);
 
         const fileId = (path.parse(fileKey)).name;
-        await convertToMp3Mp4(tempFilePath, fileKey, fileId, userEmailId);
+        await convertToMp3Mp4(tempFilePath, fileKey, fileId, userEmailId, fileName);
 
         fs.unlinkSync(tempFilePath);
 
         const endTime = Date.now();
-        logger.info(`[${fileKey}] Processing completed. Total time: ${(endTime - startTime) / 1000} seconds`); return fileId;
+        logger.info(`[${fileKey}] Processing completed. Total time: ${(endTime - startTime) / 1000} seconds`);
+        return fileId;
     } catch (error) {
         logger.error(`Error processing file ${fileKey}: ${error}`);
         throw error;
@@ -65,7 +79,6 @@ async function getMetadataWithFFmpeg(filePath: string): Promise<number> {
             }
 
             const duration = metadata.format.duration as number;
-
             if (!duration) {
                 return reject(new Error('Duration not found'));
             }
@@ -75,7 +88,77 @@ async function getMetadataWithFFmpeg(filePath: string): Promise<number> {
     });
 }
 
-async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: string, userEmailId: string): Promise<void> {
+async function convertFile(input: string, output: string, format: 'mp3' | 'mp4', fileId: string, fileName: string): Promise<void> {
+    let lastError: Error | undefined;
+
+    for (let attempt = 1; attempt <= CONVERSION_RETRY_CONFIG.maxAttempts; attempt++) {
+        try {
+            await new Promise<void>((resolve, reject) => {
+                let command = ffmpeg(input).outputFormat(format);
+
+                if (format === 'mp4') {
+                    command = command
+                        .videoCodec('libx264')
+                        .audioCodec('aac')
+                        .outputOptions('-preset', 'medium')
+                        .outputOptions('-movflags', '+faststart');
+                }
+
+                command
+                    .on('start', () => {
+                        logger.info(`Starting ${format} conversion attempt ${attempt}`);
+                    })
+                    .on('end', () => {
+                        logger.info(`${format} conversion attempt ${attempt} completed successfully`);
+                        resolve();
+                    })
+                    .on('error', (err: Error) => {
+                        logger.error(`${format} conversion attempt ${attempt} failed: ${err.message}`);
+                        reject(err);
+                    })
+                    .save(output);
+            });
+
+            if (attempt > 1) {
+                logger.info(`File conversion to ${format} succeeded on attempt ${attempt}`);
+            }
+            return;
+
+        } catch (error) {
+            lastError = error as Error;
+
+            if (attempt === CONVERSION_RETRY_CONFIG.maxAttempts) {
+                const finalError = new Error(
+                    `File conversion to ${format} failed after ${CONVERSION_RETRY_CONFIG.maxAttempts} attempts. Final error: ${error}`
+                );
+                logger.error(finalError.message);
+
+                const ses = getAWSSesInstance();
+
+                const emailData = { userEmailId: '' };
+                const templateData = {
+                    file_id: fileId,
+                    file_name: fileName,
+                };
+
+                await ses.sendMail('CONVERSION_ERROR', emailData, templateData);
+
+                throw finalError;
+            }
+
+            const backoffDelay = calculateBackoffDelay(attempt);
+            logger.warn(
+                `File conversion to ${format} attempt ${attempt} failed. ` +
+                `Retrying in ${backoffDelay / 1000} seconds. Error: ${error}`
+            );
+            await delay(backoffDelay);
+        }
+    }
+
+    throw lastError;
+}
+
+async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: string, userEmailId: string, fileName: string): Promise<void> {
     const fileExt = path.extname(originalKey).toLowerCase();
     const baseName = path.parse(originalKey).name;
     const mp3Key = `${baseName}.mp3`;
@@ -83,77 +166,54 @@ async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: st
     const mp3Path = path.join(os.tmpdir(), mp3Key);
     const mp4Path = path.join(os.tmpdir(), mp4Key);
 
-    const videoExtensions = ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.webm', '.mpg', '.mpeg', '.m4v', '.3gp', '.mts', '.mp2t', '.ogv', '.mxf'];
-
-    const isVideoFile = videoExtensions.includes(fileExt);
+    const isVideoFile = VIDEO_EXTENSIONS.includes(fileExt);
 
     if (fileExt === '.mp3') return;
 
     if (fileExt === '.mp4') {
-        await convertFile(filePath, mp3Path, 'mp3');
+        await convertFile(filePath, mp3Path, 'mp3', originalKey, fileName);
         await uploadToS3(mp3Path, mp3Key);
+        fs.unlinkSync(mp3Path);
         return;
     }
 
-    return new Promise((resolve, reject) => {
+    try {
         const conversionPromises = [];
 
-        // Convert to MP3
-        conversionPromises.push(convertFile(filePath, mp3Path, 'mp3'));
+        conversionPromises.push(convertFile(filePath, mp3Path, 'mp3', originalKey, fileName));
 
-        // Convert to MP4 if it's a video file
         if (isVideoFile) {
-            conversionPromises.push(convertFile(filePath, mp4Path, 'mp4'));
+            conversionPromises.push(convertFile(filePath, mp4Path, 'mp4', originalKey, fileName));
         }
 
-        Promise.all(conversionPromises)
-            .then(async () => {
-                try {
-                    await uploadToS3(mp3Path, mp3Key);
+        await Promise.all(conversionPromises);
 
-                    if (isVideoFile) {
-                        await uploadToS3(mp4Path, mp4Key);
-                    }
-
-                    // Delete original file if it's not mp3 or mp4
-                    if (fileExt !== '.mp3' && fileExt !== '.mp4') {
-                        await deleteFromS3(originalKey);
-                    }
-
-                    await validateDuration(mp3Path, fileId, userEmailId);
-
-                    // Clean up temp files
-                    fs.unlinkSync(mp3Path);
-                    if (isVideoFile) {
-                        fs.unlinkSync(mp4Path);
-                    }
-
-                    resolve();
-                } catch (err) {
-                    logger.error(`Error in S3 operations: ${err}`);
-                    reject(err);
-                }
-            })
-            .catch((err) => {
-                logger.error(`Error during conversion: ${err}`);
-                reject(err);
-            });
-    });
-}
-
-function convertFile(input: string, output: string, format: 'mp3' | 'mp4'): Promise<void> {
-    return new Promise((resolve, reject) => {
-        let command = ffmpeg(input).outputFormat(format);
-
-        if (format === 'mp4') {
-            command = command.videoCodec('libx264').audioCodec('aac');
+        await uploadToS3(mp3Path, mp3Key);
+        if (isVideoFile) {
+            await uploadToS3(mp4Path, mp4Key);
         }
 
-        command
-            .on('end', () => resolve())
-            .on('error', (err) => reject(err))
-            .save(output);
-    });
+        if (fileExt !== '.mp3' && fileExt !== '.mp4') {
+            await deleteFromS3(originalKey);
+        }
+
+        await validateDuration(mp3Path, fileId, userEmailId);
+
+        fs.unlinkSync(mp3Path);
+        if (isVideoFile) {
+            fs.unlinkSync(mp4Path);
+        }
+
+    } catch (error) {
+        try {
+            if (fs.existsSync(mp3Path)) fs.unlinkSync(mp3Path);
+            if (fs.existsSync(mp4Path)) fs.unlinkSync(mp4Path);
+        } catch (cleanupError) {
+            logger.error(`Error during cleanup: ${cleanupError}`);
+        }
+
+        throw error;
+    }
 }
 
 async function validateDuration(filePath: string, fileId: string, userEmailId: string): Promise<void> {
@@ -167,11 +227,10 @@ async function validateDuration(filePath: string, fileId: string, userEmailId: s
     if (file && Math.abs(file.duration - duration) > DURATION_DIFF) {
         const ses = getAWSSesInstance();
 
-        const emailData = {
-            userEmailId: userEmailId || '',
-        }
+        const emailData = { userEmailId };
+        const templateData = {};
 
-        await ses.sendMail('DURATION_DIFFERENCE_FLAGGED', emailData, {});
+        await ses.sendMail('DURATION_DIFFERENCE_FLAGGED', emailData, templateData);
 
         logger.info(
             `${fileId} - File flagged for duration difference::${ERROR_CODES.DURATION_DIFF_ERROR.code}::${ERROR_CODES.DURATION_DIFF_ERROR.httpCode}`
