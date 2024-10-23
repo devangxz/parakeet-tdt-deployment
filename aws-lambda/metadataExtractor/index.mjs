@@ -8,36 +8,64 @@ import { URL } from 'url';
 
 import { S3Client, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 
-const s3Client = new S3Client();
-
-const WEBHOOK_URLS = {
-    PROD: process.env.PROD_WEBHOOK_URL,
-    STAGING: process.env.STAGING_WEBHOOK_URL,
-    DEV: process.env.DEV_WEBHOOK_URL,
+const config = {
+    webhookUrls: {
+        PROD: process.env.PROD_WEBHOOK_URL,
+        STAGING: process.env.STAGING_WEBHOOK_URL,
+        DEV: process.env.DEV_WEBHOOK_URL,
+        DAYA: process.env.DAYA_WEBHOOK_URL,
+        TARUN: process.env.TARUN_WEBHOOK_URL,
+        PRASAD: process.env.PRASAD_WEBHOOK_URL,
+    },
+    fileTypes: {
+        allowed: [
+            'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/x-ms-wma',
+            'video/x-ms-wmv', 'video/x-msvideo', 'video/x-flv', 'video/mpeg',
+            'video/mp4', 'audio/mp4', 'video/x-m4v', 'video/quicktime',
+            'audio/ogg', 'video/ogg', 'video/webm', 'audio/aiff',
+            'audio/x-aiff', 'audio/amr', 'video/3gpp', 'audio/3gpp',
+            'video/mp2t', 'audio/aac', 'video/x-matroska', 'video/mxf',
+            'audio/opus', 'audio/flac'
+        ],
+        extensions: [
+            '.mp3', '.wav', '.wma', '.wmv', '.avi', '.flv', '.mpg', '.mpeg',
+            '.mp4', '.m4a', '.m4v', '.mov', '.ogg', '.webm', '.aif', '.aiff',
+            '.amr', '.3gp', '.3ga', '.mts', '.ogv', '.aac', '.mkv', '.mxf',
+            '.opus', '.flac'
+        ]
+    },
+    ffprobe: {
+        options: [
+            '-v', 'quiet',
+            '-print_format', 'json',
+            '-show_format',
+            '-show_streams'
+        ]
+    },
+    mediainfo: {
+        options: ['--Output=JSON']
+    },
+    paths: {
+        temp: '/tmp'
+    },
+    webhook: {
+        maxRetries: 2,
+        retryDelay: 1000,
+        timeout: 5000,
+        status: {
+            SUCCESS: 'success',
+            ERROR: 'error'
+        }
+    }
 };
 
-const ALLOWED_FILE_TYPES = [
-    'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/x-ms-wma',
-    'video/x-ms-wmv', 'video/x-msvideo', 'video/x-flv', 'video/mpeg',
-    'video/mp4', 'audio/mp4', 'video/x-m4v', 'video/quicktime',
-    'audio/ogg', 'video/ogg', 'video/webm', 'audio/aiff',
-    'audio/x-aiff', 'audio/amr', 'video/3gpp', 'audio/3gpp',
-    'video/mp2t', 'audio/aac', 'video/x-matroska', 'video/mxf',
-    'audio/opus', 'audio/flac'
-];
-
-const FILE_EXTENSIONS = [
-    '.mp3', '.wav', '.wma', '.wmv', '.avi', '.flv', '.mpg', '.mpeg',
-    '.mp4', '.m4a', '.m4v', '.mov', '.ogg', '.webm', '.aif', '.aiff',
-    '.amr', '.3gp', '.3ga', '.mts', '.ogv', '.aac', '.mkv', '.mxf',
-    '.opus', '.flac'
-];
+const s3Client = new S3Client();
 
 async function validateFileType(bucket, key) {
     try {
         const { ContentType, ContentLength } = await s3Client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
         const fileExtension = '.' + key.split('.').pop().toLowerCase();
-        if (!ALLOWED_FILE_TYPES.includes(ContentType) && !FILE_EXTENSIONS.includes(fileExtension)) {
+        if (!config.fileTypes.allowed.includes(ContentType) && !config.fileTypes.extensions.includes(fileExtension)) {
             throw new Error(`Invalid file type: ${ContentType || fileExtension}`);
         }
         return { ContentType, ContentLength };
@@ -49,14 +77,17 @@ async function validateFileType(bucket, key) {
 
 export const handler = async (event) => {
     const startTime = Date.now();
-
     const bucketName = event.Records[0].s3.bucket.name;
     const objectKey = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, ' '));
+
+    let s3Metadata = {};
+    let metadata = {};
+    let contentInfo = {};
 
     try {
         const headCommand = new HeadObjectCommand({ Bucket: bucketName, Key: objectKey });
         const headResponse = await s3Client.send(headCommand);
-        const s3Metadata = headResponse.Metadata || {};
+        s3Metadata = headResponse.Metadata || {};
 
         if (s3Metadata.type === 'CONVERTED_FILE') {
             return {
@@ -75,34 +106,64 @@ export const handler = async (event) => {
 
         console.log(`Processing file - ${bucketName}/${objectKey} of user - ${userId}`);
 
-        const { ContentType, ContentLength } = await validateFileType(bucketName, objectKey);
-        const metadata = await getMetadata({ Bucket: bucketName, Key: objectKey });
+        contentInfo = await validateFileType(bucketName, objectKey);
 
-        const endTime = Date.now();
-        const processingTimeInSeconds = (endTime - startTime) / 1000;
-        console.log(`Total processing time: ${processingTimeInSeconds} seconds`);
+        try {
+            metadata = await getMetadata({ Bucket: bucketName, Key: objectKey });
 
-        const webhookData = {
-            fileSize: ContentLength,
-            duration: metadata.duration,
-            codecName: metadata.codec_name,
-            sampleRate: metadata.sample_rate,
-            bitRate: metadata.bitrate,
-            fileName,
-            fileNameWithExtension,
-            fileId: parse(objectKey).name,
-            fileType: ContentType,
-            timeTakenToExtractMetadata: processingTimeInSeconds,
-            userId,
-            teamUserId,
-        };
+            if (!metadata.duration) {
+                throw new Error('Failed to extract duration from file');
+            }
 
-        await sendWebhook(webhookData, uploadEnvironment);
+            const endTime = Date.now();
+            const processingTimeInSeconds = (endTime - startTime) / 1000;
+            console.log(`Total processing time: ${processingTimeInSeconds} seconds`);
 
-        return {
-            statusCode: 200,
-            body: JSON.stringify({ metadata: webhookData }),
-        };
+            const webhookData = {
+                status: config.webhook.status.SUCCESS,
+                fileSize: contentInfo.ContentLength,
+                duration: metadata.duration,
+                codecName: metadata.codec_name,
+                sampleRate: metadata.sample_rate,
+                bitRate: metadata.bitrate,
+                fileName,
+                fileNameWithExtension,
+                fileId: parse(objectKey).name,
+                fileType: contentInfo.ContentType,
+                timeTakenToExtractMetadata: processingTimeInSeconds,
+                userId,
+                teamUserId,
+            };
+
+            await sendWebhook(webhookData, uploadEnvironment);
+
+            return {
+                statusCode: 200,
+                body: JSON.stringify({ metadata: webhookData }),
+            };
+
+        } catch (metadataError) {
+            const endTime = Date.now();
+            const processingTimeInSeconds = (endTime - startTime) / 1000;
+
+            const errorWebhookData = {
+                status: config.webhook.status.ERROR,
+                error: metadataError.message,
+                fileSize: contentInfo.ContentLength,
+                fileName,
+                fileNameWithExtension,
+                fileId: parse(objectKey).name,
+                fileType: contentInfo.ContentType,
+                timeTakenToProcess: processingTimeInSeconds,
+                userId,
+                teamUserId
+            };
+
+            await sendWebhook(errorWebhookData, uploadEnvironment);
+
+            throw metadataError;
+        }
+
     } catch (error) {
         console.error('Error processing file:', error);
         return {
@@ -119,11 +180,20 @@ const getMetadata = async (params) => {
         throw new Error('Invalid response body from S3');
     }
 
-    const tempFilePath = join('/tmp', `${randomUUID()}-full`);
+    const tempFilePath = join(config.paths.temp, `${randomUUID()}-full`);
 
     try {
         await streamToFile(Body, tempFilePath);
-        return await runFFprobe(tempFilePath);
+        try {
+            const ffprobeMetadata = await runFFprobe(tempFilePath);
+            if (ffprobeMetadata.duration > 0) {
+                return ffprobeMetadata;
+            }
+            console.log('FFprobe returned zero duration, falling back to MediaInfo');
+        } catch (error) {
+            console.log('FFprobe failed, attempting with MediaInfo:', error.message);
+        }
+        return await runMediaInfo(tempFilePath);
     } finally {
         await fs.unlink(tempFilePath).catch(error => console.error('Error deleting temp file:', error));
     }
@@ -140,13 +210,7 @@ const streamToFile = async (readStream, filePath) => {
 };
 
 const runFFprobe = (filePath) => new Promise((resolve, reject) => {
-    const ffprobe = spawn('ffprobe', [
-        '-v', 'quiet',
-        '-print_format', 'json',
-        '-show_format',
-        '-show_streams',
-        filePath,
-    ]);
+    const ffprobe = spawn('ffprobe', [...config.ffprobe.options, filePath]);
 
     let output = '';
     let errorOutput = '';
@@ -179,7 +243,7 @@ const runFFprobe = (filePath) => new Promise((resolve, reject) => {
                     codec_name: stream.codec_name || 'unknown',
                     sample_rate: parseInt(stream.sample_rate) || 0,
                 };
-                console.log('Parsed metadata:', JSON.stringify(result));
+                console.log('Ffprobe parsed metadata:', JSON.stringify(result));
                 resolve(result);
             } catch (err) {
                 console.error('Error parsing ffprobe output:', err);
@@ -189,25 +253,51 @@ const runFFprobe = (filePath) => new Promise((resolve, reject) => {
     });
 });
 
-const sendWebhook = (data, environment) => new Promise((resolve, reject) => {
-    const WEBHOOK_URL = WEBHOOK_URLS[environment];
+const runMediaInfo = (filePath) => new Promise((resolve, reject) => {
+    const mediainfo = spawn('mediainfo', [...config.mediainfo.options, filePath]);
 
-    if (!WEBHOOK_URL) {
-        console.error('WEBHOOK_URL is not set in environment variables');
-        return resolve();
-    }
+    let output = '';
+    let errorOutput = '';
 
-    const url = new URL(WEBHOOK_URL);
-    const options = {
-        hostname: url.hostname,
-        port: url.port || 443,
-        path: url.pathname + url.search,
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
+    mediainfo.stdout.on('data', (data) => {
+        output += data.toString();
+    });
+
+    mediainfo.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+    });
+
+    mediainfo.on('error', (error) => {
+        console.error('MediaInfo process error:', error);
+        reject(new Error(`MediaInfo process error: ${error.message}`));
+    });
+
+    mediainfo.on('close', (code) => {
+        if (code !== 0) {
+            reject(new Error(`MediaInfo failed with code ${code}: ${errorOutput}`));
+        } else {
+            try {
+                const parsedOutput = JSON.parse(output);
+                const track = parsedOutput.media.track[0];
+                const audioTrack = parsedOutput.media.track.find(t => t['@type'] === 'Audio');
+
+                const result = {
+                    duration: parseFloat(track.Duration) || 0,
+                    bitrate: parseInt(track.OverallBitRate) || 0,
+                    codec_name: audioTrack?.Format || track.Format || 'unknown',
+                    sample_rate: parseInt(audioTrack?.SamplingRate) || 0,
+                };
+                console.log('MediaInfo parsed metadata:', JSON.stringify(result));
+                resolve(result);
+            } catch (err) {
+                console.error('Error parsing mediainfo output:', err);
+                reject(new Error(`Failed to parse mediainfo output: ${err.message}`));
+            }
         }
-    };
+    });
+});
 
+const sendWebhookRequest = (url, data, options) => new Promise((resolve) => {
     const req = https.request(options, (res) => {
         let responseBody = '';
 
@@ -218,19 +308,84 @@ const sendWebhook = (data, environment) => new Promise((resolve, reject) => {
         res.on('end', () => {
             if (res.statusCode >= 200 && res.statusCode < 300) {
                 console.log('Webhook sent successfully. Response:', responseBody);
-                resolve();
+                resolve({ success: true, statusCode: res.statusCode, body: responseBody });
             } else {
                 console.error(`HTTP error! status: ${res.statusCode}, body: ${responseBody}`);
-                reject(new Error(`HTTP error! status: ${res.statusCode}`));
+                resolve({
+                    success: false,
+                    statusCode: res.statusCode,
+                    error: `HTTP error! status: ${res.statusCode}`
+                });
             }
         });
     });
 
     req.on('error', (error) => {
         console.error('Error sending webhook:', error);
-        reject(error);
+        resolve({ success: false, error: error.message });
+    });
+
+    // Add timeout handling
+    req.setTimeout(config.webhook.timeout, () => {
+        req.destroy();
+        resolve({ success: false, error: 'Request timeout' });
     });
 
     req.write(JSON.stringify(data));
     req.end();
 });
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const sendWebhook = async (data, environment) => {
+    const webhookUrl = config.webhookUrls[environment];
+
+    if (!webhookUrl) {
+        console.error('Webhook URL is not set in environment variables');
+        return;
+    }
+
+    const url = new URL(webhookUrl);
+    const options = {
+        hostname: url.hostname,
+        port: url.port || 443,
+        path: url.pathname + url.search,
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    };
+
+    let lastError = null;
+    let attempt = 0;
+    const maxAttempts = config.webhook.maxRetries + 1;
+
+    while (attempt < maxAttempts) {
+        attempt++;
+        console.log(`Webhook attempt ${attempt}/${maxAttempts}`);
+
+        try {
+            const result = await sendWebhookRequest(url, data, options);
+
+            if (result.success) {
+                return;
+            }
+
+            lastError = result.error;
+
+            if (attempt < maxAttempts) {
+                console.log(`Retrying webhook in ${config.webhook.retryDelay}ms...`);
+                await sleep(config.webhook.retryDelay);
+            }
+        } catch (error) {
+            lastError = error.message;
+
+            if (attempt < maxAttempts) {
+                console.log(`Retrying webhook in ${config.webhook.retryDelay}ms...`);
+                await sleep(config.webhook.retryDelay);
+            }
+        }
+    }
+
+    throw new Error(`Failed to send webhook after ${maxAttempts} attempts. Last error: ${lastError}`);
+};
