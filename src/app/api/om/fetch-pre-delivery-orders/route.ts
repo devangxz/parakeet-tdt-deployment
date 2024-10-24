@@ -5,7 +5,6 @@ import { NextResponse } from 'next/server'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import calculateFileCost from '@/utils/calculateFileCost'
-import serializeBigInt from '@/utils/serializeBigInt'
 
 export async function GET() {
   try {
@@ -30,11 +29,9 @@ export async function GET() {
 
     logger.info(`fetched pre delivery order`)
 
-    const serializedData = serializeBigInt(orders)
-
     return NextResponse.json({
       success: true,
-      details: serializedData,
+      details: orders,
     })
   } catch (error) {
     logger.error(`Error while fetching pre delivery orders`, error)

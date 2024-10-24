@@ -5,7 +5,6 @@ import { NextResponse } from 'next/server'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import calculateFileCost from '@/utils/calculateFileCost'
-import serializeBigInt from '@/utils/serializeBigInt'
 
 export async function GET() {
   try {
@@ -34,11 +33,9 @@ export async function GET() {
       order.fileCost = fileCost
     }
 
-    const serializedData = serializeBigInt(pendingOrders)
-
     return NextResponse.json({
       success: true,
-      details: serializedData,
+      details: pendingOrders,
     })
   } catch (error) {
     logger.error(`Error while fetching pending orders`, error)

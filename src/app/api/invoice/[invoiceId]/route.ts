@@ -13,7 +13,6 @@ import {
   getCreditsPreferences,
   applyCredits,
 } from '@/utils/backend-helper'
-import serializeBigInt from '@/utils/serializeBigInt'
 
 export async function GET(
   request: NextRequest,
@@ -138,9 +137,7 @@ export async function GET(
         isBillingEnabledForCustomer,
       }
 
-      const serializedData = serializeBigInt(responseData)
-
-      return NextResponse.json(serializedData)
+      return NextResponse.json(responseData)
     } else {
       const templates = await prisma.template.findMany({
         where: {
@@ -162,10 +159,7 @@ export async function GET(
         isBillingEnabledForCustomer,
       }
 
-      // Serialize the response data to handle BigInt values
-      const serializedData = serializeBigInt(responseData)
-
-      return NextResponse.json(serializedData)
+      return NextResponse.json(responseData)
     }
   } catch (error) {
     logger.error(`Error fetching invoice details ${invoiceId}`, error)
