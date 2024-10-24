@@ -63,7 +63,11 @@ export async function POST(req: Request) {
       logger.error(`Assignment already exists for ${transcriberId}`)
       return NextResponse.json({
         error: 'Please submit the current file before accepting other.',
-      })
+      },
+        {
+          status: 400
+        }
+      )
     }
 
     const rejectedAssignment = await prisma.jobAssignment.findFirst({
