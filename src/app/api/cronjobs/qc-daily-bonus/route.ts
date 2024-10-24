@@ -1,5 +1,4 @@
 import { JobStatus, JobType, BonusType } from '@prisma/client'
-import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 import logger from '@/lib/logger'
@@ -28,11 +27,6 @@ const addBonus = async (userId: number, amount: number, fileIds: string) => {
 }
 
 export async function POST() {
-  const apiKey = headers().get('x-api-key')
-
-  if (apiKey !== process.env.CRON_API_KEY) {
-    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
-  }
   try {
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1)
@@ -108,9 +102,8 @@ export async function POST() {
       await addBonus(user.transcriberId, amount, user.fileIds.join(','))
 
       const today = new Date()
-      const today_date = `${
-        today.getMonth() + 1
-      }/${today.getDate()}/${today.getFullYear()}`
+      const today_date = `${today.getMonth() + 1
+        }/${today.getDate()}/${today.getFullYear()}`
 
       const emailData = {
         userEmailId: user.email,

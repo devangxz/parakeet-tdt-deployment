@@ -1,4 +1,5 @@
 'use client'
+import { ReloadIcon } from '@radix-ui/react-icons'
 import {
     ArrowBigDownDash,
     ArrowBigUpDash,
@@ -9,16 +10,21 @@ import {
     Volume1,
     Volume2,
 } from 'lucide-react'
+import Image from 'next/image'
 import Slider from 'rc-slider'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { toast } from 'sonner'
-import WaveSurfer from 'wavesurfer.js'
 
-import 'rc-slider/assets/index.css'
-
-// eslint-disable-next-line import/order
-import { BACKEND_URL } from '@/constants'
+import {
+    TooltipProvider,
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip'
+import 'rc-slider/assets/index.css';
+import { FILE_CACHE_URL } from '@/constants'
 import axiosInstance from '@/utils/axios'
+import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 
 type PlayerButtonProps = {
     icon: React.ReactNode
@@ -38,121 +44,90 @@ function PlayerButton({ icon, tooltip, onClick }: PlayerButtonProps) {
     )
 }
 
-type PlayerControls = {
-    playPause: () => void
-    seekForward: () => void
-    seekBackward: () => void
-    volumeDown: () => void
-    volumeUp: () => void
-    fastForward: () => void
-    rewind: () => void
-}
+const createShortcutControls = (audioPlayer: React.RefObject<HTMLAudioElement>): Partial<ShortcutControls> => ({
+    togglePlay: () => {
+        if (!audioPlayer.current) return;
+        audioPlayer.current.paused ? audioPlayer.current.play() : audioPlayer.current.pause();
+    },
+    pause: () => {
+        audioPlayer.current?.pause();
+    },
+    skipAudio: (seconds: number) => {
+        if (audioPlayer.current) {
+            audioPlayer.current.currentTime += seconds;
+        }
+    },
+    increaseVolume: () => {
+        if (audioPlayer.current) {
+            audioPlayer.current.volume = Math.min(1, audioPlayer.current.volume + 0.1);
+        }
+    },
+    decreaseVolume: () => {
+        if (audioPlayer.current) {
+            audioPlayer.current.volume = Math.max(0, audioPlayer.current.volume - 0.1);
+        }
+    },
+    increasePlaybackSpeed: () => {
+        if (audioPlayer.current) {
+            audioPlayer.current.playbackRate += 0.1;
+        }
+    },
+    decreasePlaybackSpeed: () => {
+        if (audioPlayer.current) {
+            audioPlayer.current.playbackRate -= 0.1;
+        }
+    },
+});
 
-const playControls = {
-    playPause: () => { },
-    seekForward: () => { },
-    seekBackward: () => { },
-    volumeDown: () => { },
-    volumeUp: () => { },
-    fastForward: () => { },
-    rewind: () => { },
-}
-
-export default function AudioPlayer({
-    getWaveSurfer,
-    fileId,
-}: {
-    getWaveSurfer?: (wavesurfer: WaveSurfer | null) => void
-    fileId: string
-}) {
-    const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null)
+export default function AudioPlayer({ fileId, getAudioPlayer }: { fileId: string, getAudioPlayer?: (audioPlayer: HTMLAudioElement | null) => void }) {
     const [currentValue, setCurrentValue] = useState(0)
     const [currentTime, setCurrentTime] = useState('00:00')
-    const [playerControls, setPlayerControls] =
-        useState<PlayerControls>(playControls)
     const [audioDuration, setAudioDuration] = useState(0)
-    const waveformRef = useRef<HTMLDivElement>(null)
-    const [audioUrl, setAudioUrl] = useState('')
+    const audioPlayer = useRef<HTMLAudioElement>(null);
+    const [waveformUrl, setWaveformUrl] = useState('')
+    const [isPlayerLoaded, setIsPlayerLoaded] = useState(false)
 
-    const fetchAudioFile = async () => {
+    const shortcutControls = useMemo(() => createShortcutControls(audioPlayer), [audioPlayer]);
+
+    useShortcuts(shortcutControls as ShortcutControls);
+
+    const fetchWaveform = async () => {
         try {
-            const response = await axiosInstance.get(`${BACKEND_URL}/get-audio/${fileId}`, { responseType: 'blob' }) // Replace with your file name
-            const url = URL.createObjectURL(response.data)
-            setAudioUrl(url)
+            const res = await axiosInstance.get(`${FILE_CACHE_URL}/get-waveform/${fileId}`, { responseType: 'blob' })
+            const waveformUrl = URL.createObjectURL(res.data)
+            setWaveformUrl(waveformUrl)
+            setIsPlayerLoaded(true)
         } catch (error) {
-            toast.error('Failed to play audio.')
+            toast.error('Failed to load waveform.')
         }
     }
 
     useEffect(() => {
         if (!fileId) return
-        fetchAudioFile()
+        fetchWaveform()
     }, [fileId])
 
     useEffect(() => {
-        if (!waveformRef.current) return
-        waveformRef.current.innerHTML = ''
-        const ws = WaveSurfer.create({
-            container: '#waveform',
-            waveColor: '#4F4A85',
-            progressColor: '#383351',
-            url: audioUrl,
-            interact: false, // This makes the waveform unclickable
-            height: 70,
-        })
+        const audio = audioPlayer.current;
+        if (!audio) return;
+        const handleLoadedMetadata = () => {
+            setAudioDuration(audio.duration);
+            if (getAudioPlayer) getAudioPlayer(audio);
+        };
+        audio.addEventListener('loadedmetadata', handleLoadedMetadata);
 
-        setWavesurfer(ws)
-        if (getWaveSurfer) getWaveSurfer(ws)
-    }, [audioUrl])
-
-    useEffect(() => {
-        if (!wavesurfer) return
-        wavesurfer.on('ready', () => {
-            setAudioDuration(wavesurfer.getDuration())
-
-            setPlayerControls({
-                playPause: () => {
-                    wavesurfer?.playPause()
-                },
-                seekForward: () => {
-                    if (!wavesurfer) return
-                    console.log('seek forward')
-                    const currentTime = wavesurfer.getCurrentTime()
-                    wavesurfer.seekTo((currentTime + 10) / wavesurfer.getDuration())
-                },
-                seekBackward: () => {
-                    if (!wavesurfer) return
-                    const currentTime = wavesurfer.getCurrentTime()
-                    wavesurfer.seekTo((currentTime - 10) / wavesurfer.getDuration())
-                },
-                volumeDown: () => {
-                    if (!wavesurfer) return
-                    let newVolume = wavesurfer.getVolume() - 0.1
-                    if (newVolume < 0) newVolume = 0
-                    wavesurfer?.setVolume(newVolume)
-                },
-                volumeUp: () => {
-                    if (!wavesurfer) return
-                    let newVolume = wavesurfer.getVolume() + 0.1
-                    if (newVolume > 1) newVolume = 1
-                    wavesurfer?.setVolume(newVolume)
-                },
-                fastForward: () => {
-                    if (!wavesurfer) return
-                    const currentRate = wavesurfer.getPlaybackRate()
-                    wavesurfer.setPlaybackRate(currentRate + 0.5)
-                },
-                rewind: () => {
-                    if (!wavesurfer) return
-                    const currentRate = wavesurfer.getPlaybackRate()
-                    wavesurfer.setPlaybackRate(currentRate - 0.5)
-                },
-            })
-        })
-    }, [wavesurfer])
+        return () => {
+            audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        };
+    }, [audioPlayer, getAudioPlayer]);
 
     const seekTo = (value: number) => {
-        wavesurfer?.seekTo(value)
+        if (!audioPlayer.current) return;
+        const duration = audioPlayer.current.duration;
+        if (duration) {
+            const time = (value / 100) * duration;
+            audioPlayer.current.currentTime = time;
+        }
     }
 
     const formatTime = (seconds: number | undefined): string => {
@@ -172,21 +147,40 @@ export default function AudioPlayer({
         }
     }
 
-    wavesurfer?.on('audioprocess', () => {
-        const currentTime = formatTime(wavesurfer.getCurrentTime())
-        setCurrentTime(currentTime)
-        const playedPercentage =
-            (wavesurfer.getCurrentTime() / wavesurfer.getDuration()) * 100
-        setCurrentValue(playedPercentage)
-    })
+    useEffect(() => {
+        const audio = audioPlayer.current;
+        if (!audio) return;
+
+        const handleTimeUpdate = () => {
+            const currentTime = formatTime(audio.currentTime)
+            setCurrentTime(currentTime)
+            const playedPercentage = (audio.currentTime / audio.duration) * 100
+            setCurrentValue(playedPercentage)
+        };
+
+        audio.addEventListener('timeupdate', handleTimeUpdate);
+
+        return () => {
+            audio.removeEventListener('timeupdate', handleTimeUpdate);
+        };
+    }, []);
 
     return (
-        <div className='mb-3 h-1/4'>
-            <div className='h-1/2 bg-white rounded-t-2xl border border-gray-200 border-b-0 overflow-hidden'>
-                <div id='waveform' ref={waveformRef}></div>
+        <div className='mb-3 h-60 relative overflow-hidden'>
+            {!isPlayerLoaded && (
+                <div className='absolute inset-0 w-full h-full bg-white z-50 flex justify-center items-center rounded-2xl'>
+                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                    <span>Loading...</span>
+                </div>
+            )}
+            <div className='h-[45%] bg-white rounded-t-2xl border border-gray-200 border-b-0 overflow-hidden'>
+                <div id='waveform' className='relative h-full'>
+                    <Image src={waveformUrl} alt='waveform' layout='fill' objectFit='contain' />
+                </div>
             </div>
-            <div className='h-1/2 bg-white border border-gray-200 rounded-b-2xl px-3'>
-                <div className='w-full h-10 mt-2'>
+            <div className='h-[55%] bg-white border border-gray-200 rounded-b-2xl px-3'>
+                <div className='w-full mt-2'>
+                    <audio ref={audioPlayer} className='hidden' src={`/api/editor/get-audio/${fileId}`}></audio>
                     <Slider
                         step={0.01}
                         min={0}
@@ -194,7 +188,7 @@ export default function AudioPlayer({
                         value={currentValue}
                         onChange={(value) => {
                             setCurrentValue(value as number)
-                            seekTo((value as number) / 100)
+                            seekTo(Number(value))
                         }}
                         styles={{
                             rail: { height: '7px' },
@@ -204,57 +198,122 @@ export default function AudioPlayer({
                     />
                 </div>
 
-                <div className='flex justify-between items-center -mt-3 mb-3'>
+                <div className='flex justify-between items-center mb-2 mt-3'>
                     <span className='text-[#8C8C8C] text-sm w-[100px]'>
                         {currentTime}
                     </span>
                     <div className='flex items-center'>
-                        <PlayerButton
-                            icon={<Rewind />}
-                            tooltip='Go back 10 seconds'
-                            onClick={playerControls.seekBackward}
-                        />
-                        <PlayerButton
-                            icon={<Play />}
-                            tooltip='Play'
-                            onClick={playerControls.playPause}
-                        />
-                        <PlayerButton
-                            icon={<Pause />}
-                            tooltip='Pause'
-                            onClick={playerControls.playPause}
-                        />
-                        <PlayerButton
-                            icon={<FastForward />}
-                            tooltip='Go forward 10 seconds'
-                            onClick={playerControls.seekForward}
-                        />
-                        <PlayerButton
-                            icon={<ArrowBigUpDash />}
-                            tooltip='Fast forward'
-                            onClick={playerControls.fastForward}
-                        />
-                        <PlayerButton
-                            icon={<ArrowBigDownDash />}
-                            tooltip='Rewind'
-                            onClick={playerControls.rewind}
-                        />
-                        <PlayerButton
-                            icon={<Volume2 />}
-                            tooltip='Increase volume'
-                            onClick={playerControls.volumeUp}
-                        />
-                        <PlayerButton
-                            icon={<Volume1 />}
-                            tooltip='Decrease volume'
-                            onClick={playerControls.volumeDown}
-                        />
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger>
+                                    <PlayerButton
+                                        icon={<Rewind />}
+                                        tooltip=''
+                                        onClick={() => shortcutControls.skipAudio?.(-10)}
+                                    />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Go back 10 seconds</p>
+                                </TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                                <TooltipTrigger>
+                                    <PlayerButton
+                                        icon={<Play />}
+                                        tooltip='Play'
+                                        onClick={shortcutControls.togglePlay}
+                                    />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Play</p>
+                                </TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                                <TooltipTrigger>
+                                    <PlayerButton
+                                        icon={<Pause />}
+                                        tooltip='Pause'
+                                        onClick={shortcutControls.pause}
+                                    />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Pause</p>
+                                </TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                                <TooltipTrigger>
+                                    <PlayerButton
+                                        icon={<FastForward />}
+                                        tooltip='Go forward 10 seconds'
+                                        onClick={() => shortcutControls.skipAudio?.(10)}
+                                    />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Go forward 10 seconds</p>
+                                </TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                                <TooltipTrigger>
+                                    <PlayerButton
+                                        icon={<ArrowBigUpDash />}
+                                        tooltip='Fast forward'
+                                        onClick={shortcutControls.increasePlaybackSpeed}
+                                    />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Increase playback speed</p>
+                                </TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                                <TooltipTrigger>
+                                    <PlayerButton
+                                        icon={<ArrowBigDownDash />}
+                                        tooltip='Rewind'
+                                        onClick={shortcutControls.decreasePlaybackSpeed}
+                                    />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Decrease playback speed</p>
+                                </TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                                <TooltipTrigger>
+                                    <PlayerButton
+                                        icon={<Volume2 />}
+                                        tooltip='Increase volume'
+                                        onClick={shortcutControls.increaseVolume}
+                                    />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Increase volume</p>
+                                </TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                                <TooltipTrigger>
+                                    <PlayerButton
+                                        icon={<Volume1 />}
+                                        tooltip='Decrease volume'
+                                        onClick={shortcutControls.decreaseVolume}
+                                    />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Decrease volume</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                     </div>
                     <span className='text-[#8C8C8C] text-sm w-[100px] text-right'>
                         {formatTime(audioDuration)}
                     </span>
                 </div>
             </div>
-        </div>
+        </div >
     )
 }

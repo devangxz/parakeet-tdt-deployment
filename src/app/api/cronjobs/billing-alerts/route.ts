@@ -1,5 +1,4 @@
 import { InvoiceStatus } from '@prisma/client'
-import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 import logger from '@/lib/logger'
@@ -7,11 +6,6 @@ import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
 
 export async function POST() {
-  const apiKey = headers().get('x-api-key')
-
-  if (apiKey !== process.env.CRON_API_KEY) {
-    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
-  }
 
   try {
     const lastMonth = new Date()

@@ -10,12 +10,12 @@ import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
 import ActionButton from '@/components/editor/ActionButton'
+import AudioPlayer from '@/components/editor/AudioPlayer'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
 import DownloadDocxDialog from '@/components/editor/DownloadDocxDialog'
 import FrequentTermsDialog from '@/components/editor/FrequentTermsDialog'
-import NewAudioPlayer from '@/components/editor/NewAudioPlayer'
-import NewHeader from '@/components/editor/NewHeader'
+import Header from '@/components/editor/Header'
 import ReportDialog from '@/components/editor/ReportDialog'
 import SectionSelector from '@/components/editor/SectionSelector'
 import { DiffTabComponent, EditorTabComponent, InfoTabComponent, SpeakerNameTabComponent } from '@/components/editor/TabComponents'
@@ -27,7 +27,6 @@ import {
 import renderTitleInputs from '@/components/editor/TitleInputs'
 import { CTMSWord } from '@/components/editor/transcriptUtils'
 import UploadDocxDialog from '@/components/editor/UploadDocxDialog'
-import UploadTextFile from '@/components/editor/UploadTextFile'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -50,9 +49,6 @@ import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcu
 import {
   ConvertedASROutput,
   updatePlayedPercentage,
-  downloadEditorDocxFile,
-  downloadEditorTextFile,
-  downloadMP3,
   regenDocx,
   convertSecondsToTimestamp,
   fetchFileDetails,
@@ -64,6 +60,7 @@ import {
   playCurrentParagraphTimestamp,
   replaceTextHandler,
   searchAndSelect,
+  downloadBlankDocx,
 } from '@/utils/editorUtils'
 
 export type OrderDetails = {
@@ -246,16 +243,9 @@ function EditorPage() {
   useEffect(() => {
     if (!session || !session.user) return
 
-    if (!process.env.NEXT_PUBLIC_DEV_EDITOR_TESTER?.split(',').includes(session?.user?.email)) {
-      router.push(`/editor/${params?.orderId}`)
-      return
-    }
+    const ALLOWED_ROLES = ['QC', 'REVIEWER', 'ADMIN', 'OM', 'CUSTOMER']
 
-    if (
-      session.user.role !== 'QC' &&
-      session.user.role !== 'REVIEWER' &&
-      session.user.role !== 'ADMIN'
-    ) {
+    if (!ALLOWED_ROLES.includes(session.user.role)) {
       router.replace('/') //TODO: Redirect to another page
       return
     }
@@ -511,7 +501,7 @@ function EditorPage() {
 
   return (
     <div className='bg-[#F7F5FF] h-screen flex flex-col'>
-      <NewHeader
+      <Header
         editorMode={editorMode}
         editorModeOptions={editorModeOptions}
         getEditorMode={getEditorMode}
@@ -526,25 +516,22 @@ function EditorPage() {
       <div className='flex justify-between px-16 my-5'>
         <div className='flex'>
           <p className='inline-block font-semibold'>{orderDetails.filename}</p>
-          <strong className={`text-red-600 ml-2 ${orderDetails.remainingTime === '0' ? 'animate-pulse' : ''}`}>{timeoutCount}</strong>
+          {session?.user?.role !== 'CUSTOMER' && <strong className={`text-red-600 ml-2 ${orderDetails.remainingTime === '0' ? 'animate-pulse' : ''}`}>{timeoutCount}</strong>}
         </div>
         <div className='inline-flex'>
-          <Button
-            disabled={buttonLoading.mp3}
-            onClick={downloadMP3.bind(null, orderDetails, setButtonLoading)}
-            className='mr-2'
-          >
-            {' '}
-            {buttonLoading.mp3 && (
-              <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-            )}{' '}
-            Download MP3
-          </Button>
+
           {step !== 'QC' && (
             <>
               {editorMode === 'Manual' && (
                 <>
-                  <DownloadDocxDialog orderDetails={orderDetails} downloadableType={downloadableType} setButtonLoading={setButtonLoading} buttonLoading={buttonLoading} setDownloadableType={setDownloadableType} />
+                  {orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === 'PRE_DELIVERED' ? (
+                    <Button onClick={() => downloadBlankDocx({ orderDetails, downloadableType: "markings", setButtonLoading })}>
+                      Download DOCX
+                    </Button>
+                  )
+                    :
+                    <DownloadDocxDialog orderDetails={orderDetails} downloadableType={downloadableType} setButtonLoading={setButtonLoading} buttonLoading={buttonLoading} setDownloadableType={setDownloadableType} />
+                  }
 
                   <UploadDocxDialog orderDetails={orderDetails} setButtonLoading={setButtonLoading} buttonLoading={buttonLoading} setFileToUpload={setFileToUpload} fileToUpload={fileToUpload} session={session} />
                 </>
@@ -552,34 +539,6 @@ function EditorPage() {
             </>
           )}
 
-          {step === 'QC' && (
-            <>
-              <Button
-                disabled={buttonLoading.download}
-                onClick={downloadEditorTextFile.bind(null, orderDetails, setButtonLoading)}
-              >
-                {' '}
-                {buttonLoading.download && (
-                  <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                )}{' '}
-                Download Text File
-              </Button>
-
-              <UploadTextFile orderDetails={orderDetails} setFileToUpload={setFileToUpload} fileToUpload={fileToUpload} buttonLoading={buttonLoading} setButtonLoading={setButtonLoading} session={session} />
-
-              <Button
-                disabled={buttonLoading.download || !fileToUpload.isUploaded}
-                onClick={downloadEditorDocxFile.bind(null, orderDetails, setButtonLoading)}
-                className='ml-2'
-              >
-                {' '}
-                {buttonLoading.download && (
-                  <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                )}{' '}
-                Download Docx File
-              </Button>
-            </>
-          )}
           {editorMode === 'Editor' && step !== 'QC' && (
             <Button
               variant='outline'
@@ -594,19 +553,18 @@ function EditorPage() {
               Regenerate Document
             </Button>
           )}
-          <ReportDialog reportModalOpen={reportModalOpen} setReportModalOpen={setReportModalOpen} reportDetails={reportDetails} setReportDetails={setReportDetails} orderDetails={orderDetails} buttonLoading={buttonLoading} setButtonLoading={setButtonLoading} />
-          {/* <Button onClick={handleSpellcheck} className='ml-2'>
-            Spellcheck
-          </Button> */}
-          <Button
-            onClick={() => setReportModalOpen(true)}
-            className='ml-2'
-            variant='destructive'
-          >
-            Report
-          </Button>
+          {session?.user?.role !== 'CUSTOMER' && <>
+            <ReportDialog reportModalOpen={reportModalOpen} setReportModalOpen={setReportModalOpen} reportDetails={reportDetails} setReportDetails={setReportDetails} orderDetails={orderDetails} buttonLoading={buttonLoading} setButtonLoading={setButtonLoading} />
+            <Button
+              onClick={() => setReportModalOpen(true)}
+              className='ml-2'
+              variant='destructive'
+            >
+              Report
+            </Button>
+          </>}
           {editorMode === 'Editor' ||
-            (step === 'QC' && (
+            ((step === 'QC' || session?.user?.role === 'OM') && (
               <Button
                 onClick={() => handleSave({ getEditorText, orderDetails, notes, step, cfd, updatedCtms, setButtonLoading })}
                 // disabled={buttonLoading.save}
@@ -620,12 +578,12 @@ function EditorPage() {
                 Save
               </Button>
             ))}
-          <Button
+          {session?.user?.role !== 'CUSTOMER' && <Button
             onClick={() => setSubmitting(true)}
             className='ml-2'
           >
             Submit
-          </Button>
+          </Button>}
         </div>
       </div>
       <div className='flex flex-col items-center h-4/5'>
@@ -645,7 +603,7 @@ function EditorPage() {
             className={`${step !== 'QC' && editorMode === 'Editor' ? 'w-1/2' : 'w-3/4'
               } flex flex-col justify-between`}
           >
-            <NewAudioPlayer
+            <AudioPlayer
               fileId={orderDetails.fileId}
               getAudioPlayer={getAudioPlayer}
             />
@@ -745,7 +703,7 @@ function EditorPage() {
                     </TabsList>
                   </div>
 
-                  <EditorTabComponent transcript={transcript} ctms={ctms} audioPlayer={audioPlayer} audioDuration={audioDuration} getQuillRef={getQuillRef} getCtms={getCtms} disableGoToWord={disableGoToWord} />
+                  <EditorTabComponent orderDetails={orderDetails} transcript={transcript} ctms={ctms} audioPlayer={audioPlayer} audioDuration={audioDuration} getQuillRef={getQuillRef} getCtms={getCtms} disableGoToWord={disableGoToWord} />
 
                   <SpeakerNameTabComponent />
 
@@ -783,7 +741,7 @@ function EditorPage() {
           )}
         </div>
       </div>
-      <div className='self-end px-16 mb-5 mt-7'>
+      {session?.user?.role !== 'CUSTOMER' && <div className='self-end px-16 mb-5 mt-7'>
         <FrequentTermsDialog frequentTermsModalOpen={frequentTermsModalOpen} setFrequentTermsModalOpen={setFrequentTermsModalOpen} frequentTermsData={frequentTermsData} />
 
         <Button
@@ -796,7 +754,7 @@ function EditorPage() {
           )}{' '}
           Frequent Terms
         </Button>
-      </div>
+      </div>}
 
       <Dialog open={isSubmitModalOpen} onOpenChange={setIsSubmitModalOpen}>
         <DialogContent>

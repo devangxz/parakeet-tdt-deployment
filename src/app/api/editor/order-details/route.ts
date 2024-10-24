@@ -8,17 +8,31 @@ import getOrderUserDetails from '@/services/editor-service/getOrderUserDetails';
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
-    const orderId = Number(searchParams.get('orderId'));
+    const fileId = searchParams.get('fileId') as string;
     const userToken = request.headers.get('x-user-token')
     const user = JSON.parse(userToken ?? '{}')
     const transcriberId = user?.userId
 
-    if (!orderId || !transcriberId) {
-        logger.error(`Missing orderId or transcriberId for order ${orderId}`)
-        return NextResponse.json({ message: 'Missing orderId or transcriberId' }, { status: 400 });
+    if (!fileId || !transcriberId) {
+        logger.error(`Missing fileId or transcriberId for file ${fileId}`)
+        return NextResponse.json({ message: 'Missing fileId or transcriberId' }, { status: 400 });
     }
 
     try {
+
+        const order = await prisma.order.findUnique({
+            where: {
+                fileId: fileId,
+            },
+        })
+
+        if (!order) {
+            logger.error(`Order not found for ${fileId}`)
+            return NextResponse.json({ message: 'Order not found' }, { status: 404 });
+        }
+
+        const orderId = order?.id
+
         const resultJson = await getOrderUserDetails(orderId);
 
         const file = await prisma.file.findUnique({
@@ -68,7 +82,7 @@ export async function GET(request: NextRequest) {
         logger.info(`orderDetails fetched for file ${resultJson.file_id}`);
         return NextResponse.json(orderDetails);
     } catch (error) {
-        logger.error(`Error fetching order details ${orderId}`, error);
+        logger.error(`Error fetching order details for file ${fileId}`, error);
         return NextResponse.json({ message: 'Error fetching order details.' }, { status: 500 });
     }
 }

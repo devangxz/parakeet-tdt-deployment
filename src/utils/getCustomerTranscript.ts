@@ -1,10 +1,16 @@
 import prisma from '@/lib/prisma'
 
-const removeTimestamps = (transcript: string) => transcript.replace(/^\d+:[0-5][0-9]:[0-5][0-9]\.\d+\s/gm, ''); // this is the regex for removing timestamps
+function removeTimestamps(transcript: string): string {
+    return transcript.replace(/^\d{1,2}:[0-5][0-9]:[0-5][0-9]\.\d\s/gm, '');
+}
 
-const removeSpeakerNames = (transcript: string) => transcript.replace(/(\d+:\d+:\d+\.\d+)\s+[^:]+:/g, '$1:'); // this is the regex for removing speaker names
+function removeSpeakerNames(transcript: string): string {
+    return transcript.replace(/(\d+:\d+:\d+\.\d+)\s+[^:]+:/g, '$1:');
+}
 
-const removeSpeakerNamesAndTimestamps = (transcript: string) => transcript.replace(/^\d+:[0-5][0-9]:[0-5][0-9]\.\d+\s+[^\:]+:\s/gm, '');
+function removeSpeakerNamesAndTimestamps(transcript: string): string {
+    return transcript.replace(/^\d+:[0-5][0-9]:[0-5][0-9]\.\d+\s+[^\:]+:\s/gm, '');
+}
 
 const getCustomerTranscript = async (fileId: string, transcript: string) => {
 
@@ -30,28 +36,56 @@ const getCustomerTranscript = async (fileId: string, transcript: string) => {
 
     let customerTranscript = transcript;
 
+    const speakers: { fn: string, ln: string }[] = options.sn ? options.sn[fileId] : [];
+
     // sif => speaker tracking
     // si => (0 = initial, 1 = full name)
     // ts => timestamps
 
     if (!options.ts && !options.sif) {
         customerTranscript = removeSpeakerNamesAndTimestamps(customerTranscript);
-    } else if (options.sif) {
+    }
+    if (options.sif) {
         if (!options.si) {
+            const speakerMap = new Map();
+            speakers.forEach((speaker, index) => {
+                speakerMap.set(`S${index + 1}`, {
+                    fullName: `${speaker.fn} ${speaker.ln}`,
+                    initials: `${speaker.fn.charAt(0)}${speaker.ln.charAt(0)}`
+                });
+            });
+
             const seenSpeakers = new Set();
-            customerTranscript = customerTranscript.replace(/\d+:\d+:\d+\.\d+\s+([a-zA-Z]+)\s([a-zA-Z]+):/g, function (match, p1, p2) {
-                const fullName = `${p1} ${p2}`;
-                if (seenSpeakers.has(fullName)) {
-                    return match.replace(`${p1} ${p2}:`, `${p1.charAt(0).toUpperCase()}${p2.charAt(0).toUpperCase()}:`);
+            customerTranscript = customerTranscript.replace(/(\d+:\d+:\d+\.\d+)\s+(S\d+):/g, (match, timestamp, speakerCode) => {
+                const speaker = speakerMap.get(speakerCode);
+                if (!speaker) return match; // If no mapping found, return original
+
+                if (seenSpeakers.has(speakerCode)) {
+                    return `${timestamp} ${speaker.initials}:`;
                 } else {
-                    seenSpeakers.add(fullName);
-                    return match; // Keep the full name for the first occurrence
+                    seenSpeakers.add(speakerCode);
+                    return `${timestamp} ${speaker.fullName}:`;
                 }
             });
+        } else {
+            const speakerMap = new Map();
+            speakers.forEach((speaker, index) => {
+                speakerMap.set(`S${index + 1}`, `${speaker.fn} ${speaker.ln}`);
+            });
+
+            customerTranscript = customerTranscript.replace(/(\d+:\d+:\d+\.\d+)\s+(S\d+):/g, (match, timestamp, speakerCode) => {
+                const fullName = speakerMap.get(speakerCode);
+                if (!fullName) return match; // If no mapping found, return original
+                return `${timestamp} ${fullName}:`;
+            });
         }
-    } else if (!options.sif) {
+    }
+
+    if (!options.sif) {
         customerTranscript = removeSpeakerNames(customerTranscript)
-    } else if (!options.ts) {
+    }
+
+    if (!options.ts) {
         customerTranscript = removeTimestamps(customerTranscript)
     }
 

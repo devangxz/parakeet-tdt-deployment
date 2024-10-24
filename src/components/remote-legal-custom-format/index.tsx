@@ -214,8 +214,8 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
       const toastId = toast.loading(`Updating RIS Data, please wait...`)
       try {
         setDisableNextButton(true)
-        const response = await axiosInstance.get(
-          `${BACKEND_URL}/ris-data/${fileId}?template=${templateName}`
+        const response = await axios.get(
+          `/api/ris-data/${fileId}?template=${templateName}`
         )
 
         if (response.data) {
@@ -400,8 +400,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
 
       if (response.data.success) {
         const tId = toast.success(
-          `Successfully ${
-            !rushOrderEnable ? 'Enabled' : 'Disabled'
+          `Successfully ${!rushOrderEnable ? 'Enabled' : 'Disabled'
           } rush order option`
         )
         toast.dismiss(tId)
@@ -479,9 +478,8 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
             <div key={step}>
               <div className={`flex items-center justify-center gap-3`}>
                 <div
-                  className={`rounded-full p-1 ${
-                    activeStep >= step ? 'bg-[#36F0C3]' : 'bg-violet-100'
-                  }`}
+                  className={`rounded-full p-1 ${activeStep >= step ? 'bg-[#36F0C3]' : 'bg-violet-100'
+                    }`}
                 >
                   <Check className='h-4 w-4 font-bold' />
                 </div>
@@ -504,33 +502,33 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
               <ScrollArea className='h-[62vh]'>
                 {session?.user?.organizationName.toLocaleLowerCase() !==
                   'remotelegal' && (
-                  <>
-                    {' '}
-                    <div className='flex justify-between flex-wrap'>
-                      <div className='flex items-center gap-2'>
-                        <Switch
-                          id='exd-switch'
-                          checked={rushOrderEnable}
-                          onCheckedChange={handleRushOrder}
-                        />
-                        <div className='text-md font-medium ml-3'>
-                          Rush Order
+                    <>
+                      {' '}
+                      <div className='flex justify-between flex-wrap'>
+                        <div className='flex items-center gap-2'>
+                          <Switch
+                            id='exd-switch'
+                            checked={rushOrderEnable}
+                            onCheckedChange={handleRushOrder}
+                          />
+                          <div className='text-md font-medium ml-3'>
+                            Rush Order
+                          </div>
                         </div>
+                        <div className='text-md font-normal'>{`+${rushOrderPrice.toFixed(
+                          2
+                        )} / min`}</div>
                       </div>
-                      <div className='text-md font-normal'>{`+${rushOrderPrice.toFixed(
-                        2
-                      )} / min`}</div>
-                    </div>
-                    <div className='mt-3 mb-3 font-normal text-sm text-[#8A8A8A]'>
-                      All files are prioritised for completion. Get your files
-                      delivered up to 3x faster. Files exceeding a duration of 2
-                      hours will require more than 12 hours to process. The
-                      lengthier the file, the longer is the turnaround time.
-                      Also, files with audio issues may be delayed.
-                    </div>
-                    <Separator />
-                  </>
-                )}
+                      <div className='mt-3 mb-3 font-normal text-sm text-[#8A8A8A]'>
+                        All files are prioritised for completion. Get your files
+                        delivered up to 3x faster. Files exceeding a duration of 2
+                        hours will require more than 12 hours to process. The
+                        lengthier the file, the longer is the turnaround time.
+                        Also, files with audio issues may be delayed.
+                      </div>
+                      <Separator />
+                    </>
+                  )}
 
                 {files.map((file, index) => (
                   <CustomOrderOptions

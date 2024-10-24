@@ -51,7 +51,11 @@ export async function POST(req: Request) {
       return NextResponse.json({
         error:
           'You have already reviewed the file so you cannot assign it to yourself.',
-      })
+      },
+        {
+          status: 400
+        }
+      )
     }
     const existingAssignment = await checkExistingAssignment(transcriberId)
 

@@ -6,7 +6,7 @@ import prisma from '@/lib/prisma'
 export async function POST(req: Request) {
   const { invoiceId, optionId, value } = await req.json()
 
-  if (!invoiceId || !optionId || !value) {
+  if (!invoiceId || !optionId) {
     return NextResponse.json(
       { error: 'Missing required fields' },
       { status: 400 }

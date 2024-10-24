@@ -124,7 +124,7 @@ export async function GET(
       })
       logger.info(`Invoice details fetched for ${invoiceId}`)
 
-      return NextResponse.json({
+      const responseData = {
         invoice: { ...invoice, user: invoiceUser },
         files: filesWithInvoiceInfo,
         templates: templates,
@@ -135,7 +135,9 @@ export async function GET(
         },
         paidByUser,
         isBillingEnabledForCustomer,
-      })
+      }
+
+      return NextResponse.json(responseData)
     } else {
       const templates = await prisma.template.findMany({
         where: {
@@ -144,7 +146,7 @@ export async function GET(
       })
       logger.info(`Invoice details fetched for ${invoiceId}`)
 
-      return NextResponse.json({
+      const responseData = {
         invoice: { ...invoice, user: invoiceUser },
         files: filesWithInvoiceInfo,
         templates: templates,
@@ -155,7 +157,9 @@ export async function GET(
         },
         paidByUser,
         isBillingEnabledForCustomer,
-      })
+      }
+
+      return NextResponse.json(responseData)
     }
   } catch (error) {
     logger.error(`Error fetching invoice details ${invoiceId}`, error)

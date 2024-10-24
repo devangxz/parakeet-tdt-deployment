@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './data-table'
-import { determinePwerLevel, getAudioUrl } from './utils'
+import { determinePwerLevel } from './utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -47,11 +47,7 @@ export default function AvailableFilesPage({ changeTab }: Props) {
   useEffect(() => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    getAudioUrl({ fileId }).then((url) => {
-      if (url) {
-        setCurrentlyPlayingFileUrl({ [fileId]: url })
-      }
-    })
+    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
   }, [playing])
 
   const fetchAvailableFiles = async (showLoader = false) => {
