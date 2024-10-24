@@ -4,7 +4,7 @@ import { UploadIcon } from '@radix-ui/react-icons'
 import axios from 'axios'
 import { FolderUp } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-import React, { useState, ChangeEvent, useEffect, useRef } from 'react'
+import React, { ChangeEvent, useEffect, useRef } from 'react'
 import Dropzone from 'react-dropzone'
 import { toast } from 'sonner'
 import { v4 as uuidv4 } from 'uuid'
@@ -55,9 +55,7 @@ interface FileWithId {
 
 const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadSuccess }) => {
   const { data: session } = useSession()
-  const { uploadingFiles, setUploadingFiles, updateUploadProgress, clearUpload } = useUpload();
-
-  const [uploadedFiles, setUploadedFiles] = useState<Set<string>>(new Set());
+  const { uploadingFiles, setUploadingFiles, updateUploadStatus } = useUpload();
 
   const uploadedBytesRef = useRef<{ [key: string]: number }>({});
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -69,10 +67,20 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
 
     eventSourceRef.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      if (data?.status === 'METADATA_EXTRACTED') {
-        updateUploadProgress(data?.fileNameWithExtension, 100);
-        setUploadedFiles(prev => new Set(prev).add(data?.fileNameWithExtension));
-        onUploadSuccess(true);
+      if (data?.type === 'METADATA_EXTRACTION') {
+        if (data?.file?.status === 'success') {
+          updateUploadStatus(data?.file?.fileNameWithExtension, {
+            progress: 100,
+            status: 'completed'
+          });
+          onUploadSuccess(true);
+        } else {
+          updateUploadStatus(data?.file?.fileNameWithExtension, {
+            progress: 0,
+            status: 'failed',
+            error: 'Metadata extraction failed.'
+          });
+        }
       }
     };
 
@@ -84,13 +92,6 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
       eventSourceRef.current?.close();
     };
   }, []);
-
-  useEffect(() => {
-    if (uploadedFiles.size > 0 && uploadedFiles.size === uploadingFiles.length) {
-      clearUpload();
-      setUploadedFiles(new Set());
-    }
-  }, [uploadedFiles, uploadingFiles, clearUpload, onUploadSuccess]);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -105,7 +106,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }
-  }, [uploadingFiles])
+  }, [uploadingFiles]);
 
   const singlePartUpload = async (file: FileWithId) => {
     const formData = new FormData();
@@ -118,12 +119,15 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const progress = (progressEvent.loaded / progressEvent.total) * 100;
-            updateUploadProgress(file.name, Math.min(progress, 99));
+            updateUploadStatus(file.name, {
+              progress: Math.min(progress, 99),
+              status: 'uploading'
+            });
           }
         },
       });
     } catch (error) {
-      throw new Error('An error occurred during file upload.');
+      throw new Error('An error occurred during file upload. Please try again.');
     }
   };
 
@@ -156,7 +160,10 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
             const chunkLoaded = progressEvent.loaded;
             totalUploaded = i * MULTI_PART_UPLOAD_CHUNK_SIZE + chunkLoaded;
             const overallProgress = (totalUploaded / file.size) * 100;
-            updateUploadProgress(file.name, Math.min(overallProgress, 99));
+            updateUploadStatus(file.name, {
+              progress: Math.min(overallProgress, 99),
+              status: 'uploading'
+            });
           }
         });
 
@@ -168,29 +175,38 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
 
       const sortedParts = parts.sort((a, b) => a.PartNumber - b.PartNumber);
       await axios.post('/api/s3-upload/multi-part/complete', {
-        sendBackData: { key, uploadId },
+        sendBackData: { key, uploadId, fileName: file.name },
         parts: sortedParts
       });
 
       return;
     } catch (error) {
-      toast.error('An error occurred during file upload. Please try again.');
+      throw new Error('An error occurred during file upload. Please try again.');
     }
   };
 
   const uploadFile = async (file: FileWithId) => {
-    updateUploadProgress(file.name, 0);
+    updateUploadStatus(file.name, { progress: 0, status: 'uploading' });
     uploadedBytesRef.current[file.name] = 0;
 
-    if (file.size <= SINGLE_PART_UPLOAD_LIMIT) {
-      await singlePartUpload(file);
-    } else {
-      await multiPartUpload(file);
-    }
+    try {
+      if (file.size <= SINGLE_PART_UPLOAD_LIMIT) {
+        await singlePartUpload(file);
+      } else {
+        await multiPartUpload(file);
+      }
 
-    if (isRemoteLegal && file.name.toLowerCase().endsWith('.docx')) {
-      updateUploadProgress(file.name, 100);
-      setUploadedFiles(prev => new Set(prev).add(file.name));
+      if (isRemoteLegal && file.name.toLowerCase().endsWith('.docx')) {
+        updateUploadStatus(file.name, { progress: 100, status: 'completed' });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      updateUploadStatus(file.name, {
+        progress: 0,
+        status: 'failed',
+        error: errorMessage
+      });
+      toast.error(`Error uploading ${file.name}: ${errorMessage}`);
     }
   };
 
@@ -240,7 +256,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
           name: docxFile.name,
           size: docxFile.size,
           type: docxFile.type,
-          fileId: commonFileId,
+          fileId: `${commonFileId}_ris`,
           file: docxFile
         }
       ];
@@ -267,12 +283,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
     setUploadingFiles(filesToUpload.map(file => ({ name: file.name, size: file.size })));
 
     for (const file of filesToUpload) {
-      try {
-        await uploadFile(file);
-      } catch (error) {
-        toast.error(`Error uploading ${file.name}`);
-        updateUploadProgress(file.name, 0);
-      }
+      await uploadFile(file);
     }
 
     uploadedBytesRef.current = {};

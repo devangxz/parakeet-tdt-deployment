@@ -7,11 +7,17 @@ interface UploadFile {
     size: number;
 }
 
+interface UploadStatus {
+    progress: number;
+    status: 'uploading' | 'completed' | 'failed';
+    error?: string;
+}
+
 interface UploadContextType {
     uploadingFiles: UploadFile[];
     setUploadingFiles: React.Dispatch<React.SetStateAction<UploadFile[]>>;
-    uploadProgress: Record<string, number>;
-    updateUploadProgress: (fileName: string, progress: number) => void;
+    uploadStatus: Record<string, UploadStatus>;
+    updateUploadStatus: (fileName: string, status: Partial<UploadStatus>) => void;
     clearUpload: () => void;
 }
 
@@ -39,58 +45,58 @@ export const useUpload = () => {
 
 const UploadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [uploadingFiles, setUploadingFiles] = useState<UploadFile[]>([]);
-    const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
-    const latestProgressRef = useRef<Record<string, number>>({});
+    const [uploadStatus, setUploadStatus] = useState<Record<string, UploadStatus>>({});
 
-    const debouncedSetUploadProgress = useCallback(
+    const latestStatusRef = useRef<Record<string, UploadStatus>>({});
+
+    const debouncedSetUploadStatus = useCallback(
         debounce(() => {
-            setUploadProgress(prevProgress => ({
-                ...prevProgress,
-                ...latestProgressRef.current
+            setUploadStatus(prevStatus => ({
+                ...prevStatus,
+                ...latestStatusRef.current
             }));
         }, 100),
         []
     );
 
-    const updateUploadProgress = useCallback((fileName: string, progress: number) => {
-        latestProgressRef.current[fileName] = progress;
-        debouncedSetUploadProgress();
-    }, [debouncedSetUploadProgress]);
+    const updateUploadStatus = useCallback((fileName: string, status: Partial<UploadStatus>) => {
+        latestStatusRef.current[fileName] = {
+            ...latestStatusRef.current[fileName],
+            ...status
+        };
+        debouncedSetUploadStatus();
+    }, [debouncedSetUploadStatus]);
 
     const clearUpload = useCallback(() => {
         setUploadingFiles([]);
-        setUploadProgress({});
-        latestProgressRef.current = {};
-        sessionStorage.removeItem('uploadingFiles');
-        sessionStorage.removeItem('uploadProgress');
-    }, []);
-
-    useEffect(() => {
-        const storedFiles = sessionStorage.getItem('uploadingFiles');
-        const storedProgress = sessionStorage.getItem('uploadProgress');
-
-        if (storedFiles && storedProgress) {
-            setUploadingFiles(JSON.parse(storedFiles));
-            setUploadProgress(JSON.parse(storedProgress));
-            latestProgressRef.current = JSON.parse(storedProgress);
-        }
+        setUploadStatus({});
+        latestStatusRef.current = {};
     }, []);
 
     useEffect(() => {
         if (uploadingFiles.length > 0) {
-            sessionStorage.setItem('uploadingFiles', JSON.stringify(uploadingFiles));
-            sessionStorage.setItem('uploadProgress', JSON.stringify(uploadProgress));
+            const allFilesProcessed = uploadingFiles.every(file => {
+                const status = uploadStatus[file.name]?.status;
+                return status === 'completed' || status === 'failed';
+            });
+
+            if (allFilesProcessed) {
+                // Clear upload state after a delay to show completion status
+                setTimeout(clearUpload, 3000);
+            }
         }
-    }, [uploadingFiles, uploadProgress]);
+    }, [uploadingFiles, uploadStatus, clearUpload]);
+
+    const contextValue = {
+        uploadingFiles,
+        setUploadingFiles,
+        uploadStatus,
+        updateUploadStatus,
+        clearUpload
+    };
 
     return (
-        <UploadContext.Provider value={{
-            uploadingFiles,
-            setUploadingFiles,
-            uploadProgress,
-            updateUploadProgress,
-            clearUpload
-        }}>
+        <UploadContext.Provider value={contextValue}>
             {children}
         </UploadContext.Provider>
     );

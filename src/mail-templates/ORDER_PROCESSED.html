@@ -1,25 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Transcript Notification</title>
-</head>
+  </head>
 
-<body>
+  <body>
     <p>Hello,</p>
 
-    <p>The transcript of '{{transcript_name}}' has been added to your account on {{$$SCRIBIE_SERVER$$}}.</p>
+    <p>
+      The transcript of '{{transcript_name}}' has been added to your account on
+      {{$$SCRIBIE_SERVER$$}}.
+    </p>
 
-    <p>Please check the transcript online before downloading. Please visit the following link and click the 'Check &
-        Download' button to start:</p>
+    <p>
+      Please check the transcript online before downloading. Please visit the
+      following link and click the 'Check & Download' button to start:
+    </p>
 
     <p><a href="{{check_and_download}}">Check & Download</a></p>
 
-    <p>Thank You,
-        {{$$SCRIBIE_SERVER$$}} Support.</p>
+    <br />
+    Thank you for choosing {{$$SCRIBIE_SERVER$$}}. <br />
+    <br />
 
-</body>
-
+    Sincerely,,<br />{{$$SCRIBIE_SERVER$$}} Support.
+    <br />
+    {{$$MAIL_SIGNATURE$$}}
+  </body>
 </html>

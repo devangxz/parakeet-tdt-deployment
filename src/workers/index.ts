@@ -21,8 +21,8 @@ const createWorker = (queueName: QueueName, processFunction: (job: Job) => Promi
 
 // Create workers for each queue
 const audioVideoConversionWorker = createWorker(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, async (job) => {
-    const { fileKey, userEmailId } = job.data;
-    return await convertAudioVideo(fileKey, userEmailId);
+    const { fileKey, userEmailId, fileName } = job.data;
+    return await convertAudioVideo(fileKey, userEmailId, fileName);
 });
 
 const automaticSpeechRecognitionWorker = createWorker(WORKER_QUEUE_NAMES.AUTOMATIC_SPEECH_RECOGNITION, async (job) => {

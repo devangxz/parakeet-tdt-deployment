@@ -1,5 +1,5 @@
 {
   "$$MAIL_SIGNATURE$$": "<hr /><small>This mail is not spam. You have received this message because you have an account on <a target='_blank' href='http://{{server}}'>Scribie.ai</a>. To stop these emails please <a href='https://{{server}}/settings#mail-notifications'>click here</a>.</small>",
-  "$$SCRIBIE_SERVER$$": "scribie.ai",
+  "$$SCRIBIE_SERVER$$": "Scribie.ai",
   "$$SCRIBIE_SUPPORT_EMAIL$$": "support@scribie.com"
 }

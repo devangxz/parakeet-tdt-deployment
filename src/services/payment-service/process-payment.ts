@@ -136,6 +136,7 @@ export const processPayment = async (
           instructions: invoice.instructions,
           customerEmail: getEmails.email || '',
           fileIds: invoice.itemNumber ?? '',
+          invoiceId: invoice.invoiceId,
         })
       }
     }
