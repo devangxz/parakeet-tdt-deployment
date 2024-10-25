@@ -66,6 +66,16 @@ export async function performASR(fileId: string): Promise<void> {
     try {
         const transcriptFileName = `${fileId}.txt`;
 
+        const order = await prisma.order.findUnique({
+            where: {
+                fileId: fileId,
+            },
+        });
+
+        if (!order) {
+            throw new Error(`Order not found for ${fileId}`)
+        }
+
         const fileURL = await getSignedURLFromS3(
             `${fileId}.mp3`,
             config.aws_signed_url_expiration,
@@ -83,6 +93,7 @@ export async function performASR(fileId: string): Promise<void> {
             fileId: fileId,
             transcript: transcript,
             ctms: ctms,
+            userId: order.userId,
         }, {
             headers: {
                 'x-api-key': process.env.SCRIBIE_API_KEY
