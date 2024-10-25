@@ -25,9 +25,7 @@ import {
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
 import FileAudioPlayer from '@/components/utils/FileAudioPlayer'
-import { BACKEND_URL } from '@/constants'
 import { File, User } from '@/types/files'
-import axiosInstance from '@/utils/axios'
 import formatDateTime from '@/utils/formatDateTime'
 import formatDuration from '@/utils/formatDuration'
 import getInitials from '@/utils/getInitials'
@@ -63,27 +61,10 @@ export default function InprogressFilesPage({ files }: ListProps) {
     [key: string]: string
   }>({})
 
-  const getAudioUrl = async (fileId: string) => {
-    try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/get-audio/${fileId}`,
-        { responseType: 'blob' }
-      )
-      const url = URL.createObjectURL(response.data)
-      return url
-    } catch (error) {
-      toast.error('Failed to play audio.')
-    }
-  }
-
   useEffect(() => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    getAudioUrl(fileId).then((url) => {
-      if (url) {
-        setCurrentlyPlayingFileUrl({ [fileId]: url })
-      }
-    })
+    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
   }, [playing])
 
   const fetchInprogressFiles = async (showLoader = false) => {
@@ -382,25 +363,25 @@ export default function InprogressFilesPage({ files }: ListProps) {
           <div>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-              <Button
-                variant='order'
-                className='not-rounded text-black w-[140px] mr-3'
-                onClick={async () => {
-                  try {
-                    if (selectedFiles.length === 0) {
-                      toast.error('Please select at least one file')
-                      return
+                <Button
+                  variant='order'
+                  className='not-rounded text-black w-[140px] mr-3'
+                  onClick={async () => {
+                    try {
+                      if (selectedFiles.length === 0) {
+                        toast.error('Please select at least one file')
+                        return
+                      }
+                      await navigator.clipboard.writeText(selectedFiles.join(','))
+                      toast.success('File Ids copied to clipboard')
+                    } catch (error) {
+                      toast.error('Failed to copy file Ids')
                     }
-                    await navigator.clipboard.writeText(selectedFiles.join(','))
-                    toast.success('File Ids copied to clipboard')
-                  } catch (error) {
-                    toast.error('Failed to copy file Ids')
-                  }
-                }}
-              >
-                Copy file Ids
-              </Button>
-            )}
+                  }}
+                >
+                  Copy file Ids
+                </Button>
+              )}
           </div>
         </div>
         <DataTable

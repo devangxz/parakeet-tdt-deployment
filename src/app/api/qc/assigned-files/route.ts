@@ -85,6 +85,7 @@ export async function GET(request: Request) {
     logger.info(
       `Assigned QC files fetched successfully for ${transcriberId} with type ${type}`
     )
+
     return NextResponse.json(assignedQCFiles)
   } catch (error) {
     logger.error('Error fetching assigned QC files', error)

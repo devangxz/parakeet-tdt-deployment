@@ -5,7 +5,7 @@ import { ChangeEvent } from "react";
 
 import { Button } from "../ui/button";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
-import { OrderDetails } from "@/app/editor/dev/[orderId]/page";
+import { OrderDetails } from "@/app/editor/[fileId]/page";
 import { ButtonLoading, handleFilesUpload, uploadFile } from "@/utils/editorUtils";
 
 type UploadDocxDialogProps = {
@@ -61,7 +61,7 @@ const UploadDocxDialog = ({ orderDetails, setButtonLoading, buttonLoading, setFi
             <DialogClose asChild>
                 <Button
                     disabled={buttonLoading.upload}
-                    onClick={uploadFile.bind(null, fileToUpload, setButtonLoading, session, setFileToUpload)}
+                    onClick={uploadFile.bind(null, fileToUpload, setButtonLoading, session, setFileToUpload, orderDetails.fileId)}
                 >
                     {' '}
                     {buttonLoading.upload && (

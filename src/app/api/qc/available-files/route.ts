@@ -85,7 +85,6 @@ export async function GET(request: Request) {
         return (b.rateBonus || 0) - (a.rateBonus || 0)
       })
     }
-
     logger.info(`Available QC files fetched successfully`)
     return NextResponse.json(qcFiles)
   } catch (error) {

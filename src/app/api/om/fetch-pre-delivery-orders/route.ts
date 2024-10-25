@@ -28,6 +28,7 @@ export async function GET() {
     }
 
     logger.info(`fetched pre delivery order`)
+
     return NextResponse.json({
       success: true,
       details: orders,

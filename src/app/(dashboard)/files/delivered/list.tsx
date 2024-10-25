@@ -3,6 +3,7 @@
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
 import axios, { AxiosError } from 'axios'
+import Link from 'next/link'
 import { Session } from 'next-auth'
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
@@ -31,9 +32,7 @@ import {
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
 import FileAudioPlayer from '@/components/utils/FileAudioPlayer'
-import { BACKEND_URL } from '@/constants'
 import { User } from '@/types/files'
-import axiosInstance from '@/utils/axios'
 import formatDateTime from '@/utils/formatDateTime'
 import formatDuration from '@/utils/formatDuration'
 import getInitials from '@/utils/getInitials'
@@ -72,27 +71,11 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
     [key: string]: string
   }>({})
 
-  const getAudioUrl = async (fileId: string) => {
-    try {
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/get-audio/${fileId}`,
-        { responseType: 'blob' }
-      ) // Replace with your file name
-      const url = URL.createObjectURL(response.data)
-      return url
-    } catch (error) {
-      toast.error('Failed to play audio.')
-    }
-  }
-
   useEffect(() => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    getAudioUrl(fileId).then((url) => {
-      if (url) {
-        setCurrentlyPlayingFileUrl({ [fileId]: url })
-      }
-    })
+    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
+
   }, [playing])
 
   const fetchDeliveredFiles = async (showLoader = false) => {
@@ -254,7 +237,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   filename: '',
                   docType:
                     session?.user?.organizationName.toLowerCase() ===
-                    'remotelegal'
+                      'remotelegal'
                       ? 'CUSTOM_FORMATTING_DOC'
                       : 'TRANSCRIPTION_DOC',
                 },
@@ -345,6 +328,9 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align='end'>
+            <DropdownMenuItem asChild>
+              <Link href={`/editor/${row.original.id}`}>Open Editor</Link>
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => handleMP3Download(row.original.id)}
             >
@@ -449,25 +435,25 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
           <div className='flex items-center'>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-              <Button
-                variant='order'
-                className='not-rounded text-black w-[140px] mr-3'
-                onClick={async () => {
-                  try {
-                    if (selectedFiles.length === 0) {
-                      toast.error('Please select at least one file')
-                      return
+                <Button
+                  variant='order'
+                  className='not-rounded text-black w-[140px] mr-3'
+                  onClick={async () => {
+                    try {
+                      if (selectedFiles.length === 0) {
+                        toast.error('Please select at least one file')
+                        return
+                      }
+                      await navigator.clipboard.writeText(selectedFiles.join(','))
+                      toast.success('File Ids copied to clipboard')
+                    } catch (error) {
+                      toast.error('Failed to copy file Ids')
                     }
-                    await navigator.clipboard.writeText(selectedFiles.join(','))
-                    toast.success('File Ids copied to clipboard')
-                  } catch (error) {
-                    toast.error('Failed to copy file Ids')
-                  }
-                }}
-              >
-                Copy file Ids
-              </Button>
-            )}
+                  }}
+                >
+                  Copy file Ids
+                </Button>
+              )}
             <Button
               variant='order'
               className='format-button text-black w-[140px]'

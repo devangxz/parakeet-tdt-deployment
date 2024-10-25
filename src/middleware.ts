@@ -13,7 +13,6 @@ export async function middleware(req: NextRequest) {
     requestedUrl.startsWith('/api/auth') ||
     requestedUrl.startsWith('/api/webhook') ||
     requestedUrl.startsWith('/api/static-mails') ||
-    requestedUrl.startsWith('/api/cronjobs') ||
     requestedUrl.startsWith('/api/public')
   ) {
     return NextResponse.next()
@@ -22,21 +21,8 @@ export async function middleware(req: NextRequest) {
   if (requestedUrl.startsWith('/api')) {
     const apiKey = req.headers.get('x-api-key')
 
-    if (apiKey) {
-      // TODO:Validate API key by checking against the database and adding the user to the request
-      // const user = await prisma.user.findUnique({
-      //   where: { apiKey },
-      // })
-      // if (user) {
-      //   req.user = user
-      //   return NextResponse.next()
-      // }
-      // } else {
-      //   return NextResponse.json(
-      //     { message: 'Invalid API key' },
-      //     { status: 401 }
-      //   )
-      // }
+    if (apiKey && apiKey === process.env.SCRIBIE_API_KEY) {
+      return NextResponse.next()
     }
 
     // If no API key, check for JWT session using NextAuth

@@ -51,7 +51,11 @@ export async function POST(req: Request) {
       return NextResponse.json({
         error:
           'You have already reviewed the file so you cannot assign it to yourself.',
-      })
+      },
+        {
+          status: 400
+        }
+      )
     }
     const existingAssignment = await checkExistingAssignment(transcriberId)
 
@@ -59,7 +63,11 @@ export async function POST(req: Request) {
       logger.error(`Assignment already exists for ${transcriberId}`)
       return NextResponse.json({
         error: 'Please submit the current file before accepting other.',
-      })
+      },
+        {
+          status: 400
+        }
+      )
     }
 
     const rejectedAssignment = await prisma.jobAssignment.findFirst({

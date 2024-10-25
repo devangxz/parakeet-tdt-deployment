@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "outDir": "./dist",
+    "noEmit": false,
+    "moduleResolution": "node",
+    "isolatedModules": false,
+    "incremental": false,
+    "jsx": "react",
+    "plugins": []
+  },
+  "include": [
+    "src/workers/conversionWorker.ts",
+    "src/lib/**/*",
+    "src/services/**/*",
+    "src/scripts/manageConversionWorker.ts"
+  ],
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.spec.ts"]
+}

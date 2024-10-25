@@ -31,7 +31,7 @@
     "TO": ["$$USER_EMAIL_ID$$", "$$ADMIN_EMAIL_ID$$"],
     "CC": ["$$SUPPORT_EMAIL_ID$$"],
     "BCC": ["$$CONTACT_EMAIL_ID$$"],
-    "SUBJECT": "Scribie.ai Team Invite",
+    "SUBJECT": "Scribie.ai Team Invitation",
     "HTML": "TEAM_NEW_USER_ACCOUNT_CREATE.html",
     "TEXT": ""
   },
@@ -40,7 +40,7 @@
     "TO": ["$$USER_EMAIL_ID$$", "$$ADMIN_EMAIL_ID$$"],
     "CC": ["$$SUPPORT_EMAIL_ID$$"],
     "BCC": ["$$CONTACT_EMAIL_ID$$"],
-    "SUBJECT": "Scribie.ai Team Invite",
+    "SUBJECT": " Scribie.ai Team Invitation",
     "HTML": "TEAM_EXISTING_USER_ACCOUNT_INVITE.html",
     "TEXT": ""
   },
@@ -241,7 +241,7 @@
     "TO": ["$$USER_EMAIL_ID$$"],
     "CC": ["$$SUPPORT_EMAIL_ID$$"],
     "BCC": [],
-    "SUBJECT": "Scribie.ai Order Processed",
+    "SUBJECT": "Scribie.ai Transcript Order Processed",
     "HTML": "ORDER_PROCESSED.html",
     "TEXT": ""
   },
@@ -268,7 +268,7 @@
     "TO": ["$$SUPPORT_EMAIL_ID$$"],
     "CC": [],
     "BCC": ["$$CONTACT_EMAIL_ID$$"],
-    "SUBJECT": "Scribie.ai Send Instructions",
+    "SUBJECT": "Scribie.ai Transcript Order Instructions",
     "HTML": "SEND_INSTRUCTIONS.html",
     "TEXT": ""
   },
@@ -288,6 +288,15 @@
     "BCC": ["$$CONTACT_EMAIL_ID$$"],
     "SUBJECT": "Scribie.ai Billing Alert",
     "HTML": "BILLING_ALERT.html",
+    "TEXT": ""
+  },
+  "FILE_SHARED": {
+    "FROM": "$$ALERT_BE_EMAIL_ID$$",
+    "TO": ["$$USER_EMAIL_ID$$"],
+    "CC": [],
+    "BCC": ["$$CONTACT_EMAIL_ID$$"],
+    "SUBJECT": "Scribie.ai File Shared",
+    "HTML": "FILE_SHARED.html",
     "TEXT": ""
   }
 }

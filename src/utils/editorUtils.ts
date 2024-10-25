@@ -4,7 +4,7 @@ import Quill from 'quill';
 import { toast } from "sonner"
 
 import axiosInstance from "./axios"
-import { OrderDetails, UploadFilesType } from "@/app/editor/dev/[orderId]/page"
+import { OrderDetails, UploadFilesType } from "@/app/editor/[fileId]/page"
 import { CTMSWord } from "@/components/editor/transcriptUtils";
 import { ALLOWED_META, BACKEND_URL, FILE_CACHE_URL, MINIMUM_AUDIO_PLAYBACK_PERCENTAGE } from "@/constants"
 export type ButtonLoading = {
@@ -114,8 +114,8 @@ const downloadBlankDocx = async ({ orderDetails, downloadableType, setButtonLoad
         download: true,
     }))
     try {
-        const response = await axiosInstance.get(
-            `${BACKEND_URL}/download-blank-docx?fileId=${orderDetails.fileId}&type=${downloadableType}&orgName=${orderDetails.orgName}&templateName=${orderDetails.templateName}`,
+        const response = await axios.get(
+            `/api/editor/download-blank-docx?fileId=${orderDetails.fileId}&type=${downloadableType}&orgName=${orderDetails.orgName}&templateName=${orderDetails.templateName}`,
             { responseType: 'blob' }
         )
         const url = window.URL.createObjectURL(new Blob([response.data]))
@@ -213,29 +213,30 @@ const downloadEditorTextFile = async (orderDetails: OrderDetails, setButtonLoadi
     }
 }
 
-const downloadMP3 = async (orderDetails: OrderDetails, setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>) => {
-    setButtonLoading((prevButtonLoading) => ({
-        ...prevButtonLoading,
-        mp3: true,
-    }))
+const downloadMP3 = async (orderDetails: OrderDetails) => {
+    const toastId = toast.loading('Downloading MP3...')
     try {
-        const response = await axiosInstance.get(
-            `${BACKEND_URL}/download-mp3?fileId=${orderDetails.fileId}`
+        const response = await axios.get(
+            `/api/editor/download-mp3?fileId=${orderDetails.fileId}`,
+            { responseType: 'blob' }
         )
         if (response.status === 200) {
-            const data = response.data
-            window.open(data.url, '_blank')
+            const blob = new Blob([response.data], { type: 'audio/mpeg' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${orderDetails.fileId}.mp3`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
         }
 
-        const successToastId = toast.success(`MP3 downloaded successfully`)
-        toast.dismiss(successToastId)
+        toast.dismiss(toastId)
+        toast.success(`MP3 downloaded successfully`)
     } catch (error) {
+        toast.dismiss(toastId)
         toast.error('Error downloading mp3')
-    } finally {
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            mp3: false,
-        }))
     }
 }
 
@@ -296,13 +297,14 @@ const uploadTextFile = async (fileToUpload: { renamedFile: File | null }, orderD
     }
 }
 
-const uploadFile = async (fileToUpload: { renamedFile: File | null }, setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>, session: Session | null, setFileToUpload: React.Dispatch<React.SetStateAction<{ renamedFile: File | null, originalFile: File | null, isUploaded?: boolean }>>) => {
+const uploadFile = async (fileToUpload: { renamedFile: File | null }, setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>, session: Session | null, setFileToUpload: React.Dispatch<React.SetStateAction<{ renamedFile: File | null, originalFile: File | null, isUploaded?: boolean }>>, fileId: string) => {
     const file = fileToUpload.renamedFile
     if (!file) return toast.error('Please select a file to upload.')
 
     if (!session?.user?.token) {
         return
     }
+    const toastId = toast.loading('Uploading File...')
     setButtonLoading((prevButtonLoading) => ({
         ...prevButtonLoading,
         upload: true,
@@ -311,17 +313,18 @@ const uploadFile = async (fileToUpload: { renamedFile: File | null }, setButtonL
     const formData = new FormData()
     formData.append('file', file)
     try {
-        await axiosInstance.post(`${BACKEND_URL}/upload-docx`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-                Authorization: `Bearer ${session.user.token}`,
-            },
-        })
+        await axios.post(`/api/editor/upload-docx?fileId=${fileId}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        toast.dismiss(toastId)
         toast.success('File uploaded successfully')
+        setFileToUpload({ renamedFile: null, originalFile: null, isUploaded: true })
     } catch (uploadError) {
+        toast.dismiss(toastId)
         toast.error('Failed to upload file')
+        setFileToUpload({ renamedFile: null, originalFile: null, isUploaded: false })
     } finally {
-        setFileToUpload({ renamedFile: null, originalFile: null })
         setButtonLoading((prevButtonLoading) => ({
             ...prevButtonLoading,
             upload: false,
@@ -344,7 +347,7 @@ const handleFilesUpload = async (payload: UploadFilesType, orderDetailsId: strin
             return
         }
         const file = payload.files[0]
-        const renamedFile = new File([file], `${orderDetailsId}_cf.docx`, {
+        const renamedFile = new File([file], `${orderDetailsId}.docx`, {
             type: file.type,
         })
         setFileToUpload({ renamedFile, originalFile: file })
@@ -369,7 +372,6 @@ const reportHandler = async (reportDetails: { reportComment: string; reportOptio
         setReportModalOpen(false)
         setReportDetails({ reportComment: '', reportOption: '' })
     } catch (error) {
-        console.log(error)
         toast.error('Failed to report file')
     } finally {
         setButtonLoading((prevButtonLoading) => ({
@@ -444,10 +446,10 @@ const fetchFileDetails = async ({
     setCtms,
 }: FetchFileDetailsParams) => {
     try {
-        const orderRes = await axios.get(`/api/editor/order-details?orderId=${params?.orderId}`)
+        const orderRes = await axios.get(`/api/editor/order-details?fileId=${params?.fileId}`)
         setOrderDetails(orderRes.data)
         setCfd(orderRes.data.cfd)
-        const cfStatus = ['FORMATTED', 'REVIEWER_ASSIGNED', 'REVIEW_COMPLETED']
+        const cfStatus = ['FORMATTED', 'REVIEWER_ASSIGNED', 'REVIEW_COMPLETED', 'FINALIZER_ASSIGNED', 'FINALIZER_COMPLETED']
         let step = 'QC'
         if (cfStatus.includes(orderRes.data.status)) {
             step = 'CF'
@@ -465,12 +467,11 @@ const fetchFileDetails = async ({
         const transcriptRes = await axiosInstance.get(
             `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.data.fileId}&step=${step}&orderId=${orderRes.data.orderId}` //step will be used later when cf editor is implemented
         )
-        console.log(transcriptRes)
+
         setTranscript(transcriptRes.data.result.transcript)
         setCtms(transcriptRes.data.result.ctms)
         return orderRes.data
     } catch (error) {
-        console.log(error)
         toast.error('Failed to fetch file details')
     }
 }
@@ -509,7 +510,6 @@ const handleSave = async ({
     localStorage.setItem(orderDetails.fileId, JSON.stringify({ notes: notes }));
     const toastId = toast.loading(`Saving Transcription...`);
     try {
-        console.log(FILE_CACHE_URL)
         await axiosInstance.post(`${FILE_CACHE_URL}/save-transcript`, {
             fileId: orderDetails.fileId,
             transcript,
@@ -522,7 +522,6 @@ const handleSave = async ({
         const successToastId = toast.success(`Transcription saved successfully`);
         toast.dismiss(successToastId);
     } catch (error) {
-        console.log(error)
         toast.dismiss(toastId);
         const errorToastId = toast.error(`Error while saving transcript`);
         toast.dismiss(errorToastId);
@@ -574,7 +573,10 @@ const checkTranscriptForAllowedMeta = (quill: Quill) => {
         }
     }
 
-    throw new Error(error?.message);
+    if (error?.message) {
+        throw new Error(error.message);
+    }
+
 };
 
 const handleSubmit = async ({
@@ -589,9 +591,12 @@ const handleSubmit = async ({
 }: HandleSubmitParams) => {
     if (!orderDetails || !orderDetails.orderId || !step) return;
     const toastId = toast.loading(`Submitting Transcription...`);
-    checkTranscriptForAllowedMeta(quill);
     const transcript = quill.getText() || '';
+
     try {
+        if (orderDetails.status === 'QC_ASSIGNED') {
+            checkTranscriptForAllowedMeta(quill);
+        }
         setButtonLoading((prevButtonLoading) => ({
             ...prevButtonLoading,
             submit: true,
@@ -602,29 +607,22 @@ const handleSubmit = async ({
         }
 
         if (step === 'CF') {
-            await axiosInstance.post(
-                `${BACKEND_URL}/submit-review`,
-                {
-                    fileId: orderDetails.fileId,
-                    orderId: orderDetails.orderId,
-                    mode: editorMode.toLowerCase(),
-                }
-            );
-        } else {
-            if (!fileToUpload.isUploaded || !fileToUpload.renamedFile)
+
+            if (!fileToUpload.isUploaded)
                 throw new Error('UF');
 
-            const formData = new FormData();
-            formData.append('file', fileToUpload.renamedFile);
-
-            await axios.post(
-                `${BACKEND_URL}/submit-qc`, {
+            await axios.post(`/api/editor/submit-review`, {
+                fileId: orderDetails.fileId,
+                orderId: orderDetails.orderId,
+                mode: editorMode.toLowerCase(),
+            });
+        } else {
+            await axios.post(`/api/editor/submit-qc`, {
                 fileId: orderDetails.fileId,
                 orderId: orderDetails.orderId,
                 mode: editorMode.toLowerCase(),
                 transcript,
-            }
-            );
+            });
         }
 
         toast.dismiss(toastId);
@@ -762,7 +760,6 @@ const adjustTimestamps = (
 ) => {
     if (!quill) return;
 
-    console.log(selection)
     if (!selection) {
         toast.error("Please select text to adjust timestamps.");
         return;
