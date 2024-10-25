@@ -17,22 +17,36 @@ const config = {
         TARUN: process.env.TARUN_WEBHOOK_URL,
         PRASAD: process.env.PRASAD_WEBHOOK_URL,
     },
-    fileTypes: {
-        allowed: [
-            'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/x-ms-wma',
-            'video/x-ms-wmv', 'video/x-msvideo', 'video/x-flv', 'video/mpeg',
-            'video/mp4', 'audio/mp4', 'video/x-m4v', 'video/quicktime',
-            'audio/ogg', 'video/ogg', 'video/webm', 'audio/aiff',
-            'audio/x-aiff', 'audio/amr', 'video/3gpp', 'audio/3gpp',
-            'video/mp2t', 'audio/aac', 'video/x-matroska', 'video/mxf',
-            'audio/opus', 'audio/flac'
-        ],
-        extensions: [
-            '.mp3', '.wav', '.wma', '.wmv', '.avi', '.flv', '.mpg', '.mpeg',
-            '.mp4', '.m4a', '.m4v', '.mov', '.ogg', '.webm', '.aif', '.aiff',
-            '.amr', '.3gp', '.3ga', '.mts', '.ogv', '.aac', '.mkv', '.mxf',
-            '.opus', '.flac'
-        ]
+    allowedFileTypes: {
+        // Audio formats
+        '.mp3': ['audio/mpeg'],
+        '.wav': ['audio/wav', 'audio/x-wav'],
+        '.wma': ['audio/x-ms-wma'],
+        '.aac': ['audio/aac'],
+        '.flac': ['audio/flac'],
+        '.ogg': ['audio/ogg'],
+        '.aif': ['audio/aiff', 'audio/x-aiff'],
+        '.aiff': ['audio/aiff', 'audio/x-aiff'],
+        '.amr': ['audio/amr'],
+        '.opus': ['audio/opus'],
+        '.m4a': ['audio/mp4', 'audio/x-m4a'],
+
+        // Video formats
+        '.wmv': ['video/x-ms-wmv'],
+        '.avi': ['video/x-msvideo'],
+        '.flv': ['video/x-flv'],
+        '.mpg': ['video/mpeg'],
+        '.mpeg': ['video/mpeg'],
+        '.mp4': ['video/mp4'],
+        '.m4v': ['video/x-m4v'],
+        '.mov': ['video/quicktime'],
+        '.webm': ['video/webm'],
+        '.3gp': ['video/3gpp', 'audio/3gpp'],
+        '.3ga': ['audio/3gpp'],
+        '.mts': ['video/mp2t'],
+        '.ogv': ['video/ogg'],
+        '.mkv': ['video/x-matroska'],
+        '.mxf': ['video/mxf']
     },
     ffprobe: {
         options: [
@@ -63,11 +77,24 @@ const s3Client = new S3Client();
 
 async function validateFileType(bucket, key) {
     try {
-        const { ContentType, ContentLength } = await s3Client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
-        const fileExtension = '.' + key.split('.').pop().toLowerCase();
-        if (!config.fileTypes.allowed.includes(ContentType) && !config.fileTypes.extensions.includes(fileExtension)) {
-            throw new Error(`Invalid file type: ${ContentType || fileExtension}`);
+        const { ContentType, ContentLength } = await s3Client.send(
+            new HeadObjectCommand({ Bucket: bucket, Key: key })
+        );
+
+        const fileExtension = '.' + key.split('.').pop()?.toLowerCase();
+
+        if (!config.allowedFileTypes[fileExtension]) {
+            throw new Error(`Invalid file extension: ${fileExtension}`);
         }
+
+        if (ContentType) {
+            const isValidMimeType = config.allowedFileTypes[fileExtension].includes(ContentType.toLowerCase());
+
+            if (!isValidMimeType) {
+                throw new Error(`Invalid MIME type ${ContentType} for extension ${fileExtension}`);
+            }
+        }
+
         return { ContentType, ContentLength };
     } catch (error) {
         console.error(`Error validating file ${bucket}/${key}:`, error);
