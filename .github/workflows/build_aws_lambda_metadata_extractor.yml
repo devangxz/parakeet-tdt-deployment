@@ -19,12 +19,14 @@ jobs:
           node-version: '20'
 
       - name: Navigate to Lambda folder
-        working-directory: ./aws-lambda-metadata-extractor
+        run: cd ./aws-lambda-metadata-extractor
 
       - name: Install dependencies (if needed)
+        working-directory: ./aws-lambda-metadata-extractor
         run: npm install
 
       - name: Zip Lambda function
+        working-directory: ./aws-lambda-metadata-extractor
         run: |
           zip -r ../lambda.zip *  # Create a zip file of the Lambda code
 
