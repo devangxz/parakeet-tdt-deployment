@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: userEmail },
+      where: { email: userEmail.toLowerCase() },
     })
 
     if (!user) {
