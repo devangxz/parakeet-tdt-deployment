@@ -1,0 +1,41 @@
+name: Deploy AWS Lambda
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Navigate to Lambda folder
+        run: cd ./aws-lambda-metadata-extractor
+
+      - name: Install dependencies (if needed)
+        working-directory: ./aws-lambda-metadata-extractor
+        run: npm install
+
+      - name: Zip Lambda function
+        working-directory: ./aws-lambda-metadata-extractor
+        run: |
+          zip -r ../lambda.zip *  # Create a zip file of the Lambda code
+
+      - name: Deploy Lambda function to AWS
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_LAMBDA_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_LAMBDA_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_LAMBDA_REGION }}
+        run: |
+          aws lambda update-function-code \
+            --function-name metadataExtractor \
+            --zip-file fileb://lambda.zip

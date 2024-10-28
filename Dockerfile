@@ -27,7 +27,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # Build the worker
-RUN npm run build-worker
+RUN npm run build-conversion-worker
 
 # Command to run the worker
-CMD ["npm", "run", "start-worker"]
+CMD ["npm", "run", "start-conversion-worker"]

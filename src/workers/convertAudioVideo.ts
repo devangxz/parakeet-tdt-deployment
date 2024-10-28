@@ -27,7 +27,7 @@ const CONVERSION_RETRY_CONFIG = {
 const VIDEO_EXTENSIONS = [
     '.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv',
     '.webm', '.mpg', '.mpeg', '.m4v', '.3gp',
-    '.mts', '.mp2t', '.ogv', '.mxf'
+    '.mts', '.3ga', '.ogv', '.mxf'
 ];
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

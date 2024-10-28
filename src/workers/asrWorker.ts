@@ -1,7 +1,5 @@
 import { Worker, Job } from 'bullmq';
 
-import { convertAudioVideo } from './convertAudioVideo';
-import { markTranscript } from './markTranscript';
 import { performASR } from './performASR';
 import logger from '../lib/logger';
 import { redis } from '../lib/redis';
@@ -19,22 +17,11 @@ const createWorker = (queueName: QueueName, processFunction: (job: Job) => Promi
     concurrency: 1
 });
 
-// Create workers for each queue
-const audioVideoConversionWorker = createWorker(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, async (job) => {
-    const { fileKey, userEmailId, fileName } = job.data;
-    return await convertAudioVideo(fileKey, userEmailId, fileName);
-});
-
 const automaticSpeechRecognitionWorker = createWorker(WORKER_QUEUE_NAMES.AUTOMATIC_SPEECH_RECOGNITION, async (job) => {
     const { fileId } = job.data;
     return await performASR(fileId);
 });
 
-const LLMWorker = createWorker(WORKER_QUEUE_NAMES.LLM_MARKING, async (job) => {
-    const { fileId, orderId } = job.data;
-    return await markTranscript(orderId, fileId);
-});
+logger.info('ASR worker started');
 
-logger.info('All workers started');
-
-export { audioVideoConversionWorker, automaticSpeechRecognitionWorker, LLMWorker };
+export { automaticSpeechRecognitionWorker };

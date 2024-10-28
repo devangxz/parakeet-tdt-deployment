@@ -3,33 +3,24 @@ import axios from 'axios';
 import { Queue } from 'bullmq';
 
 import { redis } from '../lib/redis';
-// import { TranscriptionService } from '../services/transcription.service';
 
-const transcriptionQueue = new Queue('transcription', { connection: redis });
+const conversionQueue = new Queue('audio_video_conversion', { connection: redis });
 
 const RENDER_API_KEY = process.env.RENDER_API_KEY;
-const RENDER_WORKER_SERVICE_ID = process.env.RENDER_WORKER_SERVICE_ID;
-console.log("RENDER_WORKER_SERVICE_ID:", RENDER_WORKER_SERVICE_ID);
+const RENDER_WORKER_SERVICE_ID = process.env.RENDER_CONVERSION_WORKER_SERVICE_ID;
 
-const RENDER_SERVICE_ID_HARDCODED = 'srv-croequg8fa8c738qs1pg';
+const RENDER_API_URL = `https://api.render.com/v1/services/${RENDER_WORKER_SERVICE_ID}/scale`;
 
-const RENDER_API_URL = `https://api.render.com/v1/services/${RENDER_SERVICE_ID_HARDCODED}/scale`;
-
-async function manageWorkers() {
+async function manageWorker() {
   try {
-    console.log("Running manageWorkers", redis.options.host);
-    console.log("RENDER_API_URL:", RENDER_API_URL);
-    console.log("RENDER_WORKER_SERVICE_ID:", RENDER_WORKER_SERVICE_ID);
-    // const transcriptionService = new TranscriptionService();
-    // const queue = transcriptionService.getQueue();
-    const jobCounts = await transcriptionQueue.getJobCounts('waiting', 'active');
+    const jobCounts = await conversionQueue.getJobCounts('waiting', 'active');
     const totalJobs = jobCounts.waiting + jobCounts.active;
 
     console.log(`Current queue status: ${totalJobs} total jobs (${jobCounts.waiting} waiting, ${jobCounts.active} active)`);
 
     // Get current number of instances
     const currentInstancesResponse = await axios.get(
-      `https://api.render.com/v1/services/${RENDER_SERVICE_ID_HARDCODED}`,
+      `https://api.render.com/v1/services/${RENDER_WORKER_SERVICE_ID}`,
       { headers: { 'Authorization': `Bearer ${RENDER_API_KEY}` } }
     );
     const currentInstances = currentInstancesResponse.data.numInstances || 1;
@@ -69,4 +60,4 @@ setTimeout(() => {
   process.exit(1);
 }, MAX_RUNTIME);
 
-manageWorkers();
+manageWorker();
