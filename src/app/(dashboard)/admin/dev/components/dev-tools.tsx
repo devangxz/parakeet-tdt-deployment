@@ -1,3 +1,4 @@
+import { Template } from '@prisma/client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import axios from 'axios'
 import React, { useState } from 'react'
@@ -15,8 +16,6 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 type FormData = {
   [key in
@@ -45,9 +44,12 @@ function TemplateManagement() {
     try {
       setLoading(true)
       const templateId = formData[`fd_${operation}_templateid`]
-      const response = await axios.post(`/api/mail-templates/${operation}`, {
-        mailId: templateId,
-      })
+      const response = await axios.post(
+        `/api/dev-tools/mail-templates/${operation}`,
+        {
+          mailId: templateId,
+        }
+      )
       if (response.data.success) {
         toast.success(`Successfully ${operation}d template.`)
       } else {
@@ -157,16 +159,18 @@ function RISandCFDManagement() {
       const organization = 'remotelegal'
 
       setLoading(true)
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/get-ris-data-dev-dashboard/${formData.fd_ris_fileid}?template=${template}&organization=${organization}`
+      const response = await axios.get(
+        `/api/dev-tools/ris/get-ris-data?fileId=${formData.fd_ris_fileid}&template=${template}&organization=${organization}`
       )
-      const result = response.data
-      setFormData((prevData) => ({
-        ...prevData,
-        fd_ris_Details: result,
-      }))
-      if (response.status === 200) {
+
+      if (response.data.success) {
+        setFormData((prevData) => ({
+          ...prevData,
+          fd_ris_Details: response.data.risData,
+        }))
         toast.success('Successfully retrieved RIS data.')
+      } else {
+        toast.error('Failed to retrieve RIS data.')
       }
     } catch (error) {
       toast.error('Failed to retrieve RIS data.')
@@ -178,18 +182,19 @@ function RISandCFDManagement() {
   const handleGetCfdClick = async () => {
     try {
       setLoading(true)
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/get-cfd-dev-dashboard/${formData.fd_cfd_fileid}`
+      const response = await axios.get(
+        `/api/dev-tools/ris/get-cfd-data?fileId=${formData.fd_cfd_fileid}`
       )
-      const result = response.data
-      // Format the JSON object as a string with indentation
-      const formattedResult = JSON.stringify(result, null, 2)
-      setFormData((prevData) => ({
-        ...prevData,
-        fd_cfd_Details: formattedResult,
-      }))
-      if (response.status === 200) {
+
+      if (response.data.success) {
+        const formattedResult = JSON.stringify(response.data.cfdData, null, 2)
+        setFormData((prevData) => ({
+          ...prevData,
+          fd_cfd_Details: formattedResult,
+        }))
         toast.success('Successfully retrieved CFD data.')
+      } else {
+        toast.error('Failed to retrieve CFD data.')
       }
     } catch (error) {
       toast.error('Failed to retrieve CFD data.')
@@ -214,14 +219,16 @@ function RISandCFDManagement() {
         return
       }
 
-      const response = await axiosInstance.post(
-        `${BACKEND_URL}/update-cfd-dev-dashboard/`,
-        { fileId: formData.fd_cfd_fileid_1, cfd: jsonData }
-      )
-      const result = response.data
-      setFdCfdDetails1(JSON.stringify(result, null, 2))
-      if (response.status === 200) {
+      const response = await axios.post(`/api/dev-tools/ris/update-cfd-data`, {
+        fileId: formData.fd_cfd_fileid_1,
+        cfd: jsonData,
+      })
+
+      if (response.data.success) {
+        setFdCfdDetails1(JSON.stringify(response.data.updatedCfdData, null, 2))
         toast.success('Successfully updated CFD data.')
+      } else {
+        toast.error('Failed to update CFD data.')
       }
     } catch (error) {
       toast.error('Failed to update CFD data.')
@@ -373,8 +380,9 @@ function OrderTasksManagement() {
   const handleTranscribeWithFileIdClick = async () => {
     try {
       setLoading(true)
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/transcribe-with-fileId-for-dev-dashboard/${formData.fd_transcribe_fileid}`
+      const response = await axios.post(
+        `/api/dev-tools/order-tasks/asr-trigger`,
+        { fileId: formData.fd_transcribe_fileid }
       )
       if (response.status === 200) {
         toast.success('Successfully triggered transcribe with file ID.')
@@ -386,49 +394,18 @@ function OrderTasksManagement() {
     }
   }
 
-  const handleTranscribeClick = async () => {
-    try {
-      setLoading(true)
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/transcribe-for-dev-dashboard/${formData.fd_transcribe_orderid}`
-      )
-      if (response.status === 200) {
-        toast.success('Successfully triggered transcribe with order ID.')
-      }
-    } catch (error) {
-      toast.error('Failed to trigger transcribe with order ID.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleFormatClick = async () => {
     try {
       setLoading(true)
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/format-for-dev-dashboard/${formData.fd_format_orderid}`
+      const response = await axios.post(
+        `/api/dev-tools/order-tasks/llm-trigger`,
+        { fileId: formData.fd_format_orderid }
       )
       if (response.status === 200) {
         toast.success('Successfully triggered format operation.')
       }
     } catch (error) {
       toast.error('Failed to trigger format operation.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleFormatExClick = async () => {
-    try {
-      setLoading(true)
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/formatEx-for-dev-dashboard/${formData.fd_formatex_orderid}?transcriber_id=${formData.fd_formatex_transcriberid}`
-      )
-      if (response.status === 200) {
-        toast.success('Successfully triggered format ex operation.')
-      }
-    } catch (error) {
-      toast.error('Failed to trigger format ex operation.')
     } finally {
       setLoading(false)
     }
@@ -464,32 +441,7 @@ function OrderTasksManagement() {
         </CardContent>
       </Card>
 
-      {/* Transcribe with Order ID */}
-      <Card className='mt-4'>
-        <CardContent className='pt-6'>
-          <div className='space-y-4'>
-            <div className='flex flex-wrap items-center gap-4'>
-              <p className='mt-2'>Transcribe</p>
-              <Input
-                id='fd_transcribe_orderid'
-                type='text'
-                className='w-1/4'
-                placeholder='order ID'
-                value={formData.fd_transcribe_orderid}
-                onChange={handleInputChange}
-              />
-              <Button onClick={handleTranscribeClick} disabled={loading}>
-                {loading ? 'Please wait' : 'Transcribe'}
-                {loading && (
-                  <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-                )}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Format with Order ID */}
+      {/* Format with File ID */}
       <Card className='mt-4'>
         <CardContent className='pt-6'>
           <div className='space-y-4'>
@@ -499,44 +451,11 @@ function OrderTasksManagement() {
                 id='fd_format_orderid'
                 type='text'
                 className='w-1/4'
-                placeholder='order ID'
+                placeholder='file ID'
                 value={formData.fd_format_orderid}
                 onChange={handleInputChange}
               />
               <Button onClick={handleFormatClick} disabled={loading}>
-                {loading ? 'Please wait' : 'Format'}
-                {loading && (
-                  <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-                )}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Format with Order ID */}
-      <Card className='mt-4'>
-        <CardContent className='pt-6'>
-          <div className='space-y-4'>
-            <div className='flex flex-wrap items-center gap-4'>
-              <p className='mt-2'>Format</p>
-              <Input
-                id='fd_formatex_orderid'
-                type='text'
-                className='w-1/4'
-                placeholder='order ID'
-                value={formData.fd_formatex_orderid}
-                onChange={handleInputChange}
-              />
-              <Input
-                id='fd_formatex_transcriberid'
-                type='text'
-                className='w-1/4'
-                placeholder='transcriber ID'
-                value={formData.fd_formatex_transcriberid}
-                onChange={handleInputChange}
-              />
-              <Button onClick={handleFormatExClick} disabled={loading}>
                 {loading ? 'Please wait' : 'Format'}
                 {loading && (
                   <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
@@ -582,32 +501,10 @@ export default function DevTools() {
     setFormData((prevData) => ({ ...prevData, [id]: value }))
   }
 
-  // Specific action handlers
-  const handleGetDiskUsageClick = async () => {
-    try {
-      setLoading(true)
-      const response = await axiosInstance.get(`${BACKEND_URL}/disk-usage`)
-      const diskUsage = response.data
-      setFormData((prevData) => ({
-        ...prevData,
-        fd_diskUsage: JSON.stringify(diskUsage.message, null, 2),
-      }))
-      if (response.status === 200) {
-        toast.success('Successfully retireved disk usage.')
-        setLoading(false)
-      }
-    } catch (error) {
-      toast.error('Failed to retrieve disk usage.')
-      setLoading(false)
-    }
-  }
-
   const handleGetRedisDetailsClick = async () => {
     try {
       setLoading(true)
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/monitor-for-dev-dashboard`
-      )
+      const response = await axios.get(`/api/admin/monitor-for-dev-dashboard`)
       const result = response.data
       setFormData((prevData) => ({
         ...prevData,
@@ -629,10 +526,10 @@ export default function DevTools() {
       console.log(
         `handleDownloadFromS3Click ${formData.fd_s3_fileId} ${fd_s3_file_type}`
       )
-      const response = await axiosInstance.get(
-        `${BACKEND_URL}/download-from-s3-dev-dashboard/${formData.fd_s3_fileId}?suffix=${fd_s3_file_type}`
+      const response = await axios.get(
+        `/api/dev-tools/download-from-s3?fileId=${formData.fd_s3_fileId}&suffix=${fd_s3_file_type}`
       )
-      const signedUrl = response.data
+      const signedUrl = response.data.signedUrl
       window.open(signedUrl, '_blank')
       if (response.status === 200) {
         toast.success('Successfully downloaded from s3.')
@@ -653,43 +550,12 @@ export default function DevTools() {
         <TabsTrigger value='order-tasks'>Order Tasks</TabsTrigger>
         <TabsTrigger value='ris-cfd-management'>RIS & CFD</TabsTrigger>
         <TabsTrigger value='template-management'>Mail Templates</TabsTrigger>
+        <TabsTrigger value='b2b-user-onboarding'>
+          B2B User Onboarding
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value='main-tools'>
-        {/* Disk Usage */}
-        <Card>
-          <CardContent>
-            {loading ? (
-              <Button disabled className='mt-5'>
-                Please wait
-                <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-              </Button>
-            ) : (
-              <Button className='mt-5' onClick={handleGetDiskUsageClick}>
-                Get disk usage
-              </Button>
-            )}
-            <div className='ml-4 inline-block'>
-              <p className='mt-2'> Retrieve the current disk usage </p>
-            </div>
-            <br />
-            <br />
-            <div className='grid gap-6'>
-              <div className='grid gap-3'>
-                <Input
-                  id='result'
-                  type='text'
-                  className='w-1/2'
-                  placeholder='disk usage'
-                  value={formData.fd_diskUsage}
-                  onChange={handleInputChange}
-                  readOnly
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Get Redis Details */}
         <Card>
           <CardContent>
@@ -704,7 +570,7 @@ export default function DevTools() {
               </Button>
             )}
             <div className='ml-4 inline-block'>
-              <p className='mt-2'> orderQ, fileQ, mailQ, alertQ </p>
+              <p className='mt-2'> orderQ, fileQ, alertQ </p>
             </div>
 
             <br />
@@ -784,6 +650,174 @@ export default function DevTools() {
       <TabsContent value='template-management'>
         <TemplateManagement />
       </TabsContent>
+
+      <TabsContent value='b2b-user-onboarding'>
+        <B2BUserOnboarding />
+      </TabsContent>
     </Tabs>
+  )
+}
+
+// B2B User Onboarding Component
+function B2BUserOnboarding() {
+  const [templates, setTemplates] = useState<string[]>([])
+  const [email, setEmail] = useState('')
+  const [orgName, setOrgName] = useState('')
+  const [orgEmail, setOrgEmail] = useState('')
+  const [templateName, setTemplateName] = useState('')
+  const [templateEmail, setTemplateEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleFetchTemplates = async () => {
+    if (!email || !email.includes('@')) {
+      toast.error('Please enter a valid email')
+      return
+    }
+    setLoading(true)
+    try {
+      const response = await axios.get(
+        `/api/dev-tools/get-templates?email=${email}`
+      )
+      setTemplates(
+        response.data.templates.map((template: Template) => template.name)
+      )
+      toast.success('Templates fetched successfully')
+    } catch (error) {
+      toast.error('Failed to fetch templates')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddOrganization = async () => {
+    if (!orgName.trim() || !orgEmail.includes('@')) {
+      toast.error('Please enter valid organization name and email')
+      return
+    }
+    setLoading(true)
+    try {
+      await axios.post('/api/dev-tools/add-organization', {
+        name: orgName,
+        email: orgEmail,
+      })
+      toast.success('Organization added successfully')
+      setOrgName('')
+      setOrgEmail('')
+    } catch (error) {
+      toast.error('Failed to add organization')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddTemplate = async () => {
+    if (!templateName.trim() || !templateEmail.includes('@')) {
+      toast.error('Please enter valid template name and email')
+      return
+    }
+    setLoading(true)
+    try {
+      await axios.post('/api/dev-tools/add-templates', {
+        name: templateName,
+        email: templateEmail,
+      })
+      toast.success('Template added successfully')
+      setTemplateName('')
+      setTemplateEmail('')
+    } catch (error) {
+      toast.error('Failed to add template')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <Card className='mt-4'>
+        <CardContent className='pt-6'>
+          <div className='mb-6'>
+            <h4 className='text-md font-medium mb-2'>Fetch Templates</h4>
+            <div className='flex space-x-2'>
+              <Input
+                placeholder='User email'
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />{' '}
+            </div>
+            <Button
+              onClick={handleFetchTemplates}
+              disabled={loading}
+              className='mt-5 w-1/5 mb-5'
+            >
+              {loading ? 'Fetching...' : 'Fetch'}
+            </Button>
+            {templates.length > 0 && (
+              <ul className='mt-2 list-disc list-inside'>
+                {templates.map((template, index) => (
+                  <li key={index}>{template}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      <Card className='mt-4'>
+        <CardContent className='pt-6'>
+          <div className='mb-6'>
+            <h4 className='text-md font-medium mb-2'>Add Organization</h4>
+            <div className='flex space-x-2'>
+              <Input
+                placeholder='Organization Name'
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+              />
+              <Input
+                placeholder='User Email'
+                value={orgEmail}
+                onChange={(e) => setOrgEmail(e.target.value)}
+              />{' '}
+              <br />
+            </div>
+            <Button
+              onClick={handleAddOrganization}
+              disabled={loading}
+              className='mt-5 w-1/5'
+            >
+              {loading ? 'Adding...' : 'Add'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      <Card className='mt-4'>
+        <CardContent className='pt-6'>
+          <div>
+            <h4 className='text-md font-medium mb-2'>Add Template</h4>
+            <p className='text-sm text-gray-600 mb-4'>
+              Note: Double check the template name and make sure the template is
+              added in the docxTemplate folder.
+            </p>
+            <div className='flex space-x-2'>
+              <Input
+                placeholder='Template Name'
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+              />
+              <Input
+                placeholder='User Email'
+                value={templateEmail}
+                onChange={(e) => setTemplateEmail(e.target.value)}
+              />{' '}
+            </div>
+            <Button
+              onClick={handleAddTemplate}
+              disabled={loading}
+              className='mt-5 w-1/5'
+            >
+              {loading ? 'Adding...' : 'Add'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </>
   )
 }
