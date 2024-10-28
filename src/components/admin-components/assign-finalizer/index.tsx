@@ -62,15 +62,15 @@ const AssignFinalizerDialog = ({ open, onClose, fileId }: DialogProps) => {
     <AlertDialog open={open}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Assign Editor</AlertDialogTitle>
+          <AlertDialogTitle>Assign Finalizer</AlertDialogTitle>
           <AlertDialogDescription>
             <div className='grid items-center gap-1.5'>
-              <Label>Please enter Editor email below.</Label>
+              <Label>Please enter Finalizer email below.</Label>
               <Input
                 value={userEmail}
                 type='email'
                 onChange={(event) => setUserEmail(event.target.value)}
-                placeholder='Editor Email'
+                placeholder='Finalizer Email'
               />
             </div>
           </AlertDialogDescription>
