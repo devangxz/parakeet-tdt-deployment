@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { Queue } from 'bullmq'
 import { NextResponse } from 'next/server'
 
