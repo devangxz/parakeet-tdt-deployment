@@ -148,6 +148,11 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
                     replaceTextInstance(findText, replaceText, true);
                 }
             },
+            repeatLastFind: () => {
+                if (findText) {
+                    searchAndSelectInstance(findText);
+                }
+            },
         };
         return controls as ShortcutControls;
     }, [findAndReplaceOpen, findText, replaceText]);
@@ -375,7 +380,6 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
                 setIsSubmitModalOpen(true)
             }
         } catch (error) {
-            console.log(error)
             toastInstance.dismiss(toastId)
             toastInstance.error('Failed to update speaker names')
         }
@@ -408,7 +412,6 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
 
     const handleFormattingOptionChange = async () => {
         const toastId = toastInstance.loading('Updating formatting options...')
-        console.log(+currentTemplate)
         try {
             await axios.post(`/api/editor/set-formatting-options`, {
                 orderId: orderDetails.orderId,
