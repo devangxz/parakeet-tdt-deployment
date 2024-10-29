@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   const user = JSON.parse(userToken ?? '{}')
   const omId = user?.userId
   try {
-    const { orderId } = await req.json()
+    const { orderId, isReReview } = await req.json()
 
     if (!orderId) {
       return NextResponse.json({
@@ -92,6 +92,15 @@ export async function POST(req: NextRequest) {
     }
 
     await deliver(orderInformation, omId)
+
+    if (isReReview) {
+      await prisma.order.update({
+        where: { id: Number(orderId) },
+        data: {
+          reReview: false,
+        },
+      })
+    }
 
     logger.info(
       `Successfully delivered pre delivery file ${orderId} by user ${user?.user}`

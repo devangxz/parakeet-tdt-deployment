@@ -224,6 +224,7 @@ model Order {
   reportOption  ReportOption? @map("report_option")
   reportComment String?       @map("report_comment")
   comments      String?
+  reReview      Boolean?      @default(false) @map("re_review")
 
   // Relations
   File       File?           @relation(fields: [fileId], references: [fileId])
@@ -580,16 +581,17 @@ model FrequentTerms {
 }
 
 model FileVersion {
-  id          Int             @id @default(autoincrement())
-  fileId      String          @map("file_id")
-  commitHash  String?          @map("commit_hash")
-  s3VersionId String?         @map("s3_version_id")
-  userId      Int?            @map("user_id")
-  createdAt   DateTime        @default(now()) @map("created_at")
-  updatedAt   DateTime        @default(now()) @map("updated_at")
-  tag         FileTag         @default(AUTO)
-  file        File            @relation(fields: [fileId], references: [fileId])
-  user        User?           @relation(fields: [userId], references: [id])
+  id          Int      @id @default(autoincrement())
+  fileId      String   @map("file_id")
+  commitHash  String?  @map("commit_hash")
+  s3VersionId String?  @map("s3_version_id")
+  userId      Int?     @map("user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @map("updated_at")
+  tag         FileTag  @default(AUTO)
+  file        File     @relation(fields: [fileId], references: [fileId])
+  user        User?    @relation(fields: [userId], references: [id])
+
   @@map("scb_file_versions")
 }
 
