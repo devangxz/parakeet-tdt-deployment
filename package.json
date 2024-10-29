@@ -21,9 +21,9 @@
     "start-asr-manage-workers": "node dist/scripts/manageASRWorker.js",
     "build-llm-manage-workers": "tsc -P tsconfig.llmWorker.json",
     "start-llm-manage-workers": "node dist/scripts/manageLLMWorker.js",
-    "dev-conversion-worker": "ts-node -P tsconfig.worker.json src/workers/conversionWorker.ts",
-    "dev-asr-worker": "ts-node -P tsconfig.worker.json src/workers/asrWorker.ts",
-    "dev-llm-worker": "ts-node -P tsconfig.worker.json src/workers/llmWorker.ts",
+    "dev-conversion-worker": "ts-node -P tsconfig.conversionWorker.json src/workers/conversionWorker.ts",
+    "dev-asr-worker": "ts-node -P tsconfig.asrWorker.json src/workers/asrWorker.ts",
+    "dev-llm-worker": "ts-node -P tsconfig.llmWorker.json src/workers/llmWorker.ts",
     "dev-manage-workers": "ts-node -P tsconfig.worker.json src/scripts/manageWorkers.ts"
   },
   "dependencies": {

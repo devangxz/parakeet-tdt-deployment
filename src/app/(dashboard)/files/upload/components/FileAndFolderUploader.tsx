@@ -32,6 +32,7 @@ interface FileWithId {
   type: string;
   fileId: string;
   file: File;
+  isRLDocx: boolean;
 }
 
 interface FileAndFolderUploaderProps {
@@ -325,14 +326,16 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
           size: mp3File.size,
           type: mp3File.type,
           fileId: commonFileId,
-          file: mp3File
+          file: mp3File,
+          isRLDocx: false
         },
         {
           name: docxFile.name,
           size: docxFile.size,
           type: docxFile.type,
           fileId: `${commonFileId}_ris`,
-          file: docxFile
+          file: docxFile,
+          isRLDocx: true
         }
       ];
 
@@ -351,7 +354,8 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
         size: file.size,
         type: file.type,
         fileId: uuidv4(),
-        file: file
+        file: file,
+        isRLDocx: false
       }));
     }
 
@@ -359,6 +363,13 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
 
     for (const file of filesToUpload) {
       await uploadFile(file);
+
+      if (file.isRLDocx) {
+        updateUploadStatus(file.name, {
+          progress: 100,
+          status: 'completed'
+        });
+      }
     }
 
     onUploadSuccess(true);
@@ -369,34 +380,72 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
   };
 
   useEffect(() => {
-    eventSourceRef.current = new EventSource('/api/sse');
+    let retryCount = 0;
+    const maxRetries = 3;
+    const retryDelay = 5000;
+    let retryTimeout: NodeJS.Timeout;
 
-    eventSourceRef.current.onmessage = async (event) => {
-      const data = JSON.parse(event.data);
-      if (data?.type === 'METADATA_EXTRACTION') {
-        if (data?.file?.status === 'success') {
-          updateUploadStatus(data?.file?.fileNameWithExtension, {
-            progress: 100,
-            status: 'completed'
-          });
-          onUploadSuccess(true);
-        } else {
-          updateUploadStatus(data?.file?.fileNameWithExtension, {
-            progress: 0,
-            status: 'failed',
-            error: 'Metadata extraction failed.'
-          });
-          toast.error(`Error uploading ${data?.file?.fileNameWithExtension}: An error occurred during file upload. Please try again.`);
-        }
+    const connectSSE = () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
       }
+
+      eventSourceRef.current = new EventSource('/api/sse');
+
+      eventSourceRef.current.onmessage = async (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data?.type === 'METADATA_EXTRACTION') {
+            if (data?.file?.status === 'success') {
+              updateUploadStatus(data?.file?.fileNameWithExtension, {
+                progress: 100,
+                status: 'completed'
+              });
+              onUploadSuccess(true);
+
+              eventSourceRef.current?.close();
+            } else {
+              updateUploadStatus(data?.file?.fileNameWithExtension, {
+                progress: 0,
+                status: 'failed',
+                error: 'Metadata extraction failed.'
+              });
+              toast.error(
+                `Error uploading ${data?.file?.fileNameWithExtension}: An error occurred during file upload. Please try again.`
+              );
+
+              eventSourceRef.current?.close();
+            }
+          }
+        } catch (error) {
+          eventSourceRef.current?.close();
+        }
+      };
+
+      eventSourceRef.current.onopen = () => {
+        retryCount = 0;
+        clearTimeout(retryTimeout);
+      };
+
+      eventSourceRef.current.onerror = (error) => {
+        console.error('SSE connection error:', error);
+        eventSourceRef.current?.close();
+
+        if (retryCount < maxRetries) {
+          retryCount++;
+          retryTimeout = setTimeout(connectSSE, retryDelay);
+        }
+      };
     };
 
-    eventSourceRef.current.onerror = () => {
-      eventSourceRef.current?.close();
-    };
+    connectSSE();
 
     return () => {
-      eventSourceRef.current?.close();
+      clearTimeout(retryTimeout);
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
     };
   }, []);
 
