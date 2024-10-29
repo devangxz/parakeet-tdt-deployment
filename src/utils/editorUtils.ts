@@ -628,6 +628,7 @@ const handleSubmit = async ({
             });
         }
 
+        localStorage.removeItem('transcript')
         toast.dismiss(toastId);
         const successToastId = toast.success(
             `Transcription submitted successfully`
