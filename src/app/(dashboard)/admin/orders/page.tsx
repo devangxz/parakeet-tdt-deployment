@@ -6,6 +6,7 @@ import {
 } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
 import axios from 'axios'
+import dynamic from 'next/dynamic'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
@@ -15,7 +16,10 @@ import { DataTable } from './components/data-table'
 import DeliveredSection from './components/delivered-files'
 import PreDeliveryPage from './pre-delivery'
 import ScreenPage from './screen'
-import StatusPage from './status'
+const StatusPage = dynamic(() => import('./status'), {
+  ssr: false,
+  loading: () => <div>Loading...</div>,
+})
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -65,7 +69,6 @@ export default function OrdersPage() {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
     setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
-
   }, [playing])
 
   const fetchPendingOrders = async (showLoader = false) => {
@@ -223,8 +226,8 @@ export default function OrdersPage() {
                   {row.original.pwer > HIGH_PWER
                     ? 'HIGH'
                     : row.original.pwer < LOW_PWER
-                      ? 'LOW'
-                      : 'MEDIUM'}
+                    ? 'LOW'
+                    : 'MEDIUM'}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>

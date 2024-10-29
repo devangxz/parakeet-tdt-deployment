@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+export const dynamic = 'force-dynamic'
 import { OrderStatus } from '@prisma/client'
 import { NextResponse } from 'next/server'
 

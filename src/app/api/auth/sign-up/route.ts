@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     const { email, password, firstname, lastname, role, phone, industry } = body
 
     const result = await createUser({
-      email,
+      email: email.toLowerCase(),
       password,
       firstname,
       lastname,

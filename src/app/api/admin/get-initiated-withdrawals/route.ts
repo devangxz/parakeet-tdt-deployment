@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { WithdrawalStatus } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
