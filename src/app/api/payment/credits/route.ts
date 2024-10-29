@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { InvoiceType } from '@prisma/client'
 import { NextResponse, NextRequest } from 'next/server'
 
