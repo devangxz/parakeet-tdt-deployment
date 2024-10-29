@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+export const dynamic = 'force-dynamic'
 import { NextResponse, NextRequest } from 'next/server'
 
 import gateway from '@/lib/braintree'

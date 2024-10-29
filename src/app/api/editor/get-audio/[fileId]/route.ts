@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { Readable } from 'stream';
 
 import { GetObjectCommand } from '@aws-sdk/client-s3';

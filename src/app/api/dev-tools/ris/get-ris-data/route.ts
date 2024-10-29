@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 
 import extractDataFromRISFile from '@/services/file-service/get-ris'

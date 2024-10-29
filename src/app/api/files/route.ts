@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 
 import { getFilesByStatus } from '@/services/file-service/get-files'
+import serializeBigInt from '@/utils/serializeBigInt'
 
 export async function GET(req: Request) {
   try {
@@ -24,7 +25,9 @@ export async function GET(req: Request) {
       user.internalTeamUserId
     )
 
-    const response = NextResponse.json(files)
+    const serializedFiles = serializeBigInt(files)
+
+    const response = NextResponse.json(serializedFiles)
     response.headers.delete('x-user-token')
     return response
   } catch (error) {
