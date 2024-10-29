@@ -129,6 +129,7 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         if (!quill) return
         const text = quill.getText()
         setContent([{ insert: text }])
+        localStorage.setItem('transcript', JSON.stringify({ [orderDetails.fileId]: text }))
     }, [])
 
     const handleEditorClick = useCallback(() => {

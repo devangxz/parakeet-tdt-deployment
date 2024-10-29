@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     })
 
     if (order?.orderType === OrderType.TRANSCRIPTION_FORMATTING) {
-      const fileVersion = await prisma.fileVersion.findFirst({
+      const OMFileVersion = await prisma.fileVersion.findFirst({
         where: {
           fileId: orderInformation.fileId,
           tag: FileTag.CF_OM_DELIVERED,
@@ -50,14 +50,35 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      await prisma.fileVersion.create({
-        data: {
-          fileId: orderInformation.fileId,
-          tag: FileTag.CF_CUSTOMER_DELIVERED,
-          userId: order?.userId,
-          s3VersionId: fileVersion?.s3VersionId,
-        }
-      })
+      if (OMFileVersion && OMFileVersion.s3VersionId) {
+        await prisma.fileVersion.create({
+          data: {
+            fileId: orderInformation.fileId,
+            tag: FileTag.CF_CUSTOMER_DELIVERED,
+            userId: order?.userId,
+            s3VersionId: OMFileVersion?.s3VersionId,
+          }
+        })
+      } else {
+        const finalizerFileVersion = await prisma.fileVersion.findFirst({
+          where: {
+            fileId: orderInformation.fileId,
+            tag: FileTag.CF_FINALIZER_SUBMITTED,
+          },
+          orderBy: {
+            updatedAt: 'desc',
+          },
+        })
+
+        await prisma.fileVersion.create({
+          data: {
+            fileId: orderInformation.fileId,
+            tag: FileTag.CF_CUSTOMER_DELIVERED,
+            userId: order?.userId,
+            s3VersionId: finalizerFileVersion?.s3VersionId,
+          }
+        })
+      }
     }
 
     if (order?.orderType === OrderType.TRANSCRIPTION) {

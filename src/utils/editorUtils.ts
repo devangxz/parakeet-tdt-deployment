@@ -468,10 +468,16 @@ const fetchFileDetails = async ({
             `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.data.fileId}&step=${step}&orderId=${orderRes.data.orderId}` //step will be used later when cf editor is implemented
         )
 
-        setTranscript(transcriptRes.data.result.transcript)
+        const transcript = JSON.parse(localStorage.getItem('transcript') || '{}')[orderRes.data.fileId]
+        if (transcript) {
+            setTranscript(transcript)
+        } else {
+            setTranscript(transcriptRes.data.result.transcript)
+        }
         setCtms(transcriptRes.data.result.ctms)
         return orderRes.data
     } catch (error) {
+        console.log(error)
         toast.error('Failed to fetch file details')
     }
 }
