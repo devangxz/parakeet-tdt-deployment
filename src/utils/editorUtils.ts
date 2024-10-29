@@ -480,7 +480,6 @@ type HandleSaveParams = {
     getEditorText: () => string;
     orderDetails: OrderDetails;
     notes: string;
-    step: string;
     cfd: string;
     updatedCtms: CTMSWord[];
     setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>;
@@ -490,7 +489,6 @@ const handleSave = async ({
     getEditorText,
     orderDetails,
     notes,
-    step,
     cfd,
     updatedCtms,
     setButtonLoading,
@@ -513,7 +511,6 @@ const handleSave = async ({
         await axiosInstance.post(`${FILE_CACHE_URL}/save-transcript`, {
             fileId: orderDetails.fileId,
             transcript,
-            step,
             cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
             ctms: updatedCtms,
             orderId: orderDetails.orderId,

@@ -45,12 +45,12 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { RenderPDFDocument } from '@/components/utils'
+import { AUTOSAVE_INTERVAL } from '@/constants'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 import {
   ConvertedASROutput,
   updatePlayedPercentage,
   regenDocx,
-  convertSecondsToTimestamp,
   fetchFileDetails,
   handleSave,
   handleSubmit,
@@ -155,8 +155,9 @@ function EditorPage() {
   const [replaceMisspelledWord, setReplaceMisspelledWord] = useState<string>('');
   const [spellcheckOpen, setSpellcheckOpen] = useState(false);
   const [spellcheckValue, setSpellCheckValue] = useState<{ word: string, suggestions: string[] }[]>([]);
+  const [content, setContent] = useState<{ insert: string }[]>([])
 
-  const getEditorText = () => quillRef?.current?.getEditor().getText() || '';
+  const getEditorText = useCallback(() => quillRef?.current?.getEditor().getText() || '', [quillRef]);
 
   const playNextBlankInstance = () => {
     const quill = quillRef?.current?.getEditor();
@@ -187,7 +188,7 @@ function EditorPage() {
       playNextBlank: playNextBlankInstance(),
       playPreviousBlank: playPreviousBlankInstance(),
       playAudioFromTheStartOfCurrentParagraph: playCurrentParagraphInstance(),
-      saveChanges: () => handleSave({ getEditorText, orderDetails, notes, step, cfd, updatedCtms, setButtonLoading }),
+      saveChanges: () => handleSave({ getEditorText, orderDetails, notes, cfd, updatedCtms, setButtonLoading }),
     };
     return controls as ShortcutControls;
   }, [
@@ -212,27 +213,6 @@ function EditorPage() {
       });
     }
   }, [audioPlayer]);
-
-  const insertNewSpeaker = useCallback((event: KeyboardEvent) => {
-    if (event.shiftKey && event.key === 'F12') {
-      const quill = quillRef?.current?.getEditor()
-      if (quill) {
-        const range = quill.getSelection(true)
-        const currentTime = audioPlayer?.currentTime
-        if (range && currentTime != null) {
-          const timestamps = convertSecondsToTimestamp(currentTime)
-          quill.insertText(range.index, `${timestamps} S1: `)
-        }
-      }
-    }
-  }, [quillRef, audioPlayer])
-
-  useEffect(() => {
-    document.addEventListener('keydown', insertNewSpeaker)
-    return () => {
-      document.removeEventListener('keydown', insertNewSpeaker)
-    }
-  }, [insertNewSpeaker])
 
   const sectionChangeHandler = (e: React.MouseEvent<HTMLButtonElement>) => {
     const value = e.currentTarget.dataset.value
@@ -272,13 +252,9 @@ function EditorPage() {
 
   const handleTabChange = () => {
     //TODO: Fix this
-    const diff = diffWords(transcript, getEditorText())
+    const diff = diffWords(transcript, content[0].insert)
     setDiff(diff)
   }
-
-  useEffect(() => {
-    handleTabChange()
-  }, [selectedSection])
 
   const getAudioPlayer = (audioPlayer: HTMLAudioElement | null) => {
     setAudioPlayer(audioPlayer)
@@ -287,13 +263,13 @@ function EditorPage() {
   const [audioPlayed, setAudioPlayed] = useState(new Set<number>())
   const [playedPercentage, setPlayedPercentage] = useState(0)
 
-  // useEffect(() => {
-  //   const interval = setInterval(async () => {
-  //     await handleSave()
-  //   }, 1000 * 60 * AUTOSAVE_INTERVAL)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      await handleSave({ getEditorText, orderDetails, notes, cfd, updatedCtms, setButtonLoading })
+    }, 1000 * 60 * AUTOSAVE_INTERVAL)
 
-  //   return () => clearInterval(interval)
-  // }, [orderDetails, editorHTMLParts])
+    return () => clearInterval(interval)
+  }, [getEditorText, orderDetails, notes, step, cfd, updatedCtms])
 
   useEffect(() => {
     const handleTimeUpdate = () => {
@@ -566,7 +542,7 @@ function EditorPage() {
           {editorMode === 'Editor' ||
             ((step === 'QC' || session?.user?.role === 'OM') && (
               <Button
-                onClick={() => handleSave({ getEditorText, orderDetails, notes, step, cfd, updatedCtms, setButtonLoading })}
+                onClick={() => handleSave({ getEditorText, orderDetails, notes, cfd, updatedCtms, setButtonLoading })}
                 // disabled={buttonLoading.save}
                 // disabled={true}
                 className='ml-2'
@@ -703,7 +679,7 @@ function EditorPage() {
                     </TabsList>
                   </div>
 
-                  <EditorTabComponent orderDetails={orderDetails} transcript={transcript} ctms={ctms} audioPlayer={audioPlayer} audioDuration={audioDuration} getQuillRef={getQuillRef} getCtms={getCtms} disableGoToWord={disableGoToWord} />
+                  <EditorTabComponent content={content} setContent={setContent} orderDetails={orderDetails} transcript={transcript} ctms={ctms} audioPlayer={audioPlayer} audioDuration={audioDuration} getQuillRef={getQuillRef} getCtms={getCtms} disableGoToWord={disableGoToWord} />
 
                   <SpeakerNameTabComponent />
 
