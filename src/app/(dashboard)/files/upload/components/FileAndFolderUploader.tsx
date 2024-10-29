@@ -32,6 +32,7 @@ interface FileWithId {
   type: string;
   fileId: string;
   file: File;
+  isRLDocx: boolean;
 }
 
 interface FileAndFolderUploaderProps {
@@ -325,14 +326,16 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
           size: mp3File.size,
           type: mp3File.type,
           fileId: commonFileId,
-          file: mp3File
+          file: mp3File,
+          isRLDocx: false
         },
         {
           name: docxFile.name,
           size: docxFile.size,
           type: docxFile.type,
           fileId: `${commonFileId}_ris`,
-          file: docxFile
+          file: docxFile,
+          isRLDocx: true
         }
       ];
 
@@ -351,7 +354,8 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
         size: file.size,
         type: file.type,
         fileId: uuidv4(),
-        file: file
+        file: file,
+        isRLDocx: false
       }));
     }
 
@@ -359,6 +363,13 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
 
     for (const file of filesToUpload) {
       await uploadFile(file);
+
+      if (file.isRLDocx) {
+        updateUploadStatus(file.name, {
+          progress: 100,
+          status: 'completed'
+        });
+      }
     }
 
     onUploadSuccess(true);
@@ -369,34 +380,72 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
   };
 
   useEffect(() => {
-    eventSourceRef.current = new EventSource('/api/sse');
+    let retryCount = 0;
+    const maxRetries = 3;
+    const retryDelay = 5000;
+    let retryTimeout: NodeJS.Timeout;
 
-    eventSourceRef.current.onmessage = async (event) => {
-      const data = JSON.parse(event.data);
-      if (data?.type === 'METADATA_EXTRACTION') {
-        if (data?.file?.status === 'success') {
-          updateUploadStatus(data?.file?.fileNameWithExtension, {
-            progress: 100,
-            status: 'completed'
-          });
-          onUploadSuccess(true);
-        } else {
-          updateUploadStatus(data?.file?.fileNameWithExtension, {
-            progress: 0,
-            status: 'failed',
-            error: 'Metadata extraction failed.'
-          });
-          toast.error(`Error uploading ${data?.file?.fileNameWithExtension}: An error occurred during file upload. Please try again.`);
-        }
+    const connectSSE = () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
       }
+
+      eventSourceRef.current = new EventSource('/api/sse');
+
+      eventSourceRef.current.onmessage = async (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data?.type === 'METADATA_EXTRACTION') {
+            if (data?.file?.status === 'success') {
+              updateUploadStatus(data?.file?.fileNameWithExtension, {
+                progress: 100,
+                status: 'completed'
+              });
+              onUploadSuccess(true);
+
+              eventSourceRef.current?.close();
+            } else {
+              updateUploadStatus(data?.file?.fileNameWithExtension, {
+                progress: 0,
+                status: 'failed',
+                error: 'Metadata extraction failed.'
+              });
+              toast.error(
+                `Error uploading ${data?.file?.fileNameWithExtension}: An error occurred during file upload. Please try again.`
+              );
+
+              eventSourceRef.current?.close();
+            }
+          }
+        } catch (error) {
+          eventSourceRef.current?.close();
+        }
+      };
+
+      eventSourceRef.current.onopen = () => {
+        retryCount = 0;
+        clearTimeout(retryTimeout);
+      };
+
+      eventSourceRef.current.onerror = (error) => {
+        console.error('SSE connection error:', error);
+        eventSourceRef.current?.close();
+
+        if (retryCount < maxRetries) {
+          retryCount++;
+          retryTimeout = setTimeout(connectSSE, retryDelay);
+        }
+      };
     };
 
-    eventSourceRef.current.onerror = () => {
-      eventSourceRef.current?.close();
-    };
+    connectSSE();
 
     return () => {
-      eventSourceRef.current?.close();
+      clearTimeout(retryTimeout);
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
     };
   }, []);
 
@@ -416,106 +465,109 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
   }, [uploadingFiles]);
 
   return (
-    <div className='bg-primary flex flex-col p-[12px] items-center justify-center rounded-[12px] border shadow-sm text-white'>
-      <Dropzone
-        onDrop={onDrop}
-        multiple
-        accept={Object.fromEntries(
-          getAllowedMimeTypes().map(type => [
-            type,
-            getAllowedFileExtensions()
-          ])
-        )}
-      >
-        {({ getRootProps, getInputProps, isDragActive }) => (
-          <div
-            {...getRootProps({
-              onClick: (event) => event.stopPropagation(),
-            })}
-            className={cn(
-              'group relative grid h-52 w-full place-items-center rounded-lg border-2 border-dashed border-white px-5 py-2.5 text-center transition',
-              'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-              isDragActive && 'border-white/50'
-            )}
-          >
-            <input {...getInputProps()} />
-            {isDragActive ? (
-              <div className='flex flex-col items-center justify-center gap-4 sm:px-5'>
-                <div className='rounded-full border border-dashed border-white p-3'>
-                  <UploadIcon
-                    className='size-7 text-white'
-                    aria-hidden='true'
-                  />
+    <div className='flex flex-col gap-y-4'>
+      <h2 className='text-lg font-semibold md:text-lg'>File Uploader</h2>
+      <div className='bg-primary flex flex-col p-[12px] items-center justify-center rounded-[12px] border shadow-sm text-white'>
+        <Dropzone
+          onDrop={onDrop}
+          multiple
+          accept={Object.fromEntries(
+            getAllowedMimeTypes().map(type => [
+              type,
+              getAllowedFileExtensions()
+            ])
+          )}
+        >
+          {({ getRootProps, getInputProps, isDragActive }) => (
+            <div
+              {...getRootProps({
+                onClick: (event) => event.stopPropagation(),
+              })}
+              className={cn(
+                'group relative grid h-52 w-full place-items-center rounded-lg border-2 border-dashed border-white px-5 py-2.5 text-center transition',
+                'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                isDragActive && 'border-white/50'
+              )}
+            >
+              <input {...getInputProps()} />
+              {isDragActive ? (
+                <div className='flex flex-col items-center justify-center gap-4 sm:px-5'>
+                  <div className='rounded-full border border-dashed border-white p-3'>
+                    <UploadIcon
+                      className='size-7 text-white'
+                      aria-hidden='true'
+                    />
+                  </div>
+                  <p className='font-medium text-white'>
+                    Drop files or folders here
+                  </p>
                 </div>
-                <p className='font-medium text-white'>
-                  Drop files or folders here
-                </p>
-              </div>
-            ) : (
-              <div className='flex flex-col items-center justify-center gap-4 sm:px-5'>
-                <div className='flex gap-3 text-base font-medium leading-6'>
-                  <FolderUp />
-                  <div>Upload {!isRemoteLegal && 'files or'} folders</div>
+              ) : (
+                <div className='flex flex-col items-center justify-center gap-4 sm:px-5'>
+                  <div className='flex gap-3 text-base font-medium leading-6'>
+                    <FolderUp />
+                    <div>Upload {!isRemoteLegal && 'files or'} folders</div>
+                  </div>
+                  <div className='text-xs self-stretch mt-3.5 leading-5 text-center max-md:mr-1 max-md:max-w-full'>
+                    Drag & drop {!isRemoteLegal && 'files or'} folders here or use the options below.
+                    <br />
+                    <span className='text-xs'>
+                      Supported formats: {getAllowedFileExtensions().join(', ')}
+                    </span>
+                  </div>
+                  <div className='flex gap-4 mt-4 font-semibold text-indigo-600 leading-[133%]'>
+                    {!isRemoteLegal && (
+                      <>
+                        <input
+                          ref={fileInputRef}
+                          id='fileInput'
+                          type='file'
+                          multiple
+                          hidden
+                          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                            event.target.files &&
+                            handleFileOrFolderUpload(Array.from(event.target.files))
+                          }
+                          accept={getAllowedFileExtensions().join(',')}
+                        />
+                        <label
+                          data-testid='file-uploader'
+                          htmlFor='fileInput'
+                          className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
+                        >
+                          Choose Files
+                        </label>
+                      </>
+                    )}
+                    <input
+                      ref={folderInputRef}
+                      id='folderInput'
+                      type='file'
+                      multiple
+                      hidden
+                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                        event.target.files &&
+                        handleFileOrFolderUpload(Array.from(event.target.files))
+                      }
+                      {...({
+                        webkitdirectory: 'true',
+                        directory: 'true',
+                      } as CustomInputAttributes)}
+                    />
+                    <label
+                      data-testid='folder-uploader'
+                      htmlFor='folderInput'
+                      className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
+                    >
+                      Choose Folder
+                    </label>
+                  </div>
                 </div>
-                <div className='text-xs self-stretch mt-3.5 leading-5 text-center max-md:mr-1 max-md:max-w-full'>
-                  Drag & drop {!isRemoteLegal && 'files or'} folders here or use the options below.
-                  <br />
-                  <span className='text-xs'>
-                    Supported formats: {getAllowedFileExtensions().join(', ')}
-                  </span>
-                </div>
-                <div className='flex gap-4 mt-4 font-semibold text-indigo-600 leading-[133%]'>
-                  {!isRemoteLegal && (
-                    <>
-                      <input
-                        ref={fileInputRef}
-                        id='fileInput'
-                        type='file'
-                        multiple
-                        hidden
-                        onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                          event.target.files &&
-                          handleFileOrFolderUpload(Array.from(event.target.files))
-                        }
-                        accept={getAllowedFileExtensions().join(',')}
-                      />
-                      <label
-                        data-testid='file-uploader'
-                        htmlFor='fileInput'
-                        className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
-                      >
-                        Choose Files
-                      </label>
-                    </>
-                  )}
-                  <input
-                    ref={folderInputRef}
-                    id='folderInput'
-                    type='file'
-                    multiple
-                    hidden
-                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                      event.target.files &&
-                      handleFileOrFolderUpload(Array.from(event.target.files))
-                    }
-                    {...({
-                      webkitdirectory: 'true',
-                      directory: 'true',
-                    } as CustomInputAttributes)}
-                  />
-                  <label
-                    data-testid='folder-uploader'
-                    htmlFor='folderInput'
-                    className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
-                  >
-                    Choose Folder
-                  </label>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </Dropzone>
+              )}
+            </div>
+          )}
+        </Dropzone>
+      </div>
     </div>
   )
 }
