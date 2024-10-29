@@ -3,6 +3,11 @@
 import { useEffect, useRef } from 'react';
 import { tinykeys } from "tinykeys";
 
+import { getUserOS } from './getUserOS';
+
+const isMac = getUserOS() === 'Mac OS';
+
+let configCount = 0;
 interface DefaultShortcuts {
     togglePlay: string;
     pause: string;
@@ -17,6 +22,11 @@ interface DefaultShortcuts {
     playAudioAtCursorPosition: string;
     insertTimestampBlankAtCursorPosition: string;
     insertTimestampAndSpeakerInitialAtStartOfCurrentLine: string;
+    googleSearchSelectedWord: string;
+    defineSelectedWord: string;
+    increaseFontSize: string;
+    decreaseFontSize: string;
+    repeatLastFind: string;
     // focusGotoTimestampTextBox: string;
     // scrollToTheStartOfFile: string;
     // scrollToTheEndOfFile: string;
@@ -98,6 +108,11 @@ export interface ShortcutControls {
     playAudioAtCursorPosition: () => void;
     insertTimestampBlankAtCursorPosition: () => void;
     insertTimestampAndSpeakerInitialAtStartOfCurrentLine: () => void;
+    googleSearchSelectedWord: () => void;
+    defineSelectedWord: () => void;
+    increaseFontSize: () => void;
+    decreaseFontSize: () => void;
+    repeatLastFind: () => void;
     // focusGotoTimestampTextBox: () => void;
     // scrollToTheStartOfFile: () => void;
     // scrollToTheEndOfFile: () => void;
@@ -185,6 +200,11 @@ const defaultShortcuts: DefaultShortcuts = {
     playAudioAtCursorPosition: "Shift+F10",
     insertTimestampBlankAtCursorPosition: "F12",
     insertTimestampAndSpeakerInitialAtStartOfCurrentLine: "Shift+F12",
+    googleSearchSelectedWord: isMac ? 'Alt+ß' : 'Alt+S',
+    defineSelectedWord: isMac ? 'Alt+ð' : 'Alt+D',
+    increaseFontSize: 'Control+Shift+ArrowUp',
+    decreaseFontSize: 'Control+Shift+ArrowDown',
+    repeatLastFind: 'Control+G',
     // focusGotoTimestampTextBox: "Control+M",
     // scrollToTheStartOfFile: "Control+ArrowLeft",
     // scrollToTheEndOfFile: "Control+ArrowRight",
@@ -263,6 +283,7 @@ const setShortcut = (action: keyof DefaultShortcuts, key: string): void => {
     const shortcuts = shortcutsJson ? JSON.parse(shortcutsJson) : { ...defaultShortcuts };
     shortcuts[action] = key;
     localStorage.setItem('shortcuts', JSON.stringify(shortcuts));
+    configCount++;
 };
 
 const getAllShortcuts = (): { key: string, shortcut: string }[] => {
@@ -338,7 +359,7 @@ const useShortcuts = (shortcutControls: ShortcutControls) => {
         return () => {
             unsubscribe();
         };
-    }, [shortcutControls]);
+    }, [shortcutControls, configCount]);
 
     return shortcutsRef.current;
 };

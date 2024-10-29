@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { InvoiceType, WithdrawalStatus } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
@@ -85,8 +86,8 @@ export async function POST(request: Request) {
           fee:
             currentBalance < FREE_WITHDRAWAL_AMOUNT
               ? Number(
-                  (currentBalance * CHARGE_ON_LOW_WITHDRAWAL_AMOUNT).toFixed(2)
-                )
+                (currentBalance * CHARGE_ON_LOW_WITHDRAWAL_AMOUNT).toFixed(2)
+              )
               : null,
           invoiceId: invoiceId,
           status: WithdrawalStatus.PENDING,

@@ -22,14 +22,14 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials?.password) return null
         try {
           const userDetails = await signInUser({
-            email: credentials.email,
+            email: credentials.email.toLowerCase(),
             password: credentials.password,
           })
 
           if (userDetails.success) {
             return {
               ...(userDetails.user as any),
-              email: credentials.email,
+              email: credentials.email.toLowerCase(),
               token: userDetails.token,
             }
           }

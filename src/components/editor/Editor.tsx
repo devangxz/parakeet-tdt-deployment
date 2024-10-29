@@ -8,17 +8,29 @@ import 'react-quill/dist/quill.snow.css'
 import { LineData, CTMSWord, WordData } from './transcriptUtils'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
-import { ConvertedASROutput, } from '@/utils/editorUtils'
+import { ConvertedASROutput, convertSecondsToTimestamp, } from '@/utils/editorUtils'
 
 // TODO:  Add valid values (start, end, duration, speaker) for the changed words.
 // TODO: Test if a new line is added with TS + speaker name
 // TODO: A meta text is added, this should have empty ctm
 // TODO: Problem with updates near punctuation marks
-export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, getCtms, disableGoToWord, orderDetails }: { transcript: string, ctms: ConvertedASROutput[], audioPlayer: HTMLAudioElement | null, duration: number, getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void, getCtms: (ctms: CTMSWord[]) => void, disableGoToWord: boolean, orderDetails: OrderDetails }) {
+interface EditorProps {
+    transcript: string
+    ctms: ConvertedASROutput[]
+    audioPlayer: HTMLAudioElement | null
+    duration: number
+    getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void
+    getCtms: (ctms: CTMSWord[]) => void
+    disableGoToWord: boolean
+    orderDetails: OrderDetails
+    content: { insert: string }[]
+    setContent: (content: { insert: string }[]) => void
+}
+
+export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, getCtms, disableGoToWord, orderDetails, content, setContent }: EditorProps) {
     const quillRef = useRef<ReactQuill>(null)
     const [lines, setLines] = useState<LineData[]>([])
     const [newCtms, setNewCtms] = useState<CTMSWord[]>([])
-    const [content, setContent] = useState<{ insert: string }[]>([])
     const workerRef = useRef<Worker | null>(null)
     const quillModules = {
         toolbar: false,
@@ -42,9 +54,6 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
 
                 //let speaker = ''
                 for (let i = 0; i < words.length; i++) {
-                    if (words[i] === '') {
-                        // console.log(i, 'empty')
-                    }
                     if (words[i] != '') {
                         const wordData: WordData = { word: words[i] }
                         if (i < 2) {
@@ -88,13 +97,7 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
     )
 
     const initEditor = useCallback(async () => {
-        const processedNewCtms = processTranscript(transcript, ctms)
-        // console.log('fetchedCtms', ctms.slice(0, 10))
-        console.log('processedNewCtms', processedNewCtms.slice(0, 10))
-
         processTranscript(transcript, ctms)
-        // console.log('ctms', ctms.slice(0, 10))
-        // console.log('new ctms', newCtms.slice(0, 10))
     }, [processTranscript, transcript, ctms])
 
     const handleUpdateContent = useCallback(() => {
@@ -114,7 +117,6 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         workerRef.current.onmessage = (event) => {
             const updatedCtms = event.data;
             setNewCtms(updatedCtms);
-            console.log('updatedCtms', updatedCtms.slice(0, 10));
         };
 
         return () => {
@@ -204,12 +206,7 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         const quill = quillRef.current.getEditor();
         const currentTime = audioPlayer.currentTime;
 
-        const hours = Math.floor(currentTime / 3600);
-        const minutes = Math.floor((currentTime % 3600) / 60);
-        const seconds = Math.floor(currentTime % 60);
-        const milliseconds = Math.floor((currentTime % 1) * 100);
-
-        const formattedTime = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds} `;
+        const formattedTime = convertSecondsToTimestamp(currentTime);
 
         const currentSelection = quill.getSelection();
 
@@ -218,18 +215,73 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
             paragraphStart--;
         }
 
-        quill.insertText(paragraphStart, formattedTime, 'user');
+        quill.insertText(paragraphStart, formattedTime + ' S1: ', 'user');
 
         if (currentSelection) {
             quill.setSelection(currentSelection.index + formattedTime.length, currentSelection.length);
         }
     }, [audioPlayer]);
 
+    const googleSearchSelectedWord = useCallback(() => {
+        if (!quillRef.current) return;
+
+        const quill = quillRef.current.getEditor();
+        const selection = quill.getSelection();
+
+        if (!selection) return;
+
+        const selectedText = quill.getText(selection.index, selection.length);
+
+        if (selectedText.trim()) {
+            const searchQuery = encodeURIComponent(selectedText.trim());
+            const googleSearchUrl = `https://www.google.com/search?q=${searchQuery}`;
+            window.open(googleSearchUrl, '_blank');
+        }
+    }, [quillRef]);
+
+    const defineSelectedWord = useCallback(() => {
+        if (!quillRef.current) return;
+
+        const quill = quillRef.current.getEditor();
+        const selection = quill.getSelection();
+
+        if (!selection) return;
+
+        const selectedText = quill.getText(selection.index, selection.length);
+
+        if (selectedText.trim()) {
+            const searchQuery = encodeURIComponent(selectedText.trim());
+            const googleSearchUrl = `https://www.google.com/search?q=define: ${searchQuery}`;
+            window.open(googleSearchUrl, '_blank');
+        }
+    }, [quillRef]);
+
+    const adjustFontSize = (increase: boolean) => {
+        if (!quillRef.current) return;
+
+        const quill = quillRef.current.getEditor();
+        const container = quill.container as HTMLElement;
+        const currentSize = parseInt(window.getComputedStyle(container).fontSize);
+        if (increase) {
+            container.style.fontSize = `${currentSize + 2}px`;
+        } else {
+            container.style.fontSize = `${currentSize - 2}px`;
+        }
+    }
+
+    const increaseFontSize = () => adjustFontSize(true);
+    const decreaseFontSize = () => adjustFontSize(false);
+
     const shortcutControls = useMemo(() => {
         const controls: Partial<ShortcutControls> = {
             playAudioAtCursorPosition: handlePlayAudioAtCursorPositionShortcut,
             insertTimestampBlankAtCursorPosition,
             insertTimestampAndSpeakerInitialAtStartOfCurrentLine,
+            googleSearchSelectedWord,
+            defineSelectedWord,
+            increaseFontSize,
+            decreaseFontSize
+
         };
         return controls as ShortcutControls;
     }, [handlePlayAudioAtCursorPositionShortcut, insertTimestampBlankAtCursorPosition, insertTimestampAndSpeakerInitialAtStartOfCurrentLine]);
@@ -294,7 +346,9 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
     }, [newCtms, getCtms])
 
     useEffect(() => {
-        setContent([{ insert: transcript }])
+        if (!content.length) {
+            setContent([{ insert: transcript }])
+        }
     }, [lines])
 
     useEffect(() => {
@@ -329,9 +383,11 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
                 modules={quillModules}
                 value={{ ops: content }}
                 onChange={handleContentChange}
+                formats={['size']}
                 className='h-full'
                 readOnly={(orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === "REVIEWER_ASSIGNED")}
             />
+
         </>
 
     )

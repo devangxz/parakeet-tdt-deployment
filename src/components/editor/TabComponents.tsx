@@ -11,7 +11,20 @@ import { OrderDetails } from "@/app/editor/[fileId]/page";
 import { CTMSWord } from "@/components/editor/transcriptUtils";
 import { ConvertedASROutput } from "@/utils/editorUtils";
 
-export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, getCtms, disableGoToWord, orderDetails }: { transcript: string, ctms: ConvertedASROutput[], audioPlayer: HTMLAudioElement | null, audioDuration: number, getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void, getCtms: (ctms: CTMSWord[]) => void, disableGoToWord: boolean, orderDetails: OrderDetails }) => (
+interface EditorTabComponentProps {
+    transcript: string
+    ctms: ConvertedASROutput[]
+    audioPlayer: HTMLAudioElement | null
+    audioDuration: number
+    getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void
+    getCtms: (ctms: CTMSWord[]) => void
+    disableGoToWord: boolean
+    orderDetails: OrderDetails
+    content: { insert: string }[]
+    setContent: (content: { insert: string }[]) => void
+}
+
+export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, getCtms, disableGoToWord, orderDetails, content, setContent }: EditorTabComponentProps) => (
     <TabsContent className='h-[86%] mt-0' value='transcribe'>
 
         <div className='bg-white border border-gray-200 border-t-0 rounded-b-2xl px-5 py-5 h-[99%] relative'>
@@ -31,6 +44,8 @@ export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuratio
                     audioPlayer={audioPlayer}
                     duration={audioDuration}
                     getCtms={getCtms}
+                    content={content}
+                    setContent={setContent}
                 />
             )}
             {(orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === 'REVIEWER_ASSIGNED') && (
