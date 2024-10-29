@@ -465,109 +465,106 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
   }, [uploadingFiles]);
 
   return (
-    <div className='flex flex-col gap-y-4'>
-      <h2 className='text-lg font-semibold md:text-lg'>File Uploader</h2>
-      <div className='bg-primary flex flex-col p-[12px] items-center justify-center rounded-[12px] border shadow-sm text-white'>
-        <Dropzone
-          onDrop={onDrop}
-          multiple
-          accept={Object.fromEntries(
-            getAllowedMimeTypes().map(type => [
-              type,
-              getAllowedFileExtensions()
-            ])
-          )}
-        >
-          {({ getRootProps, getInputProps, isDragActive }) => (
-            <div
-              {...getRootProps({
-                onClick: (event) => event.stopPropagation(),
-              })}
-              className={cn(
-                'group relative grid h-52 w-full place-items-center rounded-lg border-2 border-dashed border-white px-5 py-2.5 text-center transition',
-                'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                isDragActive && 'border-white/50'
-              )}
-            >
-              <input {...getInputProps()} />
-              {isDragActive ? (
-                <div className='flex flex-col items-center justify-center gap-4 sm:px-5'>
-                  <div className='rounded-full border border-dashed border-white p-3'>
-                    <UploadIcon
-                      className='size-7 text-white'
-                      aria-hidden='true'
-                    />
-                  </div>
-                  <p className='font-medium text-white'>
-                    Drop files or folders here
-                  </p>
+    <div className='bg-primary flex flex-col p-[12px] items-center justify-center rounded-[12px] border shadow-sm text-white'>
+      <Dropzone
+        onDrop={onDrop}
+        multiple
+        accept={Object.fromEntries(
+          getAllowedMimeTypes().map(type => [
+            type,
+            getAllowedFileExtensions()
+          ])
+        )}
+      >
+        {({ getRootProps, getInputProps, isDragActive }) => (
+          <div
+            {...getRootProps({
+              onClick: (event) => event.stopPropagation(),
+            })}
+            className={cn(
+              'group relative grid h-52 w-full place-items-center rounded-lg border-2 border-dashed border-white px-5 py-2.5 text-center transition',
+              'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+              isDragActive && 'border-white/50'
+            )}
+          >
+            <input {...getInputProps()} />
+            {isDragActive ? (
+              <div className='flex flex-col items-center justify-center gap-4 sm:px-5'>
+                <div className='rounded-full border border-dashed border-white p-3'>
+                  <UploadIcon
+                    className='size-7 text-white'
+                    aria-hidden='true'
+                  />
                 </div>
-              ) : (
-                <div className='flex flex-col items-center justify-center gap-4 sm:px-5'>
-                  <div className='flex gap-3 text-base font-medium leading-6'>
-                    <FolderUp />
-                    <div>Upload {!isRemoteLegal && 'files or'} folders</div>
-                  </div>
-                  <div className='text-xs self-stretch mt-3.5 leading-5 text-center max-md:mr-1 max-md:max-w-full'>
-                    Drag & drop {!isRemoteLegal && 'files or'} folders here or use the options below.
-                    <br />
-                    <span className='text-xs'>
-                      Supported formats: {getAllowedFileExtensions().join(', ')}
-                    </span>
-                  </div>
-                  <div className='flex gap-4 mt-4 font-semibold text-indigo-600 leading-[133%]'>
-                    {!isRemoteLegal && (
-                      <>
-                        <input
-                          ref={fileInputRef}
-                          id='fileInput'
-                          type='file'
-                          multiple
-                          hidden
-                          onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                            event.target.files &&
-                            handleFileOrFolderUpload(Array.from(event.target.files))
-                          }
-                          accept={getAllowedFileExtensions().join(',')}
-                        />
-                        <label
-                          data-testid='file-uploader'
-                          htmlFor='fileInput'
-                          className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
-                        >
-                          Choose Files
-                        </label>
-                      </>
-                    )}
-                    <input
-                      ref={folderInputRef}
-                      id='folderInput'
-                      type='file'
-                      multiple
-                      hidden
-                      onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                        event.target.files &&
-                        handleFileOrFolderUpload(Array.from(event.target.files))
-                      }
-                      {...({
-                        webkitdirectory: 'true',
-                        directory: 'true',
-                      } as CustomInputAttributes)}
-                    />
-                    <label
-                      data-testid='folder-uploader'
-                      htmlFor='folderInput'
-                      className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
-                    >
-                      Choose Folder
-                    </label>
-                  </div>
+                <p className='font-medium text-white'>
+                  Drop files or folders here
+                </p>
+              </div>
+            ) : (
+              <div className='flex flex-col items-center justify-center gap-4 sm:px-5'>
+                <div className='flex gap-3 text-base font-medium leading-6'>
+                  <FolderUp />
+                  <div>Upload {!isRemoteLegal && 'files or'} folders</div>
                 </div>
-              )}
-            </div>
-          )}
-        </Dropzone>
-      </div>
+                <div className='text-xs self-stretch mt-3.5 leading-5 text-center max-md:mr-1 max-md:max-w-full'>
+                  Drag & drop {!isRemoteLegal && 'files or'} folders here or use the options below.
+                  <br />
+                  <span className='text-xs'>
+                    Supported formats: {getAllowedFileExtensions().join(', ')}
+                  </span>
+                </div>
+                <div className='flex gap-4 mt-4 font-semibold text-indigo-600 leading-[133%]'>
+                  {!isRemoteLegal && (
+                    <>
+                      <input
+                        ref={fileInputRef}
+                        id='fileInput'
+                        type='file'
+                        multiple
+                        hidden
+                        onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                          event.target.files &&
+                          handleFileOrFolderUpload(Array.from(event.target.files))
+                        }
+                        accept={getAllowedFileExtensions().join(',')}
+                      />
+                      <label
+                        data-testid='file-uploader'
+                        htmlFor='fileInput'
+                        className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
+                      >
+                        Choose Files
+                      </label>
+                    </>
+                  )}
+                  <input
+                    ref={folderInputRef}
+                    id='folderInput'
+                    type='file'
+                    multiple
+                    hidden
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                      event.target.files &&
+                      handleFileOrFolderUpload(Array.from(event.target.files))
+                    }
+                    {...({
+                      webkitdirectory: 'true',
+                      directory: 'true',
+                    } as CustomInputAttributes)}
+                  />
+                  <label
+                    data-testid='folder-uploader'
+                    htmlFor='folderInput'
+                    className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
+                  >
+                    Choose Folder
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Dropzone>
     </div>
   )
 }
