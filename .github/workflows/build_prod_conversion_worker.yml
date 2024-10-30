@@ -3,7 +3,7 @@ name: Build and Push Conversion Worker Docker image
 on:
   push:
     branches:
-      - staging
+      - main
 
 jobs:
   build:
@@ -21,15 +21,15 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PAT_FOR_STAGING }}
+          password: ${{ secrets.PAT_FOR_CONVERSION_WOR_PROD }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           push: true
-          tags: ghcr.io/yuktiscribie/staging-scribie-conversion-worker:latest
+          tags: ghcr.io/yuktiscribie/prod-scribie-conversion-worker:latest
 
       - name: Trigger Render deploy
         if: success()
         run: |
-          curl -X POST https://api.render.com/deploy/srv-cs926b3tq21c73abgl6g?key=J-t-so6blX0
+          curl -X POST https://api.render.com/deploy/srv-csgaufdumphs73b2c2eg?key=AuYMPs8zbp0      
