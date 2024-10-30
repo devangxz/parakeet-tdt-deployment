@@ -21,6 +21,7 @@ interface DialogProps {
   onClose: () => void
   orderId: string
   refetch: () => void
+  isReReview?: boolean
 }
 
 const DeliveryPreDeliveryFile = ({
@@ -28,6 +29,7 @@ const DeliveryPreDeliveryFile = ({
   onClose,
   orderId,
   refetch,
+  isReReview = false,
 }: DialogProps) => {
   const [loading, setLoading] = useState(false)
   const [retainEarnings, setRetainEarnings] = useState('yes')
@@ -38,6 +40,7 @@ const DeliveryPreDeliveryFile = ({
       const response = await axios.post(`/api/om/deliver-pre-delivery-order`, {
         orderId,
         retainEarnings: retainEarnings === 'yes',
+        isReReview,
       })
       if (response.data.success) {
         const successToastId = toast.success(`Successfully delivered the file`)

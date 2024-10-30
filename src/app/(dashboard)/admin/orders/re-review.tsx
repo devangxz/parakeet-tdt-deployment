@@ -1,38 +1,31 @@
 'use client'
-import {
-  ReloadIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-} from '@radix-ui/react-icons'
+import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
 import axios from 'axios'
-import dynamic from 'next/dynamic'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
-import ApprovalPage from './approvals'
-import { DataTableColumnHeader } from './components/column-header'
 import { DataTable } from './components/data-table'
-import DeliveredSection from './components/delivered-files'
-import PreDeliveryPage from './pre-delivery'
-import ReReviewPage from './re-review'
-import ScreenPage from './screen'
-const StatusPage = dynamic(() => import('./status'), {
-  ssr: false,
-  loading: () => <div>Loading...</div>,
-})
+import DeliveryPreDeliveryFile from '@/components/admin-components/deliver-pre-delivery-file'
+import ReassignFinalizer from '@/components/admin-components/re-assign-finalizer-dialog'
+import ReassignPreDeliveryFile from '@/components/admin-components/re-assign-pre-delivery-file'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import FileAudioPlayer from '@/components/utils/FileAudioPlayer'
-import { HIGH_PWER, LOW_PWER } from '@/constants'
+import { BACKEND_URL, HIGH_PWER, LOW_PWER } from '@/constants'
 import { FileCost } from '@/types/files'
+import axiosInstance from '@/utils/axios'
 import formatDateTime from '@/utils/formatDateTime'
 import formatDuration from '@/utils/formatDuration'
 
@@ -50,37 +43,55 @@ interface File {
   qc: string
   deliveryTs: string
   hd: boolean
+  orderType: string
   fileCost: FileCost
   rateBonus: number
-  type: string
 }
 
-export default function OrdersPage() {
-  const [pendingOrders, setPendingOrders] = useState<File[] | null>(null)
+export default function ReReviewPage() {
+  const [reReviewFiles, setReReviewFiles] = useState<File[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState('orders')
-  const [fileId, setFileId] = useState<string>('')
+  const [orderId, setOrderId] = useState<string>('')
+  const [openDialog, setOpenDialog] = useState(false)
+  const [openReassignDialog, setOpenReassignDialog] = useState(false)
+  const [reassignDialogOpen, setReassignDialogOpen] = useState(false)
   const [playing, setPlaying] = useState<Record<string, boolean>>({})
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
 
+  const getAudioUrl = async (fileId: string) => {
+    try {
+      const response = await axiosInstance.get(
+        `${BACKEND_URL}/get-audio/${fileId}`,
+        { responseType: 'blob' }
+      )
+      const url = URL.createObjectURL(response.data)
+      return url
+    } catch (error) {
+      toast.error('Failed to play audio.')
+    }
+  }
+
   useEffect(() => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
+    getAudioUrl(fileId).then((url) => {
+      if (url) {
+        setCurrentlyPlayingFileUrl({ [fileId]: url })
+      }
+    })
   }, [playing])
 
-  const fetchPendingOrders = async (showLoader = false) => {
+  const fetchReReviewOrders = async (showLoader = false) => {
     if (showLoader) {
       setIsLoading(true)
     } else {
       setIsLoading(false)
     }
-
     try {
-      const response = await axios.get(`/api/om/fetch-pending-orders`)
+      const response = await axios.get(`/api/om/fetch-re-review-orders`)
 
       if (response.data.success) {
         const orders = response.data.details.map(
@@ -90,7 +101,6 @@ export default function OrdersPage() {
               fileId: string
               File: { filename: string; duration: number }
               orderTs: string
-              rateBonus: number
               pwer: number
               status: string
               priority: number
@@ -103,6 +113,7 @@ export default function OrdersPage() {
                 status: string
                 user: { firstname: string; lastname: string }
               }[]
+              rateBonus: number
               fileCost: FileCost
             },
             index: number
@@ -127,13 +138,13 @@ export default function OrdersPage() {
               qc: qcNames || '-',
               deliveryTs: order.deliveryTs,
               hd: order.highDifficulty,
+              orderType: order.orderType,
               fileCost: order.fileCost,
               rateBonus: order.rateBonus,
-              type: order.orderType,
             }
           }
         )
-        setPendingOrders(orders ?? [])
+        setReReviewFiles(orders ?? [])
         setError(null)
       } else {
         setError(response.data.message)
@@ -146,7 +157,7 @@ export default function OrdersPage() {
   }
 
   useEffect(() => {
-    fetchPendingOrders(true)
+    fetchReReviewOrders(true)
   }, [])
 
   if (isLoading) {
@@ -172,7 +183,7 @@ export default function OrdersPage() {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          height: '80vh',
+          height: '20vh',
         }}
       >
         <p>An Error Occured</p>
@@ -197,22 +208,11 @@ export default function OrdersPage() {
       ),
     },
     {
-      accessorKey: 'fileId',
+      accessorKey: 'id',
       header: 'Details',
       cell: ({ row }) => (
         <div>
-          <div className='mb-2 font-medium'>
-            <Button
-              variant='link'
-              className='p-0 m-0'
-              onClick={() => {
-                setFileId(row.original.fileId)
-                setActiveTab('status')
-              }}
-            >
-              {row.original.fileId}
-            </Button>
-          </div>
+          <div className='mb-2 font-medium'>{row.original.fileId}</div>
           <div className='mb-2 font-medium'>{row.original.filename}</div>
           <div className='mb-2 font-medium'>
             {formatDateTime(row.original.orderTs)}
@@ -282,9 +282,7 @@ export default function OrdersPage() {
     },
     {
       accessorKey: 'duration',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Duration' />
-      ),
+      header: 'Duration',
       cell: ({ row }) => (
         <div
           className='font-medium'
@@ -298,7 +296,7 @@ export default function OrdersPage() {
             {row.original.fileCost.transcriptionRate}/ah + $
             {row.original.rateBonus}/ah)
           </p>
-          {row.original.type === 'TRANSCRIPTION_FORMATTING' && (
+          {row.original.orderType === 'TRANSCRIPTION_FORMATTING' && (
             <p className='mt-1'>
               Review cost: <br /> ${row.original.fileCost.customFormatCost}/ah
               ($
@@ -311,13 +309,10 @@ export default function OrdersPage() {
     },
     {
       accessorKey: 'status',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Status' />
-      ),
+      header: 'Status',
       cell: ({ row }) => (
         <div className='capitalize font-medium'>{row.getValue('status')}</div>
       ),
-      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
       accessorKey: 'qc',
@@ -328,119 +323,112 @@ export default function OrdersPage() {
     },
     {
       accessorKey: 'deliveryTs',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Delivery Date' />
-      ),
+      header: 'Delivery Date',
       cell: ({ row }) => (
-        <div className='flex gap-3 items-center'>
-          <Tooltip>
-            <TooltipTrigger>
-              <Button
-                variant='outline'
-                className='h-5 w-5'
-                size='icon'
-                onClick={() =>
-                  handleDeliveryDateChanged(row.original.orderId, -1)
-                }
-              >
-                <span className='sr-only'>Move Date</span>
-                <ChevronLeftIcon />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Prepone one day</p>
-            </TooltipContent>
-          </Tooltip>
+        <div className='font-medium'>
+          {formatDateTime(row.getValue('deliveryTs'))}
+        </div>
+      ),
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      enableHiding: false,
+      cell: ({ row }) => (
+        <div className='flex items-center'>
+          <Button
+            variant='order'
+            className='format-button'
+            onClick={() =>
+              window.open(
+                `/editor/${row.original.orderId}`,
+                '_blank',
+                'noopener,noreferrer'
+              )
+            }
+          >
+            Open Editor
+          </Button>
 
-          <div className='font-medium'>
-            {formatDateTime(row.getValue('deliveryTs'))}
-          </div>
-          <Tooltip>
-            <TooltipTrigger>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button
-                variant='outline'
-                className='h-5 w-5'
-                size='icon'
-                onClick={() =>
-                  handleDeliveryDateChanged(row.original.orderId, 1)
-                }
+                variant='order'
+                className='h-9 w-8 p-0 format-icon-button'
               >
-                <span className='sr-only'>Move Date</span>
-                <ChevronRightIcon />
+                <span className='sr-only'>Open menu</span>
+                <ChevronDownIcon className='h-4 w-4' />
               </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Postpone one day</p>
-            </TooltipContent>
-          </Tooltip>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuItem
+                className=''
+                onClick={() => {
+                  setOrderId(row.original.orderId.toString())
+                  setOpenDialog(true)
+                }}
+              >
+                Deliver
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className=''
+                onClick={() => {
+                  setOrderId(row.original.orderId.toString())
+                  setOpenReassignDialog(true)
+                }}
+              >
+                Re-assign Editor
+              </DropdownMenuItem>
+              {row.original.orderType === 'TRANSCRIPTION_FORMATTING' && (
+                <DropdownMenuItem
+                  className=''
+                  onClick={() => {
+                    setOrderId(row.original.orderId.toString())
+                    setReassignDialogOpen(true)
+                  }}
+                >
+                  Re-assign Finalizer
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ),
     },
   ]
 
-  const handleDeliveryDateChanged = async (orderId: number, day: number) => {
-    try {
-      const response = await axios.post(`/api/om/change-delivery-date`, {
-        orderId,
-        day,
-      })
-
-      if (response.data.success) {
-        toast.success('Delivery date changed successfully')
-        fetchPendingOrders()
-      } else {
-        toast.error(response.data.message)
-      }
-    } catch (err) {
-      toast.error('An error occurred')
-    }
-  }
-
   return (
-    <Tabs
-      defaultValue='orders'
-      value={activeTab}
-      onValueChange={(value) => setActiveTab(value)}
-    >
-      <TabsList className='grid w-full grid-cols-6 mt-5 ml-8 w-[900px]'>
-        <TabsTrigger value='orders'>Orders</TabsTrigger>
-        <TabsTrigger value='status'>Status</TabsTrigger>
-        <TabsTrigger value='screen'>Screen</TabsTrigger>
-        <TabsTrigger value='pre-delivery'>Pre Delivery</TabsTrigger>
-        <TabsTrigger value='approval'>Approval</TabsTrigger>
-        <TabsTrigger value='re-review'>Re-Review</TabsTrigger>
-      </TabsList>
-      <TabsContent value='orders'>
-        <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
-          <div className='flex items-center justify-between space-y-2'>
-            <div>
-              <h1 className='text-lg font-semibold md:text-lg'>
-                Pending Orders ({pendingOrders?.length})
-              </h1>
-            </div>
+    <>
+      <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
+        <div className='flex items-center justify-between space-y-2'>
+          <div>
+            <h1 className='text-lg font-semibold md:text-lg'>
+              Available Re-Review Orders ({reReviewFiles?.length})
+            </h1>
           </div>
-          <DataTable data={pendingOrders ?? []} columns={columns} />
         </div>
-        <div className='bg-muted/40'>
-          <Separator className='mb-5' />
-        </div>
-        <DeliveredSection />
-      </TabsContent>
-      <TabsContent value='status'>
-        <StatusPage selectedFileId={fileId} />
-      </TabsContent>
-      <TabsContent value='screen'>
-        <ScreenPage />
-      </TabsContent>
-      <TabsContent value='pre-delivery'>
-        <PreDeliveryPage />
-      </TabsContent>
-      <TabsContent value='approval'>
-        <ApprovalPage />
-      </TabsContent>
-      <TabsContent value='re-review'>
-        <ReReviewPage />
-      </TabsContent>
-    </Tabs>
+        <DataTable data={reReviewFiles ?? []} columns={columns} />
+      </div>
+      <DeliveryPreDeliveryFile
+        open={openDialog}
+        onClose={() => setOpenDialog(false)}
+        orderId={orderId || ''}
+        refetch={() => fetchReReviewOrders()}
+        isReReview={true}
+      />
+      <ReassignPreDeliveryFile
+        open={openReassignDialog}
+        onClose={() => setOpenReassignDialog(false)}
+        orderId={orderId || ''}
+        refetch={() => fetchReReviewOrders()}
+      />
+      <ReassignFinalizer
+        open={reassignDialogOpen}
+        onClose={() => setReassignDialogOpen(false)}
+        orderId={orderId || ''}
+        refetch={() => fetchReReviewOrders()}
+        isCompleted={true}
+      />
+    </>
   )
 }
