@@ -165,6 +165,24 @@ export default function AudioPlayer({ fileId, getAudioPlayer }: { fileId: string
         };
     }, []);
 
+    const handleMouseMoveOnWaveform = (e: React.MouseEvent<HTMLDivElement>) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const percentage = (x / rect.width) * 100;
+        if (audioPlayer.current?.duration) {
+            const time = (percentage / 100) * audioPlayer.current.duration;
+            const timeString = formatTime(time);
+
+            const tooltip = document.getElementById('time-tooltip');
+            if (tooltip) {
+                tooltip.style.display = 'block';
+                tooltip.style.left = `${e.clientX}px`;
+                tooltip.style.top = `${e.clientY - 25}px`;
+                tooltip.textContent = timeString;
+            }
+        }
+    }
+
     return (
         <div className='mb-3 h-1/3 relative overflow-hidden'>
             {!isPlayerLoaded && (
@@ -174,7 +192,28 @@ export default function AudioPlayer({ fileId, getAudioPlayer }: { fileId: string
                 </div>
             )}
             <div className='h-[45%] bg-white rounded-t-2xl border border-gray-200 border-b-0 overflow-hidden'>
-                <div id='waveform' className='relative h-full'>
+                <div
+                    id='waveform'
+                    className='relative h-full'
+                    onMouseMove={handleMouseMoveOnWaveform}
+                    onMouseLeave={() => {
+                        const tooltip = document.getElementById('time-tooltip');
+                        if (tooltip) {
+                            tooltip.style.display = 'none';
+                        }
+                    }}
+                    onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const percentage = (x / rect.width) * 100;
+                        seekTo(percentage);
+                    }}
+                >
+                    <div
+                        id="time-tooltip"
+                        className="fixed hidden z-50 bg-primary text-white px-2 py-1 rounded text-sm pointer-events-none"
+                        style={{ transform: 'translate(-50%, -100%)' }}
+                    />
                     <Image src={waveformUrl} alt='waveform' layout='fill' objectFit='contain' />
                 </div>
             </div>

@@ -26,7 +26,7 @@ import logger from '../lib/logger'
 import paypalClient from '../lib/paypal'
 import prisma from '../lib/prisma'
 
-const s3Client = new S3Client({
+export const s3Client = new S3Client({
   region: process.env.AWS_S3_REGION,
   credentials: {
     accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID ?? '',
@@ -1091,6 +1091,23 @@ export async function getFileVersionSignedURLFromS3(
     return signedUrl;
   } catch (error) {
     logger.error(`Error generating signed URL for ${key}, version: ${versionId}: ${String(error)}`);
+    throw error;
+  }
+}
+
+export async function deleteFileFromS3(key: string, customBucketName?: string): Promise<void> {
+  logger.info(`Deleting S3 object: ${key}`);
+
+  const command = new DeleteObjectCommand({
+    Bucket: customBucketName || bucketName,
+    Key: key
+  });
+
+  try {
+    await s3Client.send(command);
+    logger.info(`Successfully deleted S3 object: ${key}`);
+  } catch (error) {
+    logger.error(`Error deleting S3 object ${key}: ${String(error)}`);
     throw error;
   }
 }
