@@ -80,5 +80,7 @@ export const ORG_REMOTELEGAL = config.org_remotelegal
 export const ORG_REMOTELEGAL_FOLDER = config.org_remotelegal_folder
 export const UPLOAD_MAX_RETRIES = config.upload_max_retries
 export const UPLOAD_RETRY_DELAY = config.upload_retry_delay
+export const SSE_MAX_RETRIES = config.sse_max_retries
+export const SSE_RETRY_DELAY = config.sse_retry_delay
 export const DURATION_DIFF = config.durationDifference;
 export const ERROR_CODES = config.errorCodes;
