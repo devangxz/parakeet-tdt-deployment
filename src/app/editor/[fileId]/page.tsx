@@ -503,7 +503,6 @@ function EditorPage() {
       const successToastId = toast.success(`Re-review request submitted successfully`)
       toast.dismiss(successToastId)
     } catch (error) {
-      console.log(error)
       toast.error('Failed to re-review the file')
     }
   }

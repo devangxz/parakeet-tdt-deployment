@@ -262,7 +262,6 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
 
     const adjustFontSize = useCallback((increase: boolean) => {
         if (!quillRef.current) return;
-        console.log('ran')
         const quill = quillRef.current.getEditor();
         const container = quill.container as HTMLElement;
         const currentSize = parseInt(window.getComputedStyle(container).fontSize);

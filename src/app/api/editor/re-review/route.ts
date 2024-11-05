@@ -12,8 +12,16 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: false, message: 'File ID is required' }, { status: 400 });
         }
 
-        await prisma.order.update({
+        const order = await prisma.order.findUnique({
             where: { fileId },
+        })
+
+        if (!order) {
+            return NextResponse.json({ success: false, message: 'Order not found' }, { status: 404 });
+        }
+
+        await prisma.order.update({
+            where: { id: order.id },
             data: {
                 reReview: true,
                 reReviewComment: comment,
