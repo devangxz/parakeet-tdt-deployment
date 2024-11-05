@@ -139,6 +139,7 @@ function EditorPage() {
     mp3: false,
     frequentTerms: false,
   })
+  const [reReviewComment, setReReviewComment] = useState('')
 
   const [adjustTimestampsBy, setAdjustTimestampsBy] = useState('0')
   const [audioDuration, setAudioDuration] = useState(1)
@@ -496,6 +497,7 @@ function EditorPage() {
     try {
       await axios.post(`/api/editor/re-review`, {
         fileId: orderDetails.fileId,
+        comment: reReviewComment,
       })
       toast.dismiss(toastId)
       const successToastId = toast.success(`Re-review request submitted successfully`)
@@ -585,6 +587,7 @@ function EditorPage() {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <Textarea
+                    onChange={(e) => setReReviewComment(e.target.value)}
                     placeholder="Enter instructions..."
                     className="min-h-[100px] resize-none"
                   />

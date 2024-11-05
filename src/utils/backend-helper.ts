@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import { Readable } from 'stream'
 
-import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import paypal, {
   RecipientType,
@@ -25,14 +25,7 @@ import gateway from '../lib/braintree'
 import logger from '../lib/logger'
 import paypalClient from '../lib/paypal'
 import prisma from '../lib/prisma'
-
-export const s3Client = new S3Client({
-  region: process.env.AWS_S3_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID ?? '',
-    secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY ?? '',
-  },
-})
+import s3Client from '@/lib/s3-client';
 
 export const getOrderOptions = async (userId: number) => {
   let options = DEFAULT_ORDER_OPTIONS

@@ -4,7 +4,8 @@ import logger from '@/lib/logger';
 import prisma from '@/lib/prisma'
 
 export async function POST(req: Request) {
-    const { fileId } = await req.json();
+    const { fileId, comment } = await req.json();
+
     try {
 
         if (!fileId) {
@@ -15,6 +16,7 @@ export async function POST(req: Request) {
             where: { fileId },
             data: {
                 reReview: true,
+                reReviewComment: comment,
             },
         });
 
