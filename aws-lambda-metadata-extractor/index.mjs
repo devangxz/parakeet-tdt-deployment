@@ -13,6 +13,7 @@ const config = {
         PROD: process.env.PROD_WEBHOOK_URL,
         STAGING: process.env.STAGING_WEBHOOK_URL,
         DEV: process.env.DEV_WEBHOOK_URL,
+        RAJIV: process.env.RAJIV_WEBHOOK_URL,
         DAYA: process.env.DAYA_WEBHOOK_URL,
         TARUN: process.env.TARUN_WEBHOOK_URL,
         PRASAD: process.env.PRASAD_WEBHOOK_URL,
