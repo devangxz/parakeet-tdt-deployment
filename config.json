@@ -219,6 +219,8 @@
   "org_remotelegal_folder": "Scribie",
   "upload_max_retries": 3,
   "upload_retry_delay": 2000,
+  "sse_max_retries": 3,
+  "sse_retry_delay": 1000,
   "durationDifference": 0.5,
   "errorCodes": {
     "VALIDATION_ERROR": { "code": 1001, "httpCode": 501 },
