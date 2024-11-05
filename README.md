@@ -1,19 +1,52 @@
+# Next.js Project Setup
+
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ## Getting Started
 
-First, run `npm install` to install dependencies
+### Environment Setup
 
-Run the development server:
+1. After cloning the project, configure the environment variables in the `.env` file with appropriate values
+2. In the `.env` file, set `UPLOAD_ENVIRONMENT` to your first name in all caps (e.g., "JOHN")
+3. AWS Lambda Configuration:
+   - In the metadata extractor Lambda function:
+     - Add a new environment variable `JOHN_WEBHOOK_URL` (replacing JOHN with your name matching your `UPLOAD_ENVIRONMENT`) with your webhook URL
+     - Update the `config.webhookUrls` in the Lambda function code to include your new entry:
+     ```javascript
+     webhookUrls: {
+         PROD: process.env.PROD_WEBHOOK_URL,
+         STAGING: process.env.STAGING_WEBHOOK_URL,
+         DEV: process.env.DEV_WEBHOOK_URL,
+         JOHN: process.env.JOHN_WEBHOOK_URL,  // Add your entry here matching your UPLOAD_ENVIRONMENT
+     }
+     ```
 
+### Installation
+
+Run `npm install` to install all dependencies
+
+### Database Setup
+
+1. Run `docker-compose up` to start the database and redis
+2. Run `npx prisma migrate dev` in another terminal, which will create the database and tables in the database
+
+### Running the Application
+
+1. Start the main application:
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+
+2. Start the background workers (open separate terminals for each):
+```bash
+# Conversion worker
+npm run dev-conversion-worker
+
+# ASR worker
+npm run dev-asr-worker
+
+# LLM worker
+npm run dev-llm-worker
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
@@ -22,14 +55,7 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
 
-<a id="initialise-database"></a>
-
-### Database setup and configuration
-
-1. Run `docker-compose up` to start the database and redis
-2. Run `npx prisma migrate dev` in another terminal, which will create the database and tables in the database.
-
-## How to generate new migration
+## Database Migrations
 
 > See also:
 >
