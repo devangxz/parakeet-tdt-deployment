@@ -932,10 +932,11 @@ export async function fileExistsInS3(key: string): Promise<boolean> {
 export async function uploadToS3(
   key: string,
   body: Buffer | Readable | string,
-  contentType = 'text/plain'
+  contentType = 'text/plain',
+  customBucket: string | null = null
 ): Promise<{ VersionId?: string }> {
   const uploadParams = {
-    Bucket: bucketName,
+    Bucket: customBucket || bucketName,
     Key: key,
     Body: body,
     ContentType: contentType,

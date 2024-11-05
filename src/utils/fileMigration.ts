@@ -1,38 +1,17 @@
-import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { FileTag, JobStatus, JobType } from "@prisma/client"
 
-import { downloadFromS3, uploadToS3, s3Client, deleteFileFromS3 } from "./backend-helper"
+import { downloadFromS3, uploadToS3, deleteFileFromS3 } from "./backend-helper"
 import prisma from "@/lib/prisma"
-
-// const userId = 2952506
 
 async function moveFile(sourceBucket: string, destinationBucket: string, key: string) {
     try {
         // Get the object from source bucket
-        const getObjectCommand = new GetObjectCommand({
-            Bucket: sourceBucket,
-            Key: key
-        });
-
-        const { Body, ContentType } = await s3Client.send(getObjectCommand);
-
-        // Upload to destination bucket
-        const putObjectCommand = new PutObjectCommand({
-            Bucket: destinationBucket,
-            Key: key,
-            Body: Body,
-            ContentType: ContentType
-        });
-
-        await s3Client.send(putObjectCommand);
-
-        // Delete from source bucket
-        const deleteObjectCommand = new DeleteObjectCommand({
-            Bucket: sourceBucket,
-            Key: key
-        });
-
-        await s3Client.send(deleteObjectCommand);
+        let contentType = 'text/plain'
+        if (key.endsWith('.docx')) {
+            contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        }
+        const buffer = await downloadFromS3(key)
+        await uploadToS3(key, buffer, contentType, destinationBucket)
 
         console.log(`Successfully moved ${key} from ${sourceBucket} to ${destinationBucket}`);
     } catch (error) {
@@ -61,15 +40,15 @@ export const fileMigration = async (userId: number) => {
                 continue
             }
 
-            moveFile('cgws', 'cgws_ai_backup', `${fileId}.txt`)
-            deleteFileFromS3(`${fileId}.txt`)
+            await moveFile('cgws3', 'cgws3-backup', `${fileId}.txt`)
+            await deleteFileFromS3(`${fileId}.txt`)
 
-            moveFile('cgws', 'cgws_ai_backup', `${fileId}_asr.txt`)
+            await moveFile('cgws3', 'cgws3-backup', `${fileId}_asr.txt`)
             // 1. Download ASR file and upload with new name
             const asrText = (await (downloadFromS3(`${fileId}_asr.txt`))).toString()
 
             const { VersionId: ASRVersionId } = await uploadToS3(`${fileId}.txt`, Buffer.from(asrText))
-            deleteFileFromS3(`${fileId}_asr.txt`)
+            await deleteFileFromS3(`${fileId}_asr.txt`)
 
             // 2. Save ASR file version
             await prisma.fileVersion.create({
@@ -81,10 +60,10 @@ export const fileMigration = async (userId: number) => {
             })
 
             // 3. Download QC file and upload with new name
-            moveFile('cgws', 'cgws_ai_backup', `${fileId}_qc.txt`)
+            await moveFile('cgws3', 'cgws3-backup', `${fileId}_qc.txt`)
             const qcFile = (await (downloadFromS3(`${fileId}_qc.txt`))).toString()
             const { VersionId: QCVersionId } = await uploadToS3(`${fileId}.txt`, qcFile)
-            deleteFileFromS3(`${fileId}_qc.txt`)
+            await deleteFileFromS3(`${fileId}_qc.txt`)
 
             // 4. Get QC assignment and save file version
             const qcAssignment = await prisma.jobAssignment.findFirst({
@@ -112,10 +91,10 @@ export const fileMigration = async (userId: number) => {
                 }
             })
 
-            moveFile('cgws', 'cgws_ai_backup', `${fileId}_cf.txt`)
+            await moveFile('cgws3', 'cgws3-backup', `${fileId}_cf.docx`)
             const cfDocxFile = await downloadFromS3(`${fileId}_cf.docx`)
             const { VersionId: CFDocxVersionId } = await uploadToS3(`${fileId}.docx`, cfDocxFile)
-            deleteFileFromS3(`${fileId}_cf.docx`)
+            await deleteFileFromS3(`${fileId}_cf.docx`)
 
             await prisma.fileVersion.create({
                 data: {
@@ -125,6 +104,12 @@ export const fileMigration = async (userId: number) => {
                     userId
                 }
             })
+
+            //deleting the unused files
+            await moveFile('cgws3', 'cgws3-backup', `${fileId}_cf.txt`)
+            await moveFile('cgws3', 'cgws3-backup', `${fileId}_cf_rev.txt`)
+            await deleteFileFromS3(`${fileId}_cf.txt`)
+            await deleteFileFromS3(`${fileId}_cf_rev.txt`)
 
         }
 
