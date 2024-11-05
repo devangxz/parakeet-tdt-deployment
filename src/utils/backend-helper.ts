@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import { Readable } from 'stream'
 
-import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import paypal, {
   RecipientType,
@@ -25,14 +25,7 @@ import gateway from '../lib/braintree'
 import logger from '../lib/logger'
 import paypalClient from '../lib/paypal'
 import prisma from '../lib/prisma'
-
-const s3Client = new S3Client({
-  region: process.env.AWS_S3_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID ?? '',
-    secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY ?? '',
-  },
-})
+import s3Client from '@/lib/s3-client';
 
 export const getOrderOptions = async (userId: number) => {
   let options = DEFAULT_ORDER_OPTIONS
@@ -932,10 +925,11 @@ export async function fileExistsInS3(key: string): Promise<boolean> {
 export async function uploadToS3(
   key: string,
   body: Buffer | Readable | string,
-  contentType = 'text/plain'
+  contentType = 'text/plain',
+  customBucket: string | null = null
 ): Promise<{ VersionId?: string }> {
   const uploadParams = {
-    Bucket: bucketName,
+    Bucket: customBucket || bucketName,
     Key: key,
     Body: body,
     ContentType: contentType,
@@ -1091,6 +1085,23 @@ export async function getFileVersionSignedURLFromS3(
     return signedUrl;
   } catch (error) {
     logger.error(`Error generating signed URL for ${key}, version: ${versionId}: ${String(error)}`);
+    throw error;
+  }
+}
+
+export async function deleteFileFromS3(key: string, customBucketName?: string): Promise<void> {
+  logger.info(`Deleting S3 object: ${key}`);
+
+  const command = new DeleteObjectCommand({
+    Bucket: customBucketName || bucketName,
+    Key: key
+  });
+
+  try {
+    await s3Client.send(command);
+    logger.info(`Successfully deleted S3 object: ${key}`);
+  } catch (error) {
+    logger.error(`Error deleting S3 object ${key}: ${String(error)}`);
     throw error;
   }
 }

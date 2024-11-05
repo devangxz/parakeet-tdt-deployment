@@ -51,6 +51,9 @@ export async function GET(req: NextRequest) {
         select: {
           s3VersionId: true,
         },
+        orderBy: {
+          createdAt: 'desc'
+        }
       })
 
       if (!fileVersion || !fileVersion.s3VersionId) {

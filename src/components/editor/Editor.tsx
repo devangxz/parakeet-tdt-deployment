@@ -98,6 +98,9 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
 
     const initEditor = useCallback(async () => {
         processTranscript(transcript, ctms)
+        const quill = quillRef.current?.getEditor()
+        if (!quill) return
+        quill.container.style.fontSize = '16px'
     }, [processTranscript, transcript, ctms])
 
     const handleUpdateContent = useCallback(() => {
@@ -257,9 +260,8 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         }
     }, [quillRef]);
 
-    const adjustFontSize = (increase: boolean) => {
+    const adjustFontSize = useCallback((increase: boolean) => {
         if (!quillRef.current) return;
-
         const quill = quillRef.current.getEditor();
         const container = quill.container as HTMLElement;
         const currentSize = parseInt(window.getComputedStyle(container).fontSize);
@@ -268,10 +270,7 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         } else {
             container.style.fontSize = `${currentSize - 2}px`;
         }
-    }
-
-    const increaseFontSize = () => adjustFontSize(true);
-    const decreaseFontSize = () => adjustFontSize(false);
+    }, [quillRef])
 
     const shortcutControls = useMemo(() => {
         const controls: Partial<ShortcutControls> = {
@@ -280,8 +279,8 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
             insertTimestampAndSpeakerInitialAtStartOfCurrentLine,
             googleSearchSelectedWord,
             defineSelectedWord,
-            increaseFontSize,
-            decreaseFontSize
+            increaseFontSize: () => adjustFontSize(true),
+            decreaseFontSize: () => adjustFontSize(false)
 
         };
         return controls as ShortcutControls;
