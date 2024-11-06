@@ -1,8 +1,12 @@
 import crypto from 'crypto'
 import { Readable } from 'stream'
 
-import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import paypal, {
   RecipientType,
   CreatePayoutRequestBody,
@@ -25,7 +29,7 @@ import gateway from '../lib/braintree'
 import logger from '../lib/logger'
 import paypalClient from '../lib/paypal'
 import prisma from '../lib/prisma'
-import s3Client from '@/lib/s3-client';
+import s3Client from '../lib/s3-client'
 
 export const getOrderOptions = async (userId: number) => {
   let options = DEFAULT_ORDER_OPTIONS
@@ -917,7 +921,9 @@ export async function fileExistsInS3(key: string): Promise<boolean> {
       logger.info(`File does not exist in S3: ${key}`)
       return false
     }
-    logger.error(`Error checking if file exists in S3: ${key}, ${String(error)}`)
+    logger.error(
+      `Error checking if file exists in S3: ${key}, ${String(error)}`
+    )
     throw error
   }
 }
@@ -941,7 +947,7 @@ export async function uploadToS3(
     const command = new PutObjectCommand(uploadParams)
     const response = await s3Client.send(command)
     logger.info(`File uploaded successfully to S3: ${key}`)
-    return response; // This will contain the version ID
+    return response // This will contain the version ID
   } catch (error) {
     logger.error(`Error uploading file to S3: ${key}, ${String(error)}`)
     throw error
@@ -978,11 +984,14 @@ export async function downloadFromS3(key: string): Promise<Buffer | string> {
   }
 }
 
-export async function deleteFileVersionFromS3(key: string, versionId: string): Promise<boolean> {
+export async function deleteFileVersionFromS3(
+  key: string,
+  versionId: string
+): Promise<boolean> {
   const deleteParams = {
     Bucket: bucketName,
     Key: key,
-    VersionId: versionId
+    VersionId: versionId,
   }
 
   logger.info(`Deleting file version from S3: ${key}, version: ${versionId}`)
@@ -990,23 +999,32 @@ export async function deleteFileVersionFromS3(key: string, versionId: string): P
   try {
     const command = new DeleteObjectCommand(deleteParams)
     await s3Client.send(command)
-    logger.info(`File version deleted successfully from S3: ${key}, version: ${versionId}`)
+    logger.info(
+      `File version deleted successfully from S3: ${key}, version: ${versionId}`
+    )
     return true
   } catch (error) {
     if (error instanceof Error && error.name === 'NotFound') {
       logger.warn(`File version not found in S3: ${key}, version: ${versionId}`)
       return false
     }
-    logger.error(`Error deleting file version from S3: ${key}, version: ${versionId}, ${String(error)}`)
+    logger.error(
+      `Error deleting file version from S3: ${key}, version: ${versionId}, ${String(
+        error
+      )}`
+    )
     throw error
   }
 }
 
-export async function getFileVersionFromS3(key: string, versionId: string): Promise<Buffer> {
+export async function getFileVersionFromS3(
+  key: string,
+  versionId: string
+): Promise<Buffer> {
   const downloadParams = {
     Bucket: bucketName,
     Key: key,
-    VersionId: versionId
+    VersionId: versionId,
   }
 
   logger.info(`Downloading file version from S3: ${key}, version: ${versionId}`)
@@ -1023,12 +1041,18 @@ export async function getFileVersionFromS3(key: string, versionId: string): Prom
         Body.on('end', () => resolve(Buffer.concat(chunks)))
         Body.on('error', reject)
       })
-      logger.info(`File version downloaded successfully from S3: ${key}, version: ${versionId}`)
+      logger.info(
+        `File version downloaded successfully from S3: ${key}, version: ${versionId}`
+      )
       return data
     }
     throw new Error('Failed to download file version: Invalid body stream')
   } catch (error) {
-    logger.error(`Error downloading file version from S3: ${key}, version: ${versionId}, ${String(error)}`)
+    logger.error(
+      `Error downloading file version from S3: ${key}, version: ${versionId}, ${String(
+        error
+      )}`
+    )
     throw error
   }
 }
@@ -1039,24 +1063,24 @@ export async function getSignedURLFromS3(
   filename?: string,
   customBucketName?: string
 ): Promise<string> {
-  const encodedFilename = encodeURIComponent(filename ?? '');
-  logger.info(`Generating signed URL for S3 object: ${key}`);
+  const encodedFilename = encodeURIComponent(filename ?? '')
+  logger.info(`Generating signed URL for S3 object: ${key}`)
 
   const command = new GetObjectCommand({
     Bucket: customBucketName || bucketName,
     Key: key,
     ResponseContentDisposition: `attachment; filename=${encodedFilename}`,
-  });
+  })
 
   try {
     const signedUrl = await getSignedUrl(s3Client, command, {
       expiresIn: expires,
-    });
-    logger.info(`Signed URL generated successfully for: ${key}`);
-    return signedUrl;
+    })
+    logger.info(`Signed URL generated successfully for: ${key}`)
+    return signedUrl
   } catch (error) {
-    logger.error(`Error generating signed URL for ${key}: ${String(error)}`);
-    throw error;
+    logger.error(`Error generating signed URL for ${key}: ${String(error)}`)
+    throw error
   }
 }
 
@@ -1067,41 +1091,52 @@ export async function getFileVersionSignedURLFromS3(
   filename?: string,
   customBucketName?: string
 ): Promise<string> {
-  const encodedFilename = encodeURIComponent(filename ?? '');
-  logger.info(`Generating signed URL for S3 object version: ${key}, version: ${versionId}`);
+  const encodedFilename = encodeURIComponent(filename ?? '')
+  logger.info(
+    `Generating signed URL for S3 object version: ${key}, version: ${versionId}`
+  )
 
   const command = new GetObjectCommand({
     Bucket: customBucketName || bucketName,
     Key: key,
     VersionId: versionId,
     ResponseContentDisposition: `attachment; filename=${encodedFilename}`,
-  });
+  })
 
   try {
     const signedUrl = await getSignedUrl(s3Client, command, {
       expiresIn: expires,
-    });
-    logger.info(`Signed URL generated successfully for: ${key}, version: ${versionId}`);
-    return signedUrl;
+    })
+    logger.info(
+      `Signed URL generated successfully for: ${key}, version: ${versionId}`
+    )
+    return signedUrl
   } catch (error) {
-    logger.error(`Error generating signed URL for ${key}, version: ${versionId}: ${String(error)}`);
-    throw error;
+    logger.error(
+      `Error generating signed URL for ${key}, version: ${versionId}: ${String(
+        error
+      )}`
+    )
+    throw error
   }
 }
 
-export async function deleteFileFromS3(key: string, customBucketName?: string): Promise<void> {
-  logger.info(`Deleting S3 object: ${key}`);
+export async function deleteFileFromS3(
+  key: string,
+  customBucketName?: string
+): Promise<void> {
+  logger.info(`Deleting S3 object: ${key}`)
 
   const command = new DeleteObjectCommand({
     Bucket: customBucketName || bucketName,
-    Key: key
-  });
+    Key: key,
+  })
 
   try {
-    await s3Client.send(command);
-    logger.info(`Successfully deleted S3 object: ${key}`);
+    await s3Client.send(command)
+    logger.info(`Successfully deleted S3 object: ${key}`)
   } catch (error) {
-    logger.error(`Error deleting S3 object ${key}: ${String(error)}`);
-    throw error;
+    logger.error(`Error deleting S3 object ${key}: ${String(error)}`)
+    throw error
   }
 }
