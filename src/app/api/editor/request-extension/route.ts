@@ -1,4 +1,4 @@
-import { JobStatus, OrderStatus } from '@prisma/client';
+import { JobStatus } from '@prisma/client';
 import { NextResponse } from 'next/server';
 
 import logger from '@/lib/logger';

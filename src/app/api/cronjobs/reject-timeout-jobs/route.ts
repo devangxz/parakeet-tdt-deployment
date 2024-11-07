@@ -1,9 +1,9 @@
 import { JobStatus, JobType, OrderStatus } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
+import config from '../../../../../config.json'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
-import config from '../../../../../config.json'
 import { getAWSSesInstance } from '@/lib/ses'
 
 export async function POST() {

@@ -25,7 +25,7 @@ import {
   TabsTrigger,
 } from '@/components/editor/Tabs'
 import renderTitleInputs from '@/components/editor/TitleInputs'
-import { CTMSWord, LineData } from '@/components/editor/transcriptUtils'
+import { LineData } from '@/components/editor/transcriptUtils'
 import UploadDocxDialog from '@/components/editor/UploadDocxDialog'
 import { Button } from '@/components/ui/button'
 import {
@@ -123,7 +123,6 @@ function EditorPage() {
   const [diff, setDiff] = useState<Change[]>([])
   const [transcript, setTranscript] = useState('')
   const [ctms, setCtms] = useState<ConvertedASROutput[]>([])
-  const [updatedCtms, setUpdatedCtms] = useState<CTMSWord[]>([])
   const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null)
   const [step, setStep] = useState<string>('')
   const [selection, setSelection] = useState<{ index: number; length: number } | null>(null);
@@ -191,7 +190,7 @@ function EditorPage() {
     const quill = quillRef?.current?.getEditor();
     if (!quill) return;
     return adjustTimestamps(quill, Number(adjustTimestampsBy), selection)
-  }, [audioPlayer, quillRef, updatedCtms, adjustTimestampsBy])
+  }, [audioPlayer, quillRef, adjustTimestampsBy])
 
   const shortcutControls = useMemo(() => {
     const controls: Partial<ShortcutControls> = {
@@ -210,7 +209,6 @@ function EditorPage() {
     notes,
     step,
     cfd,
-    updatedCtms,
     setButtonLoading
   ]);
 
@@ -412,8 +410,6 @@ function EditorPage() {
       toast.error('Failed to run spellcheck')
     }
   }
-
-  let wordsIgnored = 0
 
   const handleSpellcheckAction = (action: string) => {
     if (!spellcheckValue.length) {

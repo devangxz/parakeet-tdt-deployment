@@ -5,7 +5,7 @@ import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 
-import { LineData, CTMSWord, WordData, updateContent } from './transcriptUtils'
+import { LineData, CTMSWord, WordData } from './transcriptUtils'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 import { ConvertedASROutput, convertSecondsToTimestamp, } from '@/utils/editorUtils'
@@ -30,7 +30,6 @@ interface EditorProps {
 export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, disableGoToWord, orderDetails, content, setContent, getLines }: EditorProps) {
     const quillRef = useRef<ReactQuill>(null)
     const [lines, setLines] = useState<LineData[]>([])
-    const [newCtms, setNewCtms] = useState<CTMSWord[]>([])
     const quillModules = {
         toolbar: false,
     }
@@ -87,7 +86,6 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
                 newLines.push({ content: lineContent, words: lineWords })
             })
 
-            setNewCtms(newCtms_local)
             setLines(newLines)
             return newCtms_local
         },
@@ -109,16 +107,7 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         localStorage.setItem('transcript', JSON.stringify({ [orderDetails.fileId]: text }))
     }, [])
 
-    const handleUpdateCtms = () => {
-        const quill = quillRef.current?.getEditor()
-        if (!quill) return
-        const text = quill.getText()
-        const updatedCtms = updateContent(text, lines)
-        setNewCtms(updatedCtms)
-    }
-
     const handleEditorClick = useCallback(() => {
-        handleUpdateCtms()
         const quill = quillRef.current?.getEditor()
         if (!quill) return
 

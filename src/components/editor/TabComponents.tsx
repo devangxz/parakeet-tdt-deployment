@@ -8,7 +8,7 @@ import Editor from "./Editor";
 import { TabsContent } from "./Tabs";
 import { Textarea } from "../ui/textarea";
 import { OrderDetails } from "@/app/editor/[fileId]/page";
-import { CTMSWord, LineData } from "@/components/editor/transcriptUtils";
+import { LineData } from "@/components/editor/transcriptUtils";
 import { ConvertedASROutput } from "@/utils/editorUtils";
 
 interface EditorTabComponentProps {
