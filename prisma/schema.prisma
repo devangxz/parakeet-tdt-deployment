@@ -415,6 +415,7 @@ model JobAssignment {
   earnings      Float         @default(0) @map("earnings")
   type          JobType       @default(QC)
   inputFile     InputFileType @default(ASR_OUTPUT) @map("input_file")
+  extensionRequested Boolean @default(false) @map("extension_requested")
 
   user  User  @relation(fields: [transcriberId], references: [id])
   order Order @relation(fields: [orderId], references: [id])

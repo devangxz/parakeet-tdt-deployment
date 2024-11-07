@@ -1,7 +1,7 @@
 import { ReloadIcon } from "@radix-ui/react-icons";
 
 import { Button } from "../ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { OrderDetails } from "@/app/editor/[fileId]/page";
@@ -43,16 +43,18 @@ const DownloadDocxDialog = ({ orderDetails, downloadableType, setButtonLoading, 
                     </div>
                 </RadioGroup>
             </DialogHeader>
-            <Button
-                disabled={buttonLoading.download}
-                onClick={downloadBlankDocx.bind(null, { orderDetails, downloadableType, setButtonLoading })}
-            >
-                {' '}
-                {buttonLoading.download && (
-                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                )}{' '}
-                Download File
-            </Button>
+            <DialogClose asChild>
+                <Button
+                    disabled={buttonLoading.download}
+                    onClick={downloadBlankDocx.bind(null, { orderDetails, downloadableType, setButtonLoading })}
+                >
+                    {' '}
+                    {buttonLoading.download && (
+                        <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                    )}{' '}
+                    Download File
+                </Button>
+            </DialogClose>
         </DialogContent>
     </Dialog>
 )

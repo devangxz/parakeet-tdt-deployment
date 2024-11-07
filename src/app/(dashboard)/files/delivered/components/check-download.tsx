@@ -1,5 +1,6 @@
 import { ReloadIcon, StarFilledIcon, StarIcon } from '@radix-ui/react-icons'
 import axios from 'axios'
+import Link from 'next/link'
 import { Session } from 'next-auth'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -14,7 +15,6 @@ import {
   DialogFooter,
   DialogHeader,
 } from '@/components/ui/dialog'
-
 interface FileItem {
   id: string
   filename: string
@@ -200,6 +200,9 @@ export function CheckAndDownload({
                 >
                   Open Editor
                 </Button> */}
+                <Button asChild>
+                  <Link href={`/editor/${id}`}>Open Editor</Link>
+                </Button>
                 <Button onClick={subTitile?.getSubtitleFile}>
                   {!showSubtitle ? 'Show Subtitles' : 'Hide Subtitles'}
                 </Button>
