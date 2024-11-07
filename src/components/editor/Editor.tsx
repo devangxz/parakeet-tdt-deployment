@@ -5,7 +5,7 @@ import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 
-import { LineData, CTMSWord, WordData } from './transcriptUtils'
+import { LineData, CTMSWord, WordData, updateContent } from './transcriptUtils'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 import { ConvertedASROutput, convertSecondsToTimestamp, } from '@/utils/editorUtils'
@@ -20,18 +20,17 @@ interface EditorProps {
     audioPlayer: HTMLAudioElement | null
     duration: number
     getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void
-    getCtms: (ctms: CTMSWord[]) => void
     disableGoToWord: boolean
     orderDetails: OrderDetails
     content: { insert: string }[]
     setContent: (content: { insert: string }[]) => void
+    getLines: (lineData: LineData[]) => void
 }
 
-export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, getCtms, disableGoToWord, orderDetails, content, setContent }: EditorProps) {
+export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, disableGoToWord, orderDetails, content, setContent, getLines }: EditorProps) {
     const quillRef = useRef<ReactQuill>(null)
     const [lines, setLines] = useState<LineData[]>([])
     const [newCtms, setNewCtms] = useState<CTMSWord[]>([])
-    const workerRef = useRef<Worker | null>(null)
     const quillModules = {
         toolbar: false,
     }
@@ -46,7 +45,6 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
             let wordIndex = 0
 
             const newCtms_local: CTMSWord[] = []
-
             textLines.forEach((line) => {
                 const lineContent: { insert: string }[] = []
                 const lineWords: WordData[] = []
@@ -103,30 +101,6 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         quill.container.style.fontSize = '16px'
     }, [processTranscript, transcript, ctms])
 
-    const handleUpdateContent = useCallback(() => {
-        const quill = quillRef.current?.getEditor()
-        if (!quill) return
-
-        const newContent = quill.getText()
-
-        if (workerRef.current) {
-            workerRef.current.postMessage({ quillContent: newContent, lines });
-        }
-    }, [lines])
-
-    useEffect(() => {
-        workerRef.current = new Worker(new URL('../../utils/updateContentWorker.ts', import.meta.url));
-
-        workerRef.current.onmessage = (event) => {
-            const updatedCtms = event.data;
-            setNewCtms(updatedCtms);
-        };
-
-        return () => {
-            workerRef.current?.terminate();
-        };
-    }, []);
-
     const handleContentChange = useCallback(() => {
         const quill = quillRef.current?.getEditor()
         if (!quill) return
@@ -135,8 +109,16 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         localStorage.setItem('transcript', JSON.stringify({ [orderDetails.fileId]: text }))
     }, [])
 
+    const handleUpdateCtms = () => {
+        const quill = quillRef.current?.getEditor()
+        if (!quill) return
+        const text = quill.getText()
+        const updatedCtms = updateContent(text, lines)
+        setNewCtms(updatedCtms)
+    }
+
     const handleEditorClick = useCallback(() => {
-        handleUpdateContent()
+        handleUpdateCtms()
         const quill = quillRef.current?.getEditor()
         if (!quill) return
 
@@ -342,13 +324,10 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
     }, [handleEditorClick])
 
     useEffect(() => {
-        getCtms(newCtms)
-    }, [newCtms, getCtms])
-
-    useEffect(() => {
         if (!content.length) {
             setContent([{ insert: transcript }])
         }
+        getLines(lines)
     }, [lines])
 
     useEffect(() => {
@@ -357,26 +336,6 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
 
     return (
         <>
-            {/* <button onClick={() => {
-                const quill = quillRef.current?.getEditor();
-                if (!quill) return;
-                navigateAndPlayBlanks(quill, audioPlayer, setDisableGoToWord)
-            }}>play n blank</button>
-            <button onClick={() => {
-                const quill = quillRef.current?.getEditor();
-                if (!quill) return;
-                navigateAndPlayBlanks(quill, audioPlayer, setDisableGoToWord, true)
-            }}>play p blank</button>
-            <button onClick={() => {
-                const quill = quillRef.current?.getEditor();
-                if (!quill) return;
-                adjustTimestamps(quill, newCtms, setNewCtms, 60)
-            }}>adjust</button>
-            <button onClick={() => {
-                const quill = quillRef.current?.getEditor();
-                if (!quill || !audioPlayer) return;
-                playCurrentParagraphTimestamp(quill, audioPlayer, setDisableGoToWord)
-            }}>play c w</button> */}
             <ReactQuill
                 ref={quillRef}
                 theme='snow'

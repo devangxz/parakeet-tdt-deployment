@@ -36,7 +36,7 @@ export async function POST(req: Request) {
             (acc: { word: string; suggestions: string[] }[], word: string) => {
                 if (
                     !/\d/.test(word) &&
-                    dictionary.isMisspelled(word) &&
+                    dictionary.isMisspelled(word.toLowerCase()) &&
                     !acc.find((item) => item.word === word)
                 ) {
                     acc.push({

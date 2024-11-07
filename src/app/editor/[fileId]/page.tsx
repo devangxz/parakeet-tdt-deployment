@@ -18,14 +18,14 @@ import FrequentTermsDialog from '@/components/editor/FrequentTermsDialog'
 import Header from '@/components/editor/Header'
 import ReportDialog from '@/components/editor/ReportDialog'
 import SectionSelector from '@/components/editor/SectionSelector'
-import { DiffTabComponent, EditorTabComponent, InfoTabComponent, SpeakerNameTabComponent } from '@/components/editor/TabComponents'
+import { DiffTabComponent, EditorTabComponent, InfoTabComponent } from '@/components/editor/TabComponents'
 import {
   Tabs,
   TabsList,
   TabsTrigger,
 } from '@/components/editor/Tabs'
 import renderTitleInputs from '@/components/editor/TitleInputs'
-import { CTMSWord } from '@/components/editor/transcriptUtils'
+import { CTMSWord, LineData } from '@/components/editor/transcriptUtils'
 import UploadDocxDialog from '@/components/editor/UploadDocxDialog'
 import { Button } from '@/components/ui/button'
 import {
@@ -47,6 +47,7 @@ import {
 } from '@/components/ui/tooltip'
 import { RenderPDFDocument } from '@/components/utils'
 import { AUTOSAVE_INTERVAL } from '@/constants'
+import usePreventMultipleTabs from '@/hooks/usePreventMultipleTabs'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 import {
   ConvertedASROutput,
@@ -158,6 +159,13 @@ function EditorPage() {
   const [spellcheckOpen, setSpellcheckOpen] = useState(false);
   const [spellcheckValue, setSpellCheckValue] = useState<{ word: string, suggestions: string[] }[]>([]);
   const [content, setContent] = useState<{ insert: string }[]>([])
+  const [lines, setLines] = useState<LineData[]>([])
+
+  const isActive = usePreventMultipleTabs(params?.fileId as string || '')
+
+  if (!isActive) {
+    router.back()
+  }
 
   const getEditorText = useCallback(() => quillRef?.current?.getEditor().getText() || '', [quillRef]);
 
@@ -182,7 +190,7 @@ function EditorPage() {
   const adjustTimestampsInstance = useCallback(() => {
     const quill = quillRef?.current?.getEditor();
     if (!quill) return;
-    return adjustTimestamps(quill, updatedCtms, setUpdatedCtms, Number(adjustTimestampsBy), selection)
+    return adjustTimestamps(quill, Number(adjustTimestampsBy), selection)
   }, [audioPlayer, quillRef, updatedCtms, adjustTimestampsBy])
 
   const shortcutControls = useMemo(() => {
@@ -190,7 +198,7 @@ function EditorPage() {
       playNextBlank: playNextBlankInstance(),
       playPreviousBlank: playPreviousBlankInstance(),
       playAudioFromTheStartOfCurrentParagraph: playCurrentParagraphInstance(),
-      saveChanges: () => handleSave({ getEditorText, orderDetails, notes, cfd, updatedCtms, setButtonLoading }),
+      saveChanges: () => handleSave({ getEditorText, orderDetails, notes, cfd, setButtonLoading, lines }),
     };
     return controls as ShortcutControls;
   }, [
@@ -267,11 +275,11 @@ function EditorPage() {
 
   useEffect(() => {
     const interval = setInterval(async () => {
-      await handleSave({ getEditorText, orderDetails, notes, cfd, updatedCtms, setButtonLoading })
+      await handleSave({ getEditorText, orderDetails, notes, cfd, setButtonLoading, lines })
     }, 1000 * 60 * AUTOSAVE_INTERVAL)
 
     return () => clearInterval(interval)
-  }, [getEditorText, orderDetails, notes, step, cfd, updatedCtms])
+  }, [getEditorText, orderDetails, notes, step, cfd, lines])
 
   useEffect(() => {
     const handleTimeUpdate = () => {
@@ -326,10 +334,6 @@ function EditorPage() {
 
   const getQuillRef = (quillRef: React.RefObject<ReactQuill>) => {
     setQuillRef(quillRef)
-  }
-
-  const getCtms = (ctms: CTMSWord[]) => {
-    setUpdatedCtms(ctms)
   }
 
   const handleAdjustTimestamps = () => {
@@ -399,6 +403,10 @@ function EditorPage() {
         toast.dismiss(toastId)
       }
       setSpellcheckOpen(!spellcheckOpen);
+      if (submitting && spellcheckOpen) {
+        setIsSubmitModalOpen(true);
+        setSubmitting(false);
+      }
     } catch (error) {
       toast.dismiss(toastId)
       toast.error('Failed to run spellcheck')
@@ -408,37 +416,77 @@ function EditorPage() {
   let wordsIgnored = 0
 
   const handleSpellcheckAction = (action: string) => {
-    if (!spellcheckValue.length) return;
-    const currentWord = ` ${spellcheckValue[0].word} `;
+    if (!spellcheckValue.length) {
+      setIsSubmitModalOpen(true);
+      setSpellcheckOpen(false);
+      return;
+    }
+
+    const currentWord = spellcheckValue[0].word;
+
     if (action === 'ignoreOnce') {
+      // Remove the current word instance
+      const newSpellcheckValue = [...spellcheckValue];
+      newSpellcheckValue.shift();
+      setSpellCheckValue(newSpellcheckValue);
       setReplaceMisspelledWord('');
-      searchAndSelectInstance(currentWord);
-      wordsIgnored += 1
-    } else if (action === 'ignoreAll') {
+
+      if (newSpellcheckValue.length === 0) {
+        setSpellcheckOpen(false);
+        setIsSubmitModalOpen(true);
+      } else {
+        searchAndSelectInstance(` ${newSpellcheckValue[0].word} `);
+      }
+    }
+
+    if (action === 'ignoreAll') {
+      // Remove all instances of the current word
+      const newSpellcheckValue = spellcheckValue.filter(item => item.word !== currentWord);
+      setSpellCheckValue(newSpellcheckValue);
       setReplaceMisspelledWord('');
-      searchAndSelectInstance(` ${spellcheckValue[1].word} `);
-      setSpellCheckValue(spellcheckValue.slice(1));
+
+      if (newSpellcheckValue.length === 0) {
+        setSpellcheckOpen(false);
+        setIsSubmitModalOpen(true);
+      } else {
+        searchAndSelectInstance(` ${newSpellcheckValue[0].word} `);
+      }
     }
 
     if (action === 'changeOnce') {
       if (!replaceMisspelledWord) return toast.error('Please enter a word to replace');
-      searchAndSelectInstance(currentWord);
-      replaceTextInstance(currentWord, ` ${replaceMisspelledWord} `);
+
+      // Replace current instance and remove from array
+      searchAndSelectInstance(` ${currentWord} `);
+      replaceTextInstance(` ${currentWord} `, ` ${replaceMisspelledWord} `);
+
+      const newSpellcheckValue = [...spellcheckValue];
+      newSpellcheckValue.shift();
+      setSpellCheckValue(newSpellcheckValue);
+      setReplaceMisspelledWord('');
+
+      if (newSpellcheckValue.length === 0) {
+        setSpellcheckOpen(false);
+        setIsSubmitModalOpen(true);
+      } else {
+        searchAndSelectInstance(` ${newSpellcheckValue[0].word} `);
+      }
     }
 
     if (action === 'changeAll') {
       if (!replaceMisspelledWord) return toast.error('Please enter a word to replace');
-      replaceTextInstance(currentWord, ` ${replaceMisspelledWord} `, true);
-    }
 
-    const quill = quillRef?.current?.getEditor();
-    if (quill) {
-      const text = quill.getText();
-      const wordOccurrences = text.split(currentWord).length - 1;
-      if (!text.includes(currentWord) || wordOccurrences <= wordsIgnored) {
-        searchAndSelectInstance(` ${spellcheckValue[1].word} `);
-        setSpellCheckValue(spellcheckValue.slice(1));
-        setReplaceMisspelledWord('');
+      // Replace all instances and remove all occurrences from array
+      replaceTextInstance(` ${currentWord} `, ` ${replaceMisspelledWord} `, true);
+      const newSpellcheckValue = spellcheckValue.filter(item => item.word !== currentWord);
+      setSpellCheckValue(newSpellcheckValue);
+      setReplaceMisspelledWord('');
+
+      if (newSpellcheckValue.length === 0) {
+        setSpellcheckOpen(false);
+        setIsSubmitModalOpen(true);
+      } else {
+        searchAndSelectInstance(` ${newSpellcheckValue[0].word} `);
       }
     }
   }
@@ -507,6 +555,10 @@ function EditorPage() {
     }
   }
 
+  const getLines = (lineData: LineData[]) => {
+    setLines(lineData)
+  }
+
   return (
     <div className='bg-[#F7F5FF] h-screen flex flex-col'>
       <Header
@@ -520,6 +572,8 @@ function EditorPage() {
         audioPlayer={audioPlayer}
         submitting={submitting}
         setIsSubmitModalOpen={setIsSubmitModalOpen}
+        toggleSpellCheck={toggleSpellcheck}
+        setSubmitting={setSubmitting}
       />
       <div className='flex justify-between px-16 my-5'>
         <div className='flex'>
@@ -604,8 +658,8 @@ function EditorPage() {
           {editorMode === 'Editor' ||
             ((step === 'QC' || session?.user?.role === 'OM') && (
               <Button
-                onClick={() => handleSave({ getEditorText, orderDetails, notes, cfd, updatedCtms, setButtonLoading })}
-                // disabled={buttonLoading.save}
+                onClick={() => handleSave({ getEditorText, orderDetails, notes, cfd, setButtonLoading, lines })}
+                disabled={buttonLoading.save}
                 className='ml-2'
               >
                 {' '}
@@ -752,9 +806,6 @@ function EditorPage() {
                       <TabsTrigger className='text-base' value='transcribe'>
                         Transcribe
                       </TabsTrigger>
-                      <TabsTrigger className='text-base' value='speaker'>
-                        Speakers
-                      </TabsTrigger>
                       <TabsTrigger className='text-base' value='diff'>
                         Diff
                       </TabsTrigger>
@@ -764,9 +815,7 @@ function EditorPage() {
                     </TabsList>
                   </div>
 
-                  <EditorTabComponent content={content} setContent={setContent} orderDetails={orderDetails} transcript={transcript} ctms={ctms} audioPlayer={audioPlayer} audioDuration={audioDuration} getQuillRef={getQuillRef} getCtms={getCtms} disableGoToWord={disableGoToWord} />
-
-                  <SpeakerNameTabComponent />
+                  <EditorTabComponent content={content} getLines={getLines} setContent={setContent} orderDetails={orderDetails} transcript={transcript} ctms={ctms} audioPlayer={audioPlayer} audioDuration={audioDuration} getQuillRef={getQuillRef} disableGoToWord={disableGoToWord} />
 
                   <DiffTabComponent diff={diff} />
 

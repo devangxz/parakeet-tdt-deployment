@@ -5,7 +5,7 @@ import { toast } from "sonner"
 
 import axiosInstance from "./axios"
 import { OrderDetails, UploadFilesType } from "@/app/editor/[fileId]/page"
-import { CTMSWord } from "@/components/editor/transcriptUtils";
+import { CTMSWord, LineData, updateContent } from "@/components/editor/transcriptUtils";
 import { ALLOWED_META, BACKEND_URL, FILE_CACHE_URL, MINIMUM_AUDIO_PLAYBACK_PERCENTAGE } from "@/constants"
 export type ButtonLoading = {
     upload: boolean
@@ -487,8 +487,8 @@ type HandleSaveParams = {
     orderDetails: OrderDetails;
     notes: string;
     cfd: string;
-    updatedCtms: CTMSWord[];
     setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>;
+    lines: LineData[];
 };
 
 const handleSave = async ({
@@ -496,24 +496,27 @@ const handleSave = async ({
     orderDetails,
     notes,
     cfd,
-    updatedCtms,
     setButtonLoading,
+    lines
 }: HandleSaveParams) => {
     setButtonLoading((prevButtonLoading) => ({
         ...prevButtonLoading,
         save: true,
     }));
-    const transcript = getEditorText();
-    const paragraphs = transcript.split('\n').filter(paragraph => paragraph.trim() !== '');
-    const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/;
-    for (const paragraph of paragraphs) {
-        if (!paragraphRegex.test(paragraph)) {
-            return toast.error('Invalid paragraph format detected. Each paragraph must start with a timestamp and speaker identification.');
-        }
-    }
-    localStorage.setItem(orderDetails.fileId, JSON.stringify({ notes: notes }));
+
     const toastId = toast.loading(`Saving Transcription...`);
+
     try {
+        const transcript = getEditorText();
+        const paragraphs = transcript.split('\n').filter(paragraph => paragraph.trim() !== '');
+        const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/;
+        const updatedCtms = updateContent(transcript, lines);
+        for (const paragraph of paragraphs) {
+            if (!paragraphRegex.test(paragraph)) {
+                return toast.error('Invalid paragraph format detected. Each paragraph must start with a timestamp and speaker identification.');
+            }
+        }
+        localStorage.setItem(orderDetails.fileId, JSON.stringify({ notes: notes }));
         await axiosInstance.post(`${FILE_CACHE_URL}/save-transcript`, {
             fileId: orderDetails.fileId,
             transcript,
@@ -757,8 +760,6 @@ const navigateAndPlayBlanks = (
 
 const adjustTimestamps = (
     quill: Quill,
-    newCtms: CTMSWord[],
-    setNewCtms: (ctms: CTMSWord[]) => void,
     adjustment: number,
     selection: { index: number; length: number } | null
 ) => {
@@ -792,14 +793,6 @@ const adjustTimestamps = (
 
     quill.deleteText(selection.index, selection.length);
     quill.insertText(selection.index, adjustedText);
-
-    const updatedCtms = newCtms.map(ctm => {
-        if (ctm.start >= selection.index && ctm.start < selection.index + selection.length) {
-            return { ...ctm, start: ctm.start + adjustment, end: ctm.end + adjustment };
-        }
-        return ctm;
-    });
-    setNewCtms(updatedCtms);
 
     toast.success("Timestamps adjusted successfully.");
 };

@@ -14,6 +14,7 @@ import {
   DialogFooter,
   DialogHeader,
 } from '@/components/ui/dialog'
+import Link from 'next/link'
 
 interface FileItem {
   id: string
@@ -200,6 +201,9 @@ export function CheckAndDownload({
                 >
                   Open Editor
                 </Button> */}
+                <Button asChild>
+                  <Link href={`/editor/${id}`}>Open Editor</Link>
+                </Button>
                 <Button onClick={subTitile?.getSubtitleFile}>
                   {!showSubtitle ? 'Show Subtitles' : 'Hide Subtitles'}
                 </Button>
