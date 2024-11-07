@@ -1,6 +1,6 @@
 'use client'
 
-import { ClockIcon, Cross1Icon, ReloadIcon, TextAlignLeftIcon, ThickArrowLeftIcon, ThickArrowRightIcon } from '@radix-ui/react-icons'
+import { ClockIcon, Cross1Icon, ReloadIcon, TextAlignLeftIcon, ThickArrowLeftIcon, ThickArrowRightIcon, ZoomInIcon, ZoomOutIcon } from '@radix-ui/react-icons'
 import axios from 'axios'
 import { Change, diffWords } from 'diff'
 import { useParams, useRouter } from 'next/navigation'
@@ -38,6 +38,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import {
   TooltipProvider,
   Tooltip,
@@ -138,6 +139,7 @@ function EditorPage() {
     mp3: false,
     frequentTerms: false,
   })
+  const [reReviewComment, setReReviewComment] = useState('')
 
   const [adjustTimestampsBy, setAdjustTimestampsBy] = useState('0')
   const [audioDuration, setAudioDuration] = useState(1)
@@ -475,6 +477,36 @@ function EditorPage() {
     };
   }, [orderDetails]);
 
+  const adjustFontSize = useCallback((increase: boolean) => {
+    if (!quillRef?.current) return;
+    const quill = quillRef.current.getEditor();
+    const container = quill.container as HTMLElement;
+    const currentSize = parseInt(window.getComputedStyle(container).fontSize);
+    if (increase) {
+      container.style.fontSize = `${currentSize + 2}px`;
+    } else {
+      container.style.fontSize = `${currentSize - 2}px`;
+    }
+  }, [quillRef])
+
+  const increaseFontSize = () => adjustFontSize(true);
+  const decreaseFontSize = () => adjustFontSize(false);
+
+  const handleReReview = async () => {
+    const toastId = toast.loading('Processing re-review request...')
+    try {
+      await axios.post(`/api/editor/re-review`, {
+        fileId: orderDetails.fileId,
+        comment: reReviewComment,
+      })
+      toast.dismiss(toastId)
+      const successToastId = toast.success(`Re-review request submitted successfully`)
+      toast.dismiss(successToastId)
+    } catch (error) {
+      toast.error('Failed to re-review the file')
+    }
+  }
+
   return (
     <div className='bg-[#F7F5FF] h-screen flex flex-col'>
       <Header
@@ -539,12 +571,41 @@ function EditorPage() {
               Report
             </Button>
           </>}
+
+          {session?.user?.role === 'CUSTOMER' && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button>Re-Review</Button>
+              </DialogTrigger>
+              <DialogContent className="w-2/5">
+                <DialogHeader>
+                  <DialogTitle>Order Re-review</DialogTitle>
+                  <DialogDescription>
+                    Please enter specific instructions for the re-review, if any
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <Textarea
+                    onChange={(e) => setReReviewComment(e.target.value)}
+                    placeholder="Enter instructions..."
+                    className="min-h-[100px] resize-none"
+                  />
+                </div>
+                <div className="flex justify-end gap-3">
+                  <DialogClose asChild>
+                    <Button variant="outline">Cancel</Button>
+                  </DialogClose>
+                  <Button onClick={handleReReview} type="submit">Order</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+
           {editorMode === 'Editor' ||
             ((step === 'QC' || session?.user?.role === 'OM') && (
               <Button
                 onClick={() => handleSave({ getEditorText, orderDetails, notes, cfd, updatedCtms, setButtonLoading })}
                 // disabled={buttonLoading.save}
-                // disabled={true}
                 className='ml-2'
               >
                 {' '}
@@ -554,6 +615,7 @@ function EditorPage() {
                 Save
               </Button>
             ))}
+
           {session?.user?.role !== 'CUSTOMER' && <Button
             onClick={() => setSubmitting(true)}
             className='ml-2'
@@ -587,7 +649,7 @@ function EditorPage() {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <ActionButton onClick={playNextBlankInstance()} tooltip=''>
+                    <ActionButton onClick={playNextBlankInstance()}>
                       <ThickArrowRightIcon />
                     </ActionButton>
                   </TooltipTrigger>
@@ -598,7 +660,7 @@ function EditorPage() {
 
                 <Tooltip>
                   <TooltipTrigger>
-                    <ActionButton onClick={playPreviousBlankInstance()} tooltip=''>
+                    <ActionButton onClick={playPreviousBlankInstance()}>
                       <ThickArrowLeftIcon />
                     </ActionButton>
                   </TooltipTrigger>
@@ -609,7 +671,7 @@ function EditorPage() {
 
                 <Tooltip>
                   <TooltipTrigger>
-                    <ActionButton onClick={playCurrentParagraphInstance()} tooltip=''>
+                    <ActionButton onClick={playCurrentParagraphInstance()}>
                       <TextAlignLeftIcon />
                     </ActionButton>
                   </TooltipTrigger>
@@ -623,7 +685,7 @@ function EditorPage() {
                     <span>
                       <Dialog>
                         <DialogTrigger asChild>
-                          <ActionButton onClick={setSelectionHandler} tooltip=''>
+                          <ActionButton onClick={setSelectionHandler}>
                             <ClockIcon />
                           </ActionButton>
                         </DialogTrigger>
@@ -653,6 +715,29 @@ function EditorPage() {
                     <p>Adjust timestamps</p>
                   </TooltipContent>
                 </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger>
+                    <ActionButton onClick={increaseFontSize}>
+                      <ZoomInIcon />
+                    </ActionButton>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Increase font size</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger>
+                    <ActionButton onClick={decreaseFontSize}>
+                      <ZoomOutIcon />
+                    </ActionButton>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Decrease font size</p>
+                  </TooltipContent>
+                </Tooltip>
+
               </TooltipProvider>
             </div>
             <div className='h-[66%]'>

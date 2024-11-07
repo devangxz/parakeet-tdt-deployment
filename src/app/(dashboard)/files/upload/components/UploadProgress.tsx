@@ -1,7 +1,18 @@
 'use client'
 
 import { Box, CircularProgress } from '@mui/material';
-import { ChevronUp, ChevronDown, CheckCircle, XCircle } from 'lucide-react';
+import {
+    ChevronUp,
+    ChevronDown,
+    CheckCircle,
+    XCircle,
+    Music,
+    Video,
+    Mic,
+    FileVideo,
+    File,
+    FileText
+} from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 
 import { useUpload } from '@/app/context/UploadProvider';
@@ -10,7 +21,7 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/comp
 
 interface UploadStatus {
     progress: number;
-    status: 'uploading' | 'completed' | 'failed';
+    status: 'uploading' | 'processing' | 'completed' | 'failed';
     error?: string;
 }
 
@@ -23,43 +34,37 @@ const UploadProgressItem = ({ file, status }: { file: UploadFile; status: Upload
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
 
     const getFileIcon = (ext: string) => {
-        switch (ext.toLowerCase()) {
-            // Audio files
-            case 'mp3':
-            case 'wav':
-            case 'aac':
-            case 'ogg':
-            case 'flac':
-            case 'wma':
-                return '🎵';
+        const commonProps = {
+            size: 20,
+            strokeWidth: 2
+        };
 
-            // Video files
-            case 'mp4':
-            case 'avi':
-            case 'wmv':
-            case 'mov':
-            case 'webm':
-            case 'mkv':
-            case 'flv':
-            case '3gp':
-                return '🎬';
-
-            // Special cases
-            case 'm4a':
-                return '🎙️'; // Audio recording icon
-            case 'm4v':
-                return '📹'; // Video camera icon
-            case 'mxf':
-                return '🎞️'; // Film frames icon
-            case 'opus':
-                return '🔊'; // Speaker icon
-            case 'docx':
-                return '📄'; // Document icon
-
-            // Default case
-            default:
-                return '📁'; // Folder icon for unknown types
+        const audioTypes = ['mp3', 'wav', 'wma', 'aac', 'flac', 'ogg', 'aif', 'aiff', 'amr', '3ga'];
+        if (audioTypes.includes(ext.toLowerCase())) {
+            return <Music {...commonProps} className="text-blue-500" />;
         }
+
+        const voiceTypes = ['m4a', 'opus'];
+        if (voiceTypes.includes(ext.toLowerCase())) {
+            return <Mic {...commonProps} className="text-purple-500" />;
+        }
+
+        const videoTypes = ['mp4', 'avi', 'wmv', 'mov', 'webm', 'flv', '3gp', 'mpg', 'mpeg', 'm4v', 'ogv'];
+        if (videoTypes.includes(ext.toLowerCase())) {
+            return <Video {...commonProps} className="text-red-500" />;
+        }
+
+        const proVideoTypes = ['mxf', 'mts', 'mkv'];
+        if (proVideoTypes.includes(ext.toLowerCase())) {
+            return <FileVideo {...commonProps} className="text-orange-500" />;
+        }
+
+        const docTypes = ['docx'];
+        if (docTypes.includes(ext.toLowerCase())) {
+            return <FileText {...commonProps} className="text-emerald-500" />;
+        }
+
+        return <File {...commonProps} className="text-gray-500" />;
     };
 
     const renderStatusIcon = () => {
@@ -75,6 +80,26 @@ const UploadProgressItem = ({ file, status }: { file: UploadFile; status: Upload
                             </TooltipTrigger>
                             <TooltipContent>
                                 <p>Upload failed</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                );
+            case 'processing':
+                return (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <div className="flex items-center">
+                                    <CircularProgress
+                                        size={20}
+                                        sx={{
+                                            color: 'hsl(var(--primary))',
+                                        }}
+                                    />
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Processing file...</p>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -144,6 +169,7 @@ const UploadProgress = () => {
     const activeUploadIdRef = useRef<string | null>(null);
 
     const formatTimeLeft = (seconds: number) => {
+        seconds = Math.max(1, Math.round(seconds));
         if (seconds < 60) return `${Math.round(seconds)} sec left`;
         if (seconds < 3600) {
             const minutes = Math.round(seconds / 60);
@@ -222,12 +248,12 @@ const UploadProgress = () => {
             let estimatedTimeLeft = remainingSize / avgSpeed;
 
             // Apply some constraints to avoid unrealistic estimates
-            estimatedTimeLeft = Math.max(estimatedTimeLeft, 1);
+            estimatedTimeLeft = Math.max(1, estimatedTimeLeft);
             estimatedTimeLeft = Math.min(estimatedTimeLeft, 24 * 60 * 60);
 
             // Update the time estimate if it's reasonable
             if (lastEstimateRef.current === null ||
-                (estimatedTimeLeft < lastEstimateRef.current && estimatedTimeLeft > 0.5)) {
+                (estimatedTimeLeft < lastEstimateRef.current && estimatedTimeLeft >= 1)) {
                 lastEstimateRef.current = estimatedTimeLeft;
                 setTimeLeft(formatTimeLeft(estimatedTimeLeft));
             }
@@ -262,12 +288,25 @@ const UploadProgress = () => {
     const pluralize = (count: number, singular: string, plural: string) => count === 1 ? singular : plural;
 
     const getHeaderContent = () => {
+        const processingFiles = uploadingFiles.filter(
+            file => uploadStatus[file.name]?.status === 'processing'
+        ).length;
+
         if (inProgressFiles > 0) {
             return {
                 title: totalFiles === 1
                     ? 'Uploading 1 file'
                     : `Uploading ${inProgressFiles}/${totalFiles} files`,
                 subtitle: timeLeft || 'Calculating time left...'
+            };
+        }
+
+        if (processingFiles > 0) {
+            return {
+                title: processingFiles === 1
+                    ? 'Processing 1 file'
+                    : `Processing ${processingFiles} files`,
+                subtitle: 'This might take a moment...'
             };
         }
 

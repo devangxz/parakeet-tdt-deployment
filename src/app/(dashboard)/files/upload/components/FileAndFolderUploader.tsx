@@ -1,31 +1,28 @@
-'use client'
+'use client';
 
-import { UploadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
-import { FolderUp } from 'lucide-react'
-import { useSession } from 'next-auth/react'
-import React, { ChangeEvent, useEffect, useRef, useState } from 'react'
-import Dropzone from 'react-dropzone'
-import { toast } from 'sonner'
-import { v4 as uuidv4 } from 'uuid'
+import { UploadIcon } from '@radix-ui/react-icons';
+import axios from 'axios';
+import { FileUp } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import React, { ChangeEvent, useEffect, useRef, useState } from 'react';
+import Dropzone from 'react-dropzone';
+import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
 
-import { useUpload } from '@/app/context/UploadProvider'
-import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, ORG_REMOTELEGAL, ORG_REMOTELEGAL_FOLDER, UPLOAD_MAX_RETRIES, UPLOAD_RETRY_DELAY } from '@/constants'
-import { cn } from '@/lib/utils'
-import validateFileType, { getAllowedFileExtensions, getAllowedMimeTypes } from '@/utils/validateFileType'
-
-interface UploadPart {
-  ETag?: string;
-  PartNumber: number;
-}
+import { useUpload } from '@/app/context/UploadProvider';
+import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, ORG_REMOTELEGAL, ORG_REMOTELEGAL_FOLDER, UPLOAD_MAX_RETRIES, UPLOAD_RETRY_DELAY } from '@/constants';
+import { cn } from '@/lib/utils';
+import sleep from '@/utils/sleep';
+import validateFileType, { getAllowedFileExtensions, getAllowedMimeTypes } from '@/utils/validateFileType';
 
 interface UploadState {
   uploadId: string | null;
   key: string | null;
-  completedParts: UploadPart[];
+  completedParts: { ETag?: string; PartNumber: number }[];
   totalUploaded: number;
   lastFailedPart: number | null;
 }
+
 interface FileWithId {
   name: string;
   size: number;
@@ -35,18 +32,18 @@ interface FileWithId {
   isRLDocx: boolean;
 }
 
-interface FileAndFolderUploaderProps {
-  onUploadSuccess: (success: boolean) => void;
-}
-
 interface CustomInputAttributes extends React.InputHTMLAttributes<HTMLInputElement> {
   directory?: string;
   webkitdirectory?: string;
 }
 
+interface FileAndFolderUploaderProps {
+  onUploadSuccess: (success: boolean) => void;
+}
+
 const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadSuccess }) => {
   const { data: session } = useSession();
-  const { uploadingFiles, setUploadingFiles, updateUploadStatus } = useUpload();
+  const { uploadingFiles, setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
   const [uploadStates, setUploadStates] = useState<{ [key: string]: UploadState }>({});
 
   const initializeUploadState = (): UploadState => ({
@@ -67,13 +64,10 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
   };
 
   const abortControllersRef = useRef<{ [key: string]: AbortController }>({});
-  const eventSourceRef = useRef<EventSource | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
   const isRemoteLegal = session?.user?.organizationName.toLocaleLowerCase() === ORG_REMOTELEGAL.toLocaleLowerCase();
-
-  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   const isRetryableError = (error: unknown): boolean => {
     if (!axios.isAxiosError(error)) return false;
@@ -148,7 +142,6 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
           },
         });
         return;
-
       } catch (error) {
         retryCount++;
         await handleRetryableError(error, retryCount);
@@ -278,6 +271,12 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
       } else {
         await multiPartUpload(file);
       }
+
+      updateUploadStatus(file.name, {
+        progress: 99,
+        status: 'processing'
+      });
+
       await cleanupUpload(file, uploadStates[file.name]);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
@@ -292,6 +291,11 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
   };
 
   const handleFileOrFolderUpload = async (files: File[]) => {
+    if (isUploading) {
+      toast.error("Please wait for current uploads to complete before starting new uploads");
+      return;
+    }
+
     let filesToUpload: FileWithId[] = [];
 
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -299,155 +303,103 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
 
     setUploadStates({});
     setUploadingFiles([]);
+    setIsUploading(true);
 
-    if (isRemoteLegal) {
-      const remoteLegalFiles = files.filter(file => {
-        const pathSegments = file.webkitRelativePath.split('/');
-        return pathSegments.length > 1 && pathSegments[1].toLowerCase() === ORG_REMOTELEGAL_FOLDER.toLowerCase();
-      });
-
-      if (remoteLegalFiles.length === 0) {
-        toast.error("No 'Scribie' folder found or the folder is empty.");
-        return;
-      }
-
-      const mp3File = remoteLegalFiles.find(file => file.name.toLowerCase().endsWith('.mp3'));
-      const docxFile = remoteLegalFiles.find(file => file.name.toLowerCase().endsWith('.docx'));
-
-      if (!mp3File || !docxFile) {
-        toast.error("Both MP3 and DOCX files are required in the 'Scribie' folder.");
-        return;
-      }
-
-      const commonFileId = uuidv4();
-      filesToUpload = [
-        {
-          name: mp3File.name,
-          size: mp3File.size,
-          type: mp3File.type,
-          fileId: commonFileId,
-          file: mp3File,
-          isRLDocx: false
-        },
-        {
-          name: docxFile.name,
-          size: docxFile.size,
-          type: docxFile.type,
-          fileId: `${commonFileId}_ris`,
-          file: docxFile,
-          isRLDocx: true
-        }
-      ];
-
-    } else {
-      const allowedFiles = files.filter(validateFileType);
-      const rejectedFiles = files.filter(file => !validateFileType(file));
-
-      if (rejectedFiles.length > 0) {
-        toast.error(`${rejectedFiles.length} ${rejectedFiles.length === 1 ? 'file was' : 'files were'} rejected due to unsupported file type.`);
-      }
-
-      if (allowedFiles.length === 0) return;
-
-      filesToUpload = allowedFiles.map(file => ({
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        fileId: uuidv4(),
-        file: file,
-        isRLDocx: false
-      }));
-    }
-
-    setUploadingFiles(filesToUpload.map(file => ({ name: file.name, size: file.size })));
-
-    for (const file of filesToUpload) {
-      await uploadFile(file);
-
-      if (file.isRLDocx) {
-        updateUploadStatus(file.name, {
-          progress: 100,
-          status: 'completed'
+    try {
+      if (isRemoteLegal) {
+        const remoteLegalFiles = files.filter(file => {
+          const pathSegments = file.webkitRelativePath.split('/');
+          return pathSegments.length > 1 && pathSegments[1].toLowerCase() === ORG_REMOTELEGAL_FOLDER.toLowerCase();
         });
-      }
-    }
 
-    onUploadSuccess(true);
+        if (remoteLegalFiles.length === 0) {
+          toast.error("No 'Scribie' folder found or the folder is empty.");
+          return;
+        }
+
+        const mp3File = remoteLegalFiles.find(file => file.name.toLowerCase().endsWith('.mp3'));
+        const docxFile = remoteLegalFiles.find(file => file.name.toLowerCase().endsWith('.docx'));
+
+        if (!mp3File || !docxFile) {
+          toast.error("Both MP3 and DOCX files are required in the 'Scribie' folder.");
+          return;
+        }
+
+        const commonFileId = uuidv4();
+        filesToUpload = [
+          {
+            name: mp3File.name,
+            size: mp3File.size,
+            type: mp3File.type,
+            fileId: commonFileId,
+            file: mp3File,
+            isRLDocx: false
+          },
+          {
+            name: docxFile.name,
+            size: docxFile.size,
+            type: docxFile.type,
+            fileId: `${commonFileId}_ris`,
+            file: docxFile,
+            isRLDocx: true
+          }
+        ];
+
+      } else {
+        const allowedFiles = files.filter(validateFileType);
+        const rejectedFiles = files.filter(file => !validateFileType(file));
+
+        if (rejectedFiles.length > 0) {
+          toast.error(`${rejectedFiles.length} ${rejectedFiles.length === 1 ? 'file was' : 'files were'} rejected due to unsupported file type.`);
+        }
+
+        if (allowedFiles.length === 0) {
+          setIsUploading(false);
+          return;
+        }
+
+        filesToUpload = allowedFiles.map(file => ({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          fileId: uuidv4(),
+          file: file,
+          isRLDocx: false
+        }));
+      }
+
+      setUploadingFiles(filesToUpload.map(file => ({ name: file.name, size: file.size, fileId: file.fileId })));
+
+      initializeSSEConnection(
+        () => onUploadSuccess(true),
+        () => setIsUploading(false)
+      );
+
+      for (const file of filesToUpload) {
+        await uploadFile(file);
+
+        if (file.isRLDocx) {
+          updateUploadStatus(file.name, {
+            progress: 100,
+            status: 'completed'
+          });
+
+          onUploadSuccess(true);
+        }
+      }
+    } catch (error) {
+      toast.error('Upload failed');
+      setIsUploading(false);
+    }
   };
 
   const onDrop = (acceptedFiles: File[]) => {
+    if (isUploading) {
+      toast.error("Please wait for current uploads to complete before starting new uploads");
+      return;
+    }
     handleFileOrFolderUpload(acceptedFiles);
   };
-
-  useEffect(() => {
-    let retryCount = 0;
-    const maxRetries = 3;
-    const retryDelay = 5000;
-    let retryTimeout: NodeJS.Timeout;
-
-    const connectSSE = () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-      }
-
-      eventSourceRef.current = new EventSource('/api/sse');
-
-      eventSourceRef.current.onmessage = async (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data?.type === 'METADATA_EXTRACTION') {
-            if (data?.file?.status === 'success') {
-              updateUploadStatus(data?.file?.fileNameWithExtension, {
-                progress: 100,
-                status: 'completed'
-              });
-              onUploadSuccess(true);
-
-              eventSourceRef.current?.close();
-            } else {
-              updateUploadStatus(data?.file?.fileNameWithExtension, {
-                progress: 0,
-                status: 'failed',
-                error: 'Metadata extraction failed.'
-              });
-              toast.error(
-                `Error uploading ${data?.file?.fileNameWithExtension}: An error occurred during file upload. Please try again.`
-              );
-
-              eventSourceRef.current?.close();
-            }
-          }
-        } catch (error) {
-          eventSourceRef.current?.close();
-        }
-      };
-
-      eventSourceRef.current.onopen = () => {
-        retryCount = 0;
-        clearTimeout(retryTimeout);
-      };
-
-      eventSourceRef.current.onerror = (error) => {
-        console.error('SSE connection error:', error);
-        eventSourceRef.current?.close();
-
-        if (retryCount < maxRetries) {
-          retryCount++;
-          retryTimeout = setTimeout(connectSSE, retryDelay);
-        }
-      };
-    };
-
-    connectSSE();
-
-    return () => {
-      clearTimeout(retryTimeout);
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
-      }
-    };
-  }, []);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -469,6 +421,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
       <Dropzone
         onDrop={onDrop}
         multiple
+        disabled={isUploading}
         accept={Object.fromEntries(
           getAllowedMimeTypes().map(type => [
             type,
@@ -484,10 +437,11 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
             className={cn(
               'group relative grid h-52 w-full place-items-center rounded-lg border-2 border-dashed border-white px-5 py-2.5 text-center transition',
               'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-              isDragActive && 'border-white/50'
+              isDragActive && 'border-white/50',
+              isUploading && 'opacity-50 cursor-not-allowed'
             )}
           >
-            <input {...getInputProps()} />
+            <input {...getInputProps()} disabled={isUploading} />
             {isDragActive ? (
               <div className='flex flex-col items-center justify-center gap-4 sm:px-5'>
                 <div className='rounded-full border border-dashed border-white p-3'>
@@ -497,23 +451,22 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
                   />
                 </div>
                 <p className='font-medium text-white'>
-                  Drop files or folders here
+                  {isUploading ? 'Please wait for current uploads to complete' : 'Drop files or folders here'}
                 </p>
               </div>
             ) : (
               <div className='flex flex-col items-center justify-center gap-4 sm:px-5'>
                 <div className='flex gap-3 text-base font-medium leading-6'>
-                  <FolderUp />
+                  <FileUp />
                   <div>Upload {!isRemoteLegal && 'files or'} folders</div>
                 </div>
-                <div className='text-xs self-stretch mt-3.5 leading-5 text-center max-md:mr-1 max-md:max-w-full'>
-                  Drag & drop {!isRemoteLegal && 'files or'} folders here or use the options below.
-                  <br />
-                  <span className='text-xs'>
-                    Supported formats: {getAllowedFileExtensions().join(', ')}
-                  </span>
+                <div className='text-xs self-stretch mt-4 leading-5 text-center max-md:mr-1 max-md:max-w-full'>
+                  {isUploading ?
+                    'Please wait for current uploads to complete' :
+                    `Drag & drop ${!isRemoteLegal ? 'files or' : ''} folders here or use the options below.`
+                  }
                 </div>
-                <div className='flex gap-4 mt-4 font-semibold text-indigo-600 leading-[133%]'>
+                <div className='flex gap-4 mt-4 font-semibold text-indigo-600'>
                   {!isRemoteLegal && (
                     <>
                       <input
@@ -522,6 +475,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
                         type='file'
                         multiple
                         hidden
+                        disabled={isUploading}
                         onChange={(event: ChangeEvent<HTMLInputElement>) =>
                           event.target.files &&
                           handleFileOrFolderUpload(Array.from(event.target.files))
@@ -531,7 +485,10 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
                       <label
                         data-testid='file-uploader'
                         htmlFor='fileInput'
-                        className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
+                        className={cn(
+                          'justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200',
+                          isUploading && 'opacity-50 cursor-not-allowed hover:bg-white'
+                        )}
                       >
                         Choose Files
                       </label>
@@ -543,6 +500,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
                     type='file'
                     multiple
                     hidden
+                    disabled={isUploading}
                     onChange={(event: ChangeEvent<HTMLInputElement>) =>
                       event.target.files &&
                       handleFileOrFolderUpload(Array.from(event.target.files))
@@ -555,7 +513,10 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
                   <label
                     data-testid='folder-uploader'
                     htmlFor='folderInput'
-                    className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
+                    className={cn(
+                      'justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200',
+                      isUploading && 'opacity-50 cursor-not-allowed hover:bg-white'
+                    )}
                   >
                     Choose Folder
                   </label>
