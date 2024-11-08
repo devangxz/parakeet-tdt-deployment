@@ -12,7 +12,7 @@ interface UploadFile {
 
 interface UploadStatus {
     progress: number;
-    status: 'uploading' | 'processing' | 'completed' | 'failed';
+    status: 'validating' | 'uploading' | 'processing' | 'completed' | 'failed';
     error?: string;
 }
 
@@ -179,8 +179,14 @@ const UploadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =
     }, [closeSSEConnection]);
 
     useEffect(() => {
+        if (uploadingFiles.length === 0) return;
+
         const checkConnection = () => {
             if (isConnectionActive.current && !eventSourceRef.current) {
+                closeSSEConnection();
+            }
+
+            if (isConnectionActive.current && eventSourceRef.current?.readyState === EventSource.CLOSED) {
                 closeSSEConnection();
             }
         };
@@ -189,8 +195,12 @@ const UploadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
         return () => {
             clearInterval(intervalId);
+
+            if (isConnectionActive.current) {
+                closeSSEConnection();
+            }
         };
-    }, [closeSSEConnection]);
+    }, [uploadingFiles.length, closeSSEConnection]);
 
     const contextValue = {
         uploadingFiles,

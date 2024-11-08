@@ -4,8 +4,10 @@ import Image from 'next/image';
 import { useState } from 'react';
 
 import FileAndFolderUploader from './components/FileAndFolderUploader';
+import GoogleDriveImporter from './components/GoogleDriveImporter';
 import LinkImporter from './components/LinkImporter';
 import AllUploads from './list';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { getAllowedFileExtensions } from '@/utils/validateFileType';
 
@@ -14,6 +16,18 @@ interface UploadType {
   icon: string;
   title: string;
 }
+
+const FileFormatDisplay = ({ formats }: { formats: string[] }) => (
+  <div className="flex flex-wrap items-center gap-2">
+    <span className="font-medium text-sm">Supported File Formats:</span>
+    {formats.map((format, index) => (
+      <Badge key={index} variant="outline" className="px-2 py-0.5 text-xs bg-[#F3F0FF] border-purple-200 text-purple-700 hover:bg-purple-100 transition-colors"
+      >
+        {format}
+      </Badge>
+    ))}
+  </div>
+);
 
 const Dashboard = () => {
   const [selectedTab, setSelectedTab] = useState('computer');
@@ -55,11 +69,11 @@ const Dashboard = () => {
     //   icon: '/assets/images/upload/one-drive.svg',
     //   title: 'Upload files via OneDrive'
     // },
-    // {
-    //   id: 'google-drive',
-    //   icon: '/assets/images/upload/google-drive.svg',
-    //   title: 'Upload files via Google Drive'
-    // },
+    {
+      id: 'google-drive',
+      icon: '/assets/images/upload/google-drive.svg',
+      title: 'Upload files via Google Drive'
+    },
     // {
     //   id: 'frame-io',
     //   icon: '/assets/images/upload/frame-io.svg',
@@ -78,6 +92,10 @@ const Dashboard = () => {
         return <FileAndFolderUploader onUploadSuccess={setUploadSuccess} />;
       case 'link':
         return <LinkImporter onUploadSuccess={setUploadSuccess} />;
+      case 'google-drive':
+        return <GoogleDriveImporter onUploadSuccess={setUploadSuccess} />;
+      default:
+        return null;
     }
   };
 
@@ -117,12 +135,7 @@ const Dashboard = () => {
 
         {renderContent()}
 
-        <p className='self-start'>
-          <span className='font-medium'>Supported File Formats:</span>{' '}
-          <span className='text-gray-600'>
-            {getAllowedFileExtensions().map(ext => ext.slice(1)).join(', ')}.
-          </span>
-        </p>
+        <FileFormatDisplay formats={getAllowedFileExtensions().map(ext => ext.slice(1))} />
       </div>
 
       <AllUploads
