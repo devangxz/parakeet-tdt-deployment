@@ -152,7 +152,7 @@
   "rush_price": 1.25,
   "audio_timecoding_price": 0,
   "order_status_weights": {
-    "pending": 0,
+    "pending": 10,
     "transcribed": 40,
     "qc_assigned": 60,
     "qc_completed": 80,
