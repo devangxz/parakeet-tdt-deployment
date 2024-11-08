@@ -51,7 +51,7 @@ export default function DisableQC() {
     try {
       setLoadingDisable(true)
       const response = await axios.post(`/api/admin/disable-qc`, {
-        email: formData.email,
+        userEmail: formData.email,
         flag: true,
         comment: formData.comment,
       })
@@ -86,7 +86,7 @@ export default function DisableQC() {
     try {
       setLoading(true)
       const response = await axios.post(`/api/admin/disable-qc`, {
-        email: formData.email,
+        userEmail: formData.email,
         flag: false,
         comment: formData.comment,
       })

@@ -32,7 +32,7 @@ export default function EnableCustomFormattingReview() {
       const response = await axios.post(
         `/api/admin/enable-custom-formatting-review`,
         {
-          email: email,
+          userEmail: email,
           flag: true,
         }
       )
@@ -67,7 +67,7 @@ export default function EnableCustomFormattingReview() {
       const response = await axios.post(
         `/api/admin/enable-custom-formatting-review`,
         {
-          email: email,
+          userEmail: email,
           flag: false,
         }
       )

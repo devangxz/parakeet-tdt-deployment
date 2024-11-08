@@ -29,7 +29,7 @@ import { CAPTCHA_EXCEPTION_LIST } from '@/constants'
 import { getRedirectPathByRole } from '@/utils/roleRedirect'
 
 const Signin = () => {
-  const [captcha, setCaptcha] = useState<boolean>(true)
+  const [captcha, setCaptcha] = useState<boolean>(false)
   const [loading, setLoading] = useState(false)
   const searchParams = useSearchParams()
   const callbackUrl = searchParams?.get('callbackUrl')
