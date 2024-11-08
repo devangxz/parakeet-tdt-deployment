@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
         const docType = url.searchParams.get('docType')
         const userToken = req.headers.get('x-user-token')
         const user = JSON.parse(userToken ?? '{}')
-        const userId = user?.userId
+        const userId = user.internalTeamUserId ?? user?.userId
 
         if (docType === "CUSTOM_FORMATTING_DOC") {
             const response = await axios.get(`${FILE_CACHE_URL}/get-cf-pdf/${fileId}?type=${docType}&userId=${userId}`, {
