@@ -666,7 +666,7 @@ function EditorPage() {
               </Button>
             ))}
 
-          {['CUSTOMER', 'OM', 'ADMIN'].includes(session?.user?.email ?? '') && <Button
+          {!(['CUSTOMER', 'OM', 'ADMIN'].includes(session?.user?.email ?? '')) && <Button
             onClick={() => setSubmitting(true)}
             className='ml-2'
           >
