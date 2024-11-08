@@ -34,7 +34,16 @@ export async function GET(req: NextRequest) {
                 return NextResponse.json({ success: false, message: 'File version not found' }, { status: 404 })
             }
 
-            const signedUrl = await getFileVersionSignedURLFromS3(`${fileId}.docx`, fileVersion?.s3VersionId)
+            const file = await prisma.file.findUnique({
+                where: {
+                    fileId: fileId,
+                },
+                select: {
+                    filename: true
+                }
+            })
+
+            const signedUrl = await getFileVersionSignedURLFromS3(`${fileId}.docx`, fileVersion?.s3VersionId, 900, file?.filename)
 
             return NextResponse.json({
                 message: 'Downloaded Successfully',
