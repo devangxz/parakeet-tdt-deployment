@@ -4,56 +4,31 @@ import { UploadIcon } from '@radix-ui/react-icons';
 import axios from 'axios';
 import { FileUp } from 'lucide-react';
 import { useSession } from 'next-auth/react';
-import React, { ChangeEvent, useEffect, useRef, useState } from 'react';
+import React, { ChangeEvent, useRef, useState } from 'react';
 import Dropzone from 'react-dropzone';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
 import { useUpload } from '@/app/context/UploadProvider';
-import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, ORG_REMOTELEGAL, ORG_REMOTELEGAL_FOLDER, UPLOAD_MAX_RETRIES, UPLOAD_RETRY_DELAY } from '@/constants';
+import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, ORG_REMOTELEGAL, ORG_REMOTELEGAL_FOLDER, UPLOAD_MAX_RETRIES } from '@/constants';
 import { cn } from '@/lib/utils';
-import sleep from '@/utils/sleep';
+import { BaseUploadState, FileWithId, CustomInputAttributes, UploaderProps } from '@/types/upload';
+import { handleRetryableError } from '@/utils/uploadUtils';
 import validateFileType, { getAllowedFileExtensions, getAllowedMimeTypes } from '@/utils/validateFileType';
 
-interface UploadState {
-  uploadId: string | null;
-  key: string | null;
-  completedParts: { ETag?: string; PartNumber: number }[];
-  totalUploaded: number;
-  lastFailedPart: number | null;
-}
-
-interface FileWithId {
-  name: string;
-  size: number;
-  type: string;
-  fileId: string;
-  file: File;
-  isRLDocx: boolean;
-}
-
-interface CustomInputAttributes extends React.InputHTMLAttributes<HTMLInputElement> {
-  directory?: string;
-  webkitdirectory?: string;
-}
-
-interface FileAndFolderUploaderProps {
-  onUploadSuccess: (success: boolean) => void;
-}
-
-const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadSuccess }) => {
+const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
   const { data: session } = useSession();
-  const { uploadingFiles, setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
-  const [uploadStates, setUploadStates] = useState<{ [key: string]: UploadState }>({});
+  const { setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
+  const [uploadStates, setUploadStates] = useState<{ [key: string]: BaseUploadState }>({});
 
-  const initializeUploadState = (): UploadState => ({
+  const initializeUploadState = (): BaseUploadState => ({
     uploadId: null,
     key: null,
     completedParts: [],
     totalUploaded: 0,
     lastFailedPart: null
   });
-  const updateUploadState = (fileName: string, updates: Partial<UploadState>) => {
+  const updateUploadState = (fileName: string, updates: Partial<BaseUploadState>) => {
     setUploadStates(prev => ({
       ...prev,
       [fileName]: {
@@ -69,31 +44,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
 
   const isRemoteLegal = session?.user?.organizationName.toLocaleLowerCase() === ORG_REMOTELEGAL.toLocaleLowerCase();
 
-  const isRetryableError = (error: unknown): boolean => {
-    if (!axios.isAxiosError(error)) return false;
-
-    const retryableStatusCodes = [408, 429, 500, 502, 503, 504];
-    return !error.response?.status || retryableStatusCodes.includes(error.response.status);
-  };
-
-  const handleRetryableError = async (error: unknown, retryCount: number): Promise<void> => {
-    if (axios.isCancel(error)) {
-      throw new Error('Upload cancelled');
-    }
-
-    if (!isRetryableError(error)) {
-      throw error;
-    }
-
-    if (retryCount >= UPLOAD_MAX_RETRIES) {
-      throw new Error(`File upload failed after ${UPLOAD_MAX_RETRIES} attempts`);
-    }
-
-    const delay = UPLOAD_RETRY_DELAY * Math.pow(2, retryCount);
-    await sleep(delay);
-  };
-
-  const cleanupUpload = async (fileName: string, uploadState?: UploadState) => {
+  const cleanupUpload = async (fileName: string, uploadState?: BaseUploadState) => {
     if (abortControllersRef.current[fileName]) {
       delete abortControllersRef.current[fileName];
     }
@@ -399,21 +350,6 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
     }
     handleFileOrFolderUpload(acceptedFiles);
   };
-
-  useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (uploadingFiles.length > 0) {
-        event.preventDefault()
-        event.returnValue = ''
-      }
-    }
-
-    window.addEventListener('beforeunload', handleBeforeUnload)
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-    }
-  }, [uploadingFiles]);
 
   return (
     <div className='bg-primary flex flex-col p-[12px] items-center justify-center rounded-[12px] border shadow-sm text-white'>

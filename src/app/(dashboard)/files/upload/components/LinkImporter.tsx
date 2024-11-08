@@ -2,55 +2,20 @@
 
 import axios from 'axios';
 import { FileUp } from 'lucide-react';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
 import { useUpload } from '@/app/context/UploadProvider';
-import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES, UPLOAD_RETRY_DELAY } from '@/constants';
-import sleep from '@/utils/sleep';
+import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
+import { StreamingState, QueuedLink, UploaderProps } from '@/types/upload';
+import { handleRetryableError, calculateOverallProgress } from '@/utils/uploadUtils';
 
-interface UploadState {
-    uploadId: string | null;
-    key: string | null;
-    completedParts: { ETag?: string; PartNumber: number }[];
-    totalUploaded: number;
-    lastFailedPart: number | null;
-}
-
-interface StreamingState extends UploadState {
-    buffer: Uint8Array[];
-    bufferSize: number;
-    partNumber: number;
-    abortController: AbortController;
-    downloadedBytes: number;
-    totalSize: number;
-}
-
-interface QueuedLink {
-    url: string;
-    fileName: string;
-    fileId: string;
-    size: number;
-    type: string;
-}
-
-interface LinkImporterProps {
-    onUploadSuccess: (success: boolean) => void;
-}
-
-const LinkImporter: React.FC<LinkImporterProps> = ({ onUploadSuccess }) => {
-    const { uploadingFiles, setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
+const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
+    const { setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
     const [urls, setUrls] = useState('');
 
     const uploadStatesRef = useRef<Record<string, StreamingState>>({});
-
-    const calculateOverallProgress = (
-        downloadProgress: number,
-        uploadProgress: number,
-        downloadWeight: number = 0.3,
-        uploadWeight: number = 0.7
-    ): number => (downloadProgress * downloadWeight + uploadProgress * uploadWeight);
 
     const extractFileName = (url: string): string => {
         try {
@@ -61,30 +26,6 @@ const LinkImporter: React.FC<LinkImporterProps> = ({ onUploadSuccess }) => {
         } catch {
             return 'imported-file';
         }
-    };
-
-    const isRetryableError = (error: unknown): boolean => {
-        if (!axios.isAxiosError(error)) return false;
-
-        const retryableStatusCodes = [408, 429, 500, 502, 503, 504];
-        return !error.response?.status || retryableStatusCodes.includes(error.response.status);
-    };
-
-    const handleRetryableError = async (error: unknown, retryCount: number): Promise<void> => {
-        if (axios.isCancel(error)) {
-            throw new Error('Upload cancelled');
-        }
-
-        if (!isRetryableError(error)) {
-            throw error;
-        }
-
-        if (retryCount >= UPLOAD_MAX_RETRIES) {
-            throw new Error(`File upload failed after ${UPLOAD_MAX_RETRIES} attempts`);
-        }
-
-        const delay = UPLOAD_RETRY_DELAY * Math.pow(2, retryCount);
-        await sleep(delay);
     };
 
     const cleanupUpload = async (fileName: string, uploadState?: StreamingState) => {
@@ -508,21 +449,6 @@ const LinkImporter: React.FC<LinkImporterProps> = ({ onUploadSuccess }) => {
             setIsUploading(false);
         }
     };
-
-    useEffect(() => {
-        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-            if (uploadingFiles.length > 0) {
-                event.preventDefault()
-                event.returnValue = ''
-            }
-        }
-
-        window.addEventListener('beforeunload', handleBeforeUnload)
-
-        return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload)
-        }
-    }, [uploadingFiles]);
 
     return (
         <div className='bg-white flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-primary shadow-sm'>

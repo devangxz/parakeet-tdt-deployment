@@ -7,8 +7,10 @@ import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
 import { useUpload } from '@/app/context/UploadProvider';
-import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES, UPLOAD_RETRY_DELAY } from '@/constants';
-import sleep from '@/utils/sleep';
+import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
+import { StreamingState, GoogleDriveFile, GooglePickerResponse, UploaderProps } from '@/types/upload';
+import { CryptoUtils } from '@/utils/encryptionUtils';
+import { handleRetryableError, calculateOverallProgress } from '@/utils/uploadUtils';
 import { getAllowedMimeTypes } from '@/utils/validateFileType';
 
 const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY!;
@@ -16,114 +18,32 @@ const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!;
 const GOOGLE_CLIENT_SECRET = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SECRET!;
 const GOOGLE_APP_ID = process.env.NEXT_PUBLIC_GOOGLE_APP_ID!;
 
-interface UploadState {
-    uploadId: string | null;
-    key: string | null;
-    completedParts: { ETag?: string; PartNumber: number }[];
-    totalUploaded: number;
-    lastFailedPart: number | null;
-}
-
-interface StreamingState extends UploadState {
-    buffer: Uint8Array[];
-    bufferSize: number;
-    partNumber: number;
-    abortController: AbortController;
-    downloadedBytes: number;
-    totalSize: number;
-}
-
-interface GoogleDriveFile {
-    id: string;
-    name: string;
-    mimeType: string;
-    sizeBytes: string;
-}
-
-interface GooglePickerResponse {
-    action: string;
-    docs: GoogleDriveFile[];
-}
-
-interface GoogleDocsView {
-    setMimeTypes(mimeTypes: string): GoogleDocsView;
-    setIncludeFolders(include: boolean): GoogleDocsView;
-}
-
-interface GooglePickerBuilder {
-    addView(view: GoogleDocsView): GooglePickerBuilder;
-    enableFeature(feature: string): GooglePickerBuilder;
-    setTitle(title: string): GooglePickerBuilder;
-    setAppId(appId: string): GooglePickerBuilder;
-    setOAuthToken(token: string): GooglePickerBuilder;
-    setDeveloperKey(key: string): GooglePickerBuilder;
-    setCallback(callback: (data: GooglePickerResponse) => void): GooglePickerBuilder;
-    build(): GooglePicker;
-}
-
-interface GooglePicker {
-    setVisible(visible: boolean): void;
-}
-
-interface TokenResponse {
-    access_token: string;
-    refresh_token?: string;
-    expires_in: number;
-}
-
-declare global {
-    interface Window {
-        google: {
-            accounts: {
-                oauth2: {
-                    initTokenClient(config: {
-                        client_id: string;
-                        scope: string;
-                        access_type: string;
-                        prompt: string;
-                        callback: (response: TokenResponse) => void;
-                    }): { requestAccessToken: () => void };
-                    initCodeClient(config: {
-                        client_id: string;
-                        scope: string;
-                        ux_mode: string;
-                        callback: (response: { error?: string; code?: string }) => void;
-                    }): { requestCode: () => void };
-                };
-            };
-            picker: {
-                DocsView: new () => GoogleDocsView;
-                PickerBuilder: new () => GooglePickerBuilder;
-                Action: {
-                    PICKED: string;
-                };
-                Feature: {
-                    MULTISELECT_ENABLED: string;
-                    SUPPORT_DRIVES: string;
-                };
-            };
-        };
-        gapi: {
-            load(api: string, callback: () => void): void;
-        };
-    }
-}
-
-interface GoogleDriveImporterProps {
-    onUploadSuccess: (success: boolean) => void;
-}
-
 const TokenManager = {
-    setCookie: (name: string, value: string, expiryHours: number = 24) => {
-        const date = new Date();
-        date.setTime(date.getTime() + (expiryHours * 60 * 60 * 1000));
-        document.cookie = `${name}=${value}; path=/; expires=${date.toUTCString()}; SameSite=Strict; ${window.location.protocol === 'https:' ? 'Secure;' : ''}`;
+    setCookie: async (name: string, value: string, expiryHours: number = 24) => {
+        try {
+            const encryptedValue = await CryptoUtils.encrypt(value);
+            const date = new Date();
+            date.setTime(date.getTime() + (expiryHours * 60 * 60 * 1000));
+            document.cookie = `${name}=${encryptedValue}; path=/; expires=${date.toUTCString()}; SameSite=Strict; ${window.location.protocol === 'https:' ? 'Secure;' : ''}`;
+        } catch (error) {
+            throw new Error('Failed to set secure cookie');
+        }
     },
 
-    getCookie: (name: string): string | null => {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        return parts.length === 2 ? parts.pop()?.split(';').shift() || null : null;
+    getCookie: async (name: string): Promise<string | null> => {
+        try {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length !== 2) return null;
+
+            const encryptedValue = parts.pop()?.split(';').shift();
+            if (!encryptedValue) return null;
+
+            return await CryptoUtils.decrypt(encryptedValue);
+        } catch (error) {
+            TokenManager.clearTokens();
+            return null;
+        }
     },
 
     clearTokens: () => {
@@ -144,8 +64,8 @@ const TokenManager = {
 
             if (response.data.access_token) {
                 const expiryTime = Date.now() + (response.data.expires_in * 1000);
-                TokenManager.setCookie('googleDriveToken', response.data.access_token, 24);
-                TokenManager.setCookie('tokenExpiryTime', expiryTime.toString(), 24);
+                await TokenManager.setCookie('googleDriveToken', response.data.access_token, 24);
+                await TokenManager.setCookie('tokenExpiryTime', expiryTime.toString(), 24);
                 return response.data.access_token;
             }
             return null;
@@ -155,59 +75,33 @@ const TokenManager = {
     },
 
     getValidToken: async (): Promise<string | null> => {
-        const currentToken = TokenManager.getCookie('googleDriveToken');
-        const refreshToken = TokenManager.getCookie('googleDriveRefreshToken');
-        const expiryTime = parseInt(TokenManager.getCookie('tokenExpiryTime') || '0');
+        try {
+            const currentToken = await TokenManager.getCookie('googleDriveToken');
+            const refreshToken = await TokenManager.getCookie('googleDriveRefreshToken');
+            const expiryTimeStr = await TokenManager.getCookie('tokenExpiryTime');
+            const expiryTime = expiryTimeStr ? parseInt(expiryTimeStr) : 0;
 
-        if (currentToken && expiryTime && Date.now() < expiryTime - 300000) {
-            return currentToken;
+            if (currentToken && expiryTime && Date.now() < expiryTime - 300000) {
+                return currentToken;
+            }
+
+            if (refreshToken) {
+                return await TokenManager.refreshToken(refreshToken);
+            }
+
+            return null;
+        } catch {
+            return null;
         }
-
-        if (refreshToken) {
-            return await TokenManager.refreshToken(refreshToken);
-        }
-
-        return null;
     }
 };
 
-const GoogleDriveImporter: React.FC<GoogleDriveImporterProps> = ({ onUploadSuccess }) => {
-    const { uploadingFiles, setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
+const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
+    const { setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
 
     const uploadStatesRef = useRef<Record<string, StreamingState>>({});
-
-    const calculateOverallProgress = (
-        downloadProgress: number,
-        uploadProgress: number,
-        downloadWeight: number = 0.3,
-        uploadWeight: number = 0.7
-    ): number => (downloadProgress * downloadWeight + uploadProgress * uploadWeight);
-
-    const isRetryableError = (error: unknown): boolean => {
-        if (!axios.isAxiosError(error)) return false;
-
-        const retryableStatusCodes = [408, 429, 500, 502, 503, 504];
-        return !error.response?.status || retryableStatusCodes.includes(error.response.status);
-    };
-
-    const handleRetryableError = async (error: unknown, retryCount: number): Promise<void> => {
-        if (axios.isCancel(error)) {
-            throw new Error('Upload cancelled');
-        }
-
-        if (!isRetryableError(error)) {
-            throw error;
-        }
-
-        if (retryCount >= UPLOAD_MAX_RETRIES) {
-            throw new Error(`File upload failed after ${UPLOAD_MAX_RETRIES} attempts`);
-        }
-
-        const delay = UPLOAD_RETRY_DELAY * Math.pow(2, retryCount);
-        await sleep(delay);
-    };
 
     const cleanupUpload = async (fileName: string, uploadState?: StreamingState) => {
         if (uploadState?.uploadId && uploadState?.key) {
@@ -580,11 +474,11 @@ const GoogleDriveImporter: React.FC<GoogleDriveImporterProps> = ({ onUploadSucce
                     }
 
                     const expiryTime = Date.now() + (expires_in * 1000);
-                    TokenManager.setCookie('googleDriveToken', access_token, 24);
+                    await TokenManager.setCookie('googleDriveToken', access_token, 24);
                     if (refresh_token) {
-                        TokenManager.setCookie('googleDriveRefreshToken', refresh_token, 720);
+                        await TokenManager.setCookie('googleDriveRefreshToken', refresh_token, 720);
                     }
-                    TokenManager.setCookie('tokenExpiryTime', expiryTime.toString(), 24);
+                    await TokenManager.setCookie('tokenExpiryTime', expiryTime.toString(), 24);
 
                     setIsAuthenticated(true);
                     showPicker(access_token);
@@ -725,18 +619,6 @@ const GoogleDriveImporter: React.FC<GoogleDriveImporterProps> = ({ onUploadSucce
                 .forEach(script => script.remove());
         };
     }, []);
-
-    useEffect(() => {
-        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-            if (uploadingFiles.length > 0) {
-                event.preventDefault();
-                event.returnValue = '';
-            }
-        };
-
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [uploadingFiles]);
 
     if (!isInitialized) {
         return (
