@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
                 }
             })
 
-            const signedUrl = await getFileVersionSignedURLFromS3(`${fileId}.docx`, fileVersion?.s3VersionId, 900, file?.filename)
+            const signedUrl = await getFileVersionSignedURLFromS3(`${fileId}.docx`, fileVersion?.s3VersionId, 900, `${file?.filename}.docx`)
 
             return NextResponse.json({
                 message: 'Downloaded Successfully',
