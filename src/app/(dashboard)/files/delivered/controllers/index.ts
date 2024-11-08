@@ -12,6 +12,7 @@ export const orderController = async (
 const downloadPDFFile = async ({
   fileId,
   docType,
+  filename,
 }: {
   fileId: string
   filename?: string
@@ -25,7 +26,7 @@ const downloadPDFFile = async ({
     const downloadUrl = window.URL.createObjectURL(fileBlob);
     const link = document.createElement('a');
     link.href = downloadUrl;
-    link.download = `${fileId}.pdf`;
+    link.download = `${filename}.pdf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -40,6 +41,7 @@ const downloadPDFFile = async ({
 const downloadFile = async ({
   fileId,
   docType,
+  filename,
 }: {
   fileId: string
   filename?: string
@@ -54,7 +56,7 @@ const downloadFile = async ({
       const downloadUrl = window.URL.createObjectURL(fileBlob);
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download = `${fileId}.docx`;
+      link.download = `${filename}.docx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
