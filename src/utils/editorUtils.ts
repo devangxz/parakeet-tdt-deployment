@@ -508,6 +508,7 @@ const handleSave = async ({
 
     try {
         const transcript = getEditorText();
+        if (!transcript) return toast.error('Transcript is empty')
         const paragraphs = transcript.split('\n').filter(paragraph => paragraph.trim() !== '');
         const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/;
         const updatedCtms = updateContent(transcript, lines);
