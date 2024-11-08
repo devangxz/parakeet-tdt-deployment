@@ -8,7 +8,7 @@ import Editor from "./Editor";
 import { TabsContent } from "./Tabs";
 import { Textarea } from "../ui/textarea";
 import { OrderDetails } from "@/app/editor/[fileId]/page";
-import { CTMSWord } from "@/components/editor/transcriptUtils";
+import { LineData } from "@/components/editor/transcriptUtils";
 import { ConvertedASROutput } from "@/utils/editorUtils";
 
 interface EditorTabComponentProps {
@@ -17,14 +17,14 @@ interface EditorTabComponentProps {
     audioPlayer: HTMLAudioElement | null
     audioDuration: number
     getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void
-    getCtms: (ctms: CTMSWord[]) => void
     disableGoToWord: boolean
     orderDetails: OrderDetails
     content: { insert: string }[]
     setContent: (content: { insert: string }[]) => void
+    getLines: (lineData: LineData[]) => void
 }
 
-export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, getCtms, disableGoToWord, orderDetails, content, setContent }: EditorTabComponentProps) => (
+export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, disableGoToWord, orderDetails, content, setContent, getLines }: EditorTabComponentProps) => (
     <TabsContent className='h-[86%] mt-0' value='transcribe'>
 
         <div className='bg-white border border-gray-200 border-t-0 rounded-b-2xl px-5 py-5 h-[99%] relative'>
@@ -43,9 +43,9 @@ export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuratio
                     ctms={ctms}
                     audioPlayer={audioPlayer}
                     duration={audioDuration}
-                    getCtms={getCtms}
                     content={content}
                     setContent={setContent}
+                    getLines={getLines}
                 />
             )}
             {(orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === 'REVIEWER_ASSIGNED') && (
@@ -54,14 +54,6 @@ export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuratio
                     onClick={() => toast.error("Text editing is not allowed in this step")}
                 ></div>
             )}
-        </div>
-    </TabsContent>
-)
-
-export const SpeakerNameTabComponent = () => (
-    <TabsContent className='h-[86%] mt-0' value='speaker'>
-        <div className='bg-white border border-gray-200 border-t-0 rounded-b-2xl px-5 py-5 overflow-y-scroll h-[99%] no-scrollbar'>
-            {/* TODO: Create new speaker name input */}
         </div>
     </TabsContent>
 )

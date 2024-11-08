@@ -6,7 +6,6 @@ import {
     ChevronDown,
     CheckCircle,
     XCircle,
-    Music,
     Video,
     Mic,
     FileVideo,
@@ -21,7 +20,7 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/comp
 
 interface UploadStatus {
     progress: number;
-    status: 'uploading' | 'processing' | 'completed' | 'failed';
+    status: 'validating' | 'uploading' | 'processing' | 'completed' | 'failed';
     error?: string;
 }
 
@@ -39,14 +38,9 @@ const UploadProgressItem = ({ file, status }: { file: UploadFile; status: Upload
             strokeWidth: 2
         };
 
-        const audioTypes = ['mp3', 'wav', 'wma', 'aac', 'flac', 'ogg', 'aif', 'aiff', 'amr', '3ga'];
+        const audioTypes = ['mp3', 'wav', 'wma', 'aac', 'flac', 'ogg', 'aif', 'aiff', 'amr', '3ga', 'm4a', 'opus'];
         if (audioTypes.includes(ext.toLowerCase())) {
-            return <Music {...commonProps} className="text-blue-500" />;
-        }
-
-        const voiceTypes = ['m4a', 'opus'];
-        if (voiceTypes.includes(ext.toLowerCase())) {
-            return <Mic {...commonProps} className="text-purple-500" />;
+            return <Mic {...commonProps} className="text-blue-500" />;
         }
 
         const videoTypes = ['mp4', 'avi', 'wmv', 'mov', 'webm', 'flv', '3gp', 'mpg', 'mpeg', 'm4v', 'ogv'];
@@ -69,22 +63,7 @@ const UploadProgressItem = ({ file, status }: { file: UploadFile; status: Upload
 
     const renderStatusIcon = () => {
         switch (status.status) {
-            case 'completed':
-                return <CheckCircle size={20} className="text-green-500" />;
-            case 'failed':
-                return (
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <XCircle size={20} className="text-red-500" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Upload failed</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                );
-            case 'processing':
+            case 'validating':
                 return (
                     <TooltipProvider>
                         <Tooltip>
@@ -99,7 +78,7 @@ const UploadProgressItem = ({ file, status }: { file: UploadFile; status: Upload
                                 </div>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>Processing file...</p>
+                                <p>Validating link...</p>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -136,6 +115,41 @@ const UploadProgressItem = ({ file, status }: { file: UploadFile; status: Upload
                             </TooltipTrigger>
                             <TooltipContent>
                                 <p>{Math.floor(status.progress)}% completed</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                );
+            case 'processing':
+                return (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <div className="flex items-center">
+                                    <CircularProgress
+                                        size={20}
+                                        sx={{
+                                            color: 'hsl(var(--primary))',
+                                        }}
+                                    />
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Processing file...</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                );
+            case 'completed':
+                return <CheckCircle size={20} className="text-green-500" />;
+            case 'failed':
+                return (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <XCircle size={20} className="text-red-500" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Upload failed</p>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -288,9 +302,17 @@ const UploadProgress = () => {
     const pluralize = (count: number, singular: string, plural: string) => count === 1 ? singular : plural;
 
     const getHeaderContent = () => {
-        const processingFiles = uploadingFiles.filter(
-            file => uploadStatus[file.name]?.status === 'processing'
+        const validatingFiles = uploadingFiles.filter(
+            file => uploadStatus[file.name]?.status === 'validating'
         ).length;
+        if (validatingFiles > 0) {
+            return {
+                title: validatingFiles === 1
+                    ? 'Validating 1 link'
+                    : `Validating ${validatingFiles} links`,
+                subtitle: 'Checking file accessibility...'
+            };
+        }
 
         if (inProgressFiles > 0) {
             return {
@@ -301,6 +323,9 @@ const UploadProgress = () => {
             };
         }
 
+        const processingFiles = uploadingFiles.filter(
+            file => uploadStatus[file.name]?.status === 'processing'
+        ).length;
         if (processingFiles > 0) {
             return {
                 title: processingFiles === 1

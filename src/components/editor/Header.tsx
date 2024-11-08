@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select"
-import { BACKEND_URL, FILE_CACHE_URL } from '@/constants';
+import { FILE_CACHE_URL } from '@/constants';
 import axiosInstance from '@/utils/axios';
 import DefaultShortcuts, { ShortcutControls, setShortcut, getAllShortcuts, useShortcuts } from '@/utils/editorAudioPlayerShortcuts';
 import { downloadMP3, replaceTextHandler, searchAndSelect } from '@/utils/editorUtils';
@@ -35,9 +35,11 @@ type NewHeaderProps = {
     audioPlayer: HTMLAudioElement | null;
     submitting: boolean;
     setIsSubmitModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    toggleSpellCheck: () => void;
+    setSubmitting: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
-export default function NewHeader({ editorModeOptions, getEditorMode, editorMode, notes, setNotes, quillRef, orderDetails, audioPlayer, submitting, setIsSubmitModalOpen }: NewHeaderProps) {
+export default function NewHeader({ editorModeOptions, getEditorMode, editorMode, notes, setNotes, quillRef, orderDetails, audioPlayer, submitting, setIsSubmitModalOpen, toggleSpellCheck, setSubmitting }: NewHeaderProps) {
     const [newEditorMode, setNewEditorMode] = useState<string>('')
     const [notesOpen, setNotesOpen] = useState(false);
     const [shortcuts, setShortcuts] = useState<{ key: string, shortcut: string }[]>([]);
@@ -47,7 +49,6 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
     const [lastSearchIndex, setLastSearchIndex] = useState<number>(-1)
     const [replaceText, setReplaceText] = useState('');
     const [matchCase, setMatchCase] = useState(false);
-    const [videoUrl, setVideoUrl] = useState('');
     const [videoPlayerOpen, setVideoPlayerOpen] = useState(false);
     const [revertTranscriptOpen, setRevertTranscriptOpen] = useState(false);
     const [isSpeakerNameModalOpen, setIsSpeakerNameModalOpen] = useState(false);
@@ -166,33 +167,31 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
             audioPlayer.onplay = () => videoRef.current?.play();
             audioPlayer.onpause = () => videoRef.current?.pause();
             audioPlayer.onseeked = () => {
-                if (videoRef.current) videoRef.current.currentTime = audioPlayer.currentTime;
+                if (!videoRef.current) return
+
+                videoRef.current.currentTime = audioPlayer.currentTime;
             };
             audioPlayer.onseeking = () => {
                 if (videoRef.current) videoRef.current.currentTime = audioPlayer.currentTime;
             };
+
         };
 
         syncVideoWithAudio();
-    }, [audioPlayer, videoUrl, videoRef]);
+        const interval = setInterval(() => {
+            if (!audioPlayer || !videoRef.current) return;
+            if (videoRef.current && audioPlayer.currentTime !== videoRef.current.currentTime) {
+                videoRef.current.currentTime = audioPlayer.currentTime
+            }
+        }, 1000)
+
+        return () => {
+            clearInterval(interval)
+        }
+    }, [audioPlayer, videoRef, videoPlayerOpen]);
 
     const toggleVideo = () => {
         setVideoPlayerOpen(!videoPlayerOpen);
-    }
-
-    const fetchVideoFile = async () => {
-        try {
-            const response = await axiosInstance.get(`${BACKEND_URL}/get-video/${orderDetails.fileId}`, { responseType: 'blob' }) // Replace with your file name
-            const url = URL.createObjectURL(response.data)
-            setVideoUrl(url)
-            toggleVideo()
-
-        } catch (error) {
-            if (axios.isAxiosError(error) && error.response?.status === 404) {
-                return toastInstance.error('Video does not exist for this file')
-            }
-            toastInstance.error('Failed to play audio.')
-        }
     }
 
     const handleAutoCapitalize = useCallback((
@@ -350,18 +349,6 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
         replaceTextInstance(findText, replaceText, true);
     }
 
-    const handleToggleVideo = async () => {
-        let toastId;
-
-        if (!videoUrl) {
-            toastId = toastInstance.loading('Fetching video...')
-            await fetchVideoFile()
-        } else {
-            toggleVideo()
-        }
-        toastInstance.dismiss(toastId)
-    }
-
     const handleSpeakerNameChange = (e: React.ChangeEvent<HTMLInputElement>, key: string) => {
         setSpeakerName(prev => ({ ...prev, [key]: e.target.value }))
     }
@@ -377,7 +364,7 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
             toastInstance.success('Speaker names updated successfully')
             setIsSpeakerNameModalOpen(false)
             if (submitting) {
-                setIsSubmitModalOpen(true)
+                toggleSpellCheck()
             }
         } catch (error) {
             toastInstance.dismiss(toastId)
@@ -421,10 +408,27 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
             })
             toastInstance.dismiss(toastId)
             toastInstance.success('Formatting options updated successfully')
+            localStorage.removeItem('transcript')
             window.location.reload() // Refresh the page after success
         } catch (error) {
             toastInstance.dismiss(toastId)
             toastInstance.error('Failed to update formatting options')
+        }
+    }
+
+    const requestExtension = async () => {
+        const toastId = toastInstance.loading('Requesting extension...')
+        try {
+            await axios.post(`/api/editor/request-extension`, {
+                orderId: orderDetails.orderId,
+            })
+
+            window.location.reload();
+            toastInstance.dismiss(toastId)
+            toastInstance.success('Extension requested successfully')
+        } catch (error) {
+            toastInstance.dismiss(toastId)
+            toastInstance.error('Failed to request extension')
         }
     }
 
@@ -462,11 +466,13 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
                             <DropdownMenuItem onClick={() => setIsShortcutsReferenceModalOpen(true)}>Shortcuts Reference</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setIsConfigureShortcutsModalOpen(true)}>Configure Shortcuts</DropdownMenuItem>
                             {session?.user?.role !== 'CUSTOMER' && <DropdownMenuItem onClick={toggleRevertTranscript}>Revert Transcript</DropdownMenuItem>}
-                            <DropdownMenuItem onClick={handleToggleVideo}>Toggle Video</DropdownMenuItem>
+                            <DropdownMenuItem onClick={toggleVideo}>Toggle Video</DropdownMenuItem>
                             <DropdownMenuItem onClick={toggleNotes}>Notes</DropdownMenuItem>
                             <DropdownMenuItem onClick={toggleFindAndReplace}>Find and Replace</DropdownMenuItem>
                             <DropdownMenuItem onClick={toggleSpeakerName}>Speaker Names</DropdownMenuItem>
                             <DropdownMenuItem onClick={downloadMP3.bind(null, orderDetails)}>Download MP3</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => toggleSpellCheck()}>Spellcheck</DropdownMenuItem>
+                            <DropdownMenuItem onClick={requestExtension}>Request Extension</DropdownMenuItem>
                             <DropdownMenuItem onClick={toggleAutoCapitalize}>
                                 {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
                             </DropdownMenuItem>
@@ -502,7 +508,12 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
         <ShortcutsReferenceDialog isShortcutsReferenceModalOpen={isShortcutsReferenceModalOpen} setIsShortcutsReferenceModalOpen={setIsShortcutsReferenceModalOpen} shortcuts={shortcuts} setShortcuts={setShortcuts} />
         <ConfigureShortcutsDialog isConfigureShortcutsModalOpen={isConfigureShortcutsModalOpen} setIsConfigureShortcutsModalOpen={setIsConfigureShortcutsModalOpen} shortcuts={shortcuts} updateShortcut={updateShortcut} />
 
-        <Dialog open={isSpeakerNameModalOpen} onOpenChange={setIsSpeakerNameModalOpen}>
+        <Dialog open={isSpeakerNameModalOpen} onOpenChange={(value) => {
+            setIsSpeakerNameModalOpen(value)
+            if (!value) {
+                setSubmitting(false)
+            }
+        }}>
             <DialogContent className="max-w-4xl w-2/4">
                 <DialogHeader>
                     <DialogTitle>Speaker Names</DialogTitle>
@@ -546,9 +557,11 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
                 </div>
 
                 <div className="mt-6 flex justify-between">
-                    <Button variant="outline" onClick={() => setIsSpeakerNameModalOpen(false)}>
-                        Close
-                    </Button>
+                    <DialogClose asChild>
+                        <Button variant="outline">
+                            Close
+                        </Button>
+                    </DialogClose>
                     <Button onClick={updateSpeakerName}>Update</Button>
                 </div>
             </DialogContent>
@@ -672,7 +685,7 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
             <div className='relative w-full h-full'>
                 <video
                     ref={videoRef}
-                    src={videoUrl}
+                    src={`/api/editor/get-video/${orderDetails.fileId}`}
                     className='w-full h-full'
                     controls={false}
                     onMouseDown={handleDragChange}

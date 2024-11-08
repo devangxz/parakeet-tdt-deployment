@@ -93,9 +93,9 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
     await sleep(delay);
   };
 
-  const cleanupUpload = async (file: FileWithId, uploadState?: UploadState) => {
-    if (abortControllersRef.current[file.name]) {
-      delete abortControllersRef.current[file.name];
+  const cleanupUpload = async (fileName: string, uploadState?: UploadState) => {
+    if (abortControllersRef.current[fileName]) {
+      delete abortControllersRef.current[fileName];
     }
 
     if (uploadState?.uploadId && uploadState?.key) {
@@ -105,13 +105,13 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
           key: uploadState.key
         });
       } catch (error) {
-        toast.error(`Failed to abort multipart upload for file ${file.name}`);
+        toast.error(`Failed to abort multipart upload for file ${fileName}`);
       }
     }
 
     setUploadStates(prev => {
       const newState = { ...prev };
-      delete newState[file.name];
+      delete newState[fileName];
       return newState;
     });
   };
@@ -252,9 +252,8 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
           await handleRetryableError(error, retryCount);
         }
       }
-
     } catch (error) {
-      await cleanupUpload(file, uploadState);
+      await cleanupUpload(file.name, uploadState);
       throw error;
     }
   };
@@ -277,7 +276,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
         status: 'processing'
       });
 
-      await cleanupUpload(file, uploadStates[file.name]);
+      await cleanupUpload(file.name, uploadStates[file.name]);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
       updateUploadStatus(file.name, {
@@ -286,7 +285,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
         error: errorMessage
       });
       toast.error(`Error uploading ${file.name}: ${errorMessage}`);
-      await cleanupUpload(file, uploadStates[file.name]);
+      await cleanupUpload(file.name, uploadStates[file.name]);
     }
   };
 
@@ -421,7 +420,6 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
       <Dropzone
         onDrop={onDrop}
         multiple
-        disabled={isUploading}
         accept={Object.fromEntries(
           getAllowedMimeTypes().map(type => [
             type,
@@ -438,33 +436,27 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
               'group relative grid h-52 w-full place-items-center rounded-lg border-2 border-dashed border-white px-5 py-2.5 text-center transition',
               'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
               isDragActive && 'border-white/50',
-              isUploading && 'opacity-50 cursor-not-allowed'
             )}
           >
-            <input {...getInputProps()} disabled={isUploading} />
+            <input {...getInputProps()} />
             {isDragActive ? (
-              <div className='flex flex-col items-center justify-center gap-4 sm:px-5'>
+              <div className='self-center flex flex-col items-center justify-center gap-4 sm:px-5'>
                 <div className='rounded-full border border-dashed border-white p-3'>
                   <UploadIcon
                     className='size-7 text-white'
                     aria-hidden='true'
                   />
                 </div>
-                <p className='font-medium text-white'>
-                  {isUploading ? 'Please wait for current uploads to complete' : 'Drop files or folders here'}
-                </p>
+                <p className='font-medium text-white'>Drop files or folders here</p>
               </div>
             ) : (
-              <div className='flex flex-col items-center justify-center gap-4 sm:px-5'>
+              <div className='self-center flex flex-col items-center justify-center gap-4 sm:px-5'>
                 <div className='flex gap-3 text-base font-medium leading-6'>
                   <FileUp />
-                  <div>Upload {!isRemoteLegal && 'files or'} folders</div>
+                  <h4>Upload {!isRemoteLegal && 'Files or'} Folders</h4>
                 </div>
                 <div className='text-xs self-stretch mt-4 leading-5 text-center max-md:mr-1 max-md:max-w-full'>
-                  {isUploading ?
-                    'Please wait for current uploads to complete' :
-                    `Drag & drop ${!isRemoteLegal ? 'files or' : ''} folders here or use the options below.`
-                  }
+                  {`Drag & drop ${!isRemoteLegal ? 'files or' : ''} folders here or use the options below.`}
                 </div>
                 <div className='flex gap-4 mt-4 font-semibold text-indigo-600'>
                   {!isRemoteLegal && (
@@ -475,7 +467,6 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
                         type='file'
                         multiple
                         hidden
-                        disabled={isUploading}
                         onChange={(event: ChangeEvent<HTMLInputElement>) =>
                           event.target.files &&
                           handleFileOrFolderUpload(Array.from(event.target.files))
@@ -485,10 +476,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
                       <label
                         data-testid='file-uploader'
                         htmlFor='fileInput'
-                        className={cn(
-                          'justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200',
-                          isUploading && 'opacity-50 cursor-not-allowed hover:bg-white'
-                        )}
+                        className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
                       >
                         Choose Files
                       </label>
@@ -500,7 +488,6 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
                     type='file'
                     multiple
                     hidden
-                    disabled={isUploading}
                     onChange={(event: ChangeEvent<HTMLInputElement>) =>
                       event.target.files &&
                       handleFileOrFolderUpload(Array.from(event.target.files))
@@ -513,10 +500,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
                   <label
                     data-testid='folder-uploader'
                     htmlFor='folderInput'
-                    className={cn(
-                      'justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200',
-                      isUploading && 'opacity-50 cursor-not-allowed hover:bg-white'
-                    )}
+                    className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
                   >
                     Choose Folder
                   </label>

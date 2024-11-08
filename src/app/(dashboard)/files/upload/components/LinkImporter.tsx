@@ -1,14 +1,13 @@
 'use client';
 
 import axios from 'axios';
-import { Download, FileUp, Loader2 } from 'lucide-react';
+import { FileUp } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
 import { useUpload } from '@/app/context/UploadProvider';
 import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES, UPLOAD_RETRY_DELAY } from '@/constants';
-import { cn } from '@/lib/utils';
 import sleep from '@/utils/sleep';
 
 interface UploadState {
@@ -115,6 +114,7 @@ const LinkImporter: React.FC<LinkImporterProps> = ({ onUploadSuccess }) => {
         contentType: string
     ): Promise<void> => {
         const abortController = new AbortController();
+
         let retryCount = -1;
         let downloadedBytes = 0;
 
@@ -149,6 +149,7 @@ const LinkImporter: React.FC<LinkImporterProps> = ({ onUploadSuccess }) => {
                 }
 
                 const blob = new Blob(chunks, { type: contentType });
+
                 const formData = new FormData();
                 formData.append('file', blob, fileName);
                 formData.append('fileId', fileId);
@@ -171,82 +172,6 @@ const LinkImporter: React.FC<LinkImporterProps> = ({ onUploadSuccess }) => {
                 retryCount++;
                 await handleRetryableError(error, retryCount);
             }
-        }
-    };
-
-    const multiPartUpload = async (
-        url: string,
-        fileName: string,
-        fileId: string,
-        contentLength: number,
-        contentType: string,
-    ): Promise<void> => {
-        let state = await initializeMultiPartUpload(fileName, fileId, contentType, contentLength);
-        uploadStatesRef.current[fileName] = state;
-
-        try {
-            const response = await fetch('/api/s3-upload/link', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url }),
-                signal: state.abortController.signal
-            });
-
-            if (!response.ok || !response.body) {
-                throw new Error('Download failed');
-            }
-
-            const reader = response.body.getReader();
-
-            while (true) {
-                const { done, value } = await reader.read();
-
-                if (done) {
-                    if (state.bufferSize > 0) {
-                        state = await uploadBufferedPart(state, fileName);
-                    }
-                    break;
-                }
-
-                state.buffer.push(value);
-                state.bufferSize += value.length;
-                state.downloadedBytes += value.length;
-
-                updateUploadStatus(fileName, {
-                    progress: Math.min(calculateOverallProgress(
-                        (state.downloadedBytes / state.totalSize) * 100,
-                        (state.totalUploaded / state.totalSize) * 100
-                    ), 99),
-                    status: 'uploading'
-                });
-
-                if (state.bufferSize >= MULTI_PART_UPLOAD_CHUNK_SIZE) {
-                    state = await uploadBufferedPart(state, fileName);
-                }
-            }
-
-            let retryCount = -1;
-            const sortedParts = state.completedParts.sort((a, b) => a.PartNumber - b.PartNumber);
-
-            while (retryCount <= UPLOAD_MAX_RETRIES) {
-                try {
-                    await axios.post('/api/s3-upload/multi-part/complete', {
-                        sendBackData: {
-                            key: state.key,
-                            uploadId: state.uploadId,
-                            fileName
-                        },
-                        parts: sortedParts
-                    });
-                    break;
-                } catch (error) {
-                    retryCount++;
-                    await handleRetryableError(error, retryCount);
-                }
-            }
-        } catch (error) {
-            await cleanupUpload(fileName, state);
-            throw error;
         }
     };
 
@@ -354,8 +279,91 @@ const LinkImporter: React.FC<LinkImporterProps> = ({ onUploadSuccess }) => {
         throw new Error('Failed to upload part');
     };
 
+    const multiPartUpload = async (
+        url: string,
+        fileName: string,
+        fileId: string,
+        contentLength: number,
+        contentType: string,
+    ): Promise<void> => {
+        let state = await initializeMultiPartUpload(fileName, fileId, contentType, contentLength);
+        uploadStatesRef.current[fileName] = state;
+
+        try {
+            const downloadResponse = await fetch('/api/s3-upload/link', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url }),
+                signal: state.abortController.signal
+            });
+
+            if (!downloadResponse.ok || !downloadResponse.body) {
+                throw new Error('Download failed');
+            }
+
+            const reader = downloadResponse.body.getReader();
+
+            while (true) {
+                const { done, value } = await reader.read();
+
+                if (done) {
+                    if (state.bufferSize > 0) {
+                        state = await uploadBufferedPart(state, fileName);
+                    }
+                    break;
+                }
+
+                if (value) {
+                    state.buffer.push(value);
+                    state.bufferSize += value.length;
+                    state.downloadedBytes += value.length;
+
+                    updateUploadStatus(fileName, {
+                        progress: Math.min(calculateOverallProgress(
+                            (state.downloadedBytes / state.totalSize) * 100,
+                            (state.totalUploaded / state.totalSize) * 100
+                        ), 99),
+                        status: 'uploading'
+                    });
+
+                    if (state.bufferSize >= MULTI_PART_UPLOAD_CHUNK_SIZE) {
+                        state = await uploadBufferedPart(state, fileName);
+                    }
+                }
+            }
+
+            let retryCount = -1;
+            const sortedParts = state.completedParts.sort((a, b) => a.PartNumber - b.PartNumber);
+
+            while (retryCount <= UPLOAD_MAX_RETRIES) {
+                try {
+                    await axios.post('/api/s3-upload/multi-part/complete', {
+                        sendBackData: {
+                            key: state.key,
+                            uploadId: state.uploadId,
+                            fileName
+                        },
+                        parts: sortedParts
+                    });
+                    break;
+                } catch (error) {
+                    retryCount++;
+                    await handleRetryableError(error, retryCount);
+                }
+            }
+        } catch (error) {
+            await cleanupUpload(fileName, state);
+            throw error;
+        }
+    };
+
     const handleImport = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (isUploading) {
+            toast.error("Please wait for current uploads to complete before starting new uploads");
+            return;
+        }
 
         const links = urls.trim().split('\n').filter(url => url.trim());
 
@@ -364,16 +372,31 @@ const LinkImporter: React.FC<LinkImporterProps> = ({ onUploadSuccess }) => {
             return;
         }
 
-        setUploadingFiles([]);
+        const initialFiles = links.map(url => ({
+            name: extractFileName(url.trim()),
+            size: 0,
+            fileId: uuidv4(),
+            url: url.trim()
+        }));
+
         setIsUploading(true);
+        setUploadingFiles(initialFiles);
+        setUrls('');
+
+        initialFiles.forEach(file => {
+            updateUploadStatus(file.name, {
+                progress: 0,
+                status: 'validating'
+            });
+        });
 
         try {
             const linksToUpload: QueuedLink[] = [];
 
-            for (const url of links) {
+            for (const file of initialFiles) {
                 try {
                     const headResponse = await axios.post('/api/s3-upload/link', {
-                        url: url.trim(),
+                        url: file.url,
                         method: 'HEAD'
                     });
 
@@ -381,25 +404,37 @@ const LinkImporter: React.FC<LinkImporterProps> = ({ onUploadSuccess }) => {
                     const contentLength = parseInt(headResponse.data.contentLength || '0');
 
                     if (!contentType || !contentLength) {
-                        toast.error(`Invalid file at URL: ${url.trim()} - Missing content type or size`);
+                        toast.error(`Invalid file at URL: ${file.url} - Missing content type or size`);
+                        updateUploadStatus(file.name, {
+                            progress: 0,
+                            status: 'failed',
+                            error: 'Invalid file - Missing content type or size'
+                        });
                         continue;
                     }
 
-                    const fileName = extractFileName(url.trim());
-                    const fileId = uuidv4();
-
                     linksToUpload.push({
-                        url: url.trim(),
-                        fileName,
-                        fileId,
+                        ...file,
+                        fileName: file.name,
                         size: contentLength,
                         type: contentType
+                    });
+
+                    updateUploadStatus(file.name, {
+                        progress: 0,
+                        status: 'uploading'
                     });
                 } catch (error) {
                     const errorMessage = axios.isAxiosError(error)
                         ? error.response?.data?.error
                         : 'Invalid URL';
-                    toast.error(`Error validating URL: ${url.trim()} - ${errorMessage}`);
+
+                    toast.error(`Error validating URL: ${file.url} - ${errorMessage}`);
+                    updateUploadStatus(file.name, {
+                        progress: 0,
+                        status: 'failed',
+                        error: `Validation failed - ${errorMessage}`
+                    });
                 }
             }
 
@@ -411,7 +446,7 @@ const LinkImporter: React.FC<LinkImporterProps> = ({ onUploadSuccess }) => {
             setUploadingFiles(linksToUpload.map(link => ({
                 name: link.fileName,
                 size: link.size,
-                fileId: link.fileId
+                fileId: link.fileId,
             })));
 
             initializeSSEConnection(
@@ -471,8 +506,6 @@ const LinkImporter: React.FC<LinkImporterProps> = ({ onUploadSuccess }) => {
                     : 'Import failed';
             toast.error(`Import failed: ${errorMessage}`);
             setIsUploading(false);
-        } finally {
-            setUrls('');
         }
     };
 
@@ -493,53 +526,30 @@ const LinkImporter: React.FC<LinkImporterProps> = ({ onUploadSuccess }) => {
 
     return (
         <div className='bg-white flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-primary shadow-sm'>
-            <div className={cn(
-                'group relative w-full rounded-lg px-5 py-2.5 text-center transition min-h-[13rem]',
-                isUploading && 'opacity-50 cursor-not-allowed'
-            )}>
-                <div className='w-full flex flex-col items-center justify-center gap-4 sm:px-5'>
+            <div className='group relative w-full flex rounded-lg px-5 py-2.5 text-center transition min-h-[13rem]'>
+                <div className='self-center w-full flex flex-col items-center justify-center gap-4 sm:px-5'>
                     <div className='flex gap-3 text-base font-medium leading-6 text-gray-800'>
                         <FileUp className="text-gray-800" />
-                        <div>Link importer</div>
+                        <h4>Link Importer</h4>
                     </div>
                     <div className='text-xs self-stretch mt-4 leading-5 text-center text-gray-700 max-md:mr-1 max-md:max-w-full'>
-                        {isUploading
-                            ? 'Please wait for current uploads to complete'
-                            : 'Please enter the link to the media file in the box below, one per line. Please note that the file must be publicly accessible to be imported.'
-                        }
+                        Please enter the link to the media file in the box below, one per line. Please note that the file must be publicly accessible to be imported.
                     </div>
                     <form onSubmit={handleImport} className='flex w-full items-center gap-4 mt-4'>
                         <textarea
                             value={urls}
                             onChange={(e) => setUrls(e.target.value)}
                             placeholder="Enter audio/video file download links, one per line, e.g. https://scribie.com/samples/example.mp3"
-                            className={cn(
-                                'flex-1 px-4 py-2 rounded-lg border border-primary',
-                                'placeholder:text-gray-500 focus:outline-none',
-                                'text-sm min-h-[80px] overflow-hidden resize-none text-gray-900',
-                                isUploading && 'cursor-not-allowed opacity-50'
-                            )}
+                            className="flex-1 px-4 py-2 rounded-lg border border-primary placeholder:text-gray-500 focus:outline-none text-sm min-h-[80px] overflow-hidden resize-none text-gray-900"
                             style={{
                                 minHeight: '80px',
                                 height: `${Math.max(80, urls.split('\n').length * 24)}px`
                             }}
-                            disabled={isUploading}
                         />
                         <button
                             type="submit"
-                            disabled={isUploading}
-                            className={cn(
-                                'px-5 py-2 bg-white rounded-[32px] text-gray-800 font-medium border border-primary',
-                                'hover:bg-gray-50 transition-colors',
-                                'flex items-center gap-2 shrink-0',
-                                isUploading && 'opacity-50 cursor-not-allowed hover:bg-white'
-                            )}
+                            className="px-5 py-2 bg-white rounded-[32px] text-gray-800 font-medium border border-primary hover:bg-gray-50 transition-colors"
                         >
-                            {isUploading ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                                <Download className="h-4 w-4" />
-                            )}
                             Import
                         </button>
                     </form>
