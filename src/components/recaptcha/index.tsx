@@ -1,57 +1,60 @@
-import { Snackbar, Alert } from '@mui/material';
-import axios from "axios";
-import { useState } from "react";
-import ReCAPTCHA from "react-google-recaptcha";
-function Recaptcha({setCaptcha}:{setCaptcha:(value: boolean) => void}) {
-  const [open, setOpen] = useState(false);
-  const reCaptch_sitekey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+import { Snackbar, Alert } from '@mui/material'
+import axios from 'axios'
+import { useState } from 'react'
+import ReCAPTCHA from 'react-google-recaptcha'
+function Recaptcha({ setCaptcha }: { setCaptcha: (value: boolean) => void }) {
+  const [open, setOpen] = useState(false)
+  const reCaptch_sitekey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
 
   const handleRecaptcha = async (value: string | null) => {
-    const gRecaptchaToken = value;
+    const gRecaptchaToken = value
     try {
       const response = await axios({
-        method: "POST",
-        url: "/api/recaptchaSubmit",
+        method: 'POST',
+        url: '/api/public/submit-recaptcha',
         data: {
           gRecaptchaToken,
         },
         headers: {
-          Accept: "application/json, text/plain, */*",
-          "Content-Type": "application/json",
+          Accept: 'application/json, text/plain, */*',
+          'Content-Type': 'application/json',
         },
-      });
+      })
       if (response?.data?.response?.success === true) {
-        setCaptcha(true);
+        setCaptcha(true)
       } else {
-        setCaptcha(false);
+        setCaptcha(false)
       }
-      return value;
-    } catch (err) {
-    }
-  };
+      return value
+    } catch (err) {}
+  }
 
   const handleClose = (event?: React.SyntheticEvent, reason?: string) => {
     if (reason === 'clickaway') {
-      return;
+      return
     }
-    setOpen(false);
-  };
+    setOpen(false)
+  }
 
   return (
     <>
       <ReCAPTCHA
-        className="my-5 w-[350px]"
-        sitekey={reCaptch_sitekey ? reCaptch_sitekey : ""}
+        className='my-5 w-[350px]'
+        sitekey={reCaptch_sitekey ? reCaptch_sitekey : ''}
         onChange={handleRecaptcha}
-        data-testid="recaptcha"
+        data-testid='recaptcha'
       />
-      <Snackbar open={open} autoHideDuration={6000} onClose={() => handleClose()}>
-        <Alert onClose={handleClose} severity="error" sx={{ width: '100%' }}>
+      <Snackbar
+        open={open}
+        autoHideDuration={6000}
+        onClose={() => handleClose()}
+      >
+        <Alert onClose={handleClose} severity='error' sx={{ width: '100%' }}>
           The CAPTCHA has expired. Please try again.
         </Alert>
       </Snackbar>
     </>
-  );
+  )
 }
 
-export default Recaptcha;
+export default Recaptcha
