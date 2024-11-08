@@ -99,7 +99,7 @@ export function CheckAndDownload({
         ? setCfDocxLoading(true)
         : setDocxLoading(true)
       await controller(
-        { fileId: id, filename: '', docType: docType },
+        { fileId: id, filename, docType: docType },
         'downloadFile'
       )
       docType == 'CUSTOM_FORMATTING_DOC'
@@ -114,7 +114,7 @@ export function CheckAndDownload({
         ? setCfPdfLoading(true)
         : setPdfLoading(true)
       await controller(
-        { fileId: id, filename: '', docType: docType },
+        { fileId: id, filename, docType: docType },
         'downloadPDFFile'
       )
       docType == 'CUSTOM_FORMATTING_DOC'
