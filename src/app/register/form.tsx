@@ -36,7 +36,7 @@ import { INDUSTRIES } from '@/constants'
 import { getRedirectPathByRole } from '@/utils/roleRedirect'
 
 const SingupForm = () => {
-  const [captcha, setCaptcha] = useState<boolean>(true)
+  const [captcha, setCaptcha] = useState<boolean>(false)
   const [loading, setLoading] = useState(false)
   const [showOtherIndustryInput, setShowOtherIndustryInput] = useState(false)
   const form = useForm<z.infer<typeof formSchema>>({

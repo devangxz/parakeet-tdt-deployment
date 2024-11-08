@@ -32,7 +32,7 @@ export default function EnableCustomFormattingBonus() {
       const response = await axios.post(
         `/api/admin/enable-custom-formatting-bonus`,
         {
-          email: email,
+          userEmail: email,
           flag: true,
         }
       )
@@ -66,7 +66,7 @@ export default function EnableCustomFormattingBonus() {
       const response = await axios.post(
         `/api/admin/enable-custom-formatting-bonus`,
         {
-          email: email,
+          userEmail: email,
           flag: false,
         }
       )

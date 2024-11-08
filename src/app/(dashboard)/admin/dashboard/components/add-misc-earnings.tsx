@@ -55,7 +55,7 @@ export default function AddMiscEarnings() {
     try {
       setLoading(true)
       const response = await axios.post(`/api/admin/add-misc-earnings`, {
-        email: formData.email,
+        transcriberEmail: formData.email,
         amount: formData.amount,
         reason: formData.reason,
       })

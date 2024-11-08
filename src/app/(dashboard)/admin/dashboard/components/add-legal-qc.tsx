@@ -30,7 +30,7 @@ export default function AddLegalQC() {
     try {
       setLoading(true)
       const response = await axios.post(`/api/admin/add-legal-qc`, {
-        email: email,
+        userEmail: email,
         flag: true,
       })
       if (response.data.success) {
@@ -58,7 +58,7 @@ export default function AddLegalQC() {
     try {
       setLoadingDisable(true)
       const response = await axios.post(`/api/admin/add-legal-qc`, {
-        email: email,
+        userEmail: email,
         flag: false,
       })
       if (response.data.success) {
