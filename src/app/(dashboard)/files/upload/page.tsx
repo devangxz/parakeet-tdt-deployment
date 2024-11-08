@@ -4,8 +4,8 @@ import Image from 'next/image';
 import { useState } from 'react';
 
 import FileAndFolderUploader from './components/FileAndFolderUploader';
-import GoogleDriveImporter from './components/GoogleDriveImporter';
-import LinkImporter from './components/LinkImporter';
+// import GoogleDriveImporter from './components/GoogleDriveImporter';
+// import LinkImporter from './components/LinkImporter';
 import AllUploads from './list';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -44,11 +44,11 @@ const Dashboard = () => {
     //   icon: '/assets/images/upload/youtube.svg', 
     //   title: 'Upload files via YouTube'
     // },
-    {
-      id: 'link',
-      icon: '/assets/images/upload/link.svg',
-      title: 'Upload files via Link'
-    },
+    // {
+    //   id: 'link',
+    //   icon: '/assets/images/upload/link.svg',
+    //   title: 'Upload files via Link'
+    // },
     // {
     //   id: 'dropbox',
     //   icon: '/assets/images/upload/dropbox.svg',
@@ -69,11 +69,11 @@ const Dashboard = () => {
     //   icon: '/assets/images/upload/one-drive.svg',
     //   title: 'Upload files via OneDrive'
     // },
-    {
-      id: 'google-drive',
-      icon: '/assets/images/upload/google-drive.svg',
-      title: 'Upload files via Google Drive'
-    },
+    // {
+    //   id: 'google-drive',
+    //   icon: '/assets/images/upload/google-drive.svg',
+    //   title: 'Upload files via Google Drive'
+    // },
     // {
     //   id: 'frame-io',
     //   icon: '/assets/images/upload/frame-io.svg',
@@ -90,10 +90,10 @@ const Dashboard = () => {
     switch (selectedTab) {
       case 'computer':
         return <FileAndFolderUploader onUploadSuccess={setUploadSuccess} />;
-      case 'link':
-        return <LinkImporter onUploadSuccess={setUploadSuccess} />;
-      case 'google-drive':
-        return <GoogleDriveImporter onUploadSuccess={setUploadSuccess} />;
+      // case 'link':
+      //   return <LinkImporter onUploadSuccess={setUploadSuccess} />;
+      // case 'google-drive':
+      //   return <GoogleDriveImporter onUploadSuccess={setUploadSuccess} />;
       default:
         return null;
     }
