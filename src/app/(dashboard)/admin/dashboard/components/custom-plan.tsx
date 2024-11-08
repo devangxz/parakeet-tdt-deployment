@@ -173,7 +173,7 @@ export default function CustomPlan() {
     try {
       setAddLoading(true)
       const response = await axios.post(`/api/admin/custom-plan-details`, {
-        email: userEmail,
+        userEmail,
         rates,
       })
       if (response.data.success) {

@@ -61,7 +61,7 @@ export default function Coupon() {
     try {
       setLoading(true)
       const response = await axios.post(`/api/admin/add-coupon`, {
-        email,
+        userEmail: email,
         couponCode,
         discount,
         validity,

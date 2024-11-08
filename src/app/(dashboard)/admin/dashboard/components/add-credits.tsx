@@ -48,7 +48,7 @@ export default function AddCredits() {
     try {
       setLoading(true)
       const response = await axios.post(`/api/admin/add-free-credits`, {
-        email,
+        userEmail: email,
         amount: credits,
       })
       if (response.data.success) {
