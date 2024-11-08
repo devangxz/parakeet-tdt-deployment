@@ -221,12 +221,25 @@
   "sse_retry_delay": 1000,
   "durationDifference": 0.5,
   "errorCodes": {
-    "VALIDATION_ERROR": { "code": 1001, "httpCode": 501 },
-    "UNPROCESSABLE_ERROR": { "code": 1002, "httpCode": 422 },
-    "CREATE_RECORD_ERROR": { "code": 1003, "httpCode": 500 },
-    "DURATION_DIFF_ERROR": { "code": 1004, "httpCode": 409 }
+    "VALIDATION_ERROR": {
+      "code": 1001,
+      "httpCode": 501
+    },
+    "UNPROCESSABLE_ERROR": {
+      "code": 1002,
+      "httpCode": 422
+    },
+    "CREATE_RECORD_ERROR": {
+      "code": 1003,
+      "httpCode": 500
+    },
+    "DURATION_DIFF_ERROR": {
+      "code": 1004,
+      "httpCode": 409
+    }
   },
   "job_timeout_multiplier": 4,
+  "extension_time_multiplier": 2,
   "qc": {
     "diff_change_pc_threshold": 0
   },

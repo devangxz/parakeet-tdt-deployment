@@ -54,16 +54,22 @@ export async function GET(request: NextRequest) {
             },
             select: {
                 acceptedTs: true,
+                extensionRequested: true,
             },
         });
 
+        const extensionTimeMultiplier = config.extension_time_multiplier;
         const currentTime = new Date();
         const acceptedTime = assignment?.acceptedTs ? new Date(assignment.acceptedTs) : null;
         const givenTime = file?.duration ? file.duration * config.job_timeout_multiplier : 0;
         let remainingTime = 0;
         if (acceptedTime) {
             const elapsedTimeInSeconds = Math.floor((currentTime.getTime() - acceptedTime.getTime()) / 1000);
-            remainingTime = Math.max(0, givenTime - elapsedTimeInSeconds);
+            const baseRemainingTime = Math.max(0, givenTime - elapsedTimeInSeconds);
+            const extensionTime = assignment?.extensionRequested && file?.duration
+                ? file.duration * extensionTimeMultiplier
+                : 0;
+            remainingTime = baseRemainingTime + extensionTime;
         }
 
         const orderDetails = {
