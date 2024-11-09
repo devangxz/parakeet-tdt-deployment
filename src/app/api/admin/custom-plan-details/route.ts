@@ -76,7 +76,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { email: userEmail, rates } = await req.json()
+  const { userEmail, rates } = await req.json()
   try {
     if (!isValidEmail(userEmail)) {
       logger.error(`Invalid email: ${userEmail}`)

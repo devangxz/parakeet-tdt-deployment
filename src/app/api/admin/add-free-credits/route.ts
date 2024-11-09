@@ -11,6 +11,7 @@ import isValidEmail from '@/utils/isValidEmail'
 
 export async function POST(req: Request) {
   const { amount, userEmail } = await req.json()
+  const amountToAdd = parseFloat(amount)
   try {
     if (!isValidEmail(userEmail)) {
       logger.error(`Invalid email: ${userEmail}`)
@@ -31,9 +32,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, s: 'User not found' })
     }
 
-    if (amount <= 0) {
-      logger.error(`Invalid amount: ${amount}`)
-      return NextResponse.json({ success: false, s: 'Invalid amount' })
+    if (amountToAdd <= 0) {
+      logger.error(`Invalid amount: ${amountToAdd}`)
+      return NextResponse.json({ success: false, s: 'Invalid amountToAdd' })
     }
 
     const result = await prisma.invoice.aggregate({
@@ -66,7 +67,7 @@ export async function POST(req: Request) {
         invoiceId,
         userId: user.id,
         type: InvoiceType.FREE_CREDITS,
-        amount,
+        amount: amountToAdd,
         status: InvoiceStatus.PAID,
         transactionId,
       },

@@ -59,7 +59,7 @@ export default function ArchivedFilesPage({ files }: { files: File[] }) {
     try {
       const response = await axios.get(`/api/files?status=archived`)
 
-      const files = response.data.map(
+      const files = response.data.data.map(
         (file: {
           fileId: string
           filename: string
