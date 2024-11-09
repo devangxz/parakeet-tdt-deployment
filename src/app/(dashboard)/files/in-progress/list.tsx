@@ -76,7 +76,7 @@ export default function InprogressFilesPage({ files }: ListProps) {
     try {
       const response = await axios.get(`/api/files?status=in-progress`)
 
-      const files = response.data
+      const files = response.data.data
         .map(
           (file: {
             fileId: string
@@ -363,25 +363,25 @@ export default function InprogressFilesPage({ files }: ListProps) {
           <div>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-                <Button
-                  variant='order'
-                  className='not-rounded text-black w-[140px] mr-3'
-                  onClick={async () => {
-                    try {
-                      if (selectedFiles.length === 0) {
-                        toast.error('Please select at least one file')
-                        return
-                      }
-                      await navigator.clipboard.writeText(selectedFiles.join(','))
-                      toast.success('File Ids copied to clipboard')
-                    } catch (error) {
-                      toast.error('Failed to copy file Ids')
+              <Button
+                variant='order'
+                className='not-rounded text-black w-[140px] mr-3'
+                onClick={async () => {
+                  try {
+                    if (selectedFiles.length === 0) {
+                      toast.error('Please select at least one file')
+                      return
                     }
-                  }}
-                >
-                  Copy file Ids
-                </Button>
-              )}
+                    await navigator.clipboard.writeText(selectedFiles.join(','))
+                    toast.success('File Ids copied to clipboard')
+                  } catch (error) {
+                    toast.error('Failed to copy file Ids')
+                  }
+                }}
+              >
+                Copy file Ids
+              </Button>
+            )}
           </div>
         </div>
         <DataTable
