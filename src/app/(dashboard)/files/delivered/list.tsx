@@ -75,7 +75,6 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
     setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
-
   }, [playing])
 
   const fetchDeliveredFiles = async (showLoader = false) => {
@@ -88,7 +87,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
     try {
       const response = await axios.get(`/api/files?status=delivered`)
 
-      const files = response.data.map(
+      const files = response.data.data.map(
         (file: {
           fileId: string
           filename: string
@@ -237,7 +236,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   filename: '',
                   docType:
                     session?.user?.organizationName.toLowerCase() ===
-                      'remotelegal'
+                    'remotelegal'
                       ? 'CUSTOM_FORMATTING_DOC'
                       : 'TRANSCRIPTION_DOC',
                 },
@@ -435,25 +434,25 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
           <div className='flex items-center'>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-                <Button
-                  variant='order'
-                  className='not-rounded text-black w-[140px] mr-3'
-                  onClick={async () => {
-                    try {
-                      if (selectedFiles.length === 0) {
-                        toast.error('Please select at least one file')
-                        return
-                      }
-                      await navigator.clipboard.writeText(selectedFiles.join(','))
-                      toast.success('File Ids copied to clipboard')
-                    } catch (error) {
-                      toast.error('Failed to copy file Ids')
+              <Button
+                variant='order'
+                className='not-rounded text-black w-[140px] mr-3'
+                onClick={async () => {
+                  try {
+                    if (selectedFiles.length === 0) {
+                      toast.error('Please select at least one file')
+                      return
                     }
-                  }}
-                >
-                  Copy file Ids
-                </Button>
-              )}
+                    await navigator.clipboard.writeText(selectedFiles.join(','))
+                    toast.success('File Ids copied to clipboard')
+                  } catch (error) {
+                    toast.error('Failed to copy file Ids')
+                  }
+                }}
+              >
+                Copy file Ids
+              </Button>
+            )}
             <Button
               variant='order'
               className='format-button text-black w-[140px]'
