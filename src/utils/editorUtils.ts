@@ -513,7 +513,8 @@ const handleSave = async ({
         const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/;
         const updatedCtms = updateContent(transcript, lines);
         for (const paragraph of paragraphs) {
-            if (!paragraphRegex.test(paragraph)) {
+            if (!paragraphRegex.test(paragraph) && orderDetails.orderType !== 'TRANSCRIPTION_FORMATTING') {
+                toast.dismiss(toastId)
                 return toast.error('Invalid paragraph format detected. Each paragraph must start with a timestamp and speaker identification.');
             }
         }
