@@ -666,7 +666,7 @@ function EditorPage() {
               </Button>
             ))}
 
-          {session?.user?.role !== 'CUSTOMER' && <Button
+          {!(['CUSTOMER', 'OM', 'ADMIN'].includes(session?.user?.email ?? '')) && <Button
             onClick={() => setSubmitting(true)}
             className='ml-2'
           >

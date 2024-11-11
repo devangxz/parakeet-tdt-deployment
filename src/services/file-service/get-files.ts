@@ -8,13 +8,14 @@ export async function getFilesByStatus(
   userId: number,
   internalTeamUserId: number | null
 ) {
+  const teamId = internalTeamUserId ? internalTeamUserId : userId
   try {
     let files
     const commonWhereClause = {
-      userId: Number(userId),
+      userId: Number(teamId),
       deletedAt: null,
     }
-    logger.info(`--> getFiles ${userId}`)
+    logger.info(`--> getFiles ${teamId}`)
     switch (status) {
       case 'delivered':
         files = await prisma.file.findMany({
