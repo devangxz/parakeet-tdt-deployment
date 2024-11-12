@@ -241,6 +241,8 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
   };
 
   const handleFileOrFolderUpload = async (files: File[]) => {
+    console.log('Files to be uploaded:', files.map(f => ({ name: f.name, size: f.size })));
+
     if (isUploading) {
       toast.error("Please wait for current uploads to complete before starting new uploads");
       return;
@@ -259,10 +261,15 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
       if (isRemoteLegal) {
         const remoteLegalFiles = files.filter(file => {
           const pathSegments = file.webkitRelativePath.split('/');
-          return pathSegments.length > 1 && pathSegments[1].toLowerCase() === ORG_REMOTELEGAL_FOLDER.toLowerCase();
+          if (pathSegments.length > 1) {
+            console.log('Selected folder:', pathSegments[0]);
+            return pathSegments[1].toLowerCase() === ORG_REMOTELEGAL_FOLDER.toLowerCase();
+          }
+          return false;
         });
 
         if (remoteLegalFiles.length === 0) {
+          setIsUploading(false);
           toast.error("No 'Scribie' folder found or the folder is empty.");
           return;
         }
@@ -271,6 +278,7 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
         const docxFile = remoteLegalFiles.find(file => file.name.toLowerCase().endsWith('.docx'));
 
         if (!mp3File || !docxFile) {
+          setIsUploading(false);
           toast.error("Both MP3 and DOCX files are required in the 'Scribie' folder.");
           return;
         }
@@ -333,12 +341,12 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
             progress: 100,
             status: 'completed'
           });
-
-          onUploadSuccess(true);
         }
       }
     } catch (error) {
       toast.error('Upload failed');
+      setIsUploading(false);
+    } finally {
       setIsUploading(false);
     }
   };
