@@ -42,6 +42,34 @@ export interface QueuedLink extends BaseFileInfo {
     type: string;
 }
 
+// Box Importer Types
+export interface BoxFile {
+    id: string;
+    name: string;
+    size: number;
+    type: string;
+}
+
+export interface BoxFileItem {
+    id: string;
+    name: string;
+    size: number;
+    type: string;
+}
+
+export interface BoxSelectOptions {
+    clientId: string;
+    linkType: 'direct' | 'shared';
+    multiselect: boolean;
+    token: string;
+}
+
+export interface BoxSelect {
+    success(callback: (files: BoxFile[]) => void): void;
+    cancel(callback: () => void): void;
+    launchPopup(): void;
+}
+
 // GoogleDriveImporter Types
 export interface GoogleDriveFile {
     id: string;
@@ -122,5 +150,6 @@ declare global {
         gapi: {
             load(api: string, callback: () => void): void;
         };
+        BoxSelect: new (options: BoxSelectOptions) => BoxSelect;
     }
 }
