@@ -166,10 +166,11 @@ const UploadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =
             });
 
             if (allFilesProcessed) {
+                callbacksRef.current.onFileSuccess();
                 callbacksRef.current.onAllCompleted();
                 setTimeout(() => {
                     clearUpload();
-                }, 1000);
+                }, 2000);
             }
         }
     }, [uploadingFiles, uploadStatus, clearUpload]);

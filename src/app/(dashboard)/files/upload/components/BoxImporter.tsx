@@ -297,9 +297,14 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         const fileId = uuidv4();
 
         try {
-            const tokenResponse = await axios.get('/api/s3-upload/box/token');
+            let tokenResponse = await axios.get('/api/s3-upload/box/token');
             if (!tokenResponse.data.token) {
-                throw new Error('Failed to get valid authentication token');
+                const refreshSuccess = await refreshToken();
+                if (refreshSuccess) {
+                    tokenResponse = await axios.get('/api/s3-upload/box/token');
+                } else {
+                    throw new Error('Failed to get valid authentication token');
+                }
             }
 
             if (file.size <= SINGLE_PART_UPLOAD_LIMIT) {
@@ -347,7 +352,10 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 toast.error(`${rejectedFiles.length} ${rejectedFiles.length === 1 ? 'file was' : 'files were'} rejected due to unsupported file type.`);
             }
 
-            if (allowedFiles.length === 0) return;
+            if (allowedFiles.length === 0) {
+                setIsUploading(false);
+                return;
+            };
 
             const processedFiles = allowedFiles.map(file => ({
                 id: file.id,
@@ -379,26 +387,39 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                     : 'Import failed';
             toast.error(`Import failed: ${errorMessage}`);
             setIsUploading(false);
+        } finally {
+            setIsUploading(false);
         }
     };
-    
-    const showPicker = useCallback(async () => {
+
+    const refreshToken = async (): Promise<boolean> => {
+        try {
+            const refreshResponse = await axios.get('/api/s3-upload/box/token/refresh');
+            if (refreshResponse.data.success) {
+                setIsAuthenticated(true);
+                return true;
+            }
+            return false;
+        } catch (error) {
+            setIsAuthenticated(false);
+            return false;
+        }
+    };
+
+    const showPicker = useCallback(async (accessToken: string) => {
         if (!window.BoxSelect) {
             toast.error('BoxSelect not initialized');
             return;
         }
 
-        try {
-            const tokenResponse = await axios.get('/api/s3-upload/box/token');
-            if (!tokenResponse.data.token) {
-                throw new Error('Failed to get valid token');
-            }
+        if (!accessToken) return;
 
+        try {
             boxSelectRef.current = new window.BoxSelect({
                 clientId: BOX_CLIENT_ID,
                 linkType: 'direct',
                 multiselect: true,
-                token: tokenResponse.data.token,
+                token: accessToken,
             });
 
             boxSelectRef.current.success((files: BoxFile[]) => {
@@ -412,23 +433,42 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         }
     }, [handlePickerCallback]);
 
+    const getTokenAndShowPicker = async () => {
+        try {
+            let tokenResponse = await axios.get('/api/s3-upload/box/token');
+            if (!tokenResponse.data.token) {
+                const refreshSuccess = await refreshToken();
+                if (refreshSuccess) {
+                    tokenResponse = await axios.get('/api/s3-upload/box/token');
+                } else {
+                    throw new Error('Failed to get valid token');
+                }
+            }
+
+            await showPicker(tokenResponse.data.token);
+        } catch (error) {
+            toast.error('Failed to get access token. Please try authenticating again.');
+            setIsAuthenticated(false);
+        }
+    };
+
     const authenticate = useCallback(async () => {
         try {
             const left = window.screenX + (window.outerWidth - 600) / 2;
             const top = window.screenY + (window.outerHeight - 600) / 2;
-            
+
             const popup = window.open(
                 '/api/s3-upload/box/auth',
                 'BoxAuth',
                 `width=${600},height=${600},left=${left},top=${top}`
             );
-    
+
             if (!popup) {
                 throw new Error('Popup blocked. Please enable popups and try again.');
             }
-    
+
             authWindowRef.current = popup;
-    
+
             await new Promise<void>((resolve, reject) => {
                 const handleAuthMessage = async (event: MessageEvent) => {
                     if (event.data?.type === 'BOX_AUTH_SUCCESS') {
@@ -440,9 +480,9 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                         reject(new Error('Authentication failed'));
                     }
                 };
-    
+
                 window.addEventListener('message', handleAuthMessage);
-    
+
                 const checkPopup = setInterval(() => {
                     if (authWindowRef.current?.closed) {
                         clearInterval(checkPopup);
@@ -451,8 +491,8 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                     }
                 }, 500);
             });
-    
-            await showPicker();
+
+            await getTokenAndShowPicker();
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
             toast.error(errorMessage);
@@ -473,8 +513,16 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
 
             const validationResponse = await axios.get('/api/s3-upload/box/token/validate');
             if (validationResponse.data.isValid) {
-                await showPicker();
+                setIsAuthenticated(true);
+                await getTokenAndShowPicker();
                 return;
+            }
+            if (validationResponse.data.needsRefresh) {
+                const refreshSuccess = await refreshToken();
+                if (refreshSuccess) {
+                    await getTokenAndShowPicker();
+                    return;
+                }
             }
 
             setIsAuthenticated(false);
@@ -513,7 +561,13 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 }
 
                 const validationResponse = await axios.get('/api/s3-upload/box/token/validate');
-                setIsAuthenticated(validationResponse.data.isValid);
+                if (validationResponse.data.isValid) {
+                    setIsAuthenticated(true);
+                } else if (validationResponse.data.needsRefresh) {
+                    await refreshToken();
+                } else {
+                    setIsAuthenticated(false);
+                }
                 setIsInitialized(true);
             } catch (error) {
                 toast.error('Failed to initialize Box integration');

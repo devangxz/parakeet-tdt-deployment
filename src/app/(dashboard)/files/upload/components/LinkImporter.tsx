@@ -447,6 +447,8 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                     : 'Import failed';
             toast.error(`Import failed: ${errorMessage}`);
             setIsUploading(false);
+        } finally {
+            setIsUploading(false);
         }
     };
 

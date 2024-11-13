@@ -290,9 +290,14 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         const fileId = uuidv4();
 
         try {
-            const tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
+            let tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
             if (!tokenResponse.data.token) {
-                throw new Error('Failed to get valid authentication token');
+                const refreshSuccess = await refreshToken();
+                if (refreshSuccess) {
+                    tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
+                } else {
+                    throw new Error('Failed to get valid authentication token');
+                }
             }
 
             const fileSize = parseInt(file.sizeBytes);
@@ -356,45 +361,24 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                     : 'Import failed';
             toast.error(`Import failed: ${errorMessage}`);
             setIsUploading(false);
+        } finally {
+            setIsUploading(false);
         }
     };
 
-    const authenticate = useCallback(async () => {
-        if (!window.google?.accounts?.oauth2) {
-            toast.error('Failed to initialize Google authentication');
-            return;
+    const refreshToken = async (): Promise<boolean> => {
+        try {
+            const refreshResponse = await axios.get('/api/s3-upload/google-drive/token/refresh');
+            if (refreshResponse.data.success) {
+                setIsAuthenticated(true);
+                return true;
+            }
+            return false;
+        } catch (error) {
+            setIsAuthenticated(false);
+            return false;
         }
-
-        const tokenClient = window.google.accounts.oauth2.initCodeClient({
-            client_id: GOOGLE_CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/drive.readonly',
-            ux_mode: 'popup',
-            callback: async (response: { error?: string; code?: string }) => {
-                if (response.error) {
-                    toast.error('Authentication failed. Please try again.');
-                    return;
-                }
-
-                try {
-                    const result = await axios.post('/api/s3-upload/google-drive/auth', {
-                        code: response.code
-                    });
-
-                    if (result.data.success) {
-                        setIsAuthenticated(true);
-                        const tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
-                        showPicker(tokenResponse.data.token);
-                    } else {
-                        throw new Error('Authentication failed');
-                    }
-                } catch {
-                    toast.error('Authentication failed. Please try again.');
-                }
-            },
-        });
-
-        tokenClient.requestCode();
-    }, []);
+    };
 
     const showPicker = useCallback(async (accessToken: string) => {
         if (!window.google?.picker || !accessToken) return;
@@ -430,6 +414,61 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         }
     }, [handlePickerCallback]);
 
+    const getTokenAndShowPicker = async () => {
+        try {
+            let tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
+            if (!tokenResponse.data.token) {
+                const refreshSuccess = await refreshToken();
+                if (refreshSuccess) {
+                    tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
+                } else {
+                    throw new Error('Failed to get valid token');
+                }
+            }
+
+            await showPicker(tokenResponse.data.token);
+        } catch (error) {
+            toast.error('Failed to get access token. Please try authenticating again.');
+            setIsAuthenticated(false);
+        }
+    };
+
+    const authenticate = useCallback(async () => {
+        if (!window.google?.accounts?.oauth2) {
+            toast.error('Failed to initialize Google authentication');
+            return;
+        }
+
+        const tokenClient = window.google.accounts.oauth2.initCodeClient({
+            client_id: GOOGLE_CLIENT_ID,
+            scope: 'https://www.googleapis.com/auth/drive.readonly',
+            ux_mode: 'popup',
+            callback: async (response: { error?: string; code?: string }) => {
+                if (response.error) {
+                    toast.error('Authentication failed. Please try again.');
+                    return;
+                }
+
+                try {
+                    const result = await axios.post('/api/s3-upload/google-drive/auth', {
+                        code: response.code
+                    });
+
+                    if (result.data.success) {
+                        setIsAuthenticated(true);
+                        await getTokenAndShowPicker();
+                    } else {
+                        throw new Error('Authentication failed');
+                    }
+                } catch {
+                    toast.error('Authentication failed. Please try again.');
+                }
+            },
+        });
+
+        tokenClient.requestCode();
+    }, [showPicker]);
+
     const handleDriveAction = useCallback(async () => {
         try {
             if (isUploading) {
@@ -439,9 +478,16 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
 
             const validationResponse = await axios.get('/api/s3-upload/google-drive/token/validate');
             if (validationResponse.data.isValid) {
-                const tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
-                await showPicker(tokenResponse.data.token);
+                setIsAuthenticated(true);
+                await getTokenAndShowPicker();
                 return;
+            }
+            if (validationResponse.data.needsRefresh) {
+                const refreshSuccess = await refreshToken();
+                if (refreshSuccess) {
+                    await getTokenAndShowPicker();
+                    return;
+                }
             }
 
             setIsAuthenticated(false);
@@ -476,7 +522,13 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 });
 
                 const validationResponse = await axios.get('/api/s3-upload/google-drive/token/validate');
-                setIsAuthenticated(validationResponse.data.isValid);
+                if (validationResponse.data.isValid) {
+                    setIsAuthenticated(true);
+                } else if (validationResponse.data.needsRefresh) {
+                    await refreshToken();
+                } else {
+                    setIsAuthenticated(false);
+                }
                 setIsInitialized(true);
             } catch (error) {
                 toast.error('Failed to initialize Google Drive integration');

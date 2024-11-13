@@ -48,13 +48,13 @@ export async function GET() {
         const accessTokenPayload: GoogleTokenPayload = {
             googleAccessToken: data.access_token
         };
-        const newEncryptedAccessToken = signJwtAccessToken(accessTokenPayload, { expiresIn: '24h' });
+        const newEncryptedAccessToken = signJwtAccessToken(accessTokenPayload, { expiresIn: '1h' });
 
         cookieStore.set('googleAccessToken', newEncryptedAccessToken, {
             httpOnly: true,
             secure: isProduction,
             sameSite: 'strict',
-            maxAge: 24 * 60 * 60
+            maxAge: 60 * 60
         });
 
         return NextResponse.json({ success: true });

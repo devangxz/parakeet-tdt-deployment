@@ -38,14 +38,14 @@ export async function POST(req: Request) {
         const accessTokenPayload: GoogleTokenPayload = {
             googleAccessToken: data.access_token
         };
-        const encryptedAccessToken = signJwtAccessToken(accessTokenPayload, { expiresIn: '24h' });
+        const encryptedAccessToken = signJwtAccessToken(accessTokenPayload, { expiresIn: '1h' });
 
         let encryptedRefreshToken = null;
         if (data.refresh_token) {
             const refreshTokenPayload: GoogleRefreshTokenPayload = {
                 googleRefreshToken: data.refresh_token
             };
-            encryptedRefreshToken = signJwtAccessToken(refreshTokenPayload, { expiresIn: '30d' });
+            encryptedRefreshToken = signJwtAccessToken(refreshTokenPayload, { expiresIn: '365d' });
         }
 
         const cookieStore = cookies();
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
             httpOnly: true,
             secure: isProduction,
             sameSite: 'strict',
-            maxAge: 24 * 60 * 60
+            maxAge: 60 * 60
         });
 
         if (encryptedRefreshToken) {
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
                 httpOnly: true,
                 secure: isProduction,
                 sameSite: 'strict',
-                maxAge: 30 * 24 * 60 * 60
+                maxAge: 365 * 24 * 60 * 60
             });
         }
 
