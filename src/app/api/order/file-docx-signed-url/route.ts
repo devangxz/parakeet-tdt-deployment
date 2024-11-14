@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
         const docType = url.searchParams.get('docType')
         const userToken = req.headers.get('x-user-token')
         const user = JSON.parse(userToken ?? '{}')
-        const userId = user?.userId
+        const userId = user.internalTeamUserId ?? user?.userId
 
         if (docType === "CUSTOM_FORMATTING_DOC") {
             const fileVersion = await prisma.fileVersion.findFirst({
@@ -34,7 +34,16 @@ export async function GET(req: NextRequest) {
                 return NextResponse.json({ success: false, message: 'File version not found' }, { status: 404 })
             }
 
-            const signedUrl = await getFileVersionSignedURLFromS3(`${fileId}.docx`, fileVersion?.s3VersionId)
+            const file = await prisma.file.findUnique({
+                where: {
+                    fileId: fileId,
+                },
+                select: {
+                    filename: true
+                }
+            })
+
+            const signedUrl = await getFileVersionSignedURLFromS3(`${fileId}.docx`, fileVersion?.s3VersionId, 900, `${file?.filename}.docx`)
 
             return NextResponse.json({
                 message: 'Downloaded Successfully',

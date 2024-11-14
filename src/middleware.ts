@@ -13,7 +13,8 @@ export async function middleware(req: NextRequest) {
     requestedUrl.startsWith('/api/auth') ||
     requestedUrl.startsWith('/api/webhook') ||
     requestedUrl.startsWith('/api/static-mails') ||
-    requestedUrl.startsWith('/api/public')
+    requestedUrl.startsWith('/api/public') ||
+    requestedUrl.startsWith('/api/team/member/join')
   ) {
     return NextResponse.next()
   }

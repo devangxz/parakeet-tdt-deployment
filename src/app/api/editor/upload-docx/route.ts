@@ -30,6 +30,10 @@ export async function POST(req: Request) {
       },
     })
 
+    if (!order) {
+      return NextResponse.json({ error: 'Order not found' }, { status: 400 });
+    }
+
     const buffer = await file.arrayBuffer();
 
     const { VersionId } = await uploadToS3(filename, Buffer.from(buffer), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
@@ -69,6 +73,19 @@ export async function POST(req: Request) {
 
       await prisma.fileVersion.update({
         where: { id: fileVersion.id },
+        data: {
+          s3VersionId: VersionId
+        }
+      })
+    }
+
+    if (tag === FileTag.CF_OM_DELIVERED) {
+      await prisma.fileVersion.updateMany({
+        where: {
+          fileId,
+          tag: FileTag.CF_CUSTOMER_DELIVERED,
+          userId: order.userId
+        },
         data: {
           s3VersionId: VersionId
         }
