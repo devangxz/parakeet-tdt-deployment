@@ -5,6 +5,7 @@ import {
   Verified,
   PackageMinus,
   FileUp,
+  Share2,
 } from 'lucide-react'
 import React from 'react'
 
@@ -37,12 +38,6 @@ export default function FilesLayout({
       icon: Verified,
       isActive: false,
     },
-    // {
-    //   href: '/files/shared',
-    //   name: 'Shared with me',
-    //   icon: Users,
-    //   isActive: false,
-    // },
     {
       href: '/files/archived',
       name: 'Archived',
@@ -53,6 +48,12 @@ export default function FilesLayout({
       href: '/files/all-files',
       name: 'All',
       icon: ListChecks,
+      isActive: false,
+    },
+    {
+      href: '/files/shared',
+      name: 'Shared with me',
+      icon: Share2,
       isActive: false,
     },
   ]

@@ -13,6 +13,7 @@ import ArchiveFileDialog from './components/archive-file-dialog'
 import BulkArchiveFileDialog from './components/bulk-archive-dialog'
 import { CheckAndDownload } from './components/check-download'
 import { DataTable } from './components/data-table'
+import ShareFileDialog from './components/share-file'
 import { orderController } from './controllers'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
@@ -70,6 +71,9 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
+  const [openShareFileDialog, setOpenShareFileDialog] = useState(false)
+  const [fileIds, setFileIds] = useState<string[]>([])
+  const [filenames, setFilenames] = useState<string[]>([])
 
   useEffect(() => {
     const fileId = Object.keys(playing)[0]
@@ -119,6 +123,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
 
   const handleSelectedRowsChange = (selectedRowsData: File[]) => {
     setSelectedFiles(selectedRowsData.map((file) => file.id))
+    setFilenames(selectedRowsData.map((file) => file.filename))
   }
   if (isLoading) {
     return (
@@ -360,6 +365,16 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
               Archive
             </DropdownMenuItem>
 
+            <DropdownMenuItem
+              onClick={() => {
+                setFileIds([row.original.id])
+                setFilenames([row.original.filename])
+                setOpenShareFileDialog(true)
+              }}
+            >
+              Share
+            </DropdownMenuItem>
+
             {/* <DropdownMenuItem
                 onClick={() =>
                   controller({ fileId: row?.original?.id }, 'editTranscription')
@@ -473,6 +488,18 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align='end'>
                 <DropdownMenuItem
+                  onClick={() => {
+                    if (selectedFiles.length === 0) {
+                      toast.error('Please select at least one file')
+                      return
+                    }
+                    setFileIds(selectedFiles)
+                    setOpenShareFileDialog(true)
+                  }}
+                >
+                  Share Files
+                </DropdownMenuItem>
+                <DropdownMenuItem
                   className='text-red-500'
                   onClick={handleBulkDelete}
                 >
@@ -535,6 +562,12 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
         controller={(fileId: string, handlertype: string) =>
           controller({ fileId: fileId }, handlertype)
         }
+      />
+      <ShareFileDialog
+        open={openShareFileDialog}
+        onClose={() => setOpenShareFileDialog(false)}
+        fileIds={fileIds}
+        filenames={filenames}
       />
     </>
   )

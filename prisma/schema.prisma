@@ -75,6 +75,8 @@ model User {
   MiscEarnings              MiscEarnings[]
   FrequentTerms             FrequentTerms?
   FileVersion               FileVersion[]
+  SharedFile                SharedFile[]            @relation("SharedFilesFrom")
+  SharedFileTo              SharedFile[]            @relation("SharedFilesTo")
 
   @@index([role])
   @@index([email])
@@ -131,6 +133,7 @@ model File {
   InvoiceFile               InvoiceFile[]
   fileStatus                FileStatus    @default(NONE) @map("file_status")
   FileVersion               FileVersion[]
+  SharedFile                SharedFile[]
 
   @@index([userId])
   @@index([fileId])
@@ -597,6 +600,24 @@ model FileVersion {
   @@map("scb_file_versions")
 }
 
+model SharedFile {
+  id         Int                  @id @default(autoincrement())
+  fileId     String               @map("file_id")
+  fromUserId Int                  @map("from_user_id")
+  toUserId   Int                  @map("to_user_id")
+  permission SharedFilePermission @default(VIEWER) @map("permission")
+  createdAt  DateTime             @default(now()) @map("created_at")
+
+  fromUser User @relation("SharedFilesFrom", fields: [fromUserId], references: [id])
+  toUser   User @relation("SharedFilesTo", fields: [toUserId], references: [id])
+  file     File @relation(fields: [fileId], references: [fileId])
+
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([fileId])
+  @@map("scb_shared_files")
+}
+
 //  ███████ ███    ██ ██    ██ ███    ███ ███████
 //  ██      ████   ██ ██    ██ ████  ████ ██
 //  █████   ██ ██  ██ ██    ██ ██ ████ ██ ███████
@@ -832,4 +853,9 @@ enum FileTag {
   CF_CUSTOMER_DELIVERED
   LLM
   CF_OM_DELIVERED
+}
+
+enum SharedFilePermission {
+  EDITOR
+  VIEWER
 }
