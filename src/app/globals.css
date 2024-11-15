@@ -6,45 +6,6 @@ html {
   scroll-behavior: smooth;
 }
 
-@layer utilities {
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-}
-
-.ql-container {
-  border: none !important;
-}
-
-#customer-radio-button,
-#transcriber-radio-button {
-  margin-left: 0px !important;
-  padding: 5px 7px 5px 5px;
-  border-radius: 7px;
-}
-
-#customer-radio-button>span,
-#transcriber-radio-button>span {
-  padding: 0 !important;
-}
-
-.textLayer {
-  display: none;
-}
-
-.annotationLayer {
-  display: none;
-}
-
-.react-pdf__Page {
-  border-bottom: 2px solid black;
-}
-
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -90,9 +51,7 @@ html {
     --input: 215 27.9% 16.9%;
     --ring: 263.4 70% 50.4%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
@@ -100,6 +59,48 @@ html {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Rest of your styles remain the same... */
+.ql-container {
+  border: none !important;
+}
+
+/* Radio button styles */
+#customer-radio-button,
+#transcriber-radio-button {
+  margin-left: 0px !important;
+  padding: 5px 7px 5px 5px;
+  border-radius: 7px;
+}
+
+#customer-radio-button > span,
+#transcriber-radio-button > span {
+  padding: 0 !important;
+}
+
+/* PDF viewer styles */
+.textLayer {
+  display: none;
+}
+
+.annotationLayer {
+  display: none;
+}
+
+.react-pdf__Page {
+  border-bottom: 2px solid black;
 }
 
 .highlighted {
@@ -133,14 +134,11 @@ html {
 .no-scrollbar {
   overflow: auto;
   -ms-overflow-style: none;
-  /* IE and Edge */
   scrollbar-width: none;
-  /* Firefox */
 }
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
-  /* Chrome, Safari, Opera*/
 }
 
 .rounded-custom {
@@ -183,24 +181,15 @@ html {
   display: none;
 }
 
-/* Hide scrollbars for Internet Explorer and Edge */
 .hide-scroll-bar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
 @keyframes fade {
-  0% {
-    opacity: 0;
-  }
-
-  50% {
-    opacity: 1;
-  }
-
-  100% {
-    opacity: 0;
-  }
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 .animate-fade {
@@ -245,14 +234,10 @@ html {
 
 @keyframes flipOut {
   from {
-    /* transform: rotateX(0deg) skewX(0deg) blur(0); */
     transform-origin: top;
     opacity: 1;
   }
-
   to {
-    /* Increase the rotateX degree for a more pronounced 3D effect */
-    /* transform: rotateX(180deg) skewX(20deg) blur(5px); */
     transform-origin: bottom;
     opacity: 0;
   }
@@ -260,14 +245,10 @@ html {
 
 @keyframes flipIn {
   0% {
-    /* Start from a more rotated position for a pronounced effect */
-    /* transform: rotateX(-180deg) skewX(-20deg) blur(5px); */
     transform-origin: top;
     opacity: 0;
   }
-
   100% {
-    /* transform: rotateX(0deg) skewX(0deg) blur(0); */
     transform-origin: bottom;
     opacity: 1;
   }
@@ -282,8 +263,8 @@ html {
 }
 
 .table-row:hover,
-.table-row:hover+.instruction-row,
+.table-row:hover + .instruction-row,
 .instruction-row:hover,
-.instruction-row:hover+.table-row {
+.instruction-row:hover + .table-row {
   background-color: hsl(var(--muted) / 0.5);
 }

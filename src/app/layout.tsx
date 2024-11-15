@@ -1,6 +1,6 @@
 import { Metadata } from 'next'
 import './globals.css'
-import { Inter } from 'next/font/google'
+import { Plus_Jakarta_Sans } from 'next/font/google'
 import { Toaster } from 'sonner'
 
 import AuthProvider from './context/AuthProvider'
@@ -9,7 +9,11 @@ import UploadProgress from '@/app/(dashboard)/files/upload/components/UploadProg
 import { ThemeProvider } from '@/components/theme-provider'
 import { cn } from '@/lib/utils'
 
-const inter = Inter({ subsets: ['latin'] })
+const plusJakarta = Plus_Jakarta_Sans({ 
+  subsets: ['latin'],
+  variable: '--font-plus-jakarta',
+  weight: ['400', '500', '600', '700']
+})
 
 export const metadata: Metadata = {
   title: 'Scribie - Industry-Leading Transcription Services | Audio & Video to Text',
@@ -27,8 +31,8 @@ export default function RootLayout({
   params: { locale: string }
 }>) {
   return (
-    <html lang={locale} className={inter.className}>
-      <body className={cn(`bg-background`)}>
+    <html lang={locale} className={cn(plusJakarta.variable, plusJakarta.className)}>
+      <body className={cn(`bg-background min-h-screen font-sans antialiased`)}>
         <AuthProvider>
           <UploadProvider>
             <ThemeProvider
@@ -37,9 +41,17 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange
             >
-              {children}
-              <Toaster richColors position='top-center' />
-              <UploadProgress />
+              <div className="relative flex min-h-screen flex-col">
+                <div className="flex-1 flex-grow">
+                  <div className="grid grid-cols-12 gap-4">
+                    <main className="col-span-12">
+                      {children}
+                    </main>
+                  </div>
+                </div>
+                <Toaster richColors position='top-center' />
+                <UploadProgress />
+              </div>
             </ThemeProvider>
           </UploadProvider>
         </AuthProvider>
