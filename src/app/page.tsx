@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react'
 import BrevoChatWidget from '@/components/chat-widget'
 import Footer from '@/components/footer'
 import Navbar from '@/components/navbar'
-import Features from '@/components/pages/home/features'
+import Hero from '@/components/pages/home/hero'
 import Partner from '@/components/pages/home/partner'
 import Pricing from '@/components/pages/home/pricing'
 import Testimonials from '@/components/pages/home/testimonials'
@@ -15,7 +15,7 @@ export default function Home() {
   return (
     <>
       <Navbar />
-      <Features />
+      <Hero />
       <TranscriptionCategories />
       <Pricing />
       <Testimonials />

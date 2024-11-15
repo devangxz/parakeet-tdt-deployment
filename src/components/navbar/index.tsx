@@ -10,6 +10,23 @@ import { useState, useEffect } from 'react'
 function Navbar() {
   const { data: session } = useSession()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const offset = window.scrollY
+      if (offset > 0) {
+        setScrolled(true)
+      } else {
+        setScrolled(false)
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+    }
+  }, [])
 
   const handleMenuToggle = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen)
@@ -28,7 +45,9 @@ function Navbar() {
   }, [isMobileMenuOpen])
 
   return (
-    <div className='flex justify-between px-7 lg:px-[10%] py-6 lg:py-8 sticky top-0 bg-white z-10'>
+    <div className={`flex justify-between px-7 lg:px-[10%] py-6 lg:py-8 sticky top-0 bg-white z-10 transition-all duration-300 ${
+      scrolled ? 'border-b border-gray-200 shadow-sm' : ''
+    }`}>
       <Link href='/'>
         <div className='flex items-center gap-3'>
           <Image
