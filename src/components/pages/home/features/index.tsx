@@ -1,26 +1,8 @@
 'use client'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-// import { useEffect, useState } from 'react'
-export default function Features() {
-  const router = useRouter()
-  // const [currentWordIndex, setCurrentWordIndex] = useState(0)
-  // const [isFlipping, setIsFlipping] = useState(false)
-  // const contentArray = ['custom formats', 'custom formats', 'custom formats']
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     setIsFlipping(true)
-  //     setTimeout(() => {
-  //       setCurrentWordIndex(
-  //         (prevIndex) => (prevIndex + 1) % contentArray.length
-  //       )
-  //       setIsFlipping(false)
-  //     }, 500)
-  //   }, 1000)
 
-  //   return () => clearInterval(interval)
-  // }, [contentArray.length])
+export default function Features() {
   const features = [
     {
       img: '/assets/images/home/tag.svg',
