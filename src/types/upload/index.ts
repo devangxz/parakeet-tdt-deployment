@@ -70,6 +70,33 @@ export interface BoxSelect {
     launchPopup(): void;
 }
 
+// OneDrive Types
+export interface OneDrivePickerResponse {
+    value: Array<{
+        id: string;
+        endpoint: string;
+        parentReference: {
+            driveId: string;
+        };
+    }>;
+}
+
+export interface OneDriveGraphApiFileResponse {
+    id: string;
+    name: string;
+    size: number;
+    file: {
+        mimeType: string;
+    };
+}
+
+export interface OneDriveFile {
+    id: string;
+    name: string;
+    size: number;
+    mimeType: string;
+}
+
 // GoogleDriveImporter Types
 export interface GoogleDriveFile {
     id: string;
@@ -151,5 +178,19 @@ declare global {
             load(api: string, callback: () => void): void;
         };
         BoxSelect: new (options: BoxSelectOptions) => BoxSelect;
+        OneDrive: {
+            open: (options: {
+                clientId: string;
+                action: string;
+                multiSelect: boolean;
+                advanced?: {
+                    filter?: string;
+                    endpointHint?: string;
+                    queryParameters?: string;
+                };
+                success: (response: OneDrivePickerResponse) => void;
+                error: () => void;
+            }) => void;
+        };
     }
 }
