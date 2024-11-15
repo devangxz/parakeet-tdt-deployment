@@ -578,7 +578,7 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
 
     if (!isInitialized) {
         return (
-            <div className='bg-[#2d9348] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#2d9348] shadow-sm'>
+            <div className='bg-[#00008B] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#00008B] shadow-sm'>
                 <div className='group relative w-full flex rounded-lg px-5 py-2.5 text-center transition min-h-[13rem]'>
                     <div className='self-center w-full flex flex-col items-center justify-center gap-4 sm:px-5'>
                         <div className='text-white'>Initializing OneDrive...</div>
@@ -589,7 +589,7 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     }
 
     return (
-        <div className='bg-[#2d9348] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#2d9348] shadow-sm'>
+        <div className='bg-[#00008B] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#00008B] shadow-sm'>
             <div className='group relative w-full flex rounded-lg px-5 py-2.5 text-center transition min-h-[13rem]'>
                 <div className='self-center w-full flex flex-col items-center justify-center gap-4 sm:px-5'>
                     <div className='flex gap-3 text-base font-medium leading-6 text-white'>
@@ -601,7 +601,7 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                     </div>
                     <button
                         onClick={handleDriveAction}
-                        className='mt-4 px-5 py-2 bg-white rounded-[32px] text-[#2d9348] font-medium border border-white hover:bg-gray-100 transition-colors'
+                        className='mt-4 px-5 py-2 bg-white rounded-[32px] text-[#00008B] font-medium border border-white hover:bg-gray-100 transition-colors'
                     >
                         {isAuthenticated ? 'Select Files' : 'Connect to OneDrive'}
                     </button>
