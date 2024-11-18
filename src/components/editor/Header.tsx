@@ -389,6 +389,7 @@ export default function NewHeader({ editorModeOptions, getEditorMode, editorMode
                 type: 'QC'
             })
             toastInstance.success('Transcript reverted successfully')
+            localStorage.removeItem('transcript')
             window.location.reload();
             return;
         } catch (error) {
