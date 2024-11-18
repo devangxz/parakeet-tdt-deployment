@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useUpload } from '@/app/context/UploadProvider';
 import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
 import { StreamingState, QueuedLink, UploaderProps } from '@/types/upload';
-import { handleRetryableError, calculateOverallProgress } from '@/utils/uploadUtils';
+import { handleRetryableError, calculateOverallProgress, cleanupUpload } from '@/utils/uploadUtils';
 
 const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     const { setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
@@ -26,25 +26,6 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         } catch {
             return 'imported-file';
         }
-    };
-
-    const cleanupUpload = async (fileName: string, uploadState?: StreamingState) => {
-        if (uploadState?.uploadId && uploadState?.key) {
-            try {
-                await axios.post('/api/s3-upload/multi-part/abort', {
-                    uploadId: uploadState.uploadId,
-                    key: uploadState.key
-                });
-            } catch (error) {
-                toast.error(`Failed to abort multipart upload for file ${fileName}`);
-            }
-        }
-
-        if (uploadState?.abortController) {
-            uploadState.abortController.abort();
-        }
-
-        delete uploadStatesRef.current[fileName];
     };
 
     const singlePartUpload = async (
@@ -293,7 +274,7 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 }
             }
         } catch (error) {
-            await cleanupUpload(fileName, state);
+            await cleanupUpload(fileName, state, uploadStatesRef);
             throw error;
         }
     };

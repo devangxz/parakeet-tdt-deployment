@@ -3,47 +3,40 @@
 import { ReloadIcon } from '@radix-ui/react-icons';
 import axios from 'axios';
 import { FileUp } from 'lucide-react';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
 import { useImportService } from '@/app/context/ImportServiceProvider';
 import { useUpload } from '@/app/context/UploadProvider';
 import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
-import { StreamingState, GoogleDriveFile, GooglePickerResponse, UploaderProps } from '@/types/upload';
-import { handleRetryableError, calculateOverallProgress, cleanupUpload, refreshToken } from '@/utils/uploadUtils';
-import { getAllowedMimeTypes } from '@/utils/validateFileType';
+import { StreamingState, DropboxChooserFile, DropboxFile, DropboxChooserOptions, UploaderProps } from '@/types/upload';
+import { handleRetryableError, calculateOverallProgress, cleanupUpload } from '@/utils/uploadUtils';
+import { getAllowedFileExtensions, getFileTypeFromExtension } from '@/utils/validateFileType';
 
-const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY!;
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!;
-const GOOGLE_APP_ID = process.env.NEXT_PUBLIC_GOOGLE_APP_ID!;
-
-const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
+const DropboxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     const { setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
-    const { isGoogleDriveServiceReady } = useImportService();
+    const { isDropboxServiceReady, initializeDropbox } = useImportService();
     const [isPickerLoading, setIsPickerLoading] = useState(false);
 
     const uploadStatesRef = useRef<Record<string, StreamingState>>({});
 
-    const singlePartUpload = async (file: GoogleDriveFile, fileId: string, token: string): Promise<void> => {
+    const singlePartUpload = async (file: DropboxFile, fileId: string): Promise<void> => {
         const abortController = new AbortController();
 
         let retryCount = -1;
         let downloadedBytes = 0;
-        const totalSize = parseInt(file.sizeBytes);
+        const totalSize = file.size;
 
         while (retryCount <= UPLOAD_MAX_RETRIES) {
             try {
-                const downloadResponse = await fetch(
-                    `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,
-                    {
-                        headers: { 'Authorization': `Bearer ${token}` },
-                        signal: abortController.signal
-                    }
-                );
+                const downloadResponse = await fetch(file.link, {
+                    method: 'GET',
+                    signal: abortController.signal
+                });
 
                 if (!downloadResponse.ok || !downloadResponse.body) {
-                    throw new Error('Failed to get file stream from Google Drive');
+                    throw new Error('Failed to get file from Dropbox');
                 }
 
                 const reader = downloadResponse.body.getReader();
@@ -91,7 +84,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     };
 
     const initializeMultiPartUpload = async (
-        file: GoogleDriveFile,
+        file: DropboxFile,
         fileId: string
     ): Promise<StreamingState> => {
         let retryCount = -1;
@@ -117,7 +110,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                     partNumber: 1,
                     abortController: new AbortController(),
                     downloadedBytes: 0,
-                    totalSize: parseInt(file.sizeBytes)
+                    totalSize: file.size
                 };
             } catch (error) {
                 retryCount++;
@@ -191,21 +184,18 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         throw new Error('Failed to upload part');
     };
 
-    const multiPartUpload = async (file: GoogleDriveFile, fileId: string, token: string): Promise<void> => {
+    const multiPartUpload = async (file: DropboxFile, fileId: string): Promise<void> => {
         let state = await initializeMultiPartUpload(file, fileId);
         uploadStatesRef.current[file.name] = state;
 
         try {
-            const downloadResponse = await fetch(
-                `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,
-                {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    signal: state.abortController.signal
-                }
-            );
+            const downloadResponse = await fetch(file.link, {
+                method: 'GET',
+                signal: state.abortController.signal
+            });
 
             if (!downloadResponse.ok || !downloadResponse.body) {
-                throw new Error('Failed to get file stream from Google Drive');
+                throw new Error('Failed to get file from Dropbox');
             }
 
             const reader = downloadResponse.body.getReader();
@@ -264,7 +254,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         }
     };
 
-    const uploadFile = async (file: GoogleDriveFile): Promise<void> => {
+    const uploadFile = async (file: DropboxFile): Promise<void> => {
         updateUploadStatus(file.name, {
             progress: 0,
             status: 'uploading'
@@ -273,21 +263,10 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         const fileId = uuidv4();
 
         try {
-            let tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
-            if (!tokenResponse.data.token) {
-                const refreshSuccess = await refreshToken('google-drive');
-                if (refreshSuccess) {
-                    tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
-                } else {
-                    throw new Error('Failed to get valid authentication token');
-                }
-            }
-
-            const fileSize = parseInt(file.sizeBytes);
-            if (fileSize <= SINGLE_PART_UPLOAD_LIMIT) {
-                await singlePartUpload(file, fileId, tokenResponse.data.token);
+            if (file.size <= SINGLE_PART_UPLOAD_LIMIT) {
+                await singlePartUpload(file, fileId);
             } else {
-                await multiPartUpload(file, fileId, tokenResponse.data.token);
+                await multiPartUpload(file, fileId);
             }
 
             updateUploadStatus(file.name, {
@@ -305,193 +284,107 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         }
     };
 
-    const handlePickerCallback = async (data: GooglePickerResponse) => {
-        if (data.action !== window.google.picker.Action.PICKED) return;
-
-        if (isUploading) {
-            toast.error("Please wait for current uploads to complete before starting new uploads");
-            return;
-        }
-
-        const selectedFiles = data.docs;
-
-        if (selectedFiles.length === 0) {
-            toast.error('No valid files selected. Please select supported audio or video files.');
-            return;
-        }
-
-        setIsUploading(true);
-        setUploadingFiles(selectedFiles.map((file: GoogleDriveFile) => ({
-            name: file.name,
-            size: parseInt(file.sizeBytes),
-            fileId: file.id
-        })));
-
-        try {
-            initializeSSEConnection(
-                () => onUploadSuccess(true),
-                () => setIsUploading(false)
-            );
-
-            for (const file of selectedFiles) {
-                await uploadFile(file);
-            }
-        } catch (error) {
-            const errorMessage = axios.isAxiosError(error)
-                ? error.response?.data?.error
-                : error instanceof Error
-                    ? error.message
-                    : 'Import failed';
-            toast.error(`Import failed: ${errorMessage}`);
-            setIsUploading(false);
-        } finally {
-            setIsUploading(false);
-        }
-    };
-
-    const showPicker = useCallback(async (accessToken: string) => {
-        if (!window.google?.picker || !accessToken) return;
-
-        try {
-            const { status } = await axios.get(
-                `https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${accessToken}`
-            );
-
-            if (status !== 200) {
-                throw new Error('Invalid token');
-            }
-
-            const view = new window.google.picker.DocsView()
-                .setMimeTypes(getAllowedMimeTypes().join(','))
-                .setIncludeFolders(true);
-
-            const picker = new window.google.picker.PickerBuilder()
-                .addView(view)
-                .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED)
-                .enableFeature(window.google.picker.Feature.SUPPORT_DRIVES)
-                .setTitle('Select Files')
-                .setAppId(GOOGLE_APP_ID)
-                .setOAuthToken(accessToken)
-                .setDeveloperKey(GOOGLE_API_KEY)
-                .setCallback(handlePickerCallback)
-                .build();
-
-            picker.setVisible(true);
-        } catch (error) {
-            toast.error('Failed to open file picker. Please try authenticating again.');
-        }
-    }, [handlePickerCallback]);
-
-    const getTokenAndShowPicker = async () => {
-        try {
-            let tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
-            if (!tokenResponse.data.token) {
-                const refreshSuccess = await refreshToken('google-drive');
-                if (refreshSuccess) {
-                    tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
-                } else {
-                    throw new Error('Failed to get valid token');
-                }
-            }
-
-            await showPicker(tokenResponse.data.token);
-        } catch (error) {
-            toast.error('Failed to get access token. Please try authenticating again.');
-        }
-    };
-
-    const authenticate = useCallback(async () => {
-        if (!window.google?.accounts?.oauth2) {
-            toast.error('Failed to initialize Google authentication');
-            return;
-        }
-
-        const tokenClient = window.google.accounts.oauth2.initCodeClient({
-            client_id: GOOGLE_CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/drive.readonly',
-            ux_mode: 'popup',
-            callback: async (response: { error?: string; code?: string }) => {
-                if (response.error) {
-                    toast.error('Authentication failed. Please try again.');
-                    return;
-                }
-
-                try {
-                    setIsPickerLoading(true);
-
-                    const result = await axios.post('/api/s3-upload/google-drive/auth', {
-                        code: response.code
-                    });
-
-                    if (result.data.success) {
-                        await getTokenAndShowPicker();
-                    } else {
-                        throw new Error('Authentication failed');
-                    }
-                } catch {
-                    setIsPickerLoading(false);
-                    toast.error('Authentication failed. Please try again.');
-                } finally {
-                    setIsPickerLoading(false);
-                }
-            },
-        });
-
-        tokenClient.requestCode();
-    }, [showPicker]);
-
-    const handleDriveAction = useCallback(async () => {
+    const handleDropboxAction = useCallback(async () => {
         try {
             if (isUploading) {
                 toast.error("Please wait for current uploads to complete before starting new uploads");
                 return;
             }
 
-            setIsPickerLoading(true);
-
-            const validationResponse = await axios.get('/api/s3-upload/google-drive/token/validate');
-            if (validationResponse.data.isValid) {
-                await getTokenAndShowPicker();
-                setIsPickerLoading(false);
+            if (!window.Dropbox) {
+                toast.error("Dropbox SDK not initialized");
                 return;
             }
-            if (validationResponse.data.needsRefresh) {
-                const refreshSuccess = await refreshToken('google-drive');
-                if (refreshSuccess) {
-                    await getTokenAndShowPicker();
-                    setIsPickerLoading(false);
-                    return;
-                }
-            }
 
-            await authenticate();
+            setIsPickerLoading(true);
+
+            const chooserOptions: DropboxChooserOptions = {
+                linkType: "direct",
+                multiselect: true,
+                extensions: getAllowedFileExtensions(),
+                folderselect: false,
+                success: async (files: DropboxChooserFile[]) => {
+                    if (files.length === 0) {
+                        toast.error('Please select one or more files to import');
+                        return;
+                    }
+
+                    setIsUploading(true);
+                    setUploadingFiles(files.map(file => ({
+                        name: file.name,
+                        size: parseInt(String(file.bytes)),
+                        fileId: file.id
+                    })));
+
+                    try {
+                        initializeSSEConnection(
+                            () => onUploadSuccess(true),
+                            () => setIsUploading(false)
+                        );
+
+                        for (const file of files) {
+                            const dropboxFile: DropboxFile = {
+                                name: file.name,
+                                size: parseInt(String(file.bytes)),
+                                mimeType: getFileTypeFromExtension(file.name),
+                                link: file.link
+                            };
+                            await uploadFile(dropboxFile);
+                        }
+                    } catch (error) {
+                        const errorMessage = axios.isAxiosError(error)
+                            ? error.response?.data?.error
+                            : error instanceof Error
+                                ? error.message
+                                : 'Import failed';
+                        toast.error(`Import failed: ${errorMessage}`);
+                        setIsUploading(false);
+                    }
+                },
+            };
+
+            window.Dropbox.choose(chooserOptions);
         } catch (error) {
             setIsPickerLoading(false);
             
-            const errorMessage = error instanceof Error ? error.message : 'Failed to connect to Google Drive';
+            const errorMessage = error instanceof Error ? error.message : 'Failed to connect to Dropbox';
             toast.error(errorMessage);
         } finally {
             setIsPickerLoading(false);
         }
-    }, [isUploading, authenticate, showPicker]);
+    }, [isUploading, onUploadSuccess, setIsUploading, setUploadingFiles, initializeSSEConnection]);
+
+    useEffect(() => {
+        const initialize = async () => {
+            if (!isDropboxServiceReady) {
+                try {
+                    await initializeDropbox();
+                } catch (error) {
+                    toast.error('Failed to initialize Dropbox');
+                }
+            }
+        };
+
+        initialize();
+    }, [isDropboxServiceReady, initializeDropbox]);
 
     return (
-        <div className='bg-[#00ac47] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#00ac47] shadow-sm'>
+        <div className='bg-[#007ee5] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#007ee5] shadow-sm'>
             <div className='group relative w-full flex rounded-lg px-5 py-2.5 text-center transition min-h-[13rem]'>
                 <div className='self-center w-full flex flex-col items-center justify-center gap-4 sm:px-5'>
                     <div className='flex gap-3 text-base font-medium leading-6 text-white'>
                         <FileUp className="text-white" />
-                        <h4>Google Drive Importer</h4>
+                        <h4>Dropbox Importer</h4>
                     </div>
                     <div className='text-xs self-stretch mt-4 leading-5 text-center text-white max-md:mr-1 max-md:max-w-full'>
-                        <>Select files from your Google Drive to import. Please allow Scribie.ai Importer in the popup to access your Google Drive files for the import process. We will only access the selected files. The permissions can be revoked from your <a href="https://security.google.com/settings/security/permissions" target="_blank" rel="noopener noreferrer" className="underline hover:text-white">Google Account Settings</a> page anytime.</>
+                        Select files from your Dropbox to import. We will only access the selected files.
                     </div>
                     <button
-                        onClick={handleDriveAction}
-                        disabled={!isGoogleDriveServiceReady || isPickerLoading}
-                        className='mt-4 px-5 py-2 bg-white rounded-[32px] text-[#00ac47] font-medium border border-white hover:bg-gray-100 transition-colors'
+                        onClick={handleDropboxAction}
+                        disabled={!isDropboxServiceReady || isPickerLoading}
+                        className='mt-4 px-5 py-2 bg-white rounded-[32px] text-[#007ee5] font-medium border border-white hover:bg-gray-100 transition-colors'
                     >
-                        {!isGoogleDriveServiceReady ? (
+                        {!isDropboxServiceReady ? (
                             <div className='flex items-center justify-center'>
                                 <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
                                 <span>Initializing...</span>
@@ -502,7 +395,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                                 <span>Opening Picker...</span>
                             </div>
                         ) : (
-                            'Select from Google Drive'
+                            'Select from Dropbox'
                         )}
                     </button>
                 </div>
@@ -511,4 +404,4 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     );
 };
 
-export default GoogleDriveImporter;
+export default DropboxImporter;

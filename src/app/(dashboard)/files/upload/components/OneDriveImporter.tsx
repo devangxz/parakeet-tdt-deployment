@@ -1,44 +1,29 @@
 'use client';
 
+import { ReloadIcon } from '@radix-ui/react-icons';
 import axios from 'axios';
 import { FileUp } from 'lucide-react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
+import { useImportService } from '@/app/context/ImportServiceProvider';
 import { useUpload } from '@/app/context/UploadProvider';
 import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
 import { StreamingState, OneDrivePickerResponse, OneDriveGraphApiFileResponse, OneDriveFile, UploaderProps } from '@/types/upload';
-import { handleRetryableError, calculateOverallProgress } from '@/utils/uploadUtils';
+import { handleRetryableError, calculateOverallProgress, cleanupUpload, refreshToken } from '@/utils/uploadUtils';
 import { getAllowedFileExtensions } from '@/utils/validateFileType';
 
 const ONEDRIVE_CLIENT_ID = process.env.NEXT_PUBLIC_ONEDRIVE_CLIENT_ID!;
 
 const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     const { setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [isInitialized, setIsInitialized] = useState(false);
+    const { isOneDriveServiceReady } = useImportService();
+    const [isPickerLoading, setIsPickerLoading] = useState(false);
+    const [isPreparingFiles, setIsPreparingFiles] = useState(false);
+    const [preparingProgress, setPreparingProgress] = useState('');
 
     const uploadStatesRef = useRef<Record<string, StreamingState>>({});
-
-    const cleanupUpload = async (fileName: string, uploadState?: StreamingState) => {
-        if (uploadState?.uploadId && uploadState?.key) {
-            try {
-                await axios.post('/api/s3-upload/multi-part/abort', {
-                    uploadId: uploadState.uploadId,
-                    key: uploadState.key
-                });
-            } catch (error) {
-                toast.error(`Failed to abort multipart upload for file ${fileName}`);
-            }
-        }
-
-        if (uploadState?.abortController) {
-            uploadState.abortController.abort();
-        }
-
-        delete uploadStatesRef.current[fileName];
-    };
 
     const singlePartUpload = async (file: OneDriveFile, fileId: string, token: string): Promise<void> => {
         const abortController = new AbortController();
@@ -102,79 +87,6 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 retryCount++;
                 await handleRetryableError(error, retryCount);
             }
-        }
-    };
-
-    const multiPartUpload = async (file: OneDriveFile, fileId: string, token: string): Promise<void> => {
-        let state = await initializeMultiPartUpload(file, fileId);
-        uploadStatesRef.current[file.name] = state;
-
-        try {
-            const downloadResponse = await fetch(
-                `https://graph.microsoft.com/v1.0/me/drive/items/${file.id}/content`,
-                {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    signal: state.abortController.signal
-                }
-            );
-
-            if (!downloadResponse.ok || !downloadResponse.body) {
-                throw new Error('Failed to get file stream from OneDrive');
-            }
-
-            const reader = downloadResponse.body.getReader();
-
-            while (true) {
-                const { done, value } = await reader.read();
-
-                if (done) {
-                    if (state.bufferSize > 0) {
-                        state = await uploadBufferedPart(state, file.name);
-                    }
-                    break;
-                }
-
-                if (value) {
-                    state.buffer.push(value);
-                    state.bufferSize += value.length;
-                    state.downloadedBytes += value.length;
-
-                    updateUploadStatus(file.name, {
-                        progress: Math.min(calculateOverallProgress(
-                            (state.downloadedBytes / state.totalSize) * 100,
-                            (state.totalUploaded / state.totalSize) * 100
-                        ), 99),
-                        status: 'uploading'
-                    });
-
-                    if (state.bufferSize >= MULTI_PART_UPLOAD_CHUNK_SIZE) {
-                        state = await uploadBufferedPart(state, file.name);
-                    }
-                }
-            }
-
-            let retryCount = -1;
-            const sortedParts = state.completedParts.sort((a, b) => a.PartNumber - b.PartNumber);
-
-            while (retryCount <= UPLOAD_MAX_RETRIES) {
-                try {
-                    await axios.post('/api/s3-upload/multi-part/complete', {
-                        sendBackData: {
-                            key: state.key,
-                            uploadId: state.uploadId,
-                            fileName: file.name
-                        },
-                        parts: sortedParts
-                    });
-                    break;
-                } catch (error) {
-                    retryCount++;
-                    await handleRetryableError(error, retryCount);
-                }
-            }
-        } catch (error) {
-            await cleanupUpload(file.name, state);
-            throw error;
         }
     };
 
@@ -272,10 +184,84 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             } catch (error) {
                 retryCount++;
                 await handleRetryableError(error, retryCount);
+
                 state.lastFailedPart = state.partNumber;
             }
         }
         throw new Error('Failed to upload part');
+    };
+
+    const multiPartUpload = async (file: OneDriveFile, fileId: string, token: string): Promise<void> => {
+        let state = await initializeMultiPartUpload(file, fileId);
+        uploadStatesRef.current[file.name] = state;
+
+        try {
+            const downloadResponse = await fetch(
+                `https://graph.microsoft.com/v1.0/me/drive/items/${file.id}/content`,
+                {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    signal: state.abortController.signal
+                }
+            );
+
+            if (!downloadResponse.ok || !downloadResponse.body) {
+                throw new Error('Failed to get file stream from OneDrive');
+            }
+
+            const reader = downloadResponse.body.getReader();
+
+            while (true) {
+                const { done, value } = await reader.read();
+
+                if (done) {
+                    if (state.bufferSize > 0) {
+                        state = await uploadBufferedPart(state, file.name);
+                    }
+                    break;
+                }
+
+                if (value) {
+                    state.buffer.push(value);
+                    state.bufferSize += value.length;
+                    state.downloadedBytes += value.length;
+
+                    updateUploadStatus(file.name, {
+                        progress: Math.min(calculateOverallProgress(
+                            (state.downloadedBytes / state.totalSize) * 100,
+                            (state.totalUploaded / state.totalSize) * 100
+                        ), 99),
+                        status: 'uploading'
+                    });
+
+                    if (state.bufferSize >= MULTI_PART_UPLOAD_CHUNK_SIZE) {
+                        state = await uploadBufferedPart(state, file.name);
+                    }
+                }
+            }
+
+            let retryCount = -1;
+            const sortedParts = state.completedParts.sort((a, b) => a.PartNumber - b.PartNumber);
+
+            while (retryCount <= UPLOAD_MAX_RETRIES) {
+                try {
+                    await axios.post('/api/s3-upload/multi-part/complete', {
+                        sendBackData: {
+                            key: state.key,
+                            uploadId: state.uploadId,
+                            fileName: file.name
+                        },
+                        parts: sortedParts
+                    });
+                    break;
+                } catch (error) {
+                    retryCount++;
+                    await handleRetryableError(error, retryCount);
+                }
+            }
+        } catch (error) {
+            await cleanupUpload(file.name, state, uploadStatesRef);
+            throw error;
+        }
     };
 
     const uploadFile = async (file: OneDriveFile, accessToken: string): Promise<void> => {
@@ -343,9 +329,12 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         }
 
         try {
+            setIsPreparingFiles(true);
+            setPreparingProgress(`Preparing ${pickerResponse.value.length} files for upload...`);
+
             let tokenResponse = await axios.get('/api/s3-upload/one-drive/token');
             if (!tokenResponse.data.token) {
-                const refreshSuccess = await refreshToken();
+                const refreshSuccess = await refreshToken('one-drive');
                 if (refreshSuccess) {
                     tokenResponse = await axios.get('/api/s3-upload/one-drive/token');
                 } else {
@@ -353,6 +342,7 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 }
             }
 
+            setPreparingProgress('Getting file details...');
             const fileDetailsPromises = pickerResponse.value.map(item =>
                 getFileDetails(item.id, tokenResponse.data.token)
             );
@@ -364,7 +354,12 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 throw new Error('Failed to get file details');
             }
 
+            setPreparingProgress('Initializing upload...');
+
             setIsUploading(true);
+            setIsPreparingFiles(false);
+            setPreparingProgress('');
+
             setUploadingFiles(validFiles.map(file => ({
                 name: file.name,
                 size: file.size,
@@ -386,23 +381,13 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                     ? error.message
                     : 'Import failed';
             toast.error(`Import failed: ${errorMessage}`);
+            setIsPreparingFiles(false);
+            setPreparingProgress('');
             setIsUploading(false);
         } finally {
+            setIsPreparingFiles(false);
+            setPreparingProgress('');
             setIsUploading(false);
-        }
-    };
-
-    const refreshToken = async (): Promise<boolean> => {
-        try {
-            const refreshResponse = await axios.get('/api/s3-upload/one-drive/token/refresh');
-            if (refreshResponse.data.success) {
-                setIsAuthenticated(true);
-                return true;
-            }
-            return false;
-        } catch (error) {
-            setIsAuthenticated(false);
-            return false;
         }
     };
 
@@ -424,10 +409,9 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         };
 
         try {
-            window.OneDrive.open(options);
+            window?.OneDrive?.open(options);
         } catch (error) {
             toast.error('Failed to open file picker. Please try authenticating again.');
-            setIsAuthenticated(false);
         }
     }, [handlePickerCallback, isUploading]);
 
@@ -435,7 +419,7 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         try {
             let tokenResponse = await axios.get('/api/s3-upload/one-drive/token');
             if (!tokenResponse.data.token) {
-                const refreshSuccess = await refreshToken();
+                const refreshSuccess = await refreshToken('one-drive');
                 if (refreshSuccess) {
                     tokenResponse = await axios.get('/api/s3-upload/one-drive/token');
                 } else {
@@ -446,7 +430,6 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             await showPicker();
         } catch (error) {
             toast.error('Failed to get access token. Please try authenticating again.');
-            setIsAuthenticated(false);
         }
     };
 
@@ -469,7 +452,6 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 const handleAuthMessage = async (event: MessageEvent) => {
                     if (event.data?.type === 'ONEDRIVE_AUTH_SUCCESS') {
                         window.removeEventListener('message', handleAuthMessage);
-                        setIsAuthenticated(true);
                         resolve();
                     } else if (event.data?.type === 'ONEDRIVE_AUTH_ERROR') {
                         window.removeEventListener('message', handleAuthMessage);
@@ -488,11 +470,16 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 }, 500);
             });
 
+            setIsPickerLoading(true);
+
             await getTokenAndShowPicker();
         } catch (error) {
+            setIsPickerLoading(false);
+
             const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
             toast.error(errorMessage);
-            setIsAuthenticated(false);
+        } finally {
+            setIsPickerLoading(false);
         }
     }, [showPicker]);
 
@@ -503,93 +490,37 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 return;
             }
 
+            setIsPickerLoading(true);
+
             const validationResponse = await axios.get('/api/s3-upload/one-drive/token/validate');
             if (validationResponse.data.isValid) {
-                setIsAuthenticated(true);
                 await getTokenAndShowPicker();
+                setIsPickerLoading(false);
                 return;
             }
 
             if (validationResponse.data.needsRefresh) {
-                const refreshSuccess = await refreshToken();
+                const refreshSuccess = await refreshToken('one-drive');
                 if (refreshSuccess) {
                     await getTokenAndShowPicker();
+                    setIsPickerLoading(false);
                     return;
                 }
             }
 
-            setIsAuthenticated(false);
             await authenticate();
         } catch (error) {
+            setIsPickerLoading(false);
+
             const errorMessage = error instanceof Error ? error.message : 'Failed to connect to OneDrive';
             toast.error(errorMessage);
-            setIsAuthenticated(false);
+        } finally {
+            setIsPickerLoading(false);
         }
     }, [isUploading, authenticate, showPicker]);
 
-    useEffect(() => {
-        const loadOneDriveScript = async () => {
-            try {
-                await new Promise<void>((resolve, reject) => {
-                    document.querySelectorAll('script[src*="onedrive.js"]')
-                        .forEach(script => script.remove());
-
-                    const script = document.createElement('script');
-                    script.src = 'https://js.live.net/v7.2/OneDrive.js';
-                    script.async = true;
-
-                    script.onload = () => {
-                        setTimeout(resolve, 100);
-                    };
-
-                    script.onerror = () => {
-                        reject(new Error('Failed to load OneDrive script'));
-                    };
-
-                    document.body.appendChild(script);
-                });
-
-                if (!window.OneDrive) {
-                    throw new Error('OneDrive failed to initialize');
-                }
-
-                const validationResponse = await axios.get('/api/s3-upload/one-drive/token/validate');
-                if (validationResponse.data.isValid) {
-                    setIsAuthenticated(true);
-                } else if (validationResponse.data.needsRefresh) {
-                    await refreshToken();
-                } else {
-                    setIsAuthenticated(false);
-                }
-                setIsInitialized(true);
-            } catch (error) {
-                toast.error('Failed to initialize OneDrive integration');
-                setIsAuthenticated(false);
-            }
-        };
-
-        loadOneDriveScript();
-
-        return () => {
-            document.querySelectorAll('script[src*="onedrive.js"]')
-                .forEach(script => script.remove());
-        };
-    }, []);
-
-    if (!isInitialized) {
-        return (
-            <div className='bg-[#00008B] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#00008B] shadow-sm'>
-                <div className='group relative w-full flex rounded-lg px-5 py-2.5 text-center transition min-h-[13rem]'>
-                    <div className='self-center w-full flex flex-col items-center justify-center gap-4 sm:px-5'>
-                        <div className='text-white'>Initializing OneDrive...</div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className='bg-[#00008B] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#00008B] shadow-sm'>
+        <div className='bg-[#094ab1] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#094ab1] shadow-sm'>
             <div className='group relative w-full flex rounded-lg px-5 py-2.5 text-center transition min-h-[13rem]'>
                 <div className='self-center w-full flex flex-col items-center justify-center gap-4 sm:px-5'>
                     <div className='flex gap-3 text-base font-medium leading-6 text-white'>
@@ -597,13 +528,31 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                         <h4>OneDrive Importer</h4>
                     </div>
                     <div className='text-xs self-stretch mt-4 leading-5 text-center text-white max-md:mr-1 max-md:max-w-full'>
-                        <>Select files from your OneDrive to import. Please allow Scribie.ai Importer in the popup to access your OneDrive files for the import process. We will only access the selected files. The permissions can be revoked from your <a href="https://account.microsoft.com/permissions" target="_blank" rel="noopener noreferrer" className="underline hover:text-white">Microsoft Account Settings</a> page anytime.</>
+                        Select files from your OneDrive to import. Please allow Scribie.ai Importer in the popup to access your OneDrive files for the import process. We will only access the selected files.
                     </div>
                     <button
                         onClick={handleDriveAction}
-                        className='mt-4 px-5 py-2 bg-white rounded-[32px] text-[#00008B] font-medium border border-white hover:bg-gray-100 transition-colors'
+                        disabled={!isOneDriveServiceReady || isPickerLoading || isPreparingFiles}
+                        className='mt-4 px-5 py-2 bg-white rounded-[32px] text-[#094ab1] font-medium border border-white hover:bg-gray-100 transition-colors'
                     >
-                        {isAuthenticated ? 'Select Files' : 'Connect to OneDrive'}
+                        {!isOneDriveServiceReady ? (
+                            <div className='flex items-center justify-center'>
+                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                                <span>Initializing...</span>
+                            </div>
+                        ) : isPickerLoading ? (
+                            <div className='flex items-center justify-center'>
+                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                                <span>Opening Picker...</span>
+                            </div>
+                        ) : isPreparingFiles ? (
+                            <div className='flex items-center justify-center'>
+                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                                <span>{preparingProgress}</span>
+                            </div>
+                        ) : (
+                            'Select from OneDrive'
+                        )}
                     </button>
                 </div>
             </div>

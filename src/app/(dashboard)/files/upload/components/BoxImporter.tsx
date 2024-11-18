@@ -1,53 +1,29 @@
 'use client';
 
+import { ReloadIcon } from '@radix-ui/react-icons';
 import axios from 'axios';
 import { FileUp } from 'lucide-react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
+import { useImportService } from '@/app/context/ImportServiceProvider';
 import { useUpload } from '@/app/context/UploadProvider';
-import { ALLOWED_FILE_TYPES, SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
+import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
 import { StreamingState, BoxFile, BoxSelect, UploaderProps } from '@/types/upload';
-import { handleRetryableError, calculateOverallProgress } from '@/utils/uploadUtils';
-import validateFileType from '@/utils/validateFileType';
+import { handleRetryableError, calculateOverallProgress, cleanupUpload, refreshToken } from '@/utils/uploadUtils';
+import validateFileType, { getFileTypeFromExtension } from '@/utils/validateFileType';
 
 const BOX_CLIENT_ID = process.env.NEXT_PUBLIC_BOX_CLIENT_ID!;
 
 const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     const { setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [isInitialized, setIsInitialized] = useState(false);
+    const { isBoxServiceReady } = useImportService();
+    const [isPickerLoading, setIsPickerLoading] = useState(false);
 
     const uploadStatesRef = useRef<Record<string, StreamingState>>({});
     const authWindowRef = useRef<Window | null>(null);
     const boxSelectRef = useRef<BoxSelect | null>(null);
-
-    const getFileTypeFromExtension = (fileName: string): string => {
-        const fileExtension = '.' + fileName.split('.').pop()?.toLowerCase();
-        const allowedMimeTypes = ALLOWED_FILE_TYPES[fileExtension as keyof typeof ALLOWED_FILE_TYPES];
-
-        return allowedMimeTypes?.[0] || 'invalid';
-    };
-
-    const cleanupUpload = async (fileName: string, uploadState?: StreamingState) => {
-        if (uploadState?.uploadId && uploadState?.key) {
-            try {
-                await axios.post('/api/s3-upload/multi-part/abort', {
-                    uploadId: uploadState.uploadId,
-                    key: uploadState.key
-                });
-            } catch (error) {
-                toast.error(`Failed to abort multipart upload for file ${fileName}`);
-            }
-        }
-
-        if (uploadState?.abortController) {
-            uploadState.abortController.abort();
-        }
-
-        delete uploadStatesRef.current[fileName];
-    };
 
     const singlePartUpload = async (file: BoxFile, fileId: string, token: string): Promise<void> => {
         const abortController = new AbortController();
@@ -283,7 +259,7 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 }
             }
         } catch (error) {
-            await cleanupUpload(file.name, state);
+            await cleanupUpload(file.name, state, uploadStatesRef);
             throw error;
         }
     };
@@ -299,7 +275,7 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         try {
             let tokenResponse = await axios.get('/api/s3-upload/box/token');
             if (!tokenResponse.data.token) {
-                const refreshSuccess = await refreshToken();
+                const refreshSuccess = await refreshToken('box');
                 if (refreshSuccess) {
                     tokenResponse = await axios.get('/api/s3-upload/box/token');
                 } else {
@@ -392,20 +368,6 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         }
     };
 
-    const refreshToken = async (): Promise<boolean> => {
-        try {
-            const refreshResponse = await axios.get('/api/s3-upload/box/token/refresh');
-            if (refreshResponse.data.success) {
-                setIsAuthenticated(true);
-                return true;
-            }
-            return false;
-        } catch (error) {
-            setIsAuthenticated(false);
-            return false;
-        }
-    };
-
     const showPicker = useCallback(async (accessToken: string) => {
         if (!window.BoxSelect) {
             toast.error('BoxSelect not initialized');
@@ -429,7 +391,6 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             boxSelectRef.current.launchPopup();
         } catch (error) {
             toast.error('Failed to open file picker. Please try authenticating again.');
-            setIsAuthenticated(false);
         }
     }, [handlePickerCallback]);
 
@@ -437,7 +398,7 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         try {
             let tokenResponse = await axios.get('/api/s3-upload/box/token');
             if (!tokenResponse.data.token) {
-                const refreshSuccess = await refreshToken();
+                const refreshSuccess = await refreshToken('box');
                 if (refreshSuccess) {
                     tokenResponse = await axios.get('/api/s3-upload/box/token');
                 } else {
@@ -448,7 +409,6 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             await showPicker(tokenResponse.data.token);
         } catch (error) {
             toast.error('Failed to get access token. Please try authenticating again.');
-            setIsAuthenticated(false);
         }
     };
 
@@ -473,7 +433,6 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 const handleAuthMessage = async (event: MessageEvent) => {
                     if (event.data?.type === 'BOX_AUTH_SUCCESS') {
                         window.removeEventListener('message', handleAuthMessage);
-                        setIsAuthenticated(true);
                         resolve();
                     } else if (event.data?.type === 'BOX_AUTH_ERROR') {
                         window.removeEventListener('message', handleAuthMessage);
@@ -492,12 +451,17 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 }, 500);
             });
 
+            setIsPickerLoading(true);
+
             await getTokenAndShowPicker();
         } catch (error) {
+            setIsPickerLoading(false);
+
             const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
             toast.error(errorMessage);
-            setIsAuthenticated(false);
         } finally {
+            setIsPickerLoading(false);
+
             if (authWindowRef.current) {
                 authWindowRef.current = null;
             }
@@ -511,95 +475,36 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 return;
             }
 
+            setIsPickerLoading(true);
+
             const validationResponse = await axios.get('/api/s3-upload/box/token/validate');
             if (validationResponse.data.isValid) {
-                setIsAuthenticated(true);
                 await getTokenAndShowPicker();
+                setIsPickerLoading(false);
                 return;
             }
             if (validationResponse.data.needsRefresh) {
-                const refreshSuccess = await refreshToken();
+                const refreshSuccess = await refreshToken('box');
                 if (refreshSuccess) {
                     await getTokenAndShowPicker();
+                    setIsPickerLoading(false);
                     return;
                 }
             }
 
-            setIsAuthenticated(false);
             await authenticate();
         } catch (error) {
+            setIsPickerLoading(false);
+
             const errorMessage = error instanceof Error ? error.message : 'Failed to connect to Box';
             toast.error(errorMessage);
-            setIsAuthenticated(false);
+        } finally {
+            setIsPickerLoading(false);
         }
     }, [isUploading, authenticate, showPicker]);
 
-    useEffect(() => {
-        const loadBoxScript = async () => {
-            try {
-                await new Promise<void>((resolve, reject) => {
-                    document.querySelectorAll('script[src*="box.com"]')
-                        .forEach(script => script.remove());
-
-                    const script = document.createElement('script');
-                    script.src = 'https://app.box.com/js/static/select.js';
-                    script.async = true;
-
-                    script.onload = () => {
-                        setTimeout(resolve, 100);
-                    };
-
-                    script.onerror = () => {
-                        reject(new Error('Failed to load Box script'));
-                    };
-
-                    document.body.appendChild(script);
-                });
-
-                if (!window.BoxSelect) {
-                    throw new Error('BoxSelect failed to initialize');
-                }
-
-                const validationResponse = await axios.get('/api/s3-upload/box/token/validate');
-                if (validationResponse.data.isValid) {
-                    setIsAuthenticated(true);
-                } else if (validationResponse.data.needsRefresh) {
-                    await refreshToken();
-                } else {
-                    setIsAuthenticated(false);
-                }
-                setIsInitialized(true);
-            } catch (error) {
-                toast.error('Failed to initialize Box integration');
-                setIsAuthenticated(false);
-            }
-        };
-
-        loadBoxScript();
-
-        return () => {
-            document.querySelectorAll('script[src*="box.com"]')
-                .forEach(script => script.remove());
-            if (boxSelectRef.current) {
-                boxSelectRef.current = null;
-            }
-        };
-    }, []);
-
-    if (!isInitialized) {
-        return (
-            <div className='bg-[#0061d5] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#0061d5] shadow-sm'>
-                <div className='group relative w-full flex rounded-lg px-5 py-2.5 text-center transition min-h-[13rem]'>
-                    <div className='self-center w-full flex flex-col items-center justify-center gap-4 sm:px-5'>
-                        <div className='text-white'>Initializing Box...</div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className='bg-[#0061d5] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#0061d5] shadow-sm'>
+        <div className='bg-[#0075a3] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#0075a3] shadow-sm'>
             <div className='group relative w-full flex rounded-lg px-5 py-2.5 text-center transition min-h-[13rem]'>
                 <div className='self-center w-full flex flex-col items-center justify-center gap-4 sm:px-5'>
                     <div className='flex gap-3 text-base font-medium leading-6 text-white'>
@@ -611,9 +516,22 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                     </div>
                     <button
                         onClick={handleBoxAction}
-                        className='mt-4 px-5 py-2 bg-white rounded-[32px] text-[#0061d5] font-medium border border-white hover:bg-gray-100 transition-colors'
+                        disabled={!isBoxServiceReady || isPickerLoading}
+                        className='mt-4 px-5 py-2 bg-white rounded-[32px] text-[#0075a3] font-medium border border-white hover:bg-gray-100 transition-colors'
                     >
-                        {isAuthenticated ? 'Select Files' : 'Connect to Box'}
+                        {!isBoxServiceReady ? (
+                            <div className='flex items-center justify-center'>
+                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                                <span>Initializing...</span>
+                            </div>
+                        ) : isPickerLoading ? (
+                            <div className='flex items-center justify-center'>
+                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                                <span>Opening Picker...</span>
+                            </div>
+                        ) : (
+                            'Select from Box'
+                        )}
                     </button>
                 </div>
             </div>

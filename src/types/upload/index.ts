@@ -42,6 +42,34 @@ export interface QueuedLink extends BaseFileInfo {
     type: string;
 }
 
+// Dropbox Importer Types
+export interface DropboxChooserFile {
+    name: string;
+    bytes: number;
+    link: string;
+    id: string;
+    type?: string;
+    icon?: string;
+    thumbnailLink?: string;
+    isDir?: boolean;
+}
+
+export interface DropboxFile {
+    name: string;
+    size: number;
+    mimeType: string;
+    link: string;
+}
+
+export interface DropboxChooserOptions {
+    success: (files: DropboxChooserFile[]) => void;
+    cancel?: () => void;
+    linkType: 'preview' | 'direct';
+    multiselect: boolean;
+    extensions?: string[];
+    folderselect?: boolean;
+}
+
 // Box Importer Types
 export interface BoxFile {
     id: string;
@@ -144,7 +172,25 @@ export interface UploaderProps {
 // Global Type Augmentations
 declare global {
     interface Window {
-        google: {
+        Dropbox?: {
+            choose: (options: DropboxChooserOptions) => void;
+        };
+        BoxSelect?: new (options: BoxSelectOptions) => BoxSelect;
+        OneDrive?: {
+            open: (options: {
+                clientId: string;
+                action: string;
+                multiSelect: boolean;
+                advanced?: {
+                    filter?: string;
+                    endpointHint?: string;
+                    queryParameters?: string;
+                };
+                success: (response: OneDrivePickerResponse) => void;
+                error: () => void;
+            }) => void;
+        };
+        google?: {
             accounts: {
                 oauth2: {
                     initTokenClient(config: {
@@ -174,23 +220,8 @@ declare global {
                 };
             };
         };
-        gapi: {
+        gapi?: {
             load(api: string, callback: () => void): void;
-        };
-        BoxSelect: new (options: BoxSelectOptions) => BoxSelect;
-        OneDrive: {
-            open: (options: {
-                clientId: string;
-                action: string;
-                multiSelect: boolean;
-                advanced?: {
-                    filter?: string;
-                    endpointHint?: string;
-                    queryParameters?: string;
-                };
-                success: (response: OneDrivePickerResponse) => void;
-                error: () => void;
-            }) => void;
         };
     }
 }

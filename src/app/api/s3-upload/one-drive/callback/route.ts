@@ -53,7 +53,7 @@ export async function GET(req: Request) {
             const refreshTokenPayload = {
                 oneDriveRefreshToken: refresh_token
             };
-            encryptedRefreshToken = signJwtAccessToken(refreshTokenPayload, { expiresIn: '365d' });
+            encryptedRefreshToken = signJwtAccessToken(refreshTokenPayload, { expiresIn: '90d' });
         }
 
         const response = createHtmlResponse('Authentication Successful', 'You can close this window.', true);
@@ -70,7 +70,7 @@ export async function GET(req: Request) {
                 httpOnly: true,
                 secure: isProduction,
                 sameSite: 'lax',
-                maxAge: 365 * 24 * 60 * 60
+                maxAge: 90 * 24 * 60 * 60
             });
         }
 
