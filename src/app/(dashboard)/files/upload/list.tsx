@@ -12,6 +12,7 @@ import { DataTable } from './components/data-table'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
 import RenameFileDialog from '@/components/file-rename-dialog'
+import TrimFileModal from '@/components/trim-file-modal'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -41,7 +42,7 @@ interface File {
   id: string
   name: string
   date: string
-  duration: ZodNumberCheck
+  duration: number
   fileStatus: string
   status: string
   uploadedByUser: User
@@ -65,11 +66,13 @@ const FileList = ({
   const [selectedFile, setSeletedFile] = useState<{
     fileId: string
     name: string
+    duration: number
   } | null>(null)
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
   const [openRenameDialog, setOpenRenameDialog] = useState(false)
   const [bulkLoading, setBulkLoading] = useState(false)
   const [openBulkDeleteDialog, setOpenBulkDeleteDialog] = useState(false)
+  const [openTrimFileDialog, setOpenTrimFileDialog] = useState(false)
   const [playing, setPlaying] = useState<Record<string, boolean>>({})
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
@@ -388,6 +391,7 @@ const FileList = ({
                 setSeletedFile({
                   fileId: row.original.id,
                   name: row.original.name,
+                  duration: row.original.duration,
                 })
                 setOpenRenameDialog(true)
               }}
@@ -395,11 +399,24 @@ const FileList = ({
               Rename
             </DropdownMenuItem>
             <DropdownMenuItem
+              onClick={() => {
+                setSeletedFile({
+                  fileId: row.original.id,
+                  name: row.original.name,
+                  duration: row.original.duration,
+                })
+                setOpenTrimFileDialog(true)
+              }}
+            >
+              Trim Audio
+            </DropdownMenuItem>
+            <DropdownMenuItem
               className='text-red-500'
               onClick={() => {
                 setSeletedFile({
                   fileId: row.original.id,
                   name: row.original.name,
+                  duration: row.original.duration,
                 })
                 setOpenDeleteDialog(true)
               }}
@@ -550,6 +567,13 @@ const FileList = ({
         open={openBulkDeleteDialog}
         onClose={() => setOpenBulkDeleteDialog(false)}
         fileIds={selectedFiles || []}
+        refetch={fetchPendingFiles}
+      />
+      <TrimFileModal
+        open={openTrimFileDialog}
+        onClose={() => setOpenTrimFileDialog(false)}
+        fileId={selectedFile?.fileId || ''}
+        endDuration={selectedFile?.duration || 0}
         refetch={fetchPendingFiles}
       />
     </div>
