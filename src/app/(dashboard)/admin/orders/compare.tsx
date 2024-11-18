@@ -27,7 +27,6 @@ export default function ComparePage() {
             }
 
             const res = await axios.get(`/api/om/get-compare-files?reviewDiff=${reviewDiff}&verificationDiff=${verificationDiff}&fileId=${fileId}`)
-            console.log(res.data)
             const diff = diffWords(res.data.reviewFile, res.data.verificationFile)
             setDiff(diff)
             toast.dismiss(toastId)
