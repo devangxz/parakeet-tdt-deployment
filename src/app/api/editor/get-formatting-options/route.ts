@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
         const options = JSON.parse(invoice.options ?? '{}');
         const templateId = options.tmp || null;
 
-        if (!templateId) {
+        if (templateId === null || templateId === undefined) {
             logger.error(`Template not found for file ${order.fileId}`);
             return NextResponse.json({ error: 'Template not found' }, { status: 404 });
         }
