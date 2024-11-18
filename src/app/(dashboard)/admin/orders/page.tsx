@@ -11,6 +11,7 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
 import ApprovalPage from './approvals'
+import ComparePage from './compare'
 import { DataTableColumnHeader } from './components/column-header'
 import { DataTable } from './components/data-table'
 import DeliveredSection from './components/delivered-files'
@@ -227,8 +228,8 @@ export default function OrdersPage() {
                   {row.original.pwer > HIGH_PWER
                     ? 'HIGH'
                     : row.original.pwer < LOW_PWER
-                    ? 'LOW'
-                    : 'MEDIUM'}
+                      ? 'LOW'
+                      : 'MEDIUM'}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
@@ -402,13 +403,14 @@ export default function OrdersPage() {
       value={activeTab}
       onValueChange={(value) => setActiveTab(value)}
     >
-      <TabsList className='grid w-full grid-cols-6 mt-5 ml-8 w-[900px]'>
+      <TabsList className='grid grid-cols-7 mt-5 ml-8 w-[900px]'>
         <TabsTrigger value='orders'>Orders</TabsTrigger>
         <TabsTrigger value='status'>Status</TabsTrigger>
         <TabsTrigger value='screen'>Screen</TabsTrigger>
         <TabsTrigger value='pre-delivery'>Pre Delivery</TabsTrigger>
         <TabsTrigger value='approval'>Approval</TabsTrigger>
         <TabsTrigger value='re-review'>Re-Review</TabsTrigger>
+        <TabsTrigger value='compare'>Compare</TabsTrigger>
       </TabsList>
       <TabsContent value='orders'>
         <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
@@ -440,6 +442,9 @@ export default function OrdersPage() {
       </TabsContent>
       <TabsContent value='re-review'>
         <ReReviewPage />
+      </TabsContent>
+      <TabsContent value='compare'>
+        <ComparePage />
       </TabsContent>
     </Tabs>
   )
