@@ -47,21 +47,23 @@ export default function Hero() {
   ]
 
   return (
-    <div className='relative flex justify-center px-5 mt-[2.5rem] sm:mt-[4rem]'>
+    <section className='relative flex justify-center px-5 mt-[2.5rem] sm:mt-[4rem]'>
       <WaveformBackground />   
       <div className='flex flex-col items-start max-w-full font-semibold md:items-center'>
-        <div>
-          <div className='text-4xl md:text-5xl leading-6 text-center'>
+        {/* Hero Heading */}
+        <header className='mb-12'>
+          <h1 className='text-4xl md:text-5xl leading-6 text-center'>
             <div className='flex items-center flex-col mt-5'>
               <span className='leading-[55px] md:leading-[70px]'>Human-in-the-loop <span className="text-primary">transcription</span></span>
               <span className='leading-[55px] md:leading-[70px]'>and <span className="text-primary">formatting</span> service</span>
             </div>
-          </div>
-        </div>
+          </h1>
+        </header>
 
+        {/* CTA Button */}
         <Link
           href='/signin'
-          className='flex items-center gap-4 px-10 py-5 mx-auto mt-6 text-lg font-semibold text-white bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full shadow-lg transform transition-transform hover:scale-105'
+          className='flex items-center gap-4 px-10 py-5 mx-auto mb-8 text-lg font-semibold text-white bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full shadow-lg transform transition-transform hover:scale-105'
         >
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
@@ -85,7 +87,8 @@ export default function Hero() {
           </div>
         </Link>
         
-        <div className='self-center flex flex-col md:flex-row gap-x-5 gap-y-4 mt-8 mb-12 max-w-full'>
+        {/* Features List */}
+        <div className='self-center flex flex-col md:flex-row gap-x-8 gap-y-6 mt-8 mb-16 max-w-full'>
           {features.map((feature, index) => (
             <div
               key={index}
@@ -99,6 +102,6 @@ export default function Hero() {
           ))}
         </div>
       </div>
-    </div>
+    </section>
   )
 }

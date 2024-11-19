@@ -57,7 +57,7 @@ function Navbar() {
             width={36}
             height={36}
           />
-          <span className='inline font-semibold text-4xl'>scribie</span>
+          <span className='inline font-semibold text-4xl under'>scribie.ai</span>
         </div>
       </Link>
 
@@ -116,7 +116,7 @@ function Navbar() {
                   width={36}
                   height={36}
                 />
-                <span className='font-semibold text-4xl'>scribie</span>
+                <span className='font-semibold text-4xl'>scribie.ai</span>
               </div>
             </Link>
             <CloseIcon className='cursor-pointer' fontSize='large' onClick={handleMenuToggle} />
