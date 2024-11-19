@@ -10,32 +10,32 @@ import { v4 as uuidv4 } from 'uuid';
 import { useImportService } from '@/app/context/ImportServiceProvider';
 import { useUpload } from '@/app/context/UploadProvider';
 import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
-import { StreamingState, GoogleDriveFile, GooglePickerResponse, UploaderProps } from '@/types/upload';
+import { StreamingState, OneDrivePickerResponse, OneDriveGraphApiFileResponse, OneDriveFile, UploaderProps } from '@/types/upload';
 import { handleRetryableError, calculateOverallProgress, cleanupUpload, refreshToken } from '@/utils/uploadUtils';
-import { getAllowedMimeTypes } from '@/utils/validateFileType';
+import { getAllowedFileExtensions } from '@/utils/validateFileType';
 
-const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY!;
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!;
-const GOOGLE_APP_ID = process.env.NEXT_PUBLIC_GOOGLE_APP_ID!;
+const ONEDRIVE_CLIENT_ID = process.env.NEXT_PUBLIC_ONEDRIVE_CLIENT_ID!;
 
-const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
+const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     const { setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
-    const { isGoogleDriveServiceReady } = useImportService();
+    const { isOneDriveServiceReady } = useImportService();
     const [isPickerLoading, setIsPickerLoading] = useState(false);
+    const [isPreparingFiles, setIsPreparingFiles] = useState(false);
+    const [preparingProgress, setPreparingProgress] = useState('');
 
     const uploadStatesRef = useRef<Record<string, StreamingState>>({});
 
-    const singlePartUpload = async (file: GoogleDriveFile, fileId: string, token: string): Promise<void> => {
+    const singlePartUpload = async (file: OneDriveFile, fileId: string, token: string): Promise<void> => {
         const abortController = new AbortController();
 
         let retryCount = -1;
         let downloadedBytes = 0;
-        const totalSize = parseInt(file.sizeBytes);
+        const totalSize = file.size;
 
         while (retryCount <= UPLOAD_MAX_RETRIES) {
             try {
                 const downloadResponse = await fetch(
-                    `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,
+                    `https://graph.microsoft.com/v1.0/me/drive/items/${file.id}/content`,
                     {
                         headers: { 'Authorization': `Bearer ${token}` },
                         signal: abortController.signal
@@ -43,7 +43,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 );
 
                 if (!downloadResponse.ok || !downloadResponse.body) {
-                    throw new Error('Failed to get file stream from Google Drive');
+                    throw new Error('Failed to get file stream from OneDrive');
                 }
 
                 const reader = downloadResponse.body.getReader();
@@ -91,7 +91,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     };
 
     const initializeMultiPartUpload = async (
-        file: GoogleDriveFile,
+        file: OneDriveFile,
         fileId: string
     ): Promise<StreamingState> => {
         let retryCount = -1;
@@ -117,7 +117,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                     partNumber: 1,
                     abortController: new AbortController(),
                     downloadedBytes: 0,
-                    totalSize: parseInt(file.sizeBytes)
+                    totalSize: file.size
                 };
             } catch (error) {
                 retryCount++;
@@ -191,13 +191,13 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         throw new Error('Failed to upload part');
     };
 
-    const multiPartUpload = async (file: GoogleDriveFile, fileId: string, token: string): Promise<void> => {
+    const multiPartUpload = async (file: OneDriveFile, fileId: string, token: string): Promise<void> => {
         let state = await initializeMultiPartUpload(file, fileId);
         uploadStatesRef.current[file.name] = state;
 
         try {
             const downloadResponse = await fetch(
-                `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,
+                `https://graph.microsoft.com/v1.0/me/drive/items/${file.id}/content`,
                 {
                     headers: { 'Authorization': `Bearer ${token}` },
                     signal: state.abortController.signal
@@ -205,7 +205,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             );
 
             if (!downloadResponse.ok || !downloadResponse.body) {
-                throw new Error('Failed to get file stream from Google Drive');
+                throw new Error('Failed to get file stream from OneDrive');
             }
 
             const reader = downloadResponse.body.getReader();
@@ -264,7 +264,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         }
     };
 
-    const uploadFile = async (file: GoogleDriveFile): Promise<void> => {
+    const uploadFile = async (file: OneDriveFile, accessToken: string): Promise<void> => {
         updateUploadStatus(file.name, {
             progress: 0,
             status: 'uploading'
@@ -273,21 +273,10 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         const fileId = uuidv4();
 
         try {
-            let tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
-            if (!tokenResponse.data.token) {
-                const refreshSuccess = await refreshToken('google-drive');
-                if (refreshSuccess) {
-                    tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
-                } else {
-                    throw new Error('Failed to get valid authentication token');
-                }
-            }
-
-            const fileSize = parseInt(file.sizeBytes);
-            if (fileSize <= SINGLE_PART_UPLOAD_LIMIT) {
-                await singlePartUpload(file, fileId, tokenResponse.data.token);
+            if (file.size <= SINGLE_PART_UPLOAD_LIMIT) {
+                await singlePartUpload(file, fileId, accessToken);
             } else {
-                await multiPartUpload(file, fileId, tokenResponse.data.token);
+                await multiPartUpload(file, fileId, accessToken);
             }
 
             updateUploadStatus(file.name, {
@@ -305,36 +294,85 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         }
     };
 
-    const handlePickerCallback = async (data: GooglePickerResponse) => {
-        if (data.action !== window.google.picker.Action.PICKED) return;
+    const getFileDetails = async (fileId: string, accessToken: string): Promise<OneDriveFile | null> => {
+        try {
+            const response = await axios.get<OneDriveGraphApiFileResponse>(
+                `https://graph.microsoft.com/v1.0/me/drive/items/${fileId}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Accept': 'application/json'
+                    }
+                }
+            );
+
+            return {
+                id: response.data.id,
+                name: response.data.name,
+                size: response.data.size,
+                mimeType: response.data.file?.mimeType || 'invalid'
+            };
+        } catch (error) {
+            return null;
+        }
+    };
+
+    const handlePickerCallback = async (pickerResponse: OneDrivePickerResponse) => {
+        if (!pickerResponse.value || pickerResponse.value.length === 0) {
+            toast.error('Please select one or more files to import');
+            return;
+        }
 
         if (isUploading) {
             toast.error("Please wait for current uploads to complete before starting new uploads");
             return;
         }
 
-        const selectedFiles = data.docs;
-
-        if (selectedFiles.length === 0) {
-            toast.error('No valid files selected. Please select supported audio or video files.');
-            return;
-        }
-
-        setIsUploading(true);
-        setUploadingFiles(selectedFiles.map((file: GoogleDriveFile) => ({
-            name: file.name,
-            size: parseInt(file.sizeBytes),
-            fileId: file.id
-        })));
-
         try {
+            setIsPreparingFiles(true);
+            setPreparingProgress(`Preparing ${pickerResponse.value.length} files for upload...`);
+
+            let tokenResponse = await axios.get('/api/s3-upload/one-drive/token');
+            if (!tokenResponse.data.token) {
+                const refreshSuccess = await refreshToken('one-drive');
+                if (refreshSuccess) {
+                    tokenResponse = await axios.get('/api/s3-upload/one-drive/token');
+                } else {
+                    throw new Error('Failed to get valid authentication token');
+                }
+            }
+
+            setPreparingProgress('Getting file details...');
+            const fileDetailsPromises = pickerResponse.value.map(item =>
+                getFileDetails(item.id, tokenResponse.data.token)
+            );
+
+            const fileDetails = await Promise.all(fileDetailsPromises);
+            const validFiles = fileDetails.filter((file): file is OneDriveFile => file !== null);
+
+            if (validFiles.length === 0) {
+                throw new Error('Failed to get file details');
+            }
+
+            setPreparingProgress('Initializing upload...');
+
+            setIsUploading(true);
+            setIsPreparingFiles(false);
+            setPreparingProgress('');
+
+            setUploadingFiles(validFiles.map(file => ({
+                name: file.name,
+                size: file.size,
+                fileId: file.id,
+            })));
+
             initializeSSEConnection(
                 () => onUploadSuccess(true),
                 () => setIsUploading(false)
             );
 
-            for (const file of selectedFiles) {
-                await uploadFile(file);
+            for (const file of validFiles) {
+                await uploadFile(file, tokenResponse.data.token);
             }
         } catch (error) {
             const errorMessage = axios.isAxiosError(error)
@@ -343,101 +381,106 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                     ? error.message
                     : 'Import failed';
             toast.error(`Import failed: ${errorMessage}`);
+            setIsPreparingFiles(false);
+            setPreparingProgress('');
             setIsUploading(false);
         } finally {
+            setIsPreparingFiles(false);
+            setPreparingProgress('');
             setIsUploading(false);
         }
     };
 
-    const showPicker = useCallback(async (accessToken: string) => {
-        if (!window.google?.picker || !accessToken) return;
+    const showPicker = useCallback(async () => {
+        const options = {
+            clientId: ONEDRIVE_CLIENT_ID,
+            action: "query",
+            multiSelect: true,
+            advanced: {
+                filter: `folder,${getAllowedFileExtensions().join(',')}`,
+                endpointHint: "api.onedrive.com"
+            },
+            success: (response: OneDrivePickerResponse) => {
+                handlePickerCallback(response);
+            },
+            error: () => {
+                toast.error('Failed to select files. Please try again.');
+            }
+        };
 
         try {
-            const { status } = await axios.get(
-                `https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${accessToken}`
-            );
-
-            if (status !== 200) {
-                throw new Error('Invalid token');
-            }
-
-            const view = new window.google.picker.DocsView()
-                .setMimeTypes(getAllowedMimeTypes().join(','))
-                .setIncludeFolders(true);
-
-            const picker = new window.google.picker.PickerBuilder()
-                .addView(view)
-                .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED)
-                .enableFeature(window.google.picker.Feature.SUPPORT_DRIVES)
-                .setTitle('Select Files')
-                .setAppId(GOOGLE_APP_ID)
-                .setOAuthToken(accessToken)
-                .setDeveloperKey(GOOGLE_API_KEY)
-                .setCallback(handlePickerCallback)
-                .build();
-
-            picker.setVisible(true);
+            window?.OneDrive?.open(options);
         } catch (error) {
             toast.error('Failed to open file picker. Please try authenticating again.');
         }
-    }, [handlePickerCallback]);
+    }, [handlePickerCallback, isUploading]);
 
     const getTokenAndShowPicker = async () => {
         try {
-            let tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
+            let tokenResponse = await axios.get('/api/s3-upload/one-drive/token');
             if (!tokenResponse.data.token) {
-                const refreshSuccess = await refreshToken('google-drive');
+                const refreshSuccess = await refreshToken('one-drive');
                 if (refreshSuccess) {
-                    tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
+                    tokenResponse = await axios.get('/api/s3-upload/one-drive/token');
                 } else {
                     throw new Error('Failed to get valid token');
                 }
             }
 
-            await showPicker(tokenResponse.data.token);
+            await showPicker();
         } catch (error) {
             toast.error('Failed to get access token. Please try authenticating again.');
         }
     };
 
     const authenticate = useCallback(async () => {
-        if (!window.google?.accounts?.oauth2) {
-            toast.error('Failed to initialize Google authentication');
-            return;
-        }
+        try {
+            const left = window.screenX + (window.outerWidth - 600) / 2;
+            const top = window.screenY + (window.outerHeight - 600) / 2;
 
-        const tokenClient = window.google.accounts.oauth2.initCodeClient({
-            client_id: GOOGLE_CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/drive.readonly',
-            ux_mode: 'popup',
-            callback: async (response: { error?: string; code?: string }) => {
-                if (response.error) {
-                    toast.error('Authentication failed. Please try again.');
-                    return;
-                }
+            const popup = window.open(
+                '/api/s3-upload/one-drive/auth',
+                'OneDriveAuth',
+                `width=${600},height=${600},left=${left},top=${top}`
+            );
 
-                try {
-                    setIsPickerLoading(true);
+            if (!popup) {
+                throw new Error('Popup blocked. Please enable popups and try again.');
+            }
 
-                    const result = await axios.post('/api/s3-upload/google-drive/auth', {
-                        code: response.code
-                    });
-
-                    if (result.data.success) {
-                        await getTokenAndShowPicker();
-                    } else {
-                        throw new Error('Authentication failed');
+            await new Promise<void>((resolve, reject) => {
+                const handleAuthMessage = async (event: MessageEvent) => {
+                    if (event.data?.type === 'ONEDRIVE_AUTH_SUCCESS') {
+                        window.removeEventListener('message', handleAuthMessage);
+                        resolve();
+                    } else if (event.data?.type === 'ONEDRIVE_AUTH_ERROR') {
+                        window.removeEventListener('message', handleAuthMessage);
+                        reject(new Error('Authentication failed'));
                     }
-                } catch {
-                    setIsPickerLoading(false);
-                    toast.error('Authentication failed. Please try again.');
-                } finally {
-                    setIsPickerLoading(false);
-                }
-            },
-        });
+                };
 
-        tokenClient.requestCode();
+                window.addEventListener('message', handleAuthMessage);
+
+                const checkPopup = setInterval(() => {
+                    if (popup.closed) {
+                        clearInterval(checkPopup);
+                        window.removeEventListener('message', handleAuthMessage);
+                        reject(new Error('Authentication window was closed'));
+                    }
+                }, 500);
+            });
+
+            setIsPickerLoading(true);
+
+            await getTokenAndShowPicker();
+        } catch (error) {
+            setIsPickerLoading(false);
+
+            const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
+            toast.error(errorMessage);
+        } finally {
+            setIsPickerLoading(false);
+        }
     }, [showPicker]);
 
     const handleDriveAction = useCallback(async () => {
@@ -449,14 +492,15 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
 
             setIsPickerLoading(true);
 
-            const validationResponse = await axios.get('/api/s3-upload/google-drive/token/validate');
+            const validationResponse = await axios.get('/api/s3-upload/one-drive/token/validate');
             if (validationResponse.data.isValid) {
                 await getTokenAndShowPicker();
                 setIsPickerLoading(false);
                 return;
             }
+
             if (validationResponse.data.needsRefresh) {
-                const refreshSuccess = await refreshToken('google-drive');
+                const refreshSuccess = await refreshToken('one-drive');
                 if (refreshSuccess) {
                     await getTokenAndShowPicker();
                     setIsPickerLoading(false);
@@ -467,8 +511,8 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             await authenticate();
         } catch (error) {
             setIsPickerLoading(false);
-            
-            const errorMessage = error instanceof Error ? error.message : 'Failed to connect to Google Drive';
+
+            const errorMessage = error instanceof Error ? error.message : 'Failed to connect to OneDrive';
             toast.error(errorMessage);
         } finally {
             setIsPickerLoading(false);
@@ -476,22 +520,22 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     }, [isUploading, authenticate, showPicker]);
 
     return (
-        <div className='bg-[#00ac47] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#00ac47] shadow-sm'>
+        <div className='bg-[#094ab1] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#094ab1] shadow-sm'>
             <div className='group relative w-full flex rounded-lg px-5 py-2.5 text-center transition min-h-[13rem]'>
                 <div className='self-center w-full flex flex-col items-center justify-center gap-4 sm:px-5'>
                     <div className='flex gap-3 text-base font-medium leading-6 text-white'>
                         <FileUp className="text-white" />
-                        <h4>Google Drive Importer</h4>
+                        <h4>OneDrive Importer</h4>
                     </div>
                     <div className='text-xs self-stretch mt-4 leading-5 text-center text-white max-md:mr-1 max-md:max-w-full'>
-                        <>Select files from your Google Drive to import. Please allow Scribie.ai Importer in the popup to access your Google Drive files for the import process. We will only access the selected files. The permissions can be revoked from your <a href="https://security.google.com/settings/security/permissions" target="_blank" rel="noopener noreferrer" className="underline hover:text-white">Google Account Settings</a> page anytime.</>
+                        Select files from your OneDrive to import. Please allow Scribie.ai Importer in the popup to access your OneDrive files for the import process. We will only access the selected files.
                     </div>
                     <button
                         onClick={handleDriveAction}
-                        disabled={!isGoogleDriveServiceReady || isPickerLoading}
-                        className='mt-4 px-5 py-2 bg-white rounded-[32px] text-[#00ac47] font-medium border border-white hover:bg-gray-100 transition-colors'
+                        disabled={!isOneDriveServiceReady || isPickerLoading || isPreparingFiles}
+                        className='mt-4 px-5 py-2 bg-white rounded-[32px] text-[#094ab1] font-medium border border-white hover:bg-gray-100 transition-colors'
                     >
-                        {!isGoogleDriveServiceReady ? (
+                        {!isOneDriveServiceReady ? (
                             <div className='flex items-center justify-center'>
                                 <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
                                 <span>Initializing...</span>
@@ -501,8 +545,13 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                                 <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
                                 <span>Opening Picker...</span>
                             </div>
+                        ) : isPreparingFiles ? (
+                            <div className='flex items-center justify-center'>
+                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                                <span>{preparingProgress}</span>
+                            </div>
                         ) : (
-                            'Select from Google Drive'
+                            'Select from OneDrive'
                         )}
                     </button>
                 </div>
@@ -511,4 +560,4 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     );
 };
 
-export default GoogleDriveImporter;
+export default OneDriveImporter;

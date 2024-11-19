@@ -3,9 +3,12 @@
 import Image from 'next/image';
 import { useState } from 'react';
 
+// import BoxImporter from './components/BoxImporter';
+// import DropboxImporter from './components/DropboxImporter';
 import FileAndFolderUploader from './components/FileAndFolderUploader';
 // import GoogleDriveImporter from './components/GoogleDriveImporter';
 // import LinkImporter from './components/LinkImporter';
+// import OneDriveImporter from './components/OneDriveImporter';
 import AllUploads from './list';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -92,6 +95,12 @@ const Dashboard = () => {
         return <FileAndFolderUploader onUploadSuccess={setUploadSuccess} />;
       // case 'link':
       //   return <LinkImporter onUploadSuccess={setUploadSuccess} />;
+      // case 'dropbox':
+      //   return <DropboxImporter onUploadSuccess={setUploadSuccess} />;
+      // case 'box':
+      //   return <BoxImporter onUploadSuccess={setUploadSuccess} />;
+      // case 'one-drive':
+      //   return <OneDriveImporter onUploadSuccess={setUploadSuccess} />;
       // case 'google-drive':
       //   return <GoogleDriveImporter onUploadSuccess={setUploadSuccess} />;
       default:
