@@ -32,7 +32,7 @@ export default function EnableCustomFormattingBonus() {
       const response = await axios.post(
         `/api/admin/enable-custom-formatting-bonus`,
         {
-          userEmail: email,
+          userEmail: email.toLowerCase(),
           flag: true,
         }
       )
@@ -66,7 +66,7 @@ export default function EnableCustomFormattingBonus() {
       const response = await axios.post(
         `/api/admin/enable-custom-formatting-bonus`,
         {
-          userEmail: email,
+          userEmail: email.toLowerCase(),
           flag: false,
         }
       )

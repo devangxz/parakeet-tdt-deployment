@@ -44,7 +44,7 @@ export default function TransferFiles() {
     try {
       setLoading(true)
       const response = await axios.post(`/api/admin/transfer-files`, {
-        userEmail,
+        userEmail: userEmail.toLowerCase(),
         fileIds,
       })
       if (response.data.success) {

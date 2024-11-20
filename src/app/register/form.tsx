@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import axios from 'axios'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -36,6 +37,7 @@ import { INDUSTRIES } from '@/constants'
 import { getRedirectPathByRole } from '@/utils/roleRedirect'
 
 const SingupForm = () => {
+  const searchParams = useSearchParams()
   const [captcha, setCaptcha] = useState<boolean>(false)
   const [loading, setLoading] = useState(false)
   const [showOtherIndustryInput, setShowOtherIndustryInput] = useState(false)
@@ -61,6 +63,7 @@ const SingupForm = () => {
         toast.error(`Please validate recaptcha.`)
         return
       }
+      const referralCode = searchParams?.get('rc') || ''
       setLoading(true)
       const userData = {
         email: values.userEmail,
@@ -69,6 +72,7 @@ const SingupForm = () => {
         lastname: values.lastName,
         role: values.userType,
         phone: values.phone,
+        rc: referralCode,
         industry:
           values.otherIndustry !== ''
             ? values.otherIndustry

@@ -2,6 +2,7 @@ import { User } from '@prisma/client'
 import bcrypt from 'bcrypt'
 import { v4 as uuidv4 } from 'uuid'
 
+import { AFFILIATE_RATE } from '@/constants'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
 import isValidEmail from '@/utils/isValidEmail'
@@ -14,12 +15,13 @@ interface CreateUserData {
   role: string
   phone: string
   industry: string
+  rc: string
 }
 
 export async function createUser(
   userData: CreateUserData
 ): Promise<{ success: boolean; message: string; user?: User }> {
-  const { email, password, firstname, lastname, role, phone, industry } =
+  const { email, password, firstname, lastname, role, phone, industry, rc } =
     userData
   try {
     const referralCode = uuidv4()
@@ -43,6 +45,14 @@ export async function createUser(
     const salt = await bcrypt.genSalt(10)
     const hashedPassword = await bcrypt.hash(password, salt)
 
+    let referralUser = null
+    if (rc) {
+      referralUser = await prisma.user.findFirst({
+        where: { referralCode: rc as string },
+        select: { email: true },
+      })
+    }
+
     const newUser = await prisma.user.create({
       data: {
         email,
@@ -55,6 +65,10 @@ export async function createUser(
         referralCode,
         phoneNumber: phone,
         industry,
+        ...(referralUser && {
+          referredBy: referralUser.email,
+          referralRate: AFFILIATE_RATE,
+        }),
       },
     })
 

@@ -8,7 +8,7 @@ export const listController = async (
 const deleteFile = async ({ fileId }: Record<string, unknown>) => {
   try {
     const response = await axios.post(`/api/files/delete`, {
-      data: { fileId: [fileId] },
+      fileIds: [fileId],
     })
     return response?.data?.message
   } catch (err) {

@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -23,10 +23,10 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { getRedirectPathByRole } from '@/utils/roleRedirect'
 
 const JoinTeamForm = ({ initialEmail }: { initialEmail: string }) => {
   const params = useParams()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -44,6 +44,8 @@ const JoinTeamForm = ({ initialEmail }: { initialEmail: string }) => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setLoading(true)
+      const referralCode = searchParams?.get('rc') || ''
+
       const response = await fetch(`/api/public/create`, {
         method: 'POST',
         headers: {
@@ -55,6 +57,7 @@ const JoinTeamForm = ({ initialEmail }: { initialEmail: string }) => {
           fn: values.firstName,
           ln: values.lastName,
           inviteKey: params?.invite_key,
+          rc: referralCode,
         }),
       })
       const responseData = await response.json()
@@ -69,8 +72,7 @@ const JoinTeamForm = ({ initialEmail }: { initialEmail: string }) => {
           const response = await fetch('/api/auth/session')
           const session = await response.json()
           if (session && session.user) {
-            const redirectUrl = getRedirectPathByRole(session.user.role)
-            window.location.href = redirectUrl
+            window.location.href = '/files/shared'
           }
         } else {
           setLoading(false)

@@ -245,5 +245,6 @@
   },
   "aws_signed_url_expiration": 600,
   "transcript_part_length": 10000,
-  "llm": "gpt-4-turbo-preview"
+  "llm": "gpt-4-turbo-preview",
+  "affiliate_rate": 0.5
 }

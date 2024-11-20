@@ -60,9 +60,7 @@ export const formSchema = z
     terms: z.boolean().refine((val) => val === true, {
       message: 'You must accept the terms and conditions.',
     }),
-    receive_updates: z.boolean().refine((val) => val === true, {
-      message: 'You must agree to receive updates.',
-    }),
+    receive_updates: z.boolean().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords must match.',

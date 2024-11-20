@@ -20,7 +20,7 @@ export async function POST(req: Request) {
 
     const user = await prisma.user.findUnique({
       where: {
-        email: userEmail,
+        email: userEmail.toLowerCase(),
         role: {
           in: [Role.CUSTOMER, Role.ADMIN, Role.SUPERADMIN],
         },

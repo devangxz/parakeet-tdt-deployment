@@ -87,7 +87,7 @@ export default function CustomPlan() {
 
     try {
       setSearchLoading(true)
-      const encodedEmail = encodeURIComponent(userEmail)
+      const encodedEmail = encodeURIComponent(userEmail.toLowerCase())
       const response = await axios.get(
         `/api/admin/custom-plan-details?email=${encodedEmail}`
       )
@@ -173,7 +173,7 @@ export default function CustomPlan() {
     try {
       setAddLoading(true)
       const response = await axios.post(`/api/admin/custom-plan-details`, {
-        userEmail,
+        userEmail: userEmail.toLowerCase(),
         rates,
       })
       if (response.data.success) {

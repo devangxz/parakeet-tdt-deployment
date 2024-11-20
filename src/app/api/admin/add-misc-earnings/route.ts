@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     const { transcriberEmail, amount, reason } = await req.json()
 
     const transcriberInfo = await prisma.user.findUnique({
-      where: { email: transcriberEmail },
+      where: { email: transcriberEmail.toLowerCase() },
     })
 
     if (!transcriberInfo) {
