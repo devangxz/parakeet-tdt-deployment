@@ -33,7 +33,7 @@ export default function AccountAccess() {
     try {
       setLoading(true)
       const response = await axios.post(`/api/admin/access-account`, {
-        email,
+        email: email.toLowerCase(),
       })
       if (response.data.success) {
         const data = response.data.details

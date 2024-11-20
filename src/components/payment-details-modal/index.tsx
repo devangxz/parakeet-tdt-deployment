@@ -248,10 +248,14 @@ const InvoicePDF = ({
                 fontSize: 10,
               }}
             >
-              File Name
+              {invoice?.type === 'TRANSCRIPT' ? 'File Name' : 'Description'}
             </Text>
-            <Text style={styles.tableCellHeader}>Minutes</Text>
-            <Text style={styles.tableCellHeader}>Rate</Text>
+            {invoice?.type === 'TRANSCRIPT' && (
+              <>
+                <Text style={styles.tableCellHeader}>Minutes</Text>
+                <Text style={styles.tableCellHeader}>Rate</Text>
+              </>
+            )}
             <Text style={styles.tableCellHeader}>Amount</Text>
           </View>
           {billSummary?.files.map((file, index) => (
@@ -289,23 +293,56 @@ const InvoicePDF = ({
               </Text>
             </View>
           ))}
-          <View style={styles.tableRow}>
-            <Text
-              style={{
-                textAlign: 'right',
-                width: '483px',
-                borderWidth: 1,
-                borderColor: '#000',
-                fontSize: 10,
-                padding: 2,
-              }}
-            >
-              Applied Discount
-            </Text>
-            <Text style={[styles.tableCell, { textAlign: 'right' }]}>
-              ${receipt?.discount}
-            </Text>
-          </View>
+          {invoice?.type === 'ADD_CREDITS' && (
+            <>
+              <View style={styles.tableRow}>
+                <Text
+                  style={{
+                    width: '20px',
+                    borderWidth: 1,
+                    borderColor: '#000',
+                    fontSize: 10,
+                    padding: 2,
+                  }}
+                >
+                  1
+                </Text>
+                <Text
+                  style={{
+                    width: '350px',
+                    borderWidth: 1,
+                    borderColor: '#000',
+                    fontSize: 10,
+                    padding: 2,
+                  }}
+                >
+                  Invoice for adding account credits
+                </Text>
+                <Text style={[styles.tableCell, { textAlign: 'right' }]}>
+                  ${receipt?.netAmount}
+                </Text>
+              </View>
+            </>
+          )}
+          {invoice?.type === 'TRANSCRIPT' && (
+            <View style={styles.tableRow}>
+              <Text
+                style={{
+                  textAlign: 'right',
+                  width: '483px',
+                  borderWidth: 1,
+                  borderColor: '#000',
+                  fontSize: 10,
+                  padding: 2,
+                }}
+              >
+                Applied Discount
+              </Text>
+              <Text style={[styles.tableCell, { textAlign: 'right' }]}>
+                ${receipt?.discount}
+              </Text>
+            </View>
+          )}
           <View style={styles.tableRow}>
             <Text
               style={{
@@ -320,7 +357,10 @@ const InvoicePDF = ({
               Total
             </Text>
             <Text style={[styles.tableCell, { textAlign: 'right' }]}>
-              ${billSummary?.total.toFixed(2)}
+              $
+              {invoice?.type === 'ADD_CREDITS'
+                ? receipt?.netAmount
+                : billSummary?.total.toFixed(2)}
             </Text>
           </View>
         </View>
@@ -581,7 +621,8 @@ const InvoicesDetailDialog = ({
           <DialogFooter>
             {/* Hide it for now*/}
             {/* <Button variant='order'>Print</Button> */}
-            {invoiceType === 'TRANSCRIPT' && (
+            {(invoiceType === 'TRANSCRIPT' ||
+              invoiceType === 'ADD_CREDITS') && (
               <>
                 <Button variant='order' onClick={handleCheckStatus}>
                   Check Status
@@ -600,7 +641,7 @@ const InvoicesDetailDialog = ({
                       fileName={`${selectedInvoiceId}.pdf`}
                     >
                       {({ loading }) =>
-                        loading ? 'Loading document...' : 'Download PDF'
+                        loading ? 'Loading...' : 'Download PDF'
                       }
                     </PDFDownloadLink>
                   </Button>

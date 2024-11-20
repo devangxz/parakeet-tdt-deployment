@@ -16,12 +16,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import isValidEmail from '@/utils/isValidEmail'
 
-export default function EnableCustomFormattingReview() {
+export default function OrderWatch() {
   const [loading, setLoading] = useState(false)
   const [loadingDisable, setLoadingDisable] = useState(false)
   const [email, setEmail] = useState('')
 
-  const handleEnableClick = async () => {
+  const handleAddClick = async () => {
     if (!email) return toast.error('Please enter a valid email address')
     if (!isValidEmail(email)) {
       toast.error('Please enter a valid email address.')
@@ -29,63 +29,52 @@ export default function EnableCustomFormattingReview() {
     }
     try {
       setLoading(true)
-      const response = await axios.post(
-        `/api/admin/enable-custom-formatting-review`,
-        {
-          userEmail: email.toLowerCase(),
-          flag: true,
-        }
-      )
+      const response = await axios.post(`/api/admin/add-order-watch`, {
+        userEmail: email,
+        flag: true,
+      })
       if (response.data.success) {
-        toast.success('Successfully enabled custom formatting review.')
-        setLoading(false)
+        toast.success('Successfully added customer to order watch.')
       } else {
-        toast.error(
-          response.data.s || 'Failed to enable custom formatting review'
-        )
-        setLoading(false)
+        toast.error(response.data.s || 'Failed to add customer to order watch')
       }
+      setLoading(false)
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.s)
         toast.dismiss(errorToastId)
       } else {
-        toast.error(`Failed to enable custom formatting review.`)
+        toast.error(`Failed to add customer to order watch`)
       }
       setLoading(false)
     }
   }
-  const handleDisableClick = async () => {
+  const handleRemoveClick = async () => {
     if (!email) return toast.error('Please enter a valid email address')
     if (!isValidEmail(email)) {
       toast.error('Please enter a valid email address.')
       return
     }
-
     try {
       setLoadingDisable(true)
-      const response = await axios.post(
-        `/api/admin/enable-custom-formatting-review`,
-        {
-          userEmail: email.toLowerCase(),
-          flag: false,
-        }
-      )
+      const response = await axios.post(`/api/admin/add-order-watch`, {
+        userEmail: email,
+        flag: false,
+      })
       if (response.data.success) {
-        toast.success('Successfully disabled custom formatting review.')
-        setLoadingDisable(false)
+        toast.success('Successfully removed customer from order watch.')
       } else {
         toast.error(
-          response.data.s || 'Failed to disable custom formatting review'
+          response.data.s || 'Failed to remove customer from order watch'
         )
-        setLoadingDisable(false)
       }
+      setLoadingDisable(false)
     } catch (error) {
       if (error instanceof AxiosError && error.response) {
         const errorToastId = toast.error(error.response?.data?.s)
         toast.dismiss(errorToastId)
       } else {
-        toast.error(`Failed to disable custom formatting review.`)
+        toast.error(`Failed to remove customer from order watch`)
       }
       setLoadingDisable(false)
     }
@@ -94,18 +83,17 @@ export default function EnableCustomFormattingReview() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Enable Custom Formatting Review</CardTitle>
+          <CardTitle>Add Customer to Order Watch</CardTitle>
           <CardDescription>
-            Please enter the user email address to enable custom formatting
-            review.
+            Please enter the customer email address to add it to order watch.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className='grid gap-6'>
             <div className='grid gap-3'>
-              <Label htmlFor='custom-email'>Email</Label>
+              <Label htmlFor='qc-email'>Customer Email</Label>
               <Input
-                id='custom-email'
+                id='customer-email'
                 type='email'
                 className='w-full'
                 placeholder='test@email.com'
@@ -121,11 +109,10 @@ export default function EnableCustomFormattingReview() {
               <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
             </Button>
           ) : (
-            <Button className='mt-5 mr-3' onClick={handleEnableClick}>
-              Enable
+            <Button className='mt-5 mr-3' onClick={handleAddClick}>
+              Add
             </Button>
           )}
-
           {loadingDisable ? (
             <Button disabled className='mt-5'>
               Please wait
@@ -135,9 +122,9 @@ export default function EnableCustomFormattingReview() {
             <Button
               className='mt-5'
               variant='destructive'
-              onClick={handleDisableClick}
+              onClick={handleRemoveClick}
             >
-              Disable
+              Remove
             </Button>
           )}
         </CardContent>

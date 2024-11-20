@@ -112,10 +112,21 @@ const ShareFileDialog = ({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className='sm:max-w-[892px]'>
         <DialogHeader>
-          <DialogTitle>
-            Share File{fileIds.length > 1 ? 's' : ''} ({filenames.join(', ')})
-          </DialogTitle>
+          <DialogTitle>Share File{fileIds.length > 1 ? 's' : ''}</DialogTitle>
         </DialogHeader>
+        <p>
+          {' '}
+          {fileIds.length === 1
+            ? `You are sharing "${filenames[0]}".`
+            : `You are sharing ${filenames
+                .slice(0, 2)
+                .map((name) => `"${name}"`)
+                .join(', ')}${
+                filenames.length > 2
+                  ? `, and ${filenames.length - 2} more files.`
+                  : '.'
+              }`}
+        </p>
         <div className='grid gap-4 py-4'>
           <div className='flex items-center gap-4'>
             <div className='w-4/5'>

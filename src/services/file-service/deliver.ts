@@ -2,7 +2,7 @@ import { OrderStatus, Order } from '@prisma/client'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
-import { sendTemplateMail } from '@/lib/ses'
+import { sendTemplateMail, getAWSSesInstance } from '@/lib/ses'
 
 async function getPaidByUserId(fileId: string) {
   logger.info(`--> getPaidByUserId ${fileId}`)
@@ -27,6 +27,18 @@ async function getPaidByUserId(fileId: string) {
   }
 }
 
+const checkOrderWatch = async (userId: number) => {
+  const customer = await prisma.customer.findUnique({
+    where: { userId },
+  })
+
+  if (!customer) {
+    return false
+  }
+
+  return customer.watch
+}
+
 async function deliver(order: Order, transcriberId: number) {
   logger.info(`--> deliver ${order.id} ${order.fileId}`)
 
@@ -44,6 +56,20 @@ async function deliver(order: Order, transcriberId: number) {
   })
 
   const paidBy = await getPaidByUserId(order.fileId)
+
+  const isCustomerOnWatchlist = await checkOrderWatch(order.userId)
+
+  if (isCustomerOnWatchlist) {
+    const userEmail = await prisma.user.findUnique({
+      where: { id: order.userId },
+    })
+    const awsSes = getAWSSesInstance()
+    await awsSes.sendAlert(
+      `Watchlist Customer Delivery`,
+      `${userEmail?.email ?? ''} file was just delivered, ${order.fileId}`,
+      'software'
+    )
+  }
 
   const templateData = {
     transcript_name: file?.filename || '',

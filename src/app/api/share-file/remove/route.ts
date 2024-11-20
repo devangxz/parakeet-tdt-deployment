@@ -17,16 +17,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log(files, user)
-
     const deleteResults = await prisma.sharedFile.deleteMany({
       where: {
         fileId: { in: files },
         toUserId: user.userId,
       },
     })
-
-    console.log(deleteResults)
 
     logger.info(
       `Successfully removed ${deleteResults.count} shared files for ${user.email}`

@@ -24,30 +24,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, s: 'User not found' })
     }
 
-    if (user.role !== Role.QC && user.role !== Role.REVIEWER) {
-      logger.error(`User is not a QC or a Reviewer: ${userEmail}`)
-      return NextResponse.json({ success: false, s: 'User is not a QC' })
+    if (user.role !== Role.CUSTOMER) {
+      logger.error(`User is not a customer: ${userEmail}`)
+      return NextResponse.json({ success: false, s: 'User is not a customer' })
     }
 
-    await prisma.verifier.upsert({
+    await prisma.customer.upsert({
       where: { userId: user.id },
-      update: { legalEnabled: flag },
+      update: { watch: flag },
       create: {
         userId: user.id,
-        legalEnabled: flag,
+        watch: flag,
       },
     })
 
     logger.info(
-      `successfully ${flag ? 'added' : 'removed'} legal qc for ${user.email}`
+      `successfully ${flag ? 'added' : 'removed'} customer to order watch for ${
+        user.email
+      }`
     )
 
     return NextResponse.json({
       success: true,
-      s: `QC ${flag ? 'added' : 'removed'} to legal successfully`,
+      s: `Customer ${flag ? 'added' : 'removed'} to order watch successfully`,
     })
   } catch (error) {
-    logger.error(`Error adding legal QC`, error)
+    logger.error(`Error adding customer to order watch`, error)
     return NextResponse.json({
       success: false,
       s: 'An error occurred. Please try again after some time.',

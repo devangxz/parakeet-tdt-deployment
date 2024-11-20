@@ -48,7 +48,7 @@ export default function TransferCredits() {
       setLoading(true)
       const response = await axios.post(`/api/admin/transfer-credit`, {
         invd: formData.invoiceId,
-        em: formData.email,
+        em: formData.email.toLowerCase(),
       })
       if (response.data.success) {
         toast.success('Successfully transferred credits.')

@@ -30,7 +30,7 @@ export default function EnablePreDelivery() {
     try {
       setLoading(true)
       const response = await axios.post(`/api/admin/enable-pre-delivery`, {
-        userEmail: email,
+        userEmail: email.toLowerCase(),
         flag: true,
       })
       if (response.data.success) {
@@ -55,7 +55,7 @@ export default function EnablePreDelivery() {
     try {
       setLoadingDisable(true)
       const response = await axios.post(`/api/admin/enable-pre-delivery`, {
-        userEmail: email,
+        userEmail: email.toLowerCase(),
         flag: false,
       })
       if (response.data.success) {
