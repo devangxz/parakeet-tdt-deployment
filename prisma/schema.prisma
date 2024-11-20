@@ -134,6 +134,7 @@ model File {
   fileStatus                FileStatus    @default(NONE) @map("file_status")
   FileVersion               FileVersion[]
   SharedFile                SharedFile[]
+  converted                 Boolean?      @map("converted")
 
   @@index([userId])
   @@index([fileId])
