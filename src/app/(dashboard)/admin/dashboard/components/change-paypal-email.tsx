@@ -52,7 +52,7 @@ export default function ChangePaypalEmail() {
     try {
       setLoading(true)
       const response = await axios.post(`/api/admin/change-paypal-email`, {
-        userEmail: formData.transcriber_email,
+        userEmail: formData.transcriber_email.toLowerCase(),
         newEmail: formData.paypal_email,
       })
       if (response.data.success) {

@@ -1,232 +1,29 @@
 'use client';
 
+import { ReloadIcon } from '@radix-ui/react-icons';
 import axios from 'axios';
 import { FileUp } from 'lucide-react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
+import { useImportService } from '@/app/context/ImportServiceProvider';
 import { useUpload } from '@/app/context/UploadProvider';
-import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES, UPLOAD_RETRY_DELAY } from '@/constants';
-import sleep from '@/utils/sleep';
+import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
+import { StreamingState, GoogleDriveFile, GooglePickerResponse, UploaderProps } from '@/types/upload';
+import { handleRetryableError, calculateOverallProgress, cleanupUpload, refreshToken } from '@/utils/uploadUtils';
 import { getAllowedMimeTypes } from '@/utils/validateFileType';
 
 const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY!;
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!;
-const GOOGLE_CLIENT_SECRET = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SECRET!;
 const GOOGLE_APP_ID = process.env.NEXT_PUBLIC_GOOGLE_APP_ID!;
 
-interface UploadState {
-    uploadId: string | null;
-    key: string | null;
-    completedParts: { ETag?: string; PartNumber: number }[];
-    totalUploaded: number;
-    lastFailedPart: number | null;
-}
-
-interface StreamingState extends UploadState {
-    buffer: Uint8Array[];
-    bufferSize: number;
-    partNumber: number;
-    abortController: AbortController;
-    downloadedBytes: number;
-    totalSize: number;
-}
-
-interface GoogleDriveFile {
-    id: string;
-    name: string;
-    mimeType: string;
-    sizeBytes: string;
-}
-
-interface GooglePickerResponse {
-    action: string;
-    docs: GoogleDriveFile[];
-}
-
-interface GoogleDocsView {
-    setMimeTypes(mimeTypes: string): GoogleDocsView;
-    setIncludeFolders(include: boolean): GoogleDocsView;
-}
-
-interface GooglePickerBuilder {
-    addView(view: GoogleDocsView): GooglePickerBuilder;
-    enableFeature(feature: string): GooglePickerBuilder;
-    setTitle(title: string): GooglePickerBuilder;
-    setAppId(appId: string): GooglePickerBuilder;
-    setOAuthToken(token: string): GooglePickerBuilder;
-    setDeveloperKey(key: string): GooglePickerBuilder;
-    setCallback(callback: (data: GooglePickerResponse) => void): GooglePickerBuilder;
-    build(): GooglePicker;
-}
-
-interface GooglePicker {
-    setVisible(visible: boolean): void;
-}
-
-interface TokenResponse {
-    access_token: string;
-    refresh_token?: string;
-    expires_in: number;
-}
-
-declare global {
-    interface Window {
-        google: {
-            accounts: {
-                oauth2: {
-                    initTokenClient(config: {
-                        client_id: string;
-                        scope: string;
-                        access_type: string;
-                        prompt: string;
-                        callback: (response: TokenResponse) => void;
-                    }): { requestAccessToken: () => void };
-                    initCodeClient(config: {
-                        client_id: string;
-                        scope: string;
-                        ux_mode: string;
-                        callback: (response: { error?: string; code?: string }) => void;
-                    }): { requestCode: () => void };
-                };
-            };
-            picker: {
-                DocsView: new () => GoogleDocsView;
-                PickerBuilder: new () => GooglePickerBuilder;
-                Action: {
-                    PICKED: string;
-                };
-                Feature: {
-                    MULTISELECT_ENABLED: string;
-                    SUPPORT_DRIVES: string;
-                };
-            };
-        };
-        gapi: {
-            load(api: string, callback: () => void): void;
-        };
-    }
-}
-
-interface GoogleDriveImporterProps {
-    onUploadSuccess: (success: boolean) => void;
-}
-
-const TokenManager = {
-    setCookie: (name: string, value: string, expiryHours: number = 24) => {
-        const date = new Date();
-        date.setTime(date.getTime() + (expiryHours * 60 * 60 * 1000));
-        document.cookie = `${name}=${value}; path=/; expires=${date.toUTCString()}; SameSite=Strict; ${window.location.protocol === 'https:' ? 'Secure;' : ''}`;
-    },
-
-    getCookie: (name: string): string | null => {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        return parts.length === 2 ? parts.pop()?.split(';').shift() || null : null;
-    },
-
-    clearTokens: () => {
-        ['googleDriveToken', 'googleDriveRefreshToken', 'tokenExpiryTime']
-            .forEach(name => {
-                document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
-            });
-    },
-
-    refreshToken: async (refreshToken: string): Promise<string | null> => {
-        try {
-            const response = await axios.post('https://oauth2.googleapis.com/token', {
-                client_id: GOOGLE_CLIENT_ID,
-                client_secret: GOOGLE_CLIENT_SECRET,
-                refresh_token: refreshToken,
-                grant_type: 'refresh_token'
-            });
-
-            if (response.data.access_token) {
-                const expiryTime = Date.now() + (response.data.expires_in * 1000);
-                TokenManager.setCookie('googleDriveToken', response.data.access_token, 24);
-                TokenManager.setCookie('tokenExpiryTime', expiryTime.toString(), 24);
-                return response.data.access_token;
-            }
-            return null;
-        } catch {
-            return null;
-        }
-    },
-
-    getValidToken: async (): Promise<string | null> => {
-        const currentToken = TokenManager.getCookie('googleDriveToken');
-        const refreshToken = TokenManager.getCookie('googleDriveRefreshToken');
-        const expiryTime = parseInt(TokenManager.getCookie('tokenExpiryTime') || '0');
-
-        if (currentToken && expiryTime && Date.now() < expiryTime - 300000) {
-            return currentToken;
-        }
-
-        if (refreshToken) {
-            return await TokenManager.refreshToken(refreshToken);
-        }
-
-        return null;
-    }
-};
-
-const GoogleDriveImporter: React.FC<GoogleDriveImporterProps> = ({ onUploadSuccess }) => {
-    const { uploadingFiles, setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [isInitialized, setIsInitialized] = useState(false);
+const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
+    const { setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
+    const { isGoogleDriveServiceReady } = useImportService();
+    const [isPickerLoading, setIsPickerLoading] = useState(false);
 
     const uploadStatesRef = useRef<Record<string, StreamingState>>({});
-
-    const calculateOverallProgress = (
-        downloadProgress: number,
-        uploadProgress: number,
-        downloadWeight: number = 0.3,
-        uploadWeight: number = 0.7
-    ): number => (downloadProgress * downloadWeight + uploadProgress * uploadWeight);
-
-    const isRetryableError = (error: unknown): boolean => {
-        if (!axios.isAxiosError(error)) return false;
-
-        const retryableStatusCodes = [408, 429, 500, 502, 503, 504];
-        return !error.response?.status || retryableStatusCodes.includes(error.response.status);
-    };
-
-    const handleRetryableError = async (error: unknown, retryCount: number): Promise<void> => {
-        if (axios.isCancel(error)) {
-            throw new Error('Upload cancelled');
-        }
-
-        if (!isRetryableError(error)) {
-            throw error;
-        }
-
-        if (retryCount >= UPLOAD_MAX_RETRIES) {
-            throw new Error(`File upload failed after ${UPLOAD_MAX_RETRIES} attempts`);
-        }
-
-        const delay = UPLOAD_RETRY_DELAY * Math.pow(2, retryCount);
-        await sleep(delay);
-    };
-
-    const cleanupUpload = async (fileName: string, uploadState?: StreamingState) => {
-        if (uploadState?.uploadId && uploadState?.key) {
-            try {
-                await axios.post('/api/s3-upload/multi-part/abort', {
-                    uploadId: uploadState.uploadId,
-                    key: uploadState.key
-                });
-            } catch (error) {
-                toast.error(`Failed to abort multipart upload for file ${fileName}`);
-            }
-        }
-
-        if (uploadState?.abortController) {
-            uploadState.abortController.abort();
-        }
-
-        delete uploadStatesRef.current[fileName];
-    };
 
     const singlePartUpload = async (file: GoogleDriveFile, fileId: string, token: string): Promise<void> => {
         const abortController = new AbortController();
@@ -384,7 +181,6 @@ const GoogleDriveImporter: React.FC<GoogleDriveImporterProps> = ({ onUploadSucce
                     totalUploaded: state.totalUploaded + chunk.size,
                     partNumber: state.partNumber + 1
                 };
-
             } catch (error) {
                 retryCount++;
                 await handleRetryableError(error, retryCount);
@@ -463,30 +259,35 @@ const GoogleDriveImporter: React.FC<GoogleDriveImporterProps> = ({ onUploadSucce
                 }
             }
         } catch (error) {
-            await cleanupUpload(file.name, state);
+            await cleanupUpload(file.name, state, uploadStatesRef);
             throw error;
         }
     };
 
     const uploadFile = async (file: GoogleDriveFile): Promise<void> => {
+        updateUploadStatus(file.name, {
+            progress: 0,
+            status: 'uploading'
+        });
+
         const fileId = uuidv4();
 
-        const token = await TokenManager.getValidToken();
-        if (!token) {
-            throw new Error('Failed to get valid authentication token');
-        }
-
         try {
-            updateUploadStatus(file.name, {
-                progress: 0,
-                status: 'uploading'
-            });
+            let tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
+            if (!tokenResponse.data.token) {
+                const refreshSuccess = await refreshToken('google-drive');
+                if (refreshSuccess) {
+                    tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
+                } else {
+                    throw new Error('Failed to get valid authentication token');
+                }
+            }
 
             const fileSize = parseInt(file.sizeBytes);
             if (fileSize <= SINGLE_PART_UPLOAD_LIMIT) {
-                await singlePartUpload(file, fileId, token);
+                await singlePartUpload(file, fileId, tokenResponse.data.token);
             } else {
-                await multiPartUpload(file, fileId, token);
+                await multiPartUpload(file, fileId, tokenResponse.data.token);
             }
 
             updateUploadStatus(file.name, {
@@ -543,69 +344,20 @@ const GoogleDriveImporter: React.FC<GoogleDriveImporterProps> = ({ onUploadSucce
                     : 'Import failed';
             toast.error(`Import failed: ${errorMessage}`);
             setIsUploading(false);
+        } finally {
+            setIsUploading(false);
         }
     };
-
-    const authenticate = useCallback(async () => {
-        if (!window.google?.accounts?.oauth2) {
-            toast.error('Failed to initialize Google authentication');
-            return;
-        }
-
-        TokenManager.clearTokens();
-
-        const tokenClient = window.google.accounts.oauth2.initCodeClient({
-            client_id: GOOGLE_CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/drive.readonly',
-            ux_mode: 'popup',
-            callback: async (response: { error?: string; code?: string }) => {
-                if (response.error) {
-                    toast.error('Authentication failed. Please try again.');
-                    return;
-                }
-
-                try {
-                    const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
-                        client_id: GOOGLE_CLIENT_ID,
-                        client_secret: GOOGLE_CLIENT_SECRET,
-                        code: response.code,
-                        grant_type: 'authorization_code',
-                        redirect_uri: window.location.origin
-                    });
-
-                    const { access_token, refresh_token, expires_in } = tokenResponse.data;
-
-                    if (!access_token) {
-                        throw new Error('Authentication failed');
-                    }
-
-                    const expiryTime = Date.now() + (expires_in * 1000);
-                    TokenManager.setCookie('googleDriveToken', access_token, 24);
-                    if (refresh_token) {
-                        TokenManager.setCookie('googleDriveRefreshToken', refresh_token, 720);
-                    }
-                    TokenManager.setCookie('tokenExpiryTime', expiryTime.toString(), 24);
-
-                    setIsAuthenticated(true);
-                    showPicker(access_token);
-                } catch {
-                    toast.error('Authentication failed. Please try again.');
-                }
-            },
-        });
-
-        tokenClient.requestCode();
-    }, []);
 
     const showPicker = useCallback(async (accessToken: string) => {
         if (!window.google?.picker || !accessToken) return;
 
         try {
-            const response = await fetch(
+            const { status } = await axios.get(
                 `https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${accessToken}`
             );
 
-            if (!response.ok) {
+            if (status !== 200) {
                 throw new Error('Invalid token');
             }
 
@@ -627,10 +379,66 @@ const GoogleDriveImporter: React.FC<GoogleDriveImporterProps> = ({ onUploadSucce
             picker.setVisible(true);
         } catch (error) {
             toast.error('Failed to open file picker. Please try authenticating again.');
-            TokenManager.clearTokens();
-            setIsAuthenticated(false);
         }
     }, [handlePickerCallback]);
+
+    const getTokenAndShowPicker = async () => {
+        try {
+            let tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
+            if (!tokenResponse.data.token) {
+                const refreshSuccess = await refreshToken('google-drive');
+                if (refreshSuccess) {
+                    tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
+                } else {
+                    throw new Error('Failed to get valid token');
+                }
+            }
+
+            await showPicker(tokenResponse.data.token);
+        } catch (error) {
+            toast.error('Failed to get access token. Please try authenticating again.');
+        }
+    };
+
+    const authenticate = useCallback(async () => {
+        if (!window.google?.accounts?.oauth2) {
+            toast.error('Failed to initialize Google authentication');
+            return;
+        }
+
+        const tokenClient = window.google.accounts.oauth2.initCodeClient({
+            client_id: GOOGLE_CLIENT_ID,
+            scope: 'https://www.googleapis.com/auth/drive.readonly',
+            ux_mode: 'popup',
+            callback: async (response: { error?: string; code?: string }) => {
+                if (response.error) {
+                    toast.error('Authentication failed. Please try again.');
+                    return;
+                }
+
+                try {
+                    setIsPickerLoading(true);
+
+                    const result = await axios.post('/api/s3-upload/google-drive/auth', {
+                        code: response.code
+                    });
+
+                    if (result.data.success) {
+                        await getTokenAndShowPicker();
+                    } else {
+                        throw new Error('Authentication failed');
+                    }
+                } catch {
+                    setIsPickerLoading(false);
+                    toast.error('Authentication failed. Please try again.');
+                } finally {
+                    setIsPickerLoading(false);
+                }
+            },
+        });
+
+        tokenClient.requestCode();
+    }, [showPicker]);
 
     const handleDriveAction = useCallback(async () => {
         try {
@@ -639,119 +447,36 @@ const GoogleDriveImporter: React.FC<GoogleDriveImporterProps> = ({ onUploadSucce
                 return;
             }
 
-            const validToken = await TokenManager.getValidToken();
+            setIsPickerLoading(true);
 
-            if (validToken) {
-                try {
-                    const response = await fetch(
-                        `https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${validToken}`
-                    );
-
-                    if (response.ok) {
-                        await showPicker(validToken);
-                        return;
-                    }
-
-                    TokenManager.clearTokens();
-                    setIsAuthenticated(false);
-                } catch (error) {
-                    TokenManager.clearTokens();
-                    setIsAuthenticated(false);
-                    throw new Error('Failed to verify authentication token');
+            const validationResponse = await axios.get('/api/s3-upload/google-drive/token/validate');
+            if (validationResponse.data.isValid) {
+                await getTokenAndShowPicker();
+                setIsPickerLoading(false);
+                return;
+            }
+            if (validationResponse.data.needsRefresh) {
+                const refreshSuccess = await refreshToken('google-drive');
+                if (refreshSuccess) {
+                    await getTokenAndShowPicker();
+                    setIsPickerLoading(false);
+                    return;
                 }
             }
+
             await authenticate();
         } catch (error) {
+            setIsPickerLoading(false);
+            
             const errorMessage = error instanceof Error ? error.message : 'Failed to connect to Google Drive';
             toast.error(errorMessage);
-
-            TokenManager.clearTokens();
-            setIsAuthenticated(false);
+        } finally {
+            setIsPickerLoading(false);
         }
-    }, [isUploading, authenticate, showPicker, isAuthenticated]);
-
-    useEffect(() => {
-        const loadGoogleAPIs = async () => {
-            try {
-                await Promise.all([
-                    new Promise<void>((resolve) => {
-                        const script = document.createElement('script');
-                        script.src = 'https://apis.google.com/js/api.js';
-                        script.onload = () => resolve();
-                        document.body.appendChild(script);
-                    }),
-                    new Promise<void>((resolve) => {
-                        const script = document.createElement('script');
-                        script.src = 'https://accounts.google.com/gsi/client';
-                        script.onload = () => resolve();
-                        document.body.appendChild(script);
-                    })
-                ]);
-
-                await new Promise<void>((resolve) => {
-                    window.gapi.load('picker', () => resolve());
-                });
-
-                const token = await TokenManager.getValidToken();
-                if (token) {
-                    try {
-                        const response = await fetch(
-                            `https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${token}`
-                        );
-                        if (response.ok) {
-                            setIsAuthenticated(true);
-                        } else {
-                            TokenManager.clearTokens();
-                            setIsAuthenticated(false);
-                        }
-                    } catch {
-                        TokenManager.clearTokens();
-                        setIsAuthenticated(false);
-                    }
-                }
-
-                setIsInitialized(true);
-            } catch (error) {
-                toast.error('Failed to initialize Google Drive integration');
-                TokenManager.clearTokens();
-                setIsAuthenticated(false);
-            }
-        };
-
-        loadGoogleAPIs();
-
-        return () => {
-            document.querySelectorAll('script[src*="google"]')
-                .forEach(script => script.remove());
-        };
-    }, []);
-
-    useEffect(() => {
-        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-            if (uploadingFiles.length > 0) {
-                event.preventDefault();
-                event.returnValue = '';
-            }
-        };
-
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [uploadingFiles]);
-
-    if (!isInitialized) {
-        return (
-            <div className='bg-[#2d9348] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#2d9348] shadow-sm'>
-                <div className='group relative w-full flex rounded-lg px-5 py-2.5 text-center transition min-h-[13rem]'>
-                    <div className='self-center w-full flex flex-col items-center justify-center gap-4 sm:px-5'>
-                        <div className='text-white'>Initializing Google Drive...</div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    }, [isUploading, authenticate, showPicker]);
 
     return (
-        <div className='bg-[#2d9348] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#2d9348] shadow-sm'>
+        <div className='bg-[#00ac47] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#00ac47] shadow-sm'>
             <div className='group relative w-full flex rounded-lg px-5 py-2.5 text-center transition min-h-[13rem]'>
                 <div className='self-center w-full flex flex-col items-center justify-center gap-4 sm:px-5'>
                     <div className='flex gap-3 text-base font-medium leading-6 text-white'>
@@ -763,9 +488,22 @@ const GoogleDriveImporter: React.FC<GoogleDriveImporterProps> = ({ onUploadSucce
                     </div>
                     <button
                         onClick={handleDriveAction}
-                        className='mt-4 px-5 py-2 bg-white rounded-[32px] text-[#2d9348] font-medium border border-white hover:bg-gray-100 transition-colors'
+                        disabled={!isGoogleDriveServiceReady || isPickerLoading}
+                        className='mt-4 px-5 py-2 bg-white rounded-[32px] text-[#00ac47] font-medium border border-white hover:bg-gray-100 transition-colors'
                     >
-                        {isAuthenticated ? 'Select Files' : 'Connect to Drive'}
+                        {!isGoogleDriveServiceReady ? (
+                            <div className='flex items-center justify-center'>
+                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                                <span>Initializing...</span>
+                            </div>
+                        ) : isPickerLoading ? (
+                            <div className='flex items-center justify-center'>
+                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                                <span>Opening Picker...</span>
+                            </div>
+                        ) : (
+                            'Select from Google Drive'
+                        )}
                     </button>
                 </div>
             </div>

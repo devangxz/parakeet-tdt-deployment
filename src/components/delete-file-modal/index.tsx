@@ -35,7 +35,7 @@ const DeleteFileDialog = ({
     setDeleteLoading(true)
     try {
       await axios.post(`/api/files/delete`, {
-        data: { fileId: [fileId] },
+        fileIds: [fileId],
       })
       setDeleteLoading(false)
       onClose()

@@ -1,5 +1,6 @@
 import { InvoiceType, InvoiceStatus } from '@prisma/client'
 
+import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 
 export const getCreditBalance = async (
@@ -36,13 +37,13 @@ export const getCreditBalance = async (
     }, 0)
 
     const roundedCreditsBalance = Math.round(creditsBalance * 100) / 100
-    console.info(`Credit balance ${creditsBalance} for ${customerId}`)
+    logger.info(`Credit balance ${creditsBalance} for ${customerId}`)
     return {
       success: true,
       creditsBalance: roundedCreditsBalance || 0,
     }
   } catch (err) {
-    console.error('Error fetching credit balance:', err)
+    logger.error('Error fetching credit balance:', err)
     return {
       success: false,
       creditsBalance: 0,

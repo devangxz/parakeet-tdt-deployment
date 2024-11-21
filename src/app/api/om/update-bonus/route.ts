@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { getAWSSesInstance } from '@/lib/ses'
 
 export async function POST(req: NextRequest) {
   try {
     const { fileId, rate } = await req.json()
+    const userHeader = req.headers.get('x-user-token')
+    const user = JSON.parse(userHeader ?? '{}')
 
     if (!fileId) {
       return NextResponse.json({
@@ -30,6 +33,13 @@ export async function POST(req: NextRequest) {
       where: { fileId: fileId },
       data: { rateBonus: Number(rate), updatedAt: new Date() },
     })
+
+    const awsSes = getAWSSesInstance()
+    await awsSes.sendAlert(
+      `File Bonus Updated`,
+      `${fileInformation.fileId} file bonus updated to $${rate}/ah by ${user.email}`,
+      'software'
+    )
 
     logger.info(`rate bonus updated to $${rate}/ah, for ${fileId}`)
     return NextResponse.json({

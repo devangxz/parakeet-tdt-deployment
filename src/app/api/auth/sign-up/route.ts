@@ -5,7 +5,8 @@ import { createUser } from '@/services/user-service'
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { email, password, firstname, lastname, role, phone, industry } = body
+    const { email, password, firstname, lastname, role, phone, industry, rc } =
+      body
 
     const result = await createUser({
       email: email.toLowerCase(),
@@ -15,6 +16,7 @@ export async function POST(req: Request) {
       role,
       phone,
       industry,
+      rc,
     })
 
     if (result.success) {

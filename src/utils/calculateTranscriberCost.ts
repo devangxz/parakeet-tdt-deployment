@@ -35,11 +35,11 @@ const calculateTranscriberCost = async (order: any, transcriberId: number) => {
     rate = iCQC.isICQC
       ? iCQC.cfRRate
       : userRates
-      ? (pwerLevel === 'high'
-          ? userRates.reviewerHighDifficultyRate
-          : pwerLevel === 'medium'
-          ? userRates.reviewerMediumDifficultyRate
-          : userRates.reviewerLowDifficultyRate) * 60
+      ? pwerLevel === 'high'
+        ? userRates.reviewerHighDifficultyRate
+        : pwerLevel === 'medium'
+        ? userRates.reviewerMediumDifficultyRate
+        : userRates.reviewerLowDifficultyRate
       : 0
   }
 

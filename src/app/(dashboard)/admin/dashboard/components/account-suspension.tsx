@@ -51,7 +51,7 @@ export default function AccountSuspension() {
     try {
       setLoadingDisable(true)
       const response = await axios.post(`/api/admin/suspend-account`, {
-        userEmail: formData.email,
+        userEmail: formData.email.toLowerCase(),
         flag: true,
         comment: formData.comment,
       })
@@ -86,7 +86,7 @@ export default function AccountSuspension() {
     try {
       setLoading(true)
       const response = await axios.post(`/api/admin/suspend-account`, {
-        userEmail: formData.email,
+        userEmail: formData.email.toLowerCase(),
         flag: false,
         comment: formData.comment,
       })

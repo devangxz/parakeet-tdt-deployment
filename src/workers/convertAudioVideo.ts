@@ -1,7 +1,7 @@
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
 import { Readable } from 'stream';
+import { promisify } from 'util';
 
 import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import ffmpeg from 'fluent-ffmpeg';
@@ -12,12 +12,17 @@ import prisma from '../lib/prisma';
 import { s3Client } from '../lib/s3Client';
 import { getAWSSesInstance } from '../lib/ses';
 
+const mkdir = promisify(fs.mkdir);
+const unlink = promisify(fs.unlink);
+const access = promisify(fs.access);
+
 const ffmpegPath = process.env.FFMPEG_PATH;
 const ffprobePath = process.env.FFPROBE_PATH;
 
 if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
 if (ffprobePath) ffmpeg.setFfprobePath(ffprobePath);
 
+const PERSISTENT_STORAGE_PATH = process.env.CONVERSION_WORKER_PERSISTENT_STORAGE_PATH;
 const CONVERSION_RETRY_CONFIG = {
     maxAttempts: 3,
     initialDelayMs: 1000,
@@ -30,6 +35,92 @@ const VIDEO_EXTENSIONS = [
     '.mts', '.3ga', '.ogv', '.mxf'
 ];
 
+class PersistentStorageHandler {
+    private persistentPath: string;
+
+    constructor() {
+        if (!PERSISTENT_STORAGE_PATH) {
+            throw new Error('CONVERSION_WORKER_PERSISTENT_STORAGE_PATH environment variable is not set');
+        }
+        this.persistentPath = PERSISTENT_STORAGE_PATH;
+        this.initStorage();
+    }
+
+    private async initStorage() {
+        try {
+            await access(this.persistentPath);
+        } catch {
+            await mkdir(this.persistentPath, { recursive: true });
+        }
+    }
+
+    private async checkStorageSpace(): Promise<boolean> {
+        return new Promise((resolve) => {
+            fs.statfs(this.persistentPath, (err, stats) => {
+                if (err) {
+                    logger.error('Error checking storage space:', err);
+                    resolve(false);
+                    return;
+                }
+
+                const availableGB = (stats.bavail * stats.bsize) / (1024 * 1024 * 1024);
+                resolve(availableGB > 1);
+            });
+        });
+    }
+
+    public async saveStreamToStorage(stream: Readable, fileName: string): Promise<string> {
+        const hasSpace = await this.checkStorageSpace();
+        if (!hasSpace) {
+            throw new Error('Insufficient storage space');
+        }
+
+        const filePath = this.getFilePath(fileName);
+
+        return new Promise((resolve, reject) => {
+            const writeStream = fs.createWriteStream(filePath);
+
+            stream.pipe(writeStream);
+
+            writeStream.on('finish', () => resolve(filePath));
+            writeStream.on('error', async (error) => {
+                await unlink(filePath).catch(() => { });
+                reject(error);
+            });
+        });
+    }
+
+    public async deleteFile(filePath: string): Promise<void> {
+        try {
+            const exists = await this.fileExists(filePath);
+            if (exists) {
+                await unlink(filePath);
+                logger.info(`Successfully deleted file: ${filePath}`);
+            } else {
+                logger.debug(`File does not exist, skipping deletion: ${filePath}`);
+            }
+        } catch (error) {
+            logger.error(`Error deleting file ${filePath}:`, error);
+            throw error;
+        }
+    }
+
+    public getFilePath(fileName: string): string {
+        return path.join(this.persistentPath, fileName);
+    }
+
+    private async fileExists(filePath: string): Promise<boolean> {
+        try {
+            await access(filePath, fs.constants.F_OK);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+}
+
+const storageHandler = new PersistentStorageHandler();
+
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const calculateBackoffDelay = (attempt: number): number =>
@@ -38,6 +129,7 @@ const calculateBackoffDelay = (attempt: number): number =>
 export async function convertAudioVideo(fileKey: string, userEmailId: string, fileName: string): Promise<string> {
     logger.info(`Starting processing for file: ${fileKey}`);
     const startTime = Date.now();
+    let downloadedFilePath: string | null = null;
 
     try {
         const { Body } = await s3Client.send(new GetObjectCommand({
@@ -45,13 +137,13 @@ export async function convertAudioVideo(fileKey: string, userEmailId: string, fi
             Key: fileKey,
         }));
 
-        const tempFilePath = path.join(os.tmpdir(), path.basename(fileKey));
-        await saveStreamToFile(Body as Readable, tempFilePath);
+        downloadedFilePath = await storageHandler.saveStreamToStorage(
+            Body as Readable,
+            path.basename(fileKey)
+        );
 
-        const fileId = (path.parse(fileKey)).name;
-        await convertToMp3Mp4(tempFilePath, fileKey, fileId, userEmailId, fileName);
-
-        fs.unlinkSync(tempFilePath);
+        const fileId = path.parse(fileKey).name;
+        await convertToMp3Mp4(downloadedFilePath, fileKey, fileId, userEmailId, fileName);
 
         const endTime = Date.now();
         logger.info(`[${fileKey}] Processing completed. Total time: ${(endTime - startTime) / 1000} seconds`);
@@ -59,16 +151,15 @@ export async function convertAudioVideo(fileKey: string, userEmailId: string, fi
     } catch (error) {
         logger.error(`Error processing file ${fileKey}: ${error}`);
         throw error;
+    } finally {
+        if (downloadedFilePath) {
+            try {
+                await storageHandler.deleteFile(downloadedFilePath);
+            } catch (cleanupError) {
+                logger.error(`Error cleaning up downloaded file ${downloadedFilePath}:`, cleanupError);
+            }
+        }
     }
-}
-
-async function saveStreamToFile(stream: Readable, filePath: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-        const writeStream = fs.createWriteStream(filePath);
-        stream.pipe(writeStream);
-        writeStream.on('finish', resolve);
-        writeStream.on('error', reject);
-    });
 }
 
 async function getMetadataWithFFmpeg(filePath: string): Promise<number> {
@@ -134,7 +225,6 @@ async function convertFile(input: string, output: string, format: 'mp3' | 'mp4',
                 logger.error(finalError.message);
 
                 const ses = getAWSSesInstance();
-
                 const emailData = { userEmailId: '' };
                 const templateData = {
                     file_id: fileId,
@@ -142,7 +232,6 @@ async function convertFile(input: string, output: string, format: 'mp3' | 'mp4',
                 };
 
                 await ses.sendMail('CONVERSION_ERROR', emailData, templateData);
-
                 throw finalError;
             }
 
@@ -163,56 +252,75 @@ async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: st
     const baseName = path.parse(originalKey).name;
     const mp3Key = `${baseName}.mp3`;
     const mp4Key = `${baseName}.mp4`;
-    const mp3Path = path.join(os.tmpdir(), mp3Key);
-    const mp4Path = path.join(os.tmpdir(), mp4Key);
+    const mp3Path = storageHandler.getFilePath(mp3Key);
+    const mp4Path = storageHandler.getFilePath(mp4Key);
 
     const isVideoFile = VIDEO_EXTENSIONS.includes(fileExt);
+    let mp3Created = false;
+    let mp4Created = false;
+    let originalDeleted = false;
 
     if (fileExt === '.mp3') return;
 
-    if (fileExt === '.mp4') {
-        await convertFile(filePath, mp3Path, 'mp3', originalKey, fileName);
-        await uploadToS3(mp3Path, mp3Key);
-        fs.unlinkSync(mp3Path);
-        return;
-    }
-
     try {
-        const conversionPromises = [];
+        if (fileExt === '.mp4') {
+            await convertFile(filePath, mp3Path, 'mp3', originalKey, fileName);
+            mp3Created = true;
+            await uploadToS3(mp3Path, mp3Key);
+            return;
+        }
 
-        conversionPromises.push(convertFile(filePath, mp3Path, 'mp3', originalKey, fileName));
+        const conversionPromises = [];
+        conversionPromises.push(
+            convertFile(filePath, mp3Path, 'mp3', originalKey, fileName)
+                .then(() => { mp3Created = true; })
+        );
 
         if (isVideoFile) {
-            conversionPromises.push(convertFile(filePath, mp4Path, 'mp4', originalKey, fileName));
+            conversionPromises.push(
+                convertFile(filePath, mp4Path, 'mp4', originalKey, fileName)
+                    .then(() => { mp4Created = true; })
+            );
         }
 
         await Promise.all(conversionPromises);
 
-        await uploadToS3(mp3Path, mp3Key);
-        if (isVideoFile) {
+        if (mp3Created) {
+            await uploadToS3(mp3Path, mp3Key);
+        }
+
+        if (mp4Created) {
             await uploadToS3(mp4Path, mp4Key);
         }
 
         if (fileExt !== '.mp3' && fileExt !== '.mp4') {
             await deleteFromS3(originalKey);
+            originalDeleted = true;
         }
 
-        await validateDuration(mp3Path, fileId, userEmailId);
-
-        fs.unlinkSync(mp3Path);
-        if (isVideoFile) {
-            fs.unlinkSync(mp4Path);
+        try {
+            await validateDuration(mp3Path, fileId, userEmailId);
+        } catch (durationError) {
+            logger.error(`Duration validation error for ${fileId}:`, durationError);
         }
 
     } catch (error) {
-        try {
-            if (fs.existsSync(mp3Path)) fs.unlinkSync(mp3Path);
-            if (fs.existsSync(mp4Path)) fs.unlinkSync(mp4Path);
-        } catch (cleanupError) {
-            logger.error(`Error during cleanup: ${cleanupError}`);
+        if (!originalDeleted) {
+            try {
+                if (mp3Created) await deleteFromS3(mp3Key);
+                if (mp4Created) await deleteFromS3(mp4Key);
+            } catch (cleanupError) {
+                logger.error(`Error cleaning up S3 after conversion failure:`, cleanupError);
+            }
         }
-
         throw error;
+    } finally {
+        try {
+            if (mp3Created) await storageHandler.deleteFile(mp3Path);
+            if (mp4Created) await storageHandler.deleteFile(mp4Path);
+        } catch (cleanupError) {
+            logger.error(`Error during local file cleanup:`, cleanupError);
+        }
     }
 }
 
@@ -226,7 +334,6 @@ async function validateDuration(filePath: string, fileId: string, userEmailId: s
 
     if (file && Math.abs(file.duration - duration) > DURATION_DIFF) {
         const ses = getAWSSesInstance();
-
         const emailData = { userEmailId };
         const templateData = {};
 

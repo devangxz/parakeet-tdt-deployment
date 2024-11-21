@@ -26,11 +26,11 @@ const calculateFileCost = async (order: any) => {
 
   if (order.orderType === OrderType.TRANSCRIPTION_FORMATTING) {
     rates.customFormat = userRates
-      ? (pwerLevel === 'high'
-          ? userRates.reviewerHighDifficultyRate
-          : pwerLevel === 'medium'
-          ? userRates.reviewerMediumDifficultyRate
-          : userRates.reviewerLowDifficultyRate) * 60
+      ? pwerLevel === 'high'
+        ? userRates.reviewerHighDifficultyRate
+        : pwerLevel === 'medium'
+        ? userRates.reviewerMediumDifficultyRate
+        : userRates.reviewerLowDifficultyRate
       : 0
   }
   const transcriptionRate = rates.transcription + order.rateBonus

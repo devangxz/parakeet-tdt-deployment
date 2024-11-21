@@ -45,12 +45,12 @@ const UploadProgressItem = ({ file, status }: { file: UploadFile; status: Upload
 
         const videoTypes = ['mp4', 'avi', 'wmv', 'mov', 'webm', 'flv', '3gp', 'mpg', 'mpeg', 'm4v', 'ogv'];
         if (videoTypes.includes(ext.toLowerCase())) {
-            return <Video {...commonProps} className="text-red-500" />;
+            return <Video {...commonProps} className="text-orange-500" />;
         }
 
         const proVideoTypes = ['mxf', 'mts', 'mkv'];
         if (proVideoTypes.includes(ext.toLowerCase())) {
-            return <FileVideo {...commonProps} className="text-orange-500" />;
+            return <FileVideo {...commonProps} className="text-red-500" />;
         }
 
         const docTypes = ['docx'];
