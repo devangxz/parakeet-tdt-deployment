@@ -34,13 +34,37 @@ export async function POST() {
     const dateString = now.toISOString().split('T')[0]
     logger.info(`triggered qc daily bonus cron job on ${dateString}`)
 
+    const startOfDay = new Date(
+      Date.UTC(
+        yesterday.getUTCFullYear(),
+        yesterday.getUTCMonth(),
+        yesterday.getUTCDate(),
+        0,
+        0,
+        0,
+        0
+      )
+    )
+
+    const endOfDay = new Date(
+      Date.UTC(
+        yesterday.getUTCFullYear(),
+        yesterday.getUTCMonth(),
+        yesterday.getUTCDate(),
+        23,
+        59,
+        59,
+        999
+      )
+    )
+
     const transcribers = await prisma.jobAssignment.findMany({
       where: {
         status: JobStatus.COMPLETED,
         type: JobType.QC,
         completedTs: {
-          gte: new Date(yesterday.setHours(0, 0, 0, 0)),
-          lt: new Date(yesterday.setHours(23, 59, 59, 999)),
+          gte: startOfDay,
+          lt: endOfDay,
         },
       },
       select: {
@@ -102,8 +126,9 @@ export async function POST() {
       await addBonus(user.transcriberId, amount, user.fileIds.join(','))
 
       const today = new Date()
-      const today_date = `${today.getMonth() + 1
-        }/${today.getDate()}/${today.getFullYear()}`
+      const today_date = `${
+        today.getMonth() + 1
+      }/${today.getDate()}/${today.getFullYear()}`
 
       const emailData = {
         userEmailId: user.email,

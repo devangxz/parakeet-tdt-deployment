@@ -225,7 +225,8 @@
     "CC": ["$$SUPPORT_EMAIL_ID$$"],
     "BCC": [],
     "SUBJECT": "Scribie.ai Editor File Unassigned",
-    "HTML": "UNASSIGN_FILE.html"
+    "HTML": "UNASSIGN_FILE.html",
+    "TEXT": ""
   },
   "TRANSCRIBER_SUBMIT": {
     "FROM": "$$SUPPORT_EMAIL_ID$$",

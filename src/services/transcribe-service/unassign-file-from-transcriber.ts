@@ -25,6 +25,10 @@ const unAssignFileFromTranscriber = async (
     const templateData = {
       fileId,
       type,
+      subject:
+        type === 'QC'
+          ? 'Scribie.ai Editor File Unassigned'
+          : 'Scribie.ai Finalizer File Unassigned',
     }
 
     await sendTemplateMail('UNASSIGN_FILE', transcriberId, templateData)
