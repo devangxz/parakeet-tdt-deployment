@@ -22,7 +22,7 @@ const ffprobePath = process.env.FFPROBE_PATH;
 if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
 if (ffprobePath) ffmpeg.setFfprobePath(ffprobePath);
 
-const PERSISTENT_STORAGE_PATH = '/data/files';
+const PERSISTENT_STORAGE_PATH = process.env.CONVERSION_WORKER_PERSISTENT_STORAGE_PATH;
 const CONVERSION_RETRY_CONFIG = {
     maxAttempts: 3,
     initialDelayMs: 1000,
@@ -39,6 +39,9 @@ class PersistentStorageHandler {
     private persistentPath: string;
 
     constructor() {
+        if (!PERSISTENT_STORAGE_PATH) {
+            throw new Error('CONVERSION_WORKER_PERSISTENT_STORAGE_PATH environment variable is not set');
+        }
         this.persistentPath = PERSISTENT_STORAGE_PATH;
         this.initStorage();
     }
