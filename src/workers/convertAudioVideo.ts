@@ -30,7 +30,7 @@ const CONVERSION_RETRY_CONFIG = {
 };
 
 const VIDEO_EXTENSIONS = [
-    '.avi', '.mov', '.wmv', '.flv', '.mkv',
+    '.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv',
     '.webm', '.mpg', '.mpeg', '.m4v', '.3gp',
     '.mts', '.3ga', '.ogv', '.mxf'
 ];
@@ -94,7 +94,7 @@ class PersistentStorageHandler {
                 await unlink(filePath);
                 logger.info(`Successfully deleted file: ${filePath}`);
             } else {
-                logger.info(`File does not exist, skipping deletion: ${filePath}`);
+                logger.debug(`File does not exist, skipping deletion: ${filePath}`);
             }
         } catch (error) {
             logger.error(`Error deleting file ${filePath}:`, error);
@@ -179,39 +179,17 @@ async function getMetadataWithFFmpeg(filePath: string): Promise<number> {
 async function convertFile(input: string, output: string, format: 'mp3' | 'mp4', fileId: string, fileName: string): Promise<void> {
     let lastError: Error | undefined;
 
-    const tempOutput = input === output ? `${output}.temp.${format}` : output;
-
     for (let attempt = 1; attempt <= CONVERSION_RETRY_CONFIG.maxAttempts; attempt++) {
         try {
             await new Promise<void>((resolve, reject) => {
-                let command = ffmpeg(input);
+                let command = ffmpeg(input).outputFormat(format);
 
                 if (format === 'mp4') {
                     command = command
-                        .outputFormat('mp4')
                         .videoCodec('libx264')
-                        .outputOptions([
-                            '-crf', '19',
-                            '-strict', 'experimental',
-                            '-an'
-                        ]);
-                } else if (format === 'mp3') {
-                    command = command
-                        .outputFormat('mp3')
-                        .audioCodec('libmp3lame')
-                        .outputOptions([
-                            '-ar', '44100',
-                            '-b:a', '128k'
-                        ]);
-
-                    ffmpeg.ffprobe(input, (err, metadata) => {
-                        const audioStream = metadata.streams.find(stream => stream.codec_type === 'audio');
-                        if (audioStream?.channels && audioStream.channels > 2) {
-                            command.outputOptions([
-                                '-ac', '2'
-                            ]);
-                        }
-                    });
+                        .audioCodec('aac')
+                        .outputOptions('-preset', 'medium')
+                        .outputOptions('-movflags', '+faststart');
                 }
 
                 command
@@ -226,18 +204,8 @@ async function convertFile(input: string, output: string, format: 'mp3' | 'mp4',
                         logger.error(`${format} conversion attempt ${attempt} failed: ${err.message}`);
                         reject(err);
                     })
-                    .save(tempOutput);
+                    .save(output);
             });
-
-            if (input === output) {
-                try {
-                    await storageHandler.deleteFile(output);
-                    await fs.promises.rename(tempOutput, output);
-                } catch (renameError) {
-                    logger.error(`Error renaming temporary file: ${renameError}`);
-                    throw renameError;
-                }
-            }
 
             if (attempt > 1) {
                 logger.info(`File conversion to ${format} succeeded on attempt ${attempt}`);
@@ -245,15 +213,8 @@ async function convertFile(input: string, output: string, format: 'mp3' | 'mp4',
             return;
 
         } catch (error) {
-            if (input === output) {
-                try {
-                    await storageHandler.deleteFile(tempOutput);
-                } catch (cleanupError) {
-                    logger.error(`Error cleaning up temporary file: ${cleanupError}`);
-                }
-            }
-
             lastError = error as Error;
+
             if (attempt === CONVERSION_RETRY_CONFIG.maxAttempts) {
                 const finalError = new Error(
                     `File conversion to ${format} failed after ${CONVERSION_RETRY_CONFIG.maxAttempts} attempts. Final error: ${error}`
@@ -296,9 +257,17 @@ async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: st
     let mp4Created = false;
     let originalDeleted = false;
 
-    try {
-        const conversionPromises = [];
+    if (fileExt === '.mp3') return;
 
+    try {
+        if (fileExt === '.mp4') {
+            await convertFile(filePath, mp3Path, 'mp3', originalKey, fileName);
+            mp3Created = true;
+            await uploadToS3(mp3Path, mp3Key);
+            return;
+        }
+
+        const conversionPromises = [];
         conversionPromises.push(
             convertFile(filePath, mp3Path, 'mp3', originalKey, fileName)
                 .then(() => { mp3Created = true; })
@@ -326,11 +295,6 @@ async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: st
             originalDeleted = true;
         }
 
-        await prisma.file.update({
-            where: { fileId },
-            data: { converted: true }
-        });
-
         try {
             await validateDuration(mp3Path, fileId, userEmailId);
         } catch (durationError) {
@@ -338,14 +302,7 @@ async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: st
         }
 
     } catch (error) {
-        await prisma.file.update({
-            where: { fileId },
-            data: { converted: false }
-        }).catch(updateError => {
-            logger.error(`Error updating file conversion status: ${updateError}`);
-        });
-
-        if (!originalDeleted && fileExt !== '.mp3' && fileExt !== '.mp4') {
+        if (!originalDeleted) {
             try {
                 if (mp3Created) await deleteFromS3(mp3Key);
                 if (mp4Created) await deleteFromS3(mp4Key);
@@ -356,9 +313,7 @@ async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: st
         throw error;
     } finally {
         try {
-            if (fileExt !== '.mp3') {
-                if (mp3Created) await storageHandler.deleteFile(mp3Path);
-            }
+            if (mp3Created) await storageHandler.deleteFile(mp3Path);
             if (mp4Created) await storageHandler.deleteFile(mp4Path);
         } catch (cleanupError) {
             logger.error(`Error during local file cleanup:`, cleanupError);
