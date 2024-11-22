@@ -192,8 +192,7 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
           await axios.post('/api/s3-upload/multi-part/complete', {
             sendBackData: {
               key: uploadState.key,
-              uploadId: uploadState.uploadId,
-              fileName: file.name
+              uploadId: uploadState.uploadId
             },
             parts: sortedParts
           });

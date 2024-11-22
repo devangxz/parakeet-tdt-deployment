@@ -30,7 +30,7 @@ export async function POST(req: Request) {
 
         // Create audio video conversion job
         if (fileExtension !== '.docx') { // Check for remote legal docx files
-            await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, { fileKey: sendBackData.key, userEmailId: user.email, fileName: sendBackData.fileName });
+            await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, { fileKey: sendBackData.key, userEmailId: user.email });
         }
 
         return NextResponse.json({ success: true });
