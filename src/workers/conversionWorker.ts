@@ -18,8 +18,8 @@ const createWorker = (queueName: QueueName, processFunction: (job: Job) => Promi
 });
 
 const audioVideoConversionWorker = createWorker(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, async (job) => {
-    const { fileKey, userEmailId, fileName } = job.data;
-    return await convertAudioVideo(fileKey, userEmailId, fileName);
+    const { fileKey, userEmailId } = job.data;
+    return await convertAudioVideo(fileKey, userEmailId);
 });
 
 logger.info('Conversion worker started');

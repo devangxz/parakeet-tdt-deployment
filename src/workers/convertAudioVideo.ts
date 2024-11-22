@@ -126,7 +126,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const calculateBackoffDelay = (attempt: number): number =>
     CONVERSION_RETRY_CONFIG.initialDelayMs * Math.pow(CONVERSION_RETRY_CONFIG.backoffMultiplier, attempt - 1);
 
-export async function convertAudioVideo(fileKey: string, userEmailId: string, fileName: string): Promise<string> {
+export async function convertAudioVideo(fileKey: string, userEmailId: string): Promise<string> {
     logger.info(`Starting processing for file: ${fileKey}`);
     const startTime = Date.now();
     let downloadedFilePath: string | null = null;
@@ -143,7 +143,7 @@ export async function convertAudioVideo(fileKey: string, userEmailId: string, fi
         );
 
         const fileId = path.parse(fileKey).name;
-        await convertToMp3Mp4(downloadedFilePath, fileKey, fileId, userEmailId, fileName);
+        await convertToMp3Mp4(downloadedFilePath, fileKey, fileId, userEmailId);
 
         const endTime = Date.now();
         logger.info(`[${fileKey}] Processing completed. Total time: ${(endTime - startTime) / 1000} seconds`);
@@ -179,7 +179,7 @@ async function getMetadataWithFFmpeg(filePath: string): Promise<number> {
     });
 }
 
-async function convertFile(input: string, output: string, format: 'mp3' | 'mp4', fileId: string, fileName: string): Promise<void> {
+async function convertFile(input: string, output: string, format: 'mp3' | 'mp4', fileId: string, userEmailId: string): Promise<void> {
     let lastError: Error | undefined;
 
     for (let attempt = 1; attempt <= CONVERSION_RETRY_CONFIG.maxAttempts; attempt++) {
@@ -224,14 +224,13 @@ async function convertFile(input: string, output: string, format: 'mp3' | 'mp4',
                 );
                 logger.error(finalError.message);
 
-                const ses = getAWSSesInstance();
-                const emailData = { userEmailId: '' };
-                const templateData = {
-                    file_id: fileId,
-                    file_name: fileName,
-                };
-
-                await ses.sendMail('CONVERSION_ERROR', emailData, templateData);
+                const awsSes = getAWSSesInstance();
+                await awsSes.sendAlert(
+                    `File Conversion Error`,
+                    `${format} conversion failed for file ${fileId} uploaded by ${userEmailId}.`,
+                    'software'
+                );
+        
                 throw finalError;
             }
 
@@ -247,7 +246,7 @@ async function convertFile(input: string, output: string, format: 'mp3' | 'mp4',
     throw lastError;
 }
 
-async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: string, userEmailId: string, fileName: string): Promise<void> {
+async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: string, userEmailId: string): Promise<void> {
     const fileExt = path.extname(originalKey).toLowerCase();
     const baseName = path.parse(originalKey).name;
     const mp3Key = `${baseName}.mp3`;
@@ -264,7 +263,7 @@ async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: st
 
     try {
         if (fileExt === '.mp4') {
-            await convertFile(filePath, mp3Path, 'mp3', originalKey, fileName);
+            await convertFile(filePath, mp3Path, 'mp3', originalKey, userEmailId);
             mp3Created = true;
             await uploadToS3(mp3Path, mp3Key);
             return;
@@ -272,13 +271,13 @@ async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: st
 
         const conversionPromises = [];
         conversionPromises.push(
-            convertFile(filePath, mp3Path, 'mp3', originalKey, fileName)
+            convertFile(filePath, mp3Path, 'mp3', originalKey, userEmailId)
                 .then(() => { mp3Created = true; })
         );
 
         if (isVideoFile) {
             conversionPromises.push(
-                convertFile(filePath, mp4Path, 'mp4', originalKey, fileName)
+                convertFile(filePath, mp4Path, 'mp4', originalKey, userEmailId)
                     .then(() => { mp4Created = true; })
             );
         }
@@ -325,7 +324,7 @@ async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: st
 }
 
 async function validateDuration(filePath: string, fileId: string, userEmailId: string): Promise<void> {
-    const duration = await getMetadataWithFFmpeg(filePath);
+    const duration = Math.floor(Number(((await getMetadataWithFFmpeg(filePath)) ?? 0).toFixed(2)));
 
     const file = await prisma.file.findUnique({
         where: { fileId: fileId },
@@ -333,11 +332,12 @@ async function validateDuration(filePath: string, fileId: string, userEmailId: s
     });
 
     if (file && Math.abs(file.duration - duration) > DURATION_DIFF) {
-        const ses = getAWSSesInstance();
-        const emailData = { userEmailId };
-        const templateData = {};
-
-        await ses.sendMail('DURATION_DIFFERENCE_FLAGGED', emailData, templateData);
+        const awsSes = getAWSSesInstance();
+        await awsSes.sendAlert(
+            `File Duration Difference`,
+            `Duration difference detected for file ${fileId} uploaded by ${userEmailId}. Original duration: ${file.duration}s, Converted duration: ${duration}s, Difference: ${Math.abs(file.duration - duration)}s`,
+            'software'
+        );
 
         logger.info(
             `${fileId} - File flagged for duration difference::${ERROR_CODES.DURATION_DIFF_ERROR.code}::${ERROR_CODES.DURATION_DIFF_ERROR.httpCode}`
