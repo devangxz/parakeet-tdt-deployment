@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { FileTag } from '@prisma/client';
 import { NextResponse } from 'next/server';
 
