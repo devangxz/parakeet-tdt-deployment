@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
 import { ADMIN_EMAILS } from '@/constants'
-import formatDateTime from '@/utils/formatDateTime'
 
 interface Withdrawal {
   id: number
@@ -22,6 +21,26 @@ interface Withdrawal {
   toPaypalId: string
   status: string
   requestedAt: string
+}
+
+const formatDateTimePST = (dateString: string) => {
+  const date = new Date(dateString)
+
+  const time = new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'America/Los_Angeles', // PST timezone
+  }).format(date)
+
+  const formattedDate = new Intl.DateTimeFormat('en-US', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'America/Los_Angeles', // PST timezone
+  }).format(date)
+
+  return `${time}, ${formattedDate}`
 }
 
 export default function WithdrawalPage() {
@@ -237,7 +256,7 @@ export default function WithdrawalPage() {
       header: 'Date',
       cell: ({ row }) => (
         <div className='font-medium'>
-          {formatDateTime(row.getValue('requestedAt'))}
+          {formatDateTimePST(row.getValue('requestedAt'))}
         </div>
       ),
     },
@@ -299,7 +318,7 @@ export default function WithdrawalPage() {
       header: 'Date',
       cell: ({ row }) => (
         <div className='font-medium'>
-          {formatDateTime(row.getValue('requestedAt'))}
+          {formatDateTimePST(row.getValue('requestedAt'))}
         </div>
       ),
     },
