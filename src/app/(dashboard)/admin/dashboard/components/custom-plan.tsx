@@ -118,7 +118,8 @@ export default function CustomPlan() {
               responseData.customFormatHighDifficultyReviewRate.toString(),
             agreedMonthlyHours: responseData.agreedMonthlyHours.toString(),
             customFormatDeadline: responseData.deadline.toString(),
-            customFormattingOption: responseData.customFormatOption,
+            customFormattingOption:
+              responseData.customFormatOption.toLowerCase(),
             orderType: responseData.orderType,
           }
           setRates(mappedRates)

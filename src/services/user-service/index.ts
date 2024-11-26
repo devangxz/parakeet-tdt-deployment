@@ -1,4 +1,4 @@
-import { User } from '@prisma/client'
+import { User, OrderType } from '@prisma/client'
 import bcrypt from 'bcrypt'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -16,13 +16,73 @@ interface CreateUserData {
   phone: string
   industry: string
   rc: string
+  newsletter: boolean
+}
+
+const legalOnboarding = async (
+  email: string,
+  userId: number,
+  firstname: string
+) => {
+  await prisma.organization.create({
+    data: {
+      name: firstname,
+      userId,
+    },
+  })
+
+  await prisma.template.createMany({
+    data: [
+      {
+        name: 'Deposition',
+        userId,
+      },
+      {
+        name: 'Hearing',
+        userId,
+      },
+    ],
+  })
+
+  await prisma.userRate.create({
+    data: {
+      userId,
+      manualRate: 0.8,
+      svRate: 0,
+      agreedMonthlyHours: 20,
+      addChargeRate: 0.5,
+      audioTimeCoding: 0,
+      rushOrder: 1,
+      customFormat: 0.5,
+      customFormatOption: 'Legal',
+      deadline: 5,
+      customFormatQcRate: 0.1,
+      orderType: OrderType.TRANSCRIPTION_FORMATTING,
+    },
+  })
+
+  await prisma.customer.update({
+    where: { userId },
+    data: {
+      customPlan: true,
+    },
+  })
 }
 
 export async function createUser(
   userData: CreateUserData
 ): Promise<{ success: boolean; message: string; user?: User }> {
-  const { email, password, firstname, lastname, role, phone, industry, rc } =
-    userData
+  const {
+    email,
+    password,
+    firstname,
+    lastname,
+    role,
+    phone,
+    industry,
+    rc,
+    newsletter,
+  } = userData
   try {
     const referralCode = uuidv4()
     const inviteKey = uuidv4()
@@ -78,6 +138,20 @@ export async function createUser(
           userId: newUser.id,
         },
       })
+
+      await prisma.customerNotifyPrefs.create({
+        data: {
+          userId: newUser.id,
+          newsletter,
+        },
+      })
+    } else {
+      await prisma.transcriberNotifyPrefs.create({
+        data: {
+          userId: newUser.id,
+          newsletter,
+        },
+      })
     }
 
     await prisma.invite.create({
@@ -87,8 +161,9 @@ export async function createUser(
       },
     })
 
-    // TODO: Implement email sending functionality
-    // sendInviteEmail(email, inviteKey);
+    if (industry.toLocaleLowerCase() === 'legal' && role === 'customer') {
+      await legalOnboarding(email, newUser.id, firstname)
+    }
 
     const emailData = {
       userEmailId: email,

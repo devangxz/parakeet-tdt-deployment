@@ -400,7 +400,8 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
 
       if (response.data.success) {
         const tId = toast.success(
-          `Successfully ${!rushOrderEnable ? 'Enabled' : 'Disabled'
+          `Successfully ${
+            !rushOrderEnable ? 'Enabled' : 'Disabled'
           } rush order option`
         )
         toast.dismiss(tId)
@@ -478,8 +479,9 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
             <div key={step}>
               <div className={`flex items-center justify-center gap-3`}>
                 <div
-                  className={`rounded-full p-1 ${activeStep >= step ? 'bg-[#36F0C3]' : 'bg-violet-100'
-                    }`}
+                  className={`rounded-full p-1 ${
+                    activeStep >= step ? 'bg-[#36F0C3]' : 'bg-violet-100'
+                  }`}
                 >
                   <Check className='h-4 w-4 font-bold' />
                 </div>
@@ -500,7 +502,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
           {activeStep === 1 && (
             <div className='w-[100%] md:w-[50%] p-5 lg:p-10'>
               <ScrollArea className='h-[62vh]'>
-                {session?.user?.organizationName.toLocaleLowerCase() !==
+                {/* {session?.user?.organizationName.toLocaleLowerCase() !==
                   'remotelegal' && (
                     <>
                       {' '}
@@ -528,7 +530,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
                       </div>
                       <Separator />
                     </>
-                  )}
+                  )} */}
 
                 {files.map((file, index) => (
                   <CustomOrderOptions
