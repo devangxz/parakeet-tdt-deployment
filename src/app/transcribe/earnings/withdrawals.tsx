@@ -34,7 +34,10 @@ export default function WithdrawalsPage() {
     }
     try {
       const response = await axios.get(`/api/transcriber/withdrawal`)
-      setWithdrawals(response.data.withdrawals)
+      const sortedWithdrawals = response.data.withdrawals.sort(
+        (a: { id: number }, b: { id: number }) => b.id - a.id
+      )
+      setWithdrawals(sortedWithdrawals)
     } catch (err) {
       setError('an error occurred')
     } finally {

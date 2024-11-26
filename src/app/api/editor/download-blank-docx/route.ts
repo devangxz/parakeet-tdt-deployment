@@ -131,7 +131,7 @@ export async function GET(req: NextRequest) {
       })
     }
   } catch (error) {
-    logger.error(`error downloading file for file ${fileId}`)
+    logger.error(`error downloading file for file ${fileId}: ${error}`)
     return NextResponse.json(
       { error: 'Failed to generate blank docx' },
       { status: 500 }
