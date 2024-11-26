@@ -18,7 +18,8 @@ export async function POST(req: Request) {
 
         const { fileInfo } = await req.json();
 
-        const fileKey = fileInfo.fileId + path.extname(fileInfo.originalName);
+        const fileName = path.parse(fileInfo.originalName).name;
+        const fileKey = `${fileName}_${fileInfo.fileId}${path.extname(fileInfo.originalName)}`;
 
         const command = new CreateMultipartUploadCommand({
             Bucket: process.env.AWS_S3_BUCKET_NAME,
@@ -29,6 +30,7 @@ export async function POST(req: Request) {
                 type: 'ORIGINAL_FILE',
                 user_id: user?.userId?.toString(),
                 team_user_id: user?.internalTeamUserId?.toString() || user?.userId?.toString(),
+                file_id: fileInfo.fileId,
                 file_name: path.parse(fileInfo.originalName).name
             }
         });

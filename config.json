@@ -183,6 +183,7 @@
     "bireswar@scribie.com",
     "daya@scribie.com"
   ],
+  "max_file_size": 10737418240,
   "allowed_file_types": {
     ".mp3": ["audio/mpeg"],
     ".wav": ["audio/wav", "audio/x-wav"],

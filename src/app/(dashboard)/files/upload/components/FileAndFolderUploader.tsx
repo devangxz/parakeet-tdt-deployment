@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
 import { useUpload } from '@/app/context/UploadProvider';
-import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, ORG_REMOTELEGAL, ORG_REMOTELEGAL_FOLDER, UPLOAD_MAX_RETRIES } from '@/constants';
+import { MAX_FILE_SIZE, SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, ORG_REMOTELEGAL, ORG_REMOTELEGAL_FOLDER, UPLOAD_MAX_RETRIES } from '@/constants';
 import { cn } from '@/lib/utils';
 import { BaseUploadState, FileWithId, CustomInputAttributes, UploaderProps } from '@/types/upload';
 import { handleRetryableError } from '@/utils/uploadUtils';
@@ -192,7 +192,8 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
           await axios.post('/api/s3-upload/multi-part/complete', {
             sendBackData: {
               key: uploadState.key,
-              uploadId: uploadState.uploadId
+              uploadId: uploadState.uploadId,
+              fileId: file.fileId
             },
             parts: sortedParts
           });
@@ -240,10 +241,22 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
   };
 
   const handleFileOrFolderUpload = async (files: File[]) => {
-    console.log('Files to be uploaded:', files.map(f => ({ name: f.name, size: f.size })));
-
     if (isUploading) {
       toast.error("Please wait for current uploads to complete before starting new uploads");
+      return;
+    }
+
+    const filesUnderSizeLimit = files.filter(file => {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`File "${file.name}" was rejected due to exceeding 10GB size limit.`);
+        return false;
+      }
+      return true;
+    });
+    if (filesUnderSizeLimit.length === 0) {
+      if (files.length > 1) {
+        toast.error("No valid files selected. Please select supported audio or video files under 10GB in size");
+      }
       return;
     }
 
@@ -258,13 +271,9 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
 
     try {
       if (isRemoteLegal) {
-        const remoteLegalFiles = files.filter(file => {
+        const remoteLegalFiles = filesUnderSizeLimit.filter(file => {
           const pathSegments = file.webkitRelativePath.split('/');
-          if (pathSegments.length > 1) {
-            console.log('Selected folder:', pathSegments[0]);
-            return pathSegments[1].toLowerCase() === ORG_REMOTELEGAL_FOLDER.toLowerCase();
-          }
-          return false;
+          return pathSegments.length > 1 && pathSegments[1].toLowerCase() === ORG_REMOTELEGAL_FOLDER.toLowerCase();
         });
 
         if (remoteLegalFiles.length === 0) {
@@ -303,13 +312,14 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
         ];
 
       } else {
-        const allowedFiles = files.filter(validateFileType);
-        const rejectedFiles = files.filter(file => !validateFileType(file));
+        const allowedFiles = filesUnderSizeLimit.filter(validateFileType);
+        const rejectedFiles = filesUnderSizeLimit.filter(file => !validateFileType(file));
 
         if (rejectedFiles.length > 0) {
-          toast.error(`${rejectedFiles.length} ${rejectedFiles.length === 1 ? 'file was' : 'files were'} rejected due to unsupported file type.`);
+          rejectedFiles.forEach(file => {
+            toast.error(`File "${file.name}" was rejected due to unsupported file type.`);
+          });
         }
-
         if (allowedFiles.length === 0) {
           setIsUploading(false);
           return;

@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
 import { useUpload } from '@/app/context/UploadProvider';
-import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
+import { MAX_FILE_SIZE, SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
 import { StreamingState, QueuedLink, UploaderProps } from '@/types/upload';
 import { handleRetryableError, calculateOverallProgress, cleanupUpload } from '@/utils/uploadUtils';
 
@@ -263,7 +263,7 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                         sendBackData: {
                             key: state.key,
                             uploadId: state.uploadId,
-                            fileName
+                            fileId
                         },
                         parts: sortedParts
                     });
@@ -331,6 +331,16 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                             progress: 0,
                             status: 'failed',
                             error: 'Invalid file - Missing content type or size'
+                        });
+                        continue;
+                    }
+
+                    if (contentLength > MAX_FILE_SIZE) {
+                        toast.error(`Invalid file at URL: ${file.url} - File exceeds 10GB size limit`);
+                        updateUploadStatus(file.name, {
+                            progress: 0,
+                            status: 'failed',
+                            error: 'Invalid file - File exceeds 10GB size limit'
                         });
                         continue;
                     }

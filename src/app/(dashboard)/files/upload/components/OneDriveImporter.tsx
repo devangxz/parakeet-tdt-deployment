@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { useImportService } from '@/app/context/ImportServiceProvider';
 import { useUpload } from '@/app/context/UploadProvider';
-import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
+import { MAX_FILE_SIZE, SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
 import { StreamingState, OneDrivePickerResponse, OneDriveGraphApiFileResponse, OneDriveFile, UploaderProps } from '@/types/upload';
 import { handleRetryableError, calculateOverallProgress, cleanupUpload, refreshToken } from '@/utils/uploadUtils';
 import { getAllowedFileExtensions } from '@/utils/validateFileType';
@@ -248,7 +248,7 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                         sendBackData: {
                             key: state.key,
                             uploadId: state.uploadId,
-                            fileName: file.name
+                            fileId
                         },
                         parts: sortedParts
                     });
@@ -354,13 +354,29 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 throw new Error('Failed to get file details');
             }
 
+            const filesUnderSizeLimit = validFiles.filter(file => {
+                if (file.size > MAX_FILE_SIZE) {
+                    toast.error(`File "${file.name}" was rejected due to exceeding 10GB size limit.`);
+                    return false;
+                }
+                return true;
+            });
+            if (filesUnderSizeLimit.length === 0) {
+                if (validFiles.length > 1) {
+                    toast.error("No valid files selected. Please select supported audio or video files under 10GB in size");
+                }
+                setIsPreparingFiles(false);
+                setPreparingProgress('');
+                return;
+            }
+
             setPreparingProgress('Initializing upload...');
 
             setIsUploading(true);
             setIsPreparingFiles(false);
             setPreparingProgress('');
 
-            setUploadingFiles(validFiles.map(file => ({
+            setUploadingFiles(filesUnderSizeLimit.map(file => ({
                 name: file.name,
                 size: file.size,
                 fileId: file.id,
@@ -371,7 +387,7 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 () => setIsUploading(false)
             );
 
-            for (const file of validFiles) {
+            for (const file of filesUnderSizeLimit) {
                 await uploadFile(file, tokenResponse.data.token);
             }
         } catch (error) {
@@ -535,24 +551,17 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                         disabled={!isOneDriveServiceReady || isPickerLoading || isPreparingFiles}
                         className='mt-4 px-5 py-2 bg-white rounded-[32px] text-[#094ab1] font-medium border border-white hover:bg-gray-100 transition-colors'
                     >
-                        {!isOneDriveServiceReady ? (
-                            <div className='flex items-center justify-center'>
+                        <div className='flex items-center justify-center'>
+                            {(!isOneDriveServiceReady || isPickerLoading || isPreparingFiles) && (
                                 <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                                <span>Initializing...</span>
-                            </div>
-                        ) : isPickerLoading ? (
-                            <div className='flex items-center justify-center'>
-                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                                <span>Opening Picker...</span>
-                            </div>
-                        ) : isPreparingFiles ? (
-                            <div className='flex items-center justify-center'>
-                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                                <span>{preparingProgress}</span>
-                            </div>
-                        ) : (
-                            'Select from OneDrive'
-                        )}
+                            )}
+                            <span>
+                                {!isOneDriveServiceReady ? 'Initializing...' :
+                                    isPreparingFiles ? preparingProgress :
+                                        'Select from OneDrive'
+                                }
+                            </span>
+                        </div>
                     </button>
                 </div>
             </div>

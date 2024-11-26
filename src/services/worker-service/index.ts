@@ -25,6 +25,19 @@ export class WorkerQueueService {
   getQueue(queueName: QueueName): Queue {
     return queues[queueName];
   }
+
+  async hasExistingJob(queueName: QueueName, fileId: string): Promise<boolean> {
+    const queue = this.getQueue(queueName);
+
+    const [waiting, active, delayed] = await Promise.all([
+      queue.getWaiting(),
+      queue.getActive(),
+      queue.getDelayed()
+    ]);
+
+    const allJobs = [...waiting, ...active, ...delayed];
+    return allJobs.some(job => job.data.fileId === fileId);
+  }
 }
 
 export const workerQueueService = new WorkerQueueService();

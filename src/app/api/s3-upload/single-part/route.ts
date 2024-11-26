@@ -28,7 +28,8 @@ export async function POST(req: Request) {
         const buffer = await file.arrayBuffer();
 
         const fileExtension = path.extname(file.name);
-        const fileKey = fileId + fileExtension;
+        const fileName = path.parse(file.name).name;
+        const fileKey = `${fileName}_${fileId}${fileExtension}`;
 
         const uploadParams = {
             Bucket: process.env.AWS_S3_BUCKET_NAME,
@@ -40,7 +41,8 @@ export async function POST(req: Request) {
                 type: 'ORIGINAL_FILE',
                 user_id: user?.userId?.toString(),
                 team_user_id: user?.internalTeamUserId?.toString() || user?.userId?.toString(),
-                file_name: path.parse(file.name).name
+                file_id: fileId,
+                file_name: fileName
             }
         };
 
@@ -51,7 +53,7 @@ export async function POST(req: Request) {
 
         // Create audio video conversion job
         if (fileExtension.toLowerCase() !== '.docx') { // Check for remote legal docx files
-            await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, { fileKey, userEmailId: user.email });
+            await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, { fileKey, userEmailId: user.email, fileId });
         }
 
         return NextResponse.json({ message: 'File uploaded successfully', result }, { status: 200 });

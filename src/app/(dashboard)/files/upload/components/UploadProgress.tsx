@@ -316,9 +316,9 @@ const UploadProgress = () => {
 
         if (inProgressFiles > 0) {
             return {
-                title: totalFiles === 1
+                title: inProgressFiles === 1
                     ? 'Uploading 1 file'
-                    : `Uploading ${inProgressFiles}/${totalFiles} files`,
+                    : `Uploading ${inProgressFiles} files`,
                 subtitle: timeLeft || 'Calculating time left...'
             };
         }

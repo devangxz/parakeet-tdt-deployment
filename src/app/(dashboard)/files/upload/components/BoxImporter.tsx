@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { useImportService } from '@/app/context/ImportServiceProvider';
 import { useUpload } from '@/app/context/UploadProvider';
-import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
+import { MAX_FILE_SIZE, SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
 import { StreamingState, BoxFile, BoxSelect, UploaderProps } from '@/types/upload';
 import { handleRetryableError, calculateOverallProgress, cleanupUpload, refreshToken } from '@/utils/uploadUtils';
 import validateFileType, { getFileTypeFromExtension } from '@/utils/validateFileType';
@@ -248,7 +248,7 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                         sendBackData: {
                             key: state.key,
                             uploadId: state.uploadId,
-                            fileName: file.name
+                            fileId
                         },
                         parts: sortedParts
                     });
@@ -315,8 +315,22 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             return;
         }
 
+        const filesUnderSizeLimit = files.filter(file => {
+            if (file.size > MAX_FILE_SIZE) {
+                toast.error(`File "${file.name}" was rejected due to exceeding 10GB size limit.`);
+                return false;
+            }
+            return true;
+        });
+        if (filesUnderSizeLimit.length === 0) {
+            if (files.length > 1) {
+                toast.error("No valid files selected. Please select supported audio or video files under 10GB in size");
+            }
+            return;
+        }
+
         try {
-            const filesWithTypes = files.map(file => ({
+            const filesWithTypes = filesUnderSizeLimit.map(file => ({
                 ...file,
                 type: getFileTypeFromExtension(file.name)
             }));
@@ -325,9 +339,10 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             const rejectedFiles = filesWithTypes.filter(file => !validateFileType(file as unknown as File));
 
             if (rejectedFiles.length > 0) {
-                toast.error(`${rejectedFiles.length} ${rejectedFiles.length === 1 ? 'file was' : 'files were'} rejected due to unsupported file type.`);
+                rejectedFiles.forEach(file => {
+                    toast.error(`File "${file.name}" was rejected due to unsupported file type.`);
+                });
             }
-
             if (allowedFiles.length === 0) {
                 setIsUploading(false);
                 return;
@@ -519,19 +534,10 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                         disabled={!isBoxServiceReady || isPickerLoading}
                         className='mt-4 px-5 py-2 bg-white rounded-[32px] text-[#0075a3] font-medium border border-white hover:bg-gray-100 transition-colors'
                     >
-                        {!isBoxServiceReady ? (
-                            <div className='flex items-center justify-center'>
-                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                                <span>Initializing...</span>
-                            </div>
-                        ) : isPickerLoading ? (
-                            <div className='flex items-center justify-center'>
-                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                                <span>Opening Picker...</span>
-                            </div>
-                        ) : (
-                            'Select from Box'
-                        )}
+                        <div className='flex items-center justify-center'>
+                            {(!isBoxServiceReady || isPickerLoading) && <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />}
+                            <span>{!isBoxServiceReady ? 'Initializing...' : 'Select from Box'}</span>
+                        </div>
                     </button>
                 </div>
             </div>

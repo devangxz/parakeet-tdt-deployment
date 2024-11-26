@@ -204,15 +204,22 @@ const UploadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =
     }, [uploadingFiles.length, closeSSEConnection]);
 
     useEffect(() => {
-        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+        const handleBeforeAction = (event: BeforeUnloadEvent) => {
             if (uploadingFiles.length > 0) {
                 event.preventDefault();
                 event.returnValue = '';
+                return 'You have uploads in progress. Are you sure you want to leave?';
             }
         };
 
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('beforeunload', handleBeforeAction);
+
+        window.onbeforeunload = handleBeforeAction;
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeAction);
+            window.onbeforeunload = null;
+        };
     }, [uploadingFiles]);
 
     const contextValue = {

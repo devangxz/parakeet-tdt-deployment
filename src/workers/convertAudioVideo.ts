@@ -97,7 +97,7 @@ class PersistentStorageHandler {
                 await unlink(filePath);
                 logger.info(`Successfully deleted file: ${filePath}`);
             } else {
-                logger.debug(`File does not exist, skipping deletion: ${filePath}`);
+                logger.info(`File does not exist, skipping deletion: ${filePath}`);
             }
         } catch (error) {
             logger.error(`Error deleting file ${filePath}:`, error);
@@ -126,7 +126,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const calculateBackoffDelay = (attempt: number): number =>
     CONVERSION_RETRY_CONFIG.initialDelayMs * Math.pow(CONVERSION_RETRY_CONFIG.backoffMultiplier, attempt - 1);
 
-export async function convertAudioVideo(fileKey: string, userEmailId: string): Promise<string> {
+export async function convertAudioVideo(fileKey: string, userEmailId: string, fileId: string): Promise<string> {
     logger.info(`Starting processing for file: ${fileKey}`);
     const startTime = Date.now();
     let downloadedFilePath: string | null = null;
@@ -142,7 +142,6 @@ export async function convertAudioVideo(fileKey: string, userEmailId: string): P
             path.basename(fileKey)
         );
 
-        const fileId = path.parse(fileKey).name;
         await convertToMp3Mp4(downloadedFilePath, fileKey, fileId, userEmailId);
 
         const endTime = Date.now();
@@ -179,20 +178,39 @@ async function getMetadataWithFFmpeg(filePath: string): Promise<number> {
     });
 }
 
-async function convertFile(input: string, output: string, format: 'mp3' | 'mp4', fileId: string, userEmailId: string): Promise<void> {
+async function convertFile(input: string, output: string, format: 'mp3' | 'mp4', fileKey: string, userEmailId: string): Promise<void> {
     let lastError: Error | undefined;
 
     for (let attempt = 1; attempt <= CONVERSION_RETRY_CONFIG.maxAttempts; attempt++) {
         try {
             await new Promise<void>((resolve, reject) => {
-                let command = ffmpeg(input).outputFormat(format);
+                let command = ffmpeg(input)
 
                 if (format === 'mp4') {
                     command = command
+                        .outputFormat('mp4')
                         .videoCodec('libx264')
-                        .audioCodec('aac')
-                        .outputOptions('-preset', 'medium')
-                        .outputOptions('-movflags', '+faststart');
+                        .outputOptions([
+                            '-crf', '19',
+                            '-strict', 'experimental'
+                        ]);
+                } else if (format === 'mp3') {
+                    command = command
+                        .outputFormat('mp3')
+                        .audioCodec('libmp3lame')
+                        .outputOptions([
+                            '-ar', '44100',
+                            '-b:a', '128k'
+                        ]);
+
+                    ffmpeg.ffprobe(input, (err, metadata) => {
+                        const audioStream = metadata.streams.find(stream => stream.codec_type === 'audio');
+                        if (audioStream?.channels && audioStream.channels > 2) {
+                            command.outputOptions([
+                                '-ac', '2'
+                            ]);
+                        }
+                    });
                 }
 
                 command
@@ -217,7 +235,6 @@ async function convertFile(input: string, output: string, format: 'mp3' | 'mp4',
 
         } catch (error) {
             lastError = error as Error;
-
             if (attempt === CONVERSION_RETRY_CONFIG.maxAttempts) {
                 const finalError = new Error(
                     `File conversion to ${format} failed after ${CONVERSION_RETRY_CONFIG.maxAttempts} attempts. Final error: ${error}`
@@ -227,10 +244,10 @@ async function convertFile(input: string, output: string, format: 'mp3' | 'mp4',
                 const awsSes = getAWSSesInstance();
                 await awsSes.sendAlert(
                     `File Conversion Error`,
-                    `${format} conversion failed for file ${fileId} uploaded by ${userEmailId}.`,
+                    `${format} conversion failed for file ${fileKey} uploaded by ${userEmailId}.`,
                     'software'
                 );
-        
+
                 throw finalError;
             }
 
@@ -246,38 +263,28 @@ async function convertFile(input: string, output: string, format: 'mp3' | 'mp4',
     throw lastError;
 }
 
-async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: string, userEmailId: string): Promise<void> {
-    const fileExt = path.extname(originalKey).toLowerCase();
-    const baseName = path.parse(originalKey).name;
-    const mp3Key = `${baseName}.mp3`;
-    const mp4Key = `${baseName}.mp4`;
+async function convertToMp3Mp4(filePath: string, fileKey: string, fileId: string, userEmailId: string): Promise<void> {
+    const fileExt = path.extname(fileKey).toLowerCase();
+    const mp3Key = `${fileId}.mp3`;
+    const mp4Key = `${fileId}.mp4`;
     const mp3Path = storageHandler.getFilePath(mp3Key);
     const mp4Path = storageHandler.getFilePath(mp4Key);
 
     const isVideoFile = VIDEO_EXTENSIONS.includes(fileExt);
     let mp3Created = false;
     let mp4Created = false;
-    let originalDeleted = false;
-
-    if (fileExt === '.mp3') return;
 
     try {
-        if (fileExt === '.mp4') {
-            await convertFile(filePath, mp3Path, 'mp3', originalKey, userEmailId);
-            mp3Created = true;
-            await uploadToS3(mp3Path, mp3Key);
-            return;
-        }
-
         const conversionPromises = [];
+
         conversionPromises.push(
-            convertFile(filePath, mp3Path, 'mp3', originalKey, userEmailId)
+            convertFile(filePath, mp3Path, 'mp3', fileKey, userEmailId)
                 .then(() => { mp3Created = true; })
         );
 
         if (isVideoFile) {
             conversionPromises.push(
-                convertFile(filePath, mp4Path, 'mp4', originalKey, userEmailId)
+                convertFile(filePath, mp4Path, 'mp4', fileKey, userEmailId)
                     .then(() => { mp4Created = true; })
             );
         }
@@ -292,10 +299,10 @@ async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: st
             await uploadToS3(mp4Path, mp4Key);
         }
 
-        if (fileExt !== '.mp3' && fileExt !== '.mp4') {
-            await deleteFromS3(originalKey);
-            originalDeleted = true;
-        }
+        await prisma.file.update({
+            where: { fileId },
+            data: { converted: true }
+        });
 
         try {
             await validateDuration(mp3Path, fileId, userEmailId);
@@ -304,14 +311,20 @@ async function convertToMp3Mp4(filePath: string, originalKey: string, fileId: st
         }
 
     } catch (error) {
-        if (!originalDeleted) {
-            try {
-                if (mp3Created) await deleteFromS3(mp3Key);
-                if (mp4Created) await deleteFromS3(mp4Key);
-            } catch (cleanupError) {
-                logger.error(`Error cleaning up S3 after conversion failure:`, cleanupError);
-            }
+        await prisma.file.update({
+            where: { fileId },
+            data: { converted: false }
+        }).catch(updateError => {
+            logger.error(`Error updating file conversion status: ${updateError}`);
+        });
+
+        try {
+            if (mp3Created) await deleteFromS3(mp3Key);
+            if (mp4Created) await deleteFromS3(mp4Key);
+        } catch (cleanupError) {
+            logger.error(`Error cleaning up S3 after conversion failure:`, cleanupError);
         }
+
         throw error;
     } finally {
         try {

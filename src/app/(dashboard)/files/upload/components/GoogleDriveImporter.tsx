@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { useImportService } from '@/app/context/ImportServiceProvider';
 import { useUpload } from '@/app/context/UploadProvider';
-import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
+import { MAX_FILE_SIZE, SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
 import { StreamingState, GoogleDriveFile, GooglePickerResponse, UploaderProps } from '@/types/upload';
 import { handleRetryableError, calculateOverallProgress, cleanupUpload, refreshToken } from '@/utils/uploadUtils';
 import { getAllowedMimeTypes } from '@/utils/validateFileType';
@@ -248,7 +248,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                         sendBackData: {
                             key: state.key,
                             uploadId: state.uploadId,
-                            fileName: file.name
+                            fileId
                         },
                         parts: sortedParts
                     });
@@ -315,13 +315,23 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
 
         const selectedFiles = data.docs;
 
-        if (selectedFiles.length === 0) {
-            toast.error('No valid files selected. Please select supported audio or video files.');
+        const filesUnderSizeLimit = selectedFiles.filter((file: GoogleDriveFile) => {
+            const size = parseInt(file.sizeBytes);
+            if (size > MAX_FILE_SIZE) {
+                toast.error(`File "${file.name}" was rejected due to exceeding 10GB size limit.`);
+                return false;
+            }
+            return true;
+        });
+        if (filesUnderSizeLimit.length === 0) {
+            if (selectedFiles.length > 1) {
+                toast.error("No valid files selected. Please select supported audio or video files under 10GB in size");
+            }
             return;
         }
 
         setIsUploading(true);
-        setUploadingFiles(selectedFiles.map((file: GoogleDriveFile) => ({
+        setUploadingFiles(filesUnderSizeLimit.map((file: GoogleDriveFile) => ({
             name: file.name,
             size: parseInt(file.sizeBytes),
             fileId: file.id
@@ -333,7 +343,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 () => setIsUploading(false)
             );
 
-            for (const file of selectedFiles) {
+            for (const file of filesUnderSizeLimit) {
                 await uploadFile(file);
             }
         } catch (error) {
@@ -467,7 +477,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             await authenticate();
         } catch (error) {
             setIsPickerLoading(false);
-            
+
             const errorMessage = error instanceof Error ? error.message : 'Failed to connect to Google Drive';
             toast.error(errorMessage);
         } finally {
@@ -491,19 +501,10 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                         disabled={!isGoogleDriveServiceReady || isPickerLoading}
                         className='mt-4 px-5 py-2 bg-white rounded-[32px] text-[#00ac47] font-medium border border-white hover:bg-gray-100 transition-colors'
                     >
-                        {!isGoogleDriveServiceReady ? (
-                            <div className='flex items-center justify-center'>
-                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                                <span>Initializing...</span>
-                            </div>
-                        ) : isPickerLoading ? (
-                            <div className='flex items-center justify-center'>
-                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                                <span>Opening Picker...</span>
-                            </div>
-                        ) : (
-                            'Select from Google Drive'
-                        )}
+                        <div className='flex items-center justify-center'>
+                            {(!isGoogleDriveServiceReady || isPickerLoading) && <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />}
+                            <span>{!isGoogleDriveServiceReady ? 'Initializing...' : 'Select from Google Drive'}</span>
+                        </div>
                     </button>
                 </div>
             </div>

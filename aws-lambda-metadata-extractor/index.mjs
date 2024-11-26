@@ -127,9 +127,10 @@ export const handler = async (event) => {
         const uploadEnvironment = s3Metadata.upload_environment;
         const userId = s3Metadata.user_id;
         const teamUserId = s3Metadata.team_user_id;
+        const fileId = s3Metadata.file_id;
         const fileName = s3Metadata.file_name;
 
-        const fileExtension = objectKey.split('.').pop();
+        const fileExtension = parse(objectKey).ext.slice(1);
         const fileNameWithExtension = `${fileName}.${fileExtension}`;
 
         console.log(`Processing file - ${bucketName}/${objectKey} of user - ${userId}`);
@@ -156,7 +157,8 @@ export const handler = async (event) => {
                 bitRate: metadata.bitrate,
                 fileName,
                 fileNameWithExtension,
-                fileId: parse(objectKey).name,
+                fileId,
+                fileKey: objectKey,
                 fileType: contentInfo.ContentType,
                 timeTakenToExtractMetadata: processingTimeInSeconds,
                 userId,
@@ -180,7 +182,8 @@ export const handler = async (event) => {
                 fileSize: contentInfo.ContentLength,
                 fileName,
                 fileNameWithExtension,
-                fileId: parse(objectKey).name,
+                fileId,
+                fileKey: objectKey,
                 fileType: contentInfo.ContentType,
                 timeTakenToProcess: processingTimeInSeconds,
                 userId,
@@ -263,14 +266,20 @@ const runFFprobe = (filePath) => new Promise((resolve, reject) => {
             try {
                 const parsedMetadata = JSON.parse(output);
                 const format = parsedMetadata.format || {};
-                const stream = (parsedMetadata.streams && parsedMetadata.streams[0]) || {};
+                const videoStream = (parsedMetadata.streams || []).find(s => s.codec_type === 'video') || {};
+                const audioStream = (parsedMetadata.streams || []).find(s => s.codec_type === 'audio') || {};
 
                 const result = {
-                    duration: parseFloat(format.duration) || 0,
-                    bitrate: parseInt(format.bit_rate) || 0,
-                    codec_name: stream.codec_name || 'unknown',
-                    sample_rate: parseInt(stream.sample_rate) || 0,
+                    duration: parseFloat(format.duration),
+                    bitrate: parseInt(format.bit_rate) || parseInt(videoStream.bit_rate) || parseInt(audioStream.bit_rate),
+                    codec_name: videoStream.codec_name || audioStream.codec_name,
+                    sample_rate: parseInt(videoStream.sample_rate) || parseInt(audioStream.sample_rate),
                 };
+
+                if(!result.duration || !result.bitrate || !result.codec_name || !result.sample_rate) {
+                    reject(new Error('Failed to parse ffprobe output: Invalid file'));
+                }
+
                 console.log('Ffprobe parsed metadata:', JSON.stringify(result));
                 resolve(result);
             } catch (err) {
@@ -306,15 +315,21 @@ const runMediaInfo = (filePath) => new Promise((resolve, reject) => {
         } else {
             try {
                 const parsedOutput = JSON.parse(output);
-                const track = parsedOutput.media.track[0];
-                const audioTrack = parsedOutput.media.track.find(t => t['@type'] === 'Audio');
+                const generalTrack = parsedOutput.media.track.find(t => t['@type'] === 'General') || {};
+                const videoTrack = parsedOutput.media.track.find(t => t['@type'] === 'Video') || {};
+                const audioTrack = parsedOutput.media.track.find(t => t['@type'] === 'Audio') || {};
 
                 const result = {
-                    duration: parseFloat(track.Duration) || 0,
-                    bitrate: parseInt(track.OverallBitRate) || 0,
-                    codec_name: audioTrack?.Format || track.Format || 'unknown',
-                    sample_rate: parseInt(audioTrack?.SamplingRate) || 0,
+                    duration: parseFloat(generalTrack.Duration),
+                    bitrate: parseInt(generalTrack.OverallBitRate) || parseInt(videoTrack.BitRate) || parseInt(audioTrack.BitRate),
+                    codec_name: videoTrack.Format || audioTrack.Format,
+                    sample_rate: parseInt(videoTrack.SamplingRate) || parseInt(audioTrack.SamplingRate),
                 };
+
+                if(!result.duration || !result.bitrate || !result.codec_name || !result.sample_rate) {
+                    reject(new Error('Failed to parse mediainfo output: Invalid file'));
+                }
+
                 console.log('MediaInfo parsed metadata:', JSON.stringify(result));
                 resolve(result);
             } catch (err) {
@@ -353,7 +368,6 @@ const sendWebhookRequest = (url, data, options) => new Promise((resolve) => {
         resolve({ success: false, error: error.message });
     });
 
-    // Add timeout handling
     req.setTimeout(config.webhook.timeout, () => {
         req.destroy();
         resolve({ success: false, error: 'Request timeout' });

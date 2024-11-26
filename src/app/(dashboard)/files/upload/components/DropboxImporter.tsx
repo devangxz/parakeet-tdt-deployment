@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { useImportService } from '@/app/context/ImportServiceProvider';
 import { useUpload } from '@/app/context/UploadProvider';
-import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
+import { MAX_FILE_SIZE, SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
 import { StreamingState, DropboxChooserFile, DropboxFile, DropboxChooserOptions, UploaderProps } from '@/types/upload';
 import { handleRetryableError, calculateOverallProgress, cleanupUpload } from '@/utils/uploadUtils';
 import { getAllowedFileExtensions, getFileTypeFromExtension } from '@/utils/validateFileType';
@@ -238,7 +238,7 @@ const DropboxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                         sendBackData: {
                             key: state.key,
                             uploadId: state.uploadId,
-                            fileName: file.name
+                            fileId
                         },
                         parts: sortedParts
                     });
@@ -309,8 +309,23 @@ const DropboxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                         return;
                     }
 
+                    const filesUnderSizeLimit = files.filter(file => {
+                        const size = parseInt(String(file.bytes));
+                        if (size > MAX_FILE_SIZE) {
+                            toast.error(`File "${file.name}" was rejected due to exceeding 10GB size limit.`);
+                            return false;
+                        }
+                        return true;
+                    });
+                    if (filesUnderSizeLimit.length === 0) {
+                        if (files.length > 1) {
+                            toast.error("No valid files selected. Please select supported audio or video files under 10GB in size");
+                        }
+                        return;
+                    }
+
                     setIsUploading(true);
-                    setUploadingFiles(files.map(file => ({
+                    setUploadingFiles(filesUnderSizeLimit.map(file => ({
                         name: file.name,
                         size: parseInt(String(file.bytes)),
                         fileId: file.id
@@ -322,7 +337,7 @@ const DropboxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                             () => setIsUploading(false)
                         );
 
-                        for (const file of files) {
+                        for (const file of filesUnderSizeLimit) {
                             const dropboxFile: DropboxFile = {
                                 name: file.name,
                                 size: parseInt(String(file.bytes)),
@@ -346,7 +361,7 @@ const DropboxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             window.Dropbox.choose(chooserOptions);
         } catch (error) {
             setIsPickerLoading(false);
-            
+
             const errorMessage = error instanceof Error ? error.message : 'Failed to connect to Dropbox';
             toast.error(errorMessage);
         } finally {
@@ -384,19 +399,10 @@ const DropboxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                         disabled={!isDropboxServiceReady || isPickerLoading}
                         className='mt-4 px-5 py-2 bg-white rounded-[32px] text-[#007ee5] font-medium border border-white hover:bg-gray-100 transition-colors'
                     >
-                        {!isDropboxServiceReady ? (
-                            <div className='flex items-center justify-center'>
-                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                                <span>Initializing...</span>
-                            </div>
-                        ) : isPickerLoading ? (
-                            <div className='flex items-center justify-center'>
-                                <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
-                                <span>Opening Picker...</span>
-                            </div>
-                        ) : (
-                            'Select from Dropbox'
-                        )}
+                        <div className='flex items-center justify-center'>
+                            {(!isDropboxServiceReady || isPickerLoading) && <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />}
+                            <span>{!isDropboxServiceReady ? 'Initializing...' : 'Select from Dropbox'}</span>
+                        </div>
                     </button>
                 </div>
             </div>

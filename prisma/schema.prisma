@@ -114,6 +114,7 @@ model File {
   user                      User          @relation(fields: [userId], references: [id])
   filename                  String        @db.VarChar(255)
   fileId                    String        @unique @map("file_id")
+  fileKey                   String?       @map("file_key")
   duration                  Int
   bitRate                   Float?        @map("bit_rate")
   sampleRate                Float?        @map("sample_rate")
@@ -134,6 +135,7 @@ model File {
   fileStatus                FileStatus    @default(NONE) @map("file_status")
   FileVersion               FileVersion[]
   SharedFile                SharedFile[]
+  converted                 Boolean?      @map("converted")
 
   @@index([userId])
   @@index([fileId])
