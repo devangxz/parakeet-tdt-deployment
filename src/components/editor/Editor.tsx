@@ -8,7 +8,7 @@ import 'react-quill/dist/quill.snow.css'
 import { LineData, CTMSWord, WordData } from './transcriptUtils'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
-import { ConvertedASROutput, convertSecondsToTimestamp, } from '@/utils/editorUtils'
+import { ConvertedASROutput, convertSecondsToTimestamp, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
 
 // TODO:  Add valid values (start, end, duration, speaker) for the changed words.
 // TODO: Test if a new line is added with TS + speaker name
@@ -104,7 +104,7 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         if (!quill) return
         const text = quill.getText()
         setContent([{ insert: text }])
-        localStorage.setItem('transcript', JSON.stringify({ [orderDetails.fileId]: text }))
+        // localStorage.setItem('transcript', JSON.stringify({ [orderDetails.fileId]: text }))
     }, [])
 
     const handleEditorClick = useCallback(() => {
@@ -155,24 +155,8 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         handleEditorClick();
     }, [handleEditorClick]);
 
-    const insertTimestampBlankAtCursorPosition = useCallback(() => {
-        if (!audioPlayer || !quillRef.current) return;
-
-        const quill = quillRef.current.getEditor();
-        const currentTime = audioPlayer.currentTime;
-
-        const hours = Math.floor(currentTime / 3600);
-        const minutes = Math.floor((currentTime % 3600) / 60);
-        const seconds = Math.floor(currentTime % 60);
-        const milliseconds = Math.floor((currentTime % 1) * 10);
-
-        const formattedTime = ` [${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds}] ____`;
-
-        const cursorPosition = quill.getSelection()?.index || 0;
-        quill.insertText(cursorPosition, formattedTime);
-        // quill.formatText(cursorPosition, formattedTime.length, { color: 'red' });
-
-        quill.setSelection(cursorPosition + formattedTime.length, 0);
+    const insertTimestampBlankAtCursorPositionInstance = useCallback(() => {
+        insertTimestampBlankAtCursorPosition(audioPlayer, quillRef.current?.getEditor());
     }, [audioPlayer]);
 
     const insertTimestampAndSpeakerInitialAtStartOfCurrentLine = useCallback(() => {
@@ -246,7 +230,7 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
     const shortcutControls = useMemo(() => {
         const controls: Partial<ShortcutControls> = {
             playAudioAtCursorPosition: handlePlayAudioAtCursorPositionShortcut,
-            insertTimestampBlankAtCursorPosition,
+            insertTimestampBlankAtCursorPosition: insertTimestampBlankAtCursorPositionInstance,
             insertTimestampAndSpeakerInitialAtStartOfCurrentLine,
             googleSearchSelectedWord,
             defineSelectedWord,

@@ -432,9 +432,9 @@ type FetchFileDetailsParams = {
     setOrderDetails: React.Dispatch<React.SetStateAction<OrderDetails>>;
     setCfd: React.Dispatch<React.SetStateAction<string>>;
     setStep: React.Dispatch<React.SetStateAction<string>>;
-    setDownloadableType: React.Dispatch<React.SetStateAction<string>>;
     setTranscript: React.Dispatch<React.SetStateAction<string>>;
     setCtms: React.Dispatch<React.SetStateAction<ConvertedASROutput[]>>;
+    setPlayerEvents: React.Dispatch<React.SetStateAction<PlayerEvent[]>>;
 };
 
 const fetchFileDetails = async ({
@@ -442,9 +442,9 @@ const fetchFileDetails = async ({
     setOrderDetails,
     setCfd,
     setStep,
-    setDownloadableType,
     setTranscript,
     setCtms,
+    setPlayerEvents,
 }: FetchFileDetailsParams) => {
     try {
         const orderRes = await axios.get(`/api/editor/order-details?fileId=${params?.fileId}`)
@@ -464,7 +464,6 @@ const fetchFileDetails = async ({
             }
         }
         setStep(step)
-        setDownloadableType(step === 'QC' ? 'text' : 'marking')
         const transcriptRes = await axiosInstance.get(
             `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.data.fileId}&step=${step}&orderId=${orderRes.data.orderId}` //step will be used later when cf editor is implemented
         )
@@ -476,11 +475,20 @@ const fetchFileDetails = async ({
             setTranscript(transcriptRes.data.result.transcript)
         }
         setCtms(transcriptRes.data.result.ctms)
+
+        // const playerEventRes = await axios.get(`/api/editor/player-events?orderId=${orderRes.data.orderId}`);
+
+        setPlayerEvents([]); // TODO: Implement player events
         return orderRes.data
     } catch (error) {
         console.log(error)
         toast.error('Failed to fetch file details')
     }
+}
+
+interface PlayerEvent {
+    t: number
+    s: number
 }
 
 type HandleSaveParams = {
@@ -490,6 +498,7 @@ type HandleSaveParams = {
     cfd: string;
     setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>;
     lines: LineData[];
+    playerEvents: PlayerEvent[];
 };
 
 const handleSave = async ({
@@ -498,14 +507,15 @@ const handleSave = async ({
     notes,
     cfd,
     setButtonLoading,
-    lines
-}: HandleSaveParams) => {
+    lines,
+    playerEvents
+}: HandleSaveParams, showToast = true) => {
     setButtonLoading((prevButtonLoading) => ({
         ...prevButtonLoading,
         save: true,
     }));
 
-    const toastId = toast.loading(`Saving Transcription...`);
+    const toastId = showToast ? toast.loading(`Saving Transcription...`) : null;
 
     try {
         const transcript = getEditorText();
@@ -515,25 +525,48 @@ const handleSave = async ({
         const updatedCtms = updateContent(transcript, lines);
         for (const paragraph of paragraphs) {
             if (!paragraphRegex.test(paragraph) && orderDetails.orderType !== 'TRANSCRIPTION_FORMATTING') {
-                toast.dismiss(toastId)
-                return toast.error('Invalid paragraph format detected. Each paragraph must start with a timestamp and speaker identification.');
+                if (showToast) {
+                    if (toastId) toast.dismiss(toastId);
+                    toast.error('Invalid paragraph format detected. Each paragraph must start with a timestamp and speaker identification.');
+                }
+                return;
             }
         }
+
+        //TODO: Implement this
+        console.log(playerEvents)
+        // Get last saved index from localStorage
+        // const lastSavedIndex = parseInt(localStorage.getItem(`${orderDetails.fileId}_lastEventIndex`) || '-1');
+
+        // Get only new events since last save
+        // const newEvents = playerEvents.slice(lastSavedIndex + 1);
+
+        // Save current last index
+        // localStorage.setItem(`${orderDetails.fileId}_lastEventIndex`, (playerEvents.length - 1).toString());
+
+        // Save notes and other data
         localStorage.setItem(orderDetails.fileId, JSON.stringify({ notes: notes }));
+
         await axiosInstance.post(`${FILE_CACHE_URL}/save-transcript`, {
             fileId: orderDetails.fileId,
             transcript,
             cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
             ctms: updatedCtms,
             orderId: orderDetails.orderId,
+            // playerEvents: newEvents // Send only new events
         });
-        toast.dismiss(toastId);
-        const successToastId = toast.success(`Transcription saved successfully`);
-        toast.dismiss(successToastId);
+
+        if (showToast) {
+            if (toastId) toast.dismiss(toastId);
+            const successToastId = toast.success(`Transcription saved successfully`);
+            toast.dismiss(successToastId);
+        }
     } catch (error) {
-        toast.dismiss(toastId);
-        const errorToastId = toast.error(`Error while saving transcript`);
-        toast.dismiss(errorToastId);
+        if (showToast) {
+            if (toastId) toast.dismiss(toastId);
+            const errorToastId = toast.error(`Error while saving transcript`);
+            toast.dismiss(errorToastId);
+        }
     } finally {
         setButtonLoading((prevButtonLoading) => ({
             ...prevButtonLoading,
@@ -910,6 +943,25 @@ const replaceTextHandler = (quill: Quill, searchText: string, replaceWith: strin
     }
 };
 
+const insertTimestampBlankAtCursorPosition = (audioPlayer: HTMLAudioElement | null, quill: Quill | undefined) => {
+    if (!audioPlayer || !quill) return;
+
+    const currentTime = audioPlayer.currentTime;
+
+    const hours = Math.floor(currentTime / 3600);
+    const minutes = Math.floor((currentTime % 3600) / 60);
+    const seconds = Math.floor(currentTime % 60);
+    const milliseconds = Math.floor((currentTime % 1) * 10);
+
+    const formattedTime = ` [${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds}] ____`;
+
+    const cursorPosition = quill.getSelection()?.index || 0;
+    quill.insertText(cursorPosition, formattedTime);
+    // quill.formatText(cursorPosition, formattedTime.length, { color: 'red' });
+
+    quill.setSelection(cursorPosition + formattedTime.length, 0);
+};
+
 export {
     generateRandomColor,
     convertBlankToSeconds,
@@ -934,6 +986,7 @@ export {
     playCurrentParagraphTimestamp,
     navigateAndPlayBlanks,
     searchAndSelect,
-    replaceTextHandler
+    replaceTextHandler,
+    insertTimestampBlankAtCursorPosition
 };
 export type { ConvertedASROutput };
