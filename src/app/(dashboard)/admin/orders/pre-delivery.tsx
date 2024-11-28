@@ -322,13 +322,7 @@ export default function PreDeliveryPage() {
           <Button
             variant='order'
             className='format-button'
-            onClick={() =>
-              window.open(
-                `/editor/${row.original.fileId}`,
-                '_blank',
-                'noopener,noreferrer'
-              )
-            }
+            onClick={() => window.open(`/editor/${row.original.fileId}`, '_blank', 'toolbar=no,location=no,menubar=no,width=' + window.screen.width + ',height=' + window.screen.height + ',left=0,top=0')}
           >
             Open Editor
           </Button>
