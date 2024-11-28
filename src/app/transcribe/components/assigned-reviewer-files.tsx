@@ -280,7 +280,7 @@ export default function AssignedFilesPage({ changeTab }: Props) {
               window.open(
                 `/editor/${row.original.fileId}`,
                 '_blank',
-                'noopener,noreferrer'
+                'toolbar=no,location=no,menubar=no,width=' + window.screen.width + ',height=' + window.screen.height + ',left=0,top=0'
               )
             }
           >

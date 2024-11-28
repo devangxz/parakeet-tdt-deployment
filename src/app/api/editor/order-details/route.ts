@@ -83,7 +83,8 @@ export async function GET(request: NextRequest) {
             status: resultJson.status,
             instructions: resultJson.instructions,
             userId: resultJson.user_id,
-            remainingTime: remainingTime.toString()
+            remainingTime: remainingTime.toString(),
+            duration: file?.duration.toString()
         };
 
         logger.info(`orderDetails fetched for file ${resultJson.file_id}`);
