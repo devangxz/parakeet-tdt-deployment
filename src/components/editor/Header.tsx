@@ -234,7 +234,7 @@ export default function Header({
     }
 
     useEffect(() => {
-        if (cfd || step) return;
+        if (cfd && step) return;
         setCfd(orderDetails.cfd)
         const cfStatus = ['FORMATTED', 'REVIEWER_ASSIGNED', 'REVIEW_COMPLETED', 'FINALIZER_ASSIGNED', 'FINALIZER_COMPLETED']
         let currentStep = 'QC'
