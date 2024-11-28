@@ -822,7 +822,7 @@ export default function Header({
                         seekTo(percentage);
                     }}
                     style={{
-                        backgroundImage: `url(${waveformUrl})`,
+                        backgroundImage: `linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)), url(${waveformUrl})`,
                         backgroundSize: '100% 200%', // Double the height
                         backgroundRepeat: 'no-repeat',
                         backgroundPosition: 'center top' // Position at top
@@ -1059,6 +1059,58 @@ export default function Header({
                         </div>
 
                         <div className='flex gap-2'>
+
+                            <Dialog>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger className='flex border border-gray-200 px-3 rounded-3xl items-center ml-3 h-10 shadow-none hover:bg-accent transition-colors'>
+                                        <div className='flex items-center justify-center mr-2'>
+                                            Options
+                                        </div>
+                                        <CaretDownIcon />
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuItem onClick={() => setIsShortcutsReferenceModalOpen(true)}>Shortcuts Reference</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setIsConfigureShortcutsModalOpen(true)}>Configure Shortcuts</DropdownMenuItem>
+                                        {session?.user?.role !== 'CUSTOMER' && <DropdownMenuItem onClick={toggleRevertTranscript}>Revert Transcript</DropdownMenuItem>}
+                                        <DropdownMenuItem onClick={toggleVideo}>Toggle Video</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={toggleNotes}>Notes</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={toggleFindAndReplace}>Find and Replace</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={toggleSpeakerName}>Speaker Names</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={downloadMP3.bind(null, orderDetails)}>Download MP3</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => toggleSpellCheck()}>Spellcheck</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={requestExtension}>Request Extension</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={requestExtension}>Request Extension</DropdownMenuItem>
+                                        {session?.user?.role !== 'CUSTOMER' && <DropdownMenuItem onClick={() => setReportModalOpen(true)}>Report</DropdownMenuItem>}
+                                        {session?.user?.role !== 'CUSTOMER' && (<DropdownMenuItem onClick={() => getFrequentTermsHandler(orderDetails?.userId, setButtonLoading, setFrequentTermsData, setFrequentTermsModalOpen)}>Frequent Terms</DropdownMenuItem>)}
+                                        <DropdownMenuItem onClick={toggleAutoCapitalize}>
+                                            {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
+                                        </DropdownMenuItem>
+                                        {session?.user?.role === 'CUSTOMER' && <DropdownMenuItem onClick={() => setIsFormattingOptionsModalOpen(true)}>Formatting Options</DropdownMenuItem>}
+                                        <DialogTrigger asChild>
+                                            {/* <DropdownMenuItem>Change Editor Mode</DropdownMenuItem> */}
+                                        </DialogTrigger>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle className='mb-5'>Change Editor Mode</DialogTitle>
+                                        <div>
+                                            <RadioGroup defaultValue={editorMode} onValueChange={setNewEditorMode} className='flex gap-10 mb-5'>
+                                                {editorModeOptions.map((option, index) => (
+                                                    <div className="flex items-center space-x-2" key={index}>
+                                                        <RadioGroupItem value={option} id={option} />
+                                                        <Label htmlFor={option}>{option}</Label>
+                                                    </div>
+                                                ))}
+                                            </RadioGroup>
+                                        </div>
+                                        <DialogClose asChild>
+                                            <Button onClick={() => getEditorMode(newEditorMode)}>Confirm</Button>
+                                        </DialogClose>
+                                    </DialogHeader>
+                                </DialogContent>
+                            </Dialog>
+
                             {step !== 'QC' && (
                                 <>
                                     {editorMode === 'Manual' && (
@@ -1143,57 +1195,6 @@ export default function Header({
                                     Submit
                                 </Button>}
                             </div>
-
-                            <Dialog>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger className='flex border border-gray-200 px-3 rounded-3xl items-center ml-3 h-10 shadow-none hover:bg-accent transition-colors'>
-                                        <div className='flex items-center justify-center mr-2'>
-                                            Options
-                                        </div>
-                                        <CaretDownIcon />
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent>
-                                        <DropdownMenuItem onClick={() => setIsShortcutsReferenceModalOpen(true)}>Shortcuts Reference</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => setIsConfigureShortcutsModalOpen(true)}>Configure Shortcuts</DropdownMenuItem>
-                                        {session?.user?.role !== 'CUSTOMER' && <DropdownMenuItem onClick={toggleRevertTranscript}>Revert Transcript</DropdownMenuItem>}
-                                        <DropdownMenuItem onClick={toggleVideo}>Toggle Video</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={toggleNotes}>Notes</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={toggleFindAndReplace}>Find and Replace</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={toggleSpeakerName}>Speaker Names</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={downloadMP3.bind(null, orderDetails)}>Download MP3</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => toggleSpellCheck()}>Spellcheck</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={requestExtension}>Request Extension</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={requestExtension}>Request Extension</DropdownMenuItem>
-                                        {session?.user?.role !== 'CUSTOMER' && <DropdownMenuItem onClick={() => setReportModalOpen(true)}>Report</DropdownMenuItem>}
-                                        {session?.user?.role !== 'CUSTOMER' && (<DropdownMenuItem onClick={() => getFrequentTermsHandler(orderDetails?.userId, setButtonLoading, setFrequentTermsData, setFrequentTermsModalOpen)}>Frequent Terms</DropdownMenuItem>)}
-                                        <DropdownMenuItem onClick={toggleAutoCapitalize}>
-                                            {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
-                                        </DropdownMenuItem>
-                                        {session?.user?.role === 'CUSTOMER' && <DropdownMenuItem onClick={() => setIsFormattingOptionsModalOpen(true)}>Formatting Options</DropdownMenuItem>}
-                                        <DialogTrigger asChild>
-                                            {/* <DropdownMenuItem>Change Editor Mode</DropdownMenuItem> */}
-                                        </DialogTrigger>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                                <DialogContent>
-                                    <DialogHeader>
-                                        <DialogTitle className='mb-5'>Change Editor Mode</DialogTitle>
-                                        <div>
-                                            <RadioGroup defaultValue={editorMode} onValueChange={setNewEditorMode} className='flex gap-10 mb-5'>
-                                                {editorModeOptions.map((option, index) => (
-                                                    <div className="flex items-center space-x-2" key={index}>
-                                                        <RadioGroupItem value={option} id={option} />
-                                                        <Label htmlFor={option}>{option}</Label>
-                                                    </div>
-                                                ))}
-                                            </RadioGroup>
-                                        </div>
-                                        <DialogClose asChild>
-                                            <Button onClick={() => getEditorMode(newEditorMode)}>Confirm</Button>
-                                        </DialogClose>
-                                    </DialogHeader>
-                                </DialogContent>
-                            </Dialog>
                         </div>
 
                     </div>
