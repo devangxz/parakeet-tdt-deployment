@@ -3,10 +3,10 @@ info:
   title: Scribie API
   version: 1.0.0
   description: |
-    API for file management, transcription, and user operations.
+    The Scribie REST API provides programmatic access to our transcription service. This API allows applications to upload files, pay for transcription, check transcript progress, fetch transcripts and manage files. The API is designed to be simple and easy to use.
 
     ## Authentication
-    To use this API, you need to:
+    This API uses HTTP Basic authentication with your API key as the username (no password required). To use the API:
     1. Sign up for a Scribie account.
     2. Add a valid payment method to your account.
     3. Obtain your API key from the dashboard.
@@ -14,8 +14,15 @@ info:
 
     Example: `Authorization: Bearer YOUR_API_KEY`
 
+    ## File Support
+    Supported formats: mp3, wav, wma, wmv, avi, flv, mpg, mpeg, mp4, m4a, m4v, mov, ogg, webm, aif, aiff, amr, 3gp, 3ga, mts, ogv, aac, mkv, mxf, opus, flac
+    Maximum file size: 10GB
+
+    ## Support
+    For API support, contact support@scribie.com
+
 servers:
-  - url: https://api.scribie.ai/
+  - url: https://scribie.ai/api/
 
 components:
   securitySchemes:
@@ -24,13 +31,65 @@ components:
       scheme: bearer
       bearerFormat: API Key
 
+  schemas:
+    TranscriptOptions:
+      type: object
+      properties:
+        strict_verbatim:
+          type: string
+          enum: [on, off]
+          default: off
+        subtitle_file:
+          type: string
+          enum: [on, off]
+          default: off
+        time_coding:
+          type: string
+          enum: [on, off]
+          default: on
+        speaker_tracking:
+          type: string
+          enum: [on, off]
+          default: on
+        speaker_tracking_format:
+          type: string
+          enum: [initials, 'full names']
+          default: initials
+        spelling_style:
+          type: string
+          enum: [american, british, canadian, australian]
+          default: american
+        transcript_template:
+          type: string
+          enum:
+            [
+              'scribie single line spaced',
+              'scribie double line spaced',
+              'blank single line spaced',
+              'blank double line spaced',
+            ]
+          default: 'scribie single line spaced'
+        speaker_names:
+          type: string
+          description: Comma separated list of speaker names
+        instructions:
+          type: string
+          description: Special instructions for transcription
+        custom_formatting:
+          type: string
+          enum: ['yes', 'no']
+          default: no
+        custom_formatting_details:
+          type: object
+          description: Custom formatting specifications
+
 security:
   - BearerAuth: []
 
 paths:
   /files:
     get:
-      summary: List all files for the authenticated user
+      summary: List all files
       tags:
         - Files
       responses:
@@ -48,7 +107,7 @@ paths:
         '401':
           description: Unauthorized - Invalid or missing API key
     post:
-      summary: Upload a new file or provide a URL for transcription
+      summary: Order a new file
       tags:
         - Files
       requestBody:
@@ -66,6 +125,7 @@ paths:
                 options:
                   type: string
                   description: JSON string of additional options
+                  $ref: '#/components/schemas/TranscriptOptions'
       responses:
         '201':
           description: File created successfully
@@ -78,6 +138,10 @@ paths:
                     type: string
         '401':
           description: Unauthorized - Invalid or missing API key
+        '413':
+          description: File size exceeds 10GB limit
+        '415':
+          description: Unsupported file format
 
   /file/{fileId}:
     get:
@@ -95,6 +159,7 @@ paths:
           schema:
             type: string
             enum: [txt, docx, pdf, odt, vtt, srt, json]
+            default: txt
       responses:
         '200':
           description: Successful response
@@ -126,18 +191,16 @@ paths:
           description: File deleted successfully
         '401':
           description: Unauthorized - Invalid or missing API key
+        '404':
+          description: File not found
+        '409':
+          description: Cannot delete - Transcript progress between 60-99%
 
-  /file/{fileId}/invoice:
+  /credits:
     get:
-      summary: Get invoice details for a file
+      summary: Get current credit balance
       tags:
-        - Invoices
-      parameters:
-        - name: fileId
-          in: path
-          required: true
-          schema:
-            type: string
+        - Credits
       responses:
         '200':
           description: Successful response
@@ -146,14 +209,42 @@ paths:
               schema:
                 type: object
                 properties:
-                  invoice_id:
-                    type: string
-                  amount:
+                  balance:
                     type: number
-                  status:
-                    type: string
-                  created_at:
-                    type: string
-                    format: date-time
+                    description: Current credit balance
         '401':
           description: Unauthorized - Invalid or missing API key
+    post:
+      summary: Add credits to account
+      tags:
+        - Credits
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  description: Amount of credits to add
+      responses:
+        '200':
+          description: Credits added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactionId:
+                    type: string
+                  newBalance:
+                    type: number
+                  addedAmount:
+                    type: number
+        '400':
+          description: Invalid request - Amount must be positive
+        '401':
+          description: Unauthorized - Invalid or missing API key
+        '402':
+          description: Payment failed
