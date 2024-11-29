@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server'
-import { v4 as uuidv4 } from 'uuid'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { generateUniqueId } from '@/utils/generateUniqueId'
 
 export async function POST(req: Request) {
   try {
     const userToken = req.headers.get('x-user-token')
     const user = JSON.parse(userToken ?? '{}')
     const userId = user?.internalTeamUserId || user?.userId
-    const apiKey = uuidv4()
+    const apiKey = generateUniqueId()
 
     await prisma.apiKey.upsert({
       where: {

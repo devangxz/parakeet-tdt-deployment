@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { v4 as uuidv4 } from 'uuid'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
+import { generateUniqueId } from '@/utils/generateUniqueId'
 
 export async function POST(req: NextRequest) {
   const userToken = req.headers.get('x-user-token')
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       })
       return
     }
-    const verificationKey = uuidv4()
+    const verificationKey = generateUniqueId()
     await prisma.invite.create({
       data: {
         email: secondaryEmail,
