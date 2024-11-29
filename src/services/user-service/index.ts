@@ -41,6 +41,34 @@ const legalOnboarding = async (
         name: 'Hearing',
         userId,
       },
+      {
+        name: 'EUO',
+        userId,
+      },
+      {
+        name: 'Hearing (Trial)',
+        userId,
+      },
+      {
+        name: 'Hearing (Jury Trial)',
+        userId,
+      },
+      {
+        name: 'Hearing (Arbitration)',
+        userId,
+      },
+      {
+        name: 'Examination Before Trial',
+        userId,
+      },
+      {
+        name: 'Sworn Testimony',
+        userId,
+      },
+      {
+        name: 'Trial Testimony',
+        userId,
+      },
     ],
   })
 
