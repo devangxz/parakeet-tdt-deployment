@@ -49,14 +49,16 @@ const Bill = ({ paymentInfo }: { paymentInfo: Payment | null }) => (
       </div>
       <div className='text-md font-normal'>${paymentInfo?.creditsUsed}</div>
     </div>
-    <div className='flex justify-between mr-5 mb-6'>
-      <div className='flex items-center gap-2'>
-        <div className='text-md font-medium'>Discount</div>
+    {paymentInfo && paymentInfo.discount > 0 && (
+      <div className='flex justify-between mr-5 mb-6'>
+        <div className='flex items-center gap-2'>
+          <div className='text-md font-medium'>Discount</div>
+        </div>
+        <div className='text-md font-normal text-[#00B98C]'>
+          ${paymentInfo?.discount}
+        </div>
       </div>
-      <div className='text-md font-normal text-[#00B98C]'>
-        ${paymentInfo?.discount}
-      </div>
-    </div>
+    )}
     <Separator className='bg-[#322078]' />
     <div className='flex justify-between mr-5 mb-4 mt-4'>
       <div className='flex items-center gap-2'>

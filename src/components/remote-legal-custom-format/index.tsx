@@ -154,7 +154,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
               ) => total + file.File.duration,
               0
             ) / 60,
-          service: 'Custom Format',
+          service: 'Transcribe and Custom Format',
           baseRate: response.data.invoice.orderRate,
           discount: response.data.invoice.discount,
           totalAmount: response.data.invoice.amount,
@@ -686,12 +686,12 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
                     <Image
                       loading='lazy'
                       src='/assets/images/home/call-support.svg'
-                      alt='24/7 customer'
+                      alt='20/5 customer'
                       width={32}
                       height={32}
                     />
                     <div className='text-center my-auto font-normal w-[122px]'>
-                      24/7 customer support
+                      20/5 customer support
                     </div>
                   </div>
                 </div>
@@ -774,14 +774,16 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
                       </div>
                     </div>
                   )}
-                  <div className='flex justify-between mr-5 mb-6'>
-                    <div className='flex items-center gap-2'>
-                      <div className='text-md font-medium'>Discount</div>
+                  {paymentInfo && paymentInfo.discount > 0 && (
+                    <div className='flex justify-between mr-5 mb-6'>
+                      <div className='flex items-center gap-2'>
+                        <div className='text-md font-medium'>Discount</div>
+                      </div>
+                      <div className='text-md font-normal text-[#00B98C]'>
+                        ${paymentInfo?.discount}
+                      </div>
                     </div>
-                    <div className='text-md font-normal text-[#00B98C]'>
-                      ${paymentInfo?.discount}
-                    </div>
-                  </div>
+                  )}
                   <Separator className='bg-[#322078]' />
                   <div className='flex justify-between mr-5 mb-4 mt-4'>
                     <div className='flex items-center gap-2'>
@@ -798,7 +800,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
                       <li>1. All amounts are in USD.</li>
                       <li>
                         <div>
-                          2.
+                          2.{' '}
                           <a
                             href='/customer-guide#manual-deliveries'
                             className='text-primary'
@@ -814,7 +816,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
                         </div>
                       </li>
                       <li>
-                        3.
+                        3.{' '}
                         <a
                           href='/customer-guide#additional-charges'
                           className='text-primary'

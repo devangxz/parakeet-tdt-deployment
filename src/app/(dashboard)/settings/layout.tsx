@@ -9,6 +9,7 @@ import {
   UserMinus,
   SlidersHorizontal,
   BanknoteIcon,
+  CodeXml,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import React from 'react'
@@ -89,6 +90,11 @@ export default function SettingsLayout({
           href: '/settings/preferences',
           title: 'Preferences',
           icon: SlidersHorizontal,
+        },
+        {
+          href: '/settings/rest-api',
+          title: 'REST API',
+          icon: CodeXml,
         },
         {
           href: '/settings/delete',
