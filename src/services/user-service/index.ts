@@ -1,10 +1,10 @@
 import { User, OrderType } from '@prisma/client'
 import bcrypt from 'bcrypt'
-import { v4 as uuidv4 } from 'uuid'
 
 import { AFFILIATE_RATE } from '@/constants'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
+import { generateUniqueId } from '@/utils/generateUniqueId'
 import isValidEmail from '@/utils/isValidEmail'
 
 interface CreateUserData {
@@ -112,8 +112,8 @@ export async function createUser(
     newsletter,
   } = userData
   try {
-    const referralCode = uuidv4()
-    const inviteKey = uuidv4()
+    const referralCode = generateUniqueId()
+    const inviteKey = generateUniqueId()
 
     if (!isValidEmail(email)) {
       return {
