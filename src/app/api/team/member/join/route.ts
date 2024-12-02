@@ -1,10 +1,10 @@
 export const dynamic = 'force-dynamic'
 import bcrypt from 'bcryptjs'
 import { NextRequest, NextResponse } from 'next/server'
-import { v4 as uuidv4 } from 'uuid'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { generateUniqueId } from '@/utils/generateUniqueId'
 
 export async function GET(req: NextRequest) {
   const inviteKey = req.nextUrl.searchParams.get('inviteKey') ?? ''
@@ -116,7 +116,7 @@ export async function POST(req: Request) {
   if (!fn || !ln || !pass || !email) {
     return NextResponse.json({ e: -1, s: 'All fields are required' })
   }
-  const referralCode = uuidv4()
+  const referralCode = generateUniqueId()
 
   try {
     const salt = bcrypt.genSaltSync(10)
