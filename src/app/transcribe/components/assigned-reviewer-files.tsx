@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
-import { ReloadIcon } from '@radix-ui/react-icons'
+import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
 import axios from 'axios'
 import { usePathname } from 'next/navigation'
@@ -11,6 +11,7 @@ import { unassignmentHandler } from './unassignmentHandler'
 import { determinePwerLevel } from './utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   Tooltip,
   TooltipContent,
@@ -275,17 +276,37 @@ export default function AssignedFilesPage({ changeTab }: Props) {
         <div className='flex items-center gap-4'>
           <Button
             variant='order'
-            className='not-rounded w-[140px]'
-            onClick={() =>
+            className='w-[140px] format-button'
+            onClick={() => {
               window.open(
                 `/editor/${row.original.fileId}`,
-                '_blank',
-                'toolbar=no,location=no,menubar=no,width=' + window.screen.width + ',height=' + window.screen.height + ',left=0,top=0'
+                '_blank'
               )
-            }
+            }}
           >
-            Start
+            Start in new tab
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant='order' className='h-9 w-8 p-0 format-icon-button'>
+                <span className='sr-only'>Open menu</span>
+                <ChevronDownIcon className='h-4 w-4' />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuItem
+                onClick={() => {
+                  window.open(
+                    `/editor/${row.original.fileId}`,
+                    '_blank',
+                    'toolbar=no,location=no,menubar=no,width=' + window.screen.width + ',height=' + window.screen.height + ',left=0,top=0'
+                  )
+                }}
+              >
+                Start in new window
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {loadingFileOrder[row.original.orderId] ? (
             <Button
               disabled

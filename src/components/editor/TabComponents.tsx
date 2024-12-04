@@ -1,7 +1,6 @@
 import { ReloadIcon } from "@radix-ui/react-icons";
 import { Change } from "diff";
 import ReactQuill from "react-quill";
-import { toast } from "sonner";
 
 import Diff from './Diff';
 import Editor from "./Editor";
@@ -26,7 +25,6 @@ interface EditorTabComponentProps {
 
 export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, disableGoToWord, orderDetails, content, setContent, getLines }: EditorTabComponentProps) => (
     <TabsContent className='h-full mt-0 overflow-hidden' value='transcribe'>
-
         <div className='bg-white border border-gray-200 border-t-0 rounded-b-2xl px-5 py-5 h-[99%] relative overflow-hidden'>
             {!transcript && (
                 <div className="flex items-center justify-center h-[99%]">
@@ -49,12 +47,6 @@ export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuratio
                         getLines={getLines}
                     />
                 </div>
-            )}
-            {(orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === 'REVIEWER_ASSIGNED') && (
-                <div
-                    className="absolute inset-0 z-10 bg-transparent"
-                    onClick={() => toast.error("Text editing is not allowed in this step")}
-                ></div>
             )}
         </div>
     </TabsContent>

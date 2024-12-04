@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
-import { ReloadIcon } from '@radix-ui/react-icons'
+import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
 import axios from 'axios'
 import { usePathname } from 'next/navigation'
@@ -12,6 +12,7 @@ import { unassignmentHandler } from './unassignmentHandler'
 import { determinePwerLevel } from './utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   Tooltip,
   TooltipContent,
@@ -290,10 +291,10 @@ export default function AssignedFilesPage({ changeTab }: Props) {
       header: 'Actions',
       enableHiding: false,
       cell: ({ row }) => (
-        <div className='flex items-center gap-4'>
+        <div className='flex items-center'>
           <Button
             variant='order'
-            className='not-rounded w-[140px]'
+            className='w-[140px] format-button'
             onClick={() => {
               if (
                 row.original.status === 'QC_COMPLETED' &&
@@ -305,14 +306,43 @@ export default function AssignedFilesPage({ changeTab }: Props) {
               } else {
                 window.open(
                   `/editor/${row.original.fileId}`,
-                  '_blank',
-                  'toolbar=no,location=no,menubar=no,width=' + window.screen.width + ',height=' + window.screen.height + ',left=0,top=0'
+                  '_blank'
                 )
               }
             }}
           >
-            Start
+            Start in new tab
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant='order' className='h-9 w-8 p-0 format-icon-button'>
+                <span className='sr-only'>Open menu</span>
+                <ChevronDownIcon className='h-4 w-4' />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (
+                    row.original.status === 'QC_COMPLETED' &&
+                    row.original.jobType === 'REVIEW'
+                  ) {
+                    toast.error(
+                      'LLM formatting is currently processing this file. Please wait for a while before starting the file.'
+                    )
+                  } else {
+                    window.open(
+                      `/editor/${row.original.fileId}`,
+                      '_blank',
+                      'toolbar=no,location=no,menubar=no,width=' + window.screen.width + ',height=' + window.screen.height + ',left=0,top=0'
+                    )
+                  }
+                }}
+              >
+                Start in new window
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {loadingFileOrder[row.original.orderId] ? (
             <Button
               disabled
@@ -324,7 +354,7 @@ export default function AssignedFilesPage({ changeTab }: Props) {
             </Button>
           ) : (
             <Button
-              className='shadow-none font-normal not-rounded w-[140px]'
+              className='shadow-none font-normal not-rounded w-[140px] ml-4'
               variant='destructive'
               onClick={() =>
                 unassignmentHandler({

@@ -168,10 +168,13 @@ export default function Header({
     const [selection, setSelection] = useState<{ index: number; length: number } | null>(null);
     const [adjustTimestampsBy, setAdjustTimestampsBy] = useState('0')
     const [newEditorMode, setNewEditorMode] = useState<string>('')
-    const [notesOpen, setNotesOpen] = useState(false);
+    const [notesOpen, setNotesOpen] = useState(true);
     const [shortcuts, setShortcuts] = useState<{ key: string, shortcut: string }[]>([]);
     const [position, setPosition] = useState({ x: 100, y: 100 });
-    const [findAndReplaceOpen, setFindAndReplaceOpen] = useState(false);
+    const [notesPosition, setNotesPosition] = useState(() => ({
+        x: window.innerWidth - 302, // 292px width + 10px padding from right
+        y: 127
+    })); const [findAndReplaceOpen, setFindAndReplaceOpen] = useState(false);
     const [findText, setFindText] = useState('');
     const [lastSearchIndex, setLastSearchIndex] = useState<number>(-1)
     const [replaceText, setReplaceText] = useState('');
@@ -583,6 +586,25 @@ export default function Header({
         const target = e.target as HTMLDivElement; // Correctly typecast the event target
         const onMouseMove = (moveEvent: MouseEvent) => {
             setPosition({
+                x: moveEvent.clientX - deltaX,
+                y: moveEvent.clientY - deltaY,
+            });
+        };
+
+        const deltaX = e.clientX - target.getBoundingClientRect().left;
+        const deltaY = e.clientY - target.getBoundingClientRect().top;
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', () => {
+            document.removeEventListener('mousemove', onMouseMove);
+        }, { once: true });
+    }
+
+    const handleNotesDragChange = (e: React.MouseEvent<HTMLDivElement | HTMLVideoElement>) => {
+        e.preventDefault();
+        const target = e.target as HTMLDivElement; // Correctly typecast the event target
+        const onMouseMove = (moveEvent: MouseEvent) => {
+            setNotesPosition({
                 x: moveEvent.clientX - deltaX,
                 y: moveEvent.clientY - deltaY,
             });
@@ -1359,15 +1381,15 @@ export default function Header({
             {
                 notesOpen && <div
                     className="fixed bg-white z-[1000] overflow-auto py-4 px-4 rounded-lg shadow-lg overflow-y-hidden border"
-                    style={{ top: `${position.y}px`, left: `${position.x}px`, width: '500px', height: '400px', resize: 'both' }}
+                    style={{ top: `${notesPosition.y}px`, left: `${notesPosition.x}px`, width: '292px', height: '85%', resize: 'both' }}
                 >
-                    <div onMouseDown={handleDragChange} className='cursor-move border-b flex justify-between items-center pb-2'>
+                    <div onMouseDown={handleNotesDragChange} className='cursor-move border-b flex justify-between items-center pb-2'>
                         <p className='text-lg font-semibold'>Notes</p>
                         <button onClick={toggleNotes} className='cursor-pointer hover:bg-gray-100 p-2 rounded-lg'><Cross1Icon /> </button>
                     </div>
                     <Textarea
                         placeholder='Start typing...'
-                        className='h-5/6 resize-none mt-5'
+                        className='resize-none mt-5 h-[92%]'
                         value={notes}
                         onChange={handleNotesChange}
                     />

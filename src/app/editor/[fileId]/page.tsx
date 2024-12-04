@@ -498,7 +498,7 @@ function EditorPage() {
               className="flex flex-col justify-between h-full"
             >
               <div className='flex w-[100vw] px-2 h-full'>
-                <div className='w-full h-full pb-12'>
+                <div className='w-4/5 h-full pb-12'>
                   {selectedSection === 'proceedings' && (
                     <Tabs
                       onValueChange={handleTabChange}
