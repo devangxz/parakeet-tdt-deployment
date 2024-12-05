@@ -18,7 +18,7 @@ type DownloadDocxDialogProps = {
 const DownloadDocxDialog = ({ orderDetails, downloadableType, setButtonLoading, buttonLoading, setDownloadableType }: DownloadDocxDialogProps) => (
     <Dialog>
         <DialogTrigger>
-            <Button>Download File</Button>
+            <Button variant="outline">Download File</Button>
         </DialogTrigger>
         <DialogContent>
             <DialogHeader>

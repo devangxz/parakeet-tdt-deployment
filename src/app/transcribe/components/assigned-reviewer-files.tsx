@@ -284,7 +284,7 @@ export default function AssignedFilesPage({ changeTab }: Props) {
               )
             }}
           >
-            Start in new tab
+            Open in new tab
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -303,35 +303,30 @@ export default function AssignedFilesPage({ changeTab }: Props) {
                   )
                 }}
               >
-                Start in new window
+                Open in new window
               </DropdownMenuItem>
+              {loadingFileOrder[row.original.orderId] ? (
+                <DropdownMenuItem disabled>
+                  Please wait
+                  <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  className='text-destructive'
+                  onClick={() =>
+                    unassignmentHandler({
+                      id: row.original.orderId,
+                      setLoadingFileOrder,
+                      changeTab,
+                      type: 'CF',
+                    })
+                  }
+                >
+                  Cancel
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
-          {loadingFileOrder[row.original.orderId] ? (
-            <Button
-              disabled
-              variant='order'
-              className='format-button w-[140px]'
-            >
-              Please wait
-              <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-            </Button>
-          ) : (
-            <Button
-              className='shadow-none font-normal not-rounded w-[140px]'
-              variant='destructive'
-              onClick={() =>
-                unassignmentHandler({
-                  id: row.original.orderId,
-                  setLoadingFileOrder,
-                  changeTab,
-                  type: 'CF',
-                })
-              }
-            >
-              Cancel
-            </Button>
-          )}
         </div>
       ),
     },

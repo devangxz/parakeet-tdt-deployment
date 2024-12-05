@@ -124,7 +124,6 @@ interface NewPlayerProps {
     getEditorMode: (editorMode: string) => void;
     editorMode: string;
     notes: string;
-    setNotes: React.Dispatch<React.SetStateAction<string>>;
     orderDetails: OrderDetails;
     submitting: boolean;
     setIsSubmitModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -146,7 +145,6 @@ export default function Header({
     getEditorMode,
     editorMode,
     notes,
-    setNotes,
     orderDetails,
     submitting,
     setIsSubmitModalOpen,
@@ -171,10 +169,7 @@ export default function Header({
     const [notesOpen, setNotesOpen] = useState(true);
     const [shortcuts, setShortcuts] = useState<{ key: string, shortcut: string }[]>([]);
     const [position, setPosition] = useState({ x: 100, y: 100 });
-    const [notesPosition, setNotesPosition] = useState(() => ({
-        x: window.innerWidth - 302, // 292px width + 10px padding from right
-        y: 127
-    })); const [findAndReplaceOpen, setFindAndReplaceOpen] = useState(false);
+    const [findAndReplaceOpen, setFindAndReplaceOpen] = useState(false);
     const [findText, setFindText] = useState('');
     const [lastSearchIndex, setLastSearchIndex] = useState<number>(-1)
     const [replaceText, setReplaceText] = useState('');
@@ -600,30 +595,6 @@ export default function Header({
         }, { once: true });
     }
 
-    const handleNotesDragChange = (e: React.MouseEvent<HTMLDivElement | HTMLVideoElement>) => {
-        e.preventDefault();
-        const target = e.target as HTMLDivElement; // Correctly typecast the event target
-        const onMouseMove = (moveEvent: MouseEvent) => {
-            setNotesPosition({
-                x: moveEvent.clientX - deltaX,
-                y: moveEvent.clientY - deltaY,
-            });
-        };
-
-        const deltaX = e.clientX - target.getBoundingClientRect().left;
-        const deltaY = e.clientY - target.getBoundingClientRect().top;
-
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', () => {
-            document.removeEventListener('mousemove', onMouseMove);
-        }, { once: true });
-    }
-
-    const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const text = e.target.value
-        setNotes(text)
-    }
-
     const toggleAutoCapitalize = () => {
         setAutoCapitalize(!autoCapitalize)
     }
@@ -819,7 +790,7 @@ export default function Header({
     }, [audioPlayer, quillRef]);
 
     return (
-        <div className='min-h-24 relative'>
+        <div className='min-h-24 relative mx-2'>
             {!isPlayerLoaded && (
                 <div className='absolute inset-0 w-full h-full bg-white z-50 flex justify-center items-center'>
                     <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
@@ -871,7 +842,7 @@ export default function Header({
                 </div>
             </div>
 
-            <div className='h-1/2 bg-white border border-gray-200 px-3 flex flex-col justify-between'>
+            <div className='h-1/2 bg-white border border-gray-200 px-3 flex flex-col justify-between rounded-b-2xl'>
                 <audio ref={audioPlayer} className='hidden' src={`/api/editor/get-audio/${orderDetails.fileId}`}></audio>
 
                 <div className='flex items-center h-full'>
@@ -1170,7 +1141,7 @@ export default function Header({
                             {session?.user?.role === 'CUSTOMER' && (
                                 <Dialog>
                                     <DialogTrigger asChild>
-                                        <Button>Re-Review</Button>
+                                        <Button variant="outline">Re-Review</Button>
                                     </DialogTrigger>
                                     <DialogContent className="w-2/5">
                                         <DialogHeader>
@@ -1201,6 +1172,7 @@ export default function Header({
                                         onClick={() => handleSave({ getEditorText, orderDetails, notes, cfd, setButtonLoading, lines, playerEvents })}
                                         disabled={buttonLoading.save}
                                         className='w-24 mr-2'
+                                        variant="outline"
                                     >
                                         {' '}
                                         {buttonLoading.save && (
@@ -1379,21 +1351,21 @@ export default function Header({
             </Dialog>
 
             {
-                notesOpen && <div
-                    className="fixed bg-white z-[1000] overflow-auto py-4 px-4 rounded-lg shadow-lg overflow-y-hidden border"
-                    style={{ top: `${notesPosition.y}px`, left: `${notesPosition.x}px`, width: '292px', height: '85%', resize: 'both' }}
-                >
-                    <div onMouseDown={handleNotesDragChange} className='cursor-move border-b flex justify-between items-center pb-2'>
-                        <p className='text-lg font-semibold'>Notes</p>
-                        <button onClick={toggleNotes} className='cursor-pointer hover:bg-gray-100 p-2 rounded-lg'><Cross1Icon /> </button>
-                    </div>
-                    <Textarea
-                        placeholder='Start typing...'
-                        className='resize-none mt-5 h-[92%]'
-                        value={notes}
-                        onChange={handleNotesChange}
-                    />
-                </div>
+                // notesOpen && <div
+                //     className="fixed bg-white z-[1000] overflow-auto py-4 px-4 rounded-lg shadow-lg overflow-y-hidden border"
+                //     style={{ top: `${notesPosition.y}px`, left: `${notesPosition.x}px`, width: '292px', height: '85%', resize: 'both' }}
+                // >
+                //     <div onMouseDown={handleNotesDragChange} className='cursor-move border-b flex justify-between items-center pb-2'>
+                //         <p className='text-lg font-semibold'>Notes</p>
+                //         <button onClick={toggleNotes} className='cursor-pointer hover:bg-gray-100 p-2 rounded-lg'><Cross1Icon /> </button>
+                //     </div>
+                //     <Textarea
+                //         placeholder='Start typing...'
+                //         className='resize-none mt-5 h-[92%]'
+                //         value={notes}
+                //         onChange={handleNotesChange}
+                //     />
+                // </div>
             }
 
             <div
