@@ -52,6 +52,9 @@ export default function AccountAccess() {
             reviewEnabled: data.reviewEnabled,
             adminAccess: true,
             readonly: true,
+            internalTeamUserId: data.internalTeamUserId,
+            teamName: data.teamName,
+            selectedUserTeamRole: data.selectedUserTeamRole,
           },
         })
         toast.success('Sucessfully switched to user')
