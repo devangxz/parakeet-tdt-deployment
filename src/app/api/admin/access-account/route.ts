@@ -44,6 +44,9 @@ export async function POST(req: Request) {
       readonly: true,
       legalEnabled: user?.Verifier?.legalEnabled || false,
       reviewEnabled: user?.Verifier?.cfReviewEnabled || false,
+      internalTeamUserId: null,
+      teamName: null,
+      selectedUserTeamRole: null,
     }
 
     const token = signJwtAccessToken(payload)
@@ -59,6 +62,9 @@ export async function POST(req: Request) {
       readonly: true,
       legalEnabled: user?.Verifier?.legalEnabled || false,
       reviewEnabled: user?.Verifier?.cfReviewEnabled || false,
+      internalTeamUserId: null,
+      teamName: null,
+      selectedUserTeamRole: null,
     }
 
     logger.info(`switch user to ${user.user} successful, ${user.user}`)
