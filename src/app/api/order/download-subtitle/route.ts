@@ -5,7 +5,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import logger from '@/lib/logger';
 import prisma from '@/lib/prisma';
 import { downloadFromS3 } from '@/utils/backend-helper';
-import { createSBV } from '@/utils/createSBV';
 import getSRTVTT from '@/utils/getSRTVTT';
 
 export async function GET(request: NextRequest) {
@@ -49,7 +48,7 @@ export async function GET(request: NextRequest) {
 
         const alignments = JSON.parse((await downloadFromS3(`${fileId}_ctms.json`)).toString());
 
-        const subtitiles = getSRTVTT(createSBV(alignments));
+        const subtitiles = getSRTVTT(alignments);
 
         if (!subtitiles) {
             return NextResponse.json({ error: 'Failed to generate subtitles' }, { status: 500 });

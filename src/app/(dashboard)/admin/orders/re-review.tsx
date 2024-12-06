@@ -227,8 +227,8 @@ export default function ReReviewPage() {
                   {row.original.pwer > HIGH_PWER
                     ? 'HIGH'
                     : row.original.pwer < LOW_PWER
-                    ? 'LOW'
-                    : 'MEDIUM'}
+                      ? 'LOW'
+                      : 'MEDIUM'}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
@@ -339,13 +339,7 @@ export default function ReReviewPage() {
           <Button
             variant='order'
             className='format-button'
-            onClick={() =>
-              window.open(
-                `/editor/${row.original.orderId}`,
-                '_blank',
-                'noopener,noreferrer'
-              )
-            }
+            onClick={() => window.open(`/editor/${row.original.orderId}`, '_blank', 'toolbar=no,location=no,menubar=no,width=' + window.screen.width + ',height=' + window.screen.height + ',left=0,top=0')}
           >
             Open Editor
           </Button>

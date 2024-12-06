@@ -78,6 +78,7 @@ model User {
   SharedFile                SharedFile[]            @relation("SharedFilesFrom")
   SharedFileTo              SharedFile[]            @relation("SharedFilesTo")
   UploadSessions            UploadSession[]
+  ApiKey                    ApiKey?
 
   @@index([role])
   @@index([email])
@@ -223,15 +224,15 @@ model Order {
   pwer         Float?
   wer          Float?
 
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @default(now()) @map("updated_at")
-  orderType     OrderType     @default(TRANSCRIPTION) @map("order_type")
-  reportMode    ReportMode    @default(NONE) @map("report_mode")
-  reportOption  ReportOption? @map("report_option")
-  reportComment String?       @map("report_comment")
-  comments      String?
-  reReview      Boolean?      @default(false) @map("re_review")
-  reReviewComment String?      @map("re_review_comment")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @default(now()) @map("updated_at")
+  orderType       OrderType     @default(TRANSCRIPTION) @map("order_type")
+  reportMode      ReportMode    @default(NONE) @map("report_mode")
+  reportOption    ReportOption? @map("report_option")
+  reportComment   String?       @map("report_comment")
+  comments        String?
+  reReview        Boolean?      @default(false) @map("re_review")
+  reReviewComment String?       @map("re_review_comment")
 
   // Relations
   File       File?           @relation(fields: [fileId], references: [fileId])
@@ -411,17 +412,17 @@ model Verifier {
 }
 
 model JobAssignment {
-  id            Int           @id @default(autoincrement())
-  transcriberId Int           @map("transcriber_id")
-  orderId       Int           @map("order_id")
-  status        JobStatus     @default(ACCEPTED)
-  acceptedTs    DateTime      @default(now()) @map("accepted_ts")
-  completedTs   DateTime?     @map("completed_ts")
-  cancelledTs   DateTime?     @map("cancelled_ts")
-  earnings      Float         @default(0) @map("earnings")
-  type          JobType       @default(QC)
-  inputFile     InputFileType @default(ASR_OUTPUT) @map("input_file")
-  extensionRequested Boolean @default(false) @map("extension_requested")
+  id                 Int           @id @default(autoincrement())
+  transcriberId      Int           @map("transcriber_id")
+  orderId            Int           @map("order_id")
+  status             JobStatus     @default(ACCEPTED)
+  acceptedTs         DateTime      @default(now()) @map("accepted_ts")
+  completedTs        DateTime?     @map("completed_ts")
+  cancelledTs        DateTime?     @map("cancelled_ts")
+  earnings           Float         @default(0) @map("earnings")
+  type               JobType       @default(QC)
+  inputFile          InputFileType @default(ASR_OUTPUT) @map("input_file")
+  extensionRequested Boolean       @default(false) @map("extension_requested")
 
   user  User  @relation(fields: [transcriberId], references: [id])
   order Order @relation(fields: [orderId], references: [id])
@@ -632,6 +633,20 @@ model UploadSession {
 
   @@index([userId])
   @@map("scb_upload_sessions")
+}
+
+model ApiKey {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique @map("user_id")
+  apiKey    String   @unique @map("api_key")
+  webhook   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([apiKey])
+  @@map("scb_api_keys")
 }
 
 //  ███████ ███    ██ ██    ██ ███    ███ ███████

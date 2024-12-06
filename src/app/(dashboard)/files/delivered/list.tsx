@@ -3,7 +3,6 @@
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
 import axios, { AxiosError } from 'axios'
-import Link from 'next/link'
 import { Session } from 'next-auth'
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
@@ -241,7 +240,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   filename: '',
                   docType:
                     session?.user?.organizationName.toLowerCase() ===
-                    'remotelegal'
+                      'remotelegal'
                       ? 'CUSTOM_FORMATTING_DOC'
                       : 'TRANSCRIPTION_DOC',
                 },
@@ -333,7 +332,9 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align='end'>
             <DropdownMenuItem asChild>
-              <Link href={`/editor/${row.original.id}`}>Open Editor</Link>
+              <Button onClick={() => window.open(`/editor/${row.original.id}`, '_blank', 'toolbar=no,location=no,menubar=no,width=' + window.screen.width + ',height=' + window.screen.height + ',left=0,top=0')}>
+                Open Editor
+              </Button>
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => handleMP3Download(row.original.id)}
@@ -449,25 +450,25 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
           <div className='flex items-center'>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-              <Button
-                variant='order'
-                className='not-rounded text-black w-[140px] mr-3'
-                onClick={async () => {
-                  try {
-                    if (selectedFiles.length === 0) {
-                      toast.error('Please select at least one file')
-                      return
+                <Button
+                  variant='order'
+                  className='not-rounded text-black w-[140px] mr-3'
+                  onClick={async () => {
+                    try {
+                      if (selectedFiles.length === 0) {
+                        toast.error('Please select at least one file')
+                        return
+                      }
+                      await navigator.clipboard.writeText(selectedFiles.join(','))
+                      toast.success('File Ids copied to clipboard')
+                    } catch (error) {
+                      toast.error('Failed to copy file Ids')
                     }
-                    await navigator.clipboard.writeText(selectedFiles.join(','))
-                    toast.success('File Ids copied to clipboard')
-                  } catch (error) {
-                    toast.error('Failed to copy file Ids')
-                  }
-                }}
-              >
-                Copy file Ids
-              </Button>
-            )}
+                  }}
+                >
+                  Copy file Ids
+                </Button>
+              )}
             <Button
               variant='order'
               className='format-button text-black w-[140px]'

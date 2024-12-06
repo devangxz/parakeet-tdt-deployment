@@ -1,10 +1,10 @@
 export const dynamic = 'force-dynamic'
 import axios from 'axios'
 import { NextResponse } from 'next/server'
-import { v4 as uuidv4 } from 'uuid'
 
 import logger from '@/lib/logger'
 import { redis } from '@/lib/redis'
+import { generateUniqueId } from '@/utils/generateUniqueId'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     )
 
     const userInfo = userInfoResponse.data
-    const sessionId = uuidv4()
+    const sessionId = generateUniqueId()
     await redis.set(sessionId, JSON.stringify(userInfo), 'EX', 3600)
     return NextResponse.redirect(
       `${process.env.FRONTEND_URL}/settings/paypal-account?session_id=${sessionId}`

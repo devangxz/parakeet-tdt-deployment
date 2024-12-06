@@ -1,7 +1,6 @@
 import { ReloadIcon } from "@radix-ui/react-icons";
 import { Change } from "diff";
 import ReactQuill from "react-quill";
-import { toast } from "sonner";
 
 import Diff from './Diff';
 import Editor from "./Editor";
@@ -25,9 +24,8 @@ interface EditorTabComponentProps {
 }
 
 export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, disableGoToWord, orderDetails, content, setContent, getLines }: EditorTabComponentProps) => (
-    <TabsContent className='h-[86%] mt-0' value='transcribe'>
-
-        <div className='bg-white border border-gray-200 border-t-0 rounded-b-2xl px-5 py-5 h-[99%] relative'>
+    <TabsContent className='h-full mt-0 overflow-hidden' value='transcribe'>
+        <div className='bg-white border border-gray-200 border-t-0 rounded-b-2xl px-5 py-5 h-[99%] relative overflow-hidden'>
             {!transcript && (
                 <div className="flex items-center justify-center h-[99%]">
                     <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
@@ -35,31 +33,27 @@ export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuratio
                 </div>
             )}
             {transcript && (
-                <Editor
-                    orderDetails={orderDetails}
-                    disableGoToWord={disableGoToWord}
-                    getQuillRef={getQuillRef}
-                    transcript={transcript}
-                    ctms={ctms}
-                    audioPlayer={audioPlayer}
-                    duration={audioDuration}
-                    content={content}
-                    setContent={setContent}
-                    getLines={getLines}
-                />
-            )}
-            {(orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === 'REVIEWER_ASSIGNED') && (
-                <div
-                    className="absolute inset-0 z-10 bg-transparent"
-                    onClick={() => toast.error("Text editing is not allowed in this step")}
-                ></div>
+                <div className="h-full overflow-hidden">
+                    <Editor
+                        orderDetails={orderDetails}
+                        disableGoToWord={disableGoToWord}
+                        getQuillRef={getQuillRef}
+                        transcript={transcript}
+                        ctms={ctms}
+                        audioPlayer={audioPlayer}
+                        duration={audioDuration}
+                        content={content}
+                        setContent={setContent}
+                        getLines={getLines}
+                    />
+                </div>
             )}
         </div>
     </TabsContent>
 )
 
 export const DiffTabComponent = ({ diff }: { diff: Change[] }) => (
-    <TabsContent className='h-[86%] mt-0' value='diff'>
+    <TabsContent className='h-full mt-0' value='diff'>
         <div className='bg-white border border-gray-200 border-t-0 rounded-b-2xl px-5 py-5 overflow-y-scroll h-[99%] no-scrollbar'>
             <Diff diffOutput={diff} />
         </div>
@@ -67,7 +61,7 @@ export const DiffTabComponent = ({ diff }: { diff: Change[] }) => (
 )
 
 export const InfoTabComponent = ({ orderDetails }: { orderDetails: OrderDetails }) => (
-    <TabsContent className='h-[86%] mt-0' value='info'>
+    <TabsContent className='h-full mt-0' value='info'>
         <div className='bg-white border border-gray-200 border-t-0 rounded-b-2xl px-5 py-5 overflow-y-scroll h-[99%] no-scrollbar'>
             <Textarea
                 placeholder='Customer instructions'

@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server'
-import { v4 as uuidv4 } from 'uuid'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
+import { generateUniqueId } from '@/utils/generateUniqueId'
 
 export async function POST(req: Request) {
   const userToken = req.headers.get('x-user-token')
   const user = JSON.parse(userToken ?? '{}')
   const userEmail = user?.email
-  let inviteKey = uuidv4()
+  let inviteKey = generateUniqueId()
   try {
     const inviteExists = await prisma.invite.findFirst({
       where: {

@@ -63,6 +63,9 @@ export async function POST(req: NextRequest) {
       where: { id: currentJobAssignment.id },
       data: {
         status: retainEarnings ? JobStatus.COMPLETED : JobStatus.REJECTED,
+        ...(retainEarnings
+          ? { completedTs: new Date() }
+          : { cancelledTs: new Date() }),
       },
     })
 

@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     if (!retainEarnings) {
       await prisma.jobAssignment.update({
         where: { id: currentJobAssignment.id },
-        data: { status: JobStatus.REJECTED },
+        data: { status: JobStatus.REJECTED, cancelledTs: new Date() },
       })
     }
 

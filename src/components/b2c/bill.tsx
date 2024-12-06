@@ -90,22 +90,26 @@ const Bill = ({
         <div className='flex items-center gap-2'>
           <div className='text-md font-medium'>Credits Used</div>
         </div>
-        <div className='text-md font-normal' test-id="get-final-credits">${paymentInfo?.creditsUsed}</div>
-      </div>
-      <div className='flex justify-between mr-5 mb-6'>
-        <div className='flex items-center gap-2'>
-          <div className='text-md font-medium'>Discount</div>
-        </div>
-        <div className='text-md font-normal text-[#00B98C]'>
-          ${paymentInfo?.discount}
+        <div className='text-md font-normal' test-id='get-final-credits'>
+          ${paymentInfo?.creditsUsed}
         </div>
       </div>
+      {paymentInfo && paymentInfo.discount > 0 && (
+        <div className='flex justify-between mr-5 mb-6'>
+          <div className='flex items-center gap-2'>
+            <div className='text-md font-medium'>Discount</div>
+          </div>
+          <div className='text-md font-normal text-[#00B98C]'>
+            ${paymentInfo?.discount}
+          </div>
+        </div>
+      )}
       <Separator className='bg-[#322078]' />
       <div className='flex justify-between mr-5 mb-4 mt-4'>
         <div className='flex items-center gap-2'>
           <div className='text-lg font-semibold'>Final amount</div>
         </div>
-        <div className='text-lg font-semibold' test-id = 'test-get-amount'>
+        <div className='text-lg font-semibold' test-id='test-get-amount'>
           {loadingAmount ? (
             <ReloadIcon className='h-4 w-4 animate-spin' />
           ) : (
@@ -125,7 +129,7 @@ const Bill = ({
                 <li>1. All amounts are in USD.</li>
                 <li>
                   <div>
-                    2.
+                    2.{' '}
                     <a
                       href='/customer-guide#manual-deliveries'
                       className='text-primary'
@@ -141,7 +145,7 @@ const Bill = ({
                   </div>
                 </li>
                 <li>
-                  3.
+                  3.{' '}
                   <a
                     href='/customer-guide#additional-charges'
                     className='text-primary'

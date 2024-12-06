@@ -77,6 +77,7 @@ const SingupForm = () => {
           values.otherIndustry !== ''
             ? values.otherIndustry
             : values.industry || '',
+        newsletter: values.receive_updates,
       }
 
       const response = await axios.post('/api/auth/sign-up', userData)

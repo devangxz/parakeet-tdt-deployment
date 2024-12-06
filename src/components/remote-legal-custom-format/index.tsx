@@ -154,7 +154,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
               ) => total + file.File.duration,
               0
             ) / 60,
-          service: 'Custom Format',
+          service: 'Transcribe and Custom Format',
           baseRate: response.data.invoice.orderRate,
           discount: response.data.invoice.discount,
           totalAmount: response.data.invoice.amount,
@@ -400,7 +400,8 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
 
       if (response.data.success) {
         const tId = toast.success(
-          `Successfully ${!rushOrderEnable ? 'Enabled' : 'Disabled'
+          `Successfully ${
+            !rushOrderEnable ? 'Enabled' : 'Disabled'
           } rush order option`
         )
         toast.dismiss(tId)
@@ -478,8 +479,9 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
             <div key={step}>
               <div className={`flex items-center justify-center gap-3`}>
                 <div
-                  className={`rounded-full p-1 ${activeStep >= step ? 'bg-[#36F0C3]' : 'bg-violet-100'
-                    }`}
+                  className={`rounded-full p-1 ${
+                    activeStep >= step ? 'bg-[#36F0C3]' : 'bg-violet-100'
+                  }`}
                 >
                   <Check className='h-4 w-4 font-bold' />
                 </div>
@@ -500,7 +502,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
           {activeStep === 1 && (
             <div className='w-[100%] md:w-[50%] p-5 lg:p-10'>
               <ScrollArea className='h-[62vh]'>
-                {session?.user?.organizationName.toLocaleLowerCase() !==
+                {/* {session?.user?.organizationName.toLocaleLowerCase() !==
                   'remotelegal' && (
                     <>
                       {' '}
@@ -528,7 +530,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
                       </div>
                       <Separator />
                     </>
-                  )}
+                  )} */}
 
                 {files.map((file, index) => (
                   <CustomOrderOptions
@@ -684,12 +686,12 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
                     <Image
                       loading='lazy'
                       src='/assets/images/home/call-support.svg'
-                      alt='24/7 customer'
+                      alt='20/5 customer'
                       width={32}
                       height={32}
                     />
                     <div className='text-center my-auto font-normal w-[122px]'>
-                      24/7 customer support
+                      20/5 customer support
                     </div>
                   </div>
                 </div>
@@ -772,14 +774,16 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
                       </div>
                     </div>
                   )}
-                  <div className='flex justify-between mr-5 mb-6'>
-                    <div className='flex items-center gap-2'>
-                      <div className='text-md font-medium'>Discount</div>
+                  {paymentInfo && paymentInfo.discount > 0 && (
+                    <div className='flex justify-between mr-5 mb-6'>
+                      <div className='flex items-center gap-2'>
+                        <div className='text-md font-medium'>Discount</div>
+                      </div>
+                      <div className='text-md font-normal text-[#00B98C]'>
+                        ${paymentInfo?.discount}
+                      </div>
                     </div>
-                    <div className='text-md font-normal text-[#00B98C]'>
-                      ${paymentInfo?.discount}
-                    </div>
-                  </div>
+                  )}
                   <Separator className='bg-[#322078]' />
                   <div className='flex justify-between mr-5 mb-4 mt-4'>
                     <div className='flex items-center gap-2'>
@@ -796,7 +800,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
                       <li>1. All amounts are in USD.</li>
                       <li>
                         <div>
-                          2.
+                          2.{' '}
                           <a
                             href='/customer-guide#manual-deliveries'
                             className='text-primary'
@@ -812,7 +816,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
                         </div>
                       </li>
                       <li>
-                        3.
+                        3.{' '}
                         <a
                           href='/customer-guide#additional-charges'
                           className='text-primary'
