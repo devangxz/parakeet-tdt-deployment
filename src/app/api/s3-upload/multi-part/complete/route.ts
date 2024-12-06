@@ -1,19 +1,13 @@
-import path from 'path';
-
 import { CompleteMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from 'next/server';
 
 import logger from '@/lib/logger';
+import prisma from '@/lib/prisma';
 import { s3Client } from '@/lib/s3Client';
-import { WORKER_QUEUE_NAMES, workerQueueService } from '@/services/worker-service';
 
 export async function POST(req: Request) {
     const { sendBackData, parts } = await req.json();
     try {
-        const userToken = req.headers.get('x-user-token');
-        const user = JSON.parse(userToken ?? '{}');
-
-        // Ensure parts are sorted by PartNumber
         const sortedParts = parts.sort((a: { PartNumber: number }, b: { PartNumber: number }) => a.PartNumber - b.PartNumber);
 
         const command = new CompleteMultipartUploadCommand({
@@ -24,14 +18,13 @@ export async function POST(req: Request) {
         });
         await s3Client.send(command);
 
-        logger.info(`File uploaded successfully. File ID: ${sendBackData.key}`);
+        logger.info(`File uploaded successfully. File: ${sendBackData.key}`);
 
-        const fileExtension = path.extname(sendBackData.key).toLowerCase();
-
-        // Create audio video conversion job
-        if (fileExtension !== '.docx') { // Check for remote legal docx files
-            await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, { fileKey: sendBackData.key, userEmailId: user.email, fileId: sendBackData.fileId });
-        }
+        await prisma.uploadSession.delete({
+            where: {
+                uploadId: sendBackData.uploadId
+            }
+        });
 
         return NextResponse.json({ success: true });
     } catch (error) {

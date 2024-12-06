@@ -12,7 +12,7 @@ interface UploadFile {
 
 interface UploadStatus {
     progress: number;
-    status: 'validating' | 'uploading' | 'processing' | 'completed' | 'failed';
+    status: 'validating' | 'uploading' | 'importing' | 'processing' | 'completed' | 'failed';
     error?: string;
 }
 
@@ -111,7 +111,7 @@ const UploadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =
             eventSourceRef.current.onmessage = async (event) => {
                 const data = JSON.parse(event.data);
                 if (data?.type === 'METADATA_EXTRACTION') {
-                    if (data?.file?.status === 'success') {
+                    if (data?.file?.status === 'SUCCESS') {
                         updateUploadStatus(data?.file?.fileNameWithExtension, {
                             progress: 100,
                             status: 'completed'

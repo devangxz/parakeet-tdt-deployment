@@ -5,7 +5,6 @@ import { NextResponse } from 'next/server';
 
 import logger from '@/lib/logger';
 import { s3Client } from '@/lib/s3Client';
-import { WORKER_QUEUE_NAMES, workerQueueService } from '@/services/worker-service';
 import { requireCustomer } from '@/utils/checkRoles';
 
 export async function POST(req: Request) {
@@ -49,12 +48,7 @@ export async function POST(req: Request) {
         const command = new PutObjectCommand(uploadParams);
         const result = await s3Client.send(command);
 
-        logger.info(`File uploaded successfully. File ID: ${fileKey}`);
-
-        // Create audio video conversion job
-        if (fileExtension.toLowerCase() !== '.docx') { // Check for remote legal docx files
-            await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, { fileKey, userEmailId: user.email, fileId });
-        }
+        logger.info(`File uploaded successfully. File: ${fileKey}`);
 
         return NextResponse.json({ message: 'File uploaded successfully', result }, { status: 200 });
     } catch (error) {

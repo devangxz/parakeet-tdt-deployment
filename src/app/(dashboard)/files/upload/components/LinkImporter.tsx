@@ -1,21 +1,19 @@
 'use client';
 
 import axios from 'axios';
-import { FileUp } from 'lucide-react';
-import React, { useState, useRef } from 'react';
+import Image from 'next/image';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { v4 as uuidv4 } from 'uuid';
 
 import { useUpload } from '@/app/context/UploadProvider';
 import { MAX_FILE_SIZE, SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
 import { StreamingState, QueuedLink, UploaderProps } from '@/types/upload';
-import { handleRetryableError, calculateOverallProgress, cleanupUpload } from '@/utils/uploadUtils';
+import { generateUniqueId } from '@/utils/generateUniqueId';
+import { handleRetryableError, calculateOverallProgress } from '@/utils/uploadUtils';
 
 const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     const { setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
     const [urls, setUrls] = useState('');
-
-    const uploadStatesRef = useRef<Record<string, StreamingState>>({});
 
     const extractFileName = (url: string): string => {
         try {
@@ -66,7 +64,7 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
 
                     updateUploadStatus(fileName, {
                         progress: Math.min(calculateOverallProgress(downloadProgress, 0), 99),
-                        status: 'uploading'
+                        status: 'importing'
                     });
                 }
 
@@ -84,7 +82,7 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                             const uploadProgress = (progressEvent.loaded / progressEvent.total) * 100;
                             updateUploadStatus(fileName, {
                                 progress: Math.min(calculateOverallProgress(100, uploadProgress), 99),
-                                status: 'uploading'
+                                status: 'importing'
                             });
                         }
                     },
@@ -93,6 +91,8 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             } catch (error) {
                 retryCount++;
                 await handleRetryableError(error, retryCount);
+
+                continue;
             }
         }
     };
@@ -101,9 +101,36 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         fileName: string,
         fileId: string,
         contentType: string,
-        totalSize: number
+        totalSize: number,
+        url: string
     ): Promise<StreamingState> => {
         let retryCount = -1;
+
+        const checkRes = await axios.post('/api/s3-upload/multi-part/check-session', {
+            fileName,
+            fileSize: totalSize,
+            sourceType: 'link',
+            sourceId: url
+        });
+
+        if (checkRes.data.exists) {
+            return {
+                uploadId: checkRes.data.uploadId,
+                key: checkRes.data.key,
+                completedParts: checkRes.data.parts.map((part: { ETag: string; PartNumber: number }) => ({
+                    ETag: part.ETag,
+                    PartNumber: part.PartNumber
+                })),
+                totalUploaded: checkRes.data.parts.length * MULTI_PART_UPLOAD_CHUNK_SIZE,
+                lastFailedPart: null,
+                buffer: [],
+                bufferSize: 0,
+                partNumber: Math.max(...checkRes.data.parts.map((p: { PartNumber: number }) => p.PartNumber)) + 1,
+                abortController: new AbortController(),
+                downloadedBytes: checkRes.data.parts.length * MULTI_PART_UPLOAD_CHUNK_SIZE,
+                totalSize
+            };
+        }
 
         while (retryCount <= UPLOAD_MAX_RETRIES) {
             try {
@@ -111,7 +138,10 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                     fileInfo: {
                         type: contentType,
                         originalName: fileName,
-                        fileId
+                        fileId,
+                        size: totalSize,
+                        source: 'link',
+                        sourceId: url
                     }
                 });
 
@@ -131,6 +161,8 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             } catch (error) {
                 retryCount++;
                 await handleRetryableError(error, retryCount);
+
+                continue;
             }
         }
         throw new Error('Failed to initialize upload');
@@ -143,8 +175,8 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         if (state.bufferSize === 0) return state;
 
         const chunk = new Blob(state.buffer, { type: 'application/octet-stream' });
-        let retryCount = -1;
 
+        let retryCount = -1;
         while (retryCount <= UPLOAD_MAX_RETRIES) {
             try {
                 const partRes = await axios.post('/api/s3-upload/multi-part/part', {
@@ -171,7 +203,7 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                                 (state.downloadedBytes / state.totalSize) * 100,
                                 uploadProgress
                             ), 99),
-                            status: 'uploading'
+                            status: 'importing'
                         });
                     }
                 });
@@ -196,6 +228,7 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 await handleRetryableError(error, retryCount);
 
                 state.lastFailedPart = state.partNumber;
+                continue;
             }
         }
         throw new Error('Failed to upload part');
@@ -208,55 +241,84 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         contentLength: number,
         contentType: string,
     ): Promise<void> => {
-        let state = await initializeMultiPartUpload(fileName, fileId, contentType, contentLength);
-        uploadStatesRef.current[fileName] = state;
+        let state = await initializeMultiPartUpload(fileName, fileId, contentType, contentLength, url);
 
         try {
-            const downloadResponse = await fetch('/api/s3-upload/link', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url }),
-                signal: state.abortController.signal
-            });
-
-            if (!downloadResponse.ok || !downloadResponse.body) {
-                throw new Error('Download failed');
-            }
-
-            const reader = downloadResponse.body.getReader();
-
-            while (true) {
-                const { done, value } = await reader.read();
-
-                if (done) {
-                    if (state.bufferSize > 0) {
-                        state = await uploadBufferedPart(state, fileName);
-                    }
-                    break;
-                }
-
-                if (value) {
-                    state.buffer.push(value);
-                    state.bufferSize += value.length;
-                    state.downloadedBytes += value.length;
-
-                    updateUploadStatus(fileName, {
-                        progress: Math.min(calculateOverallProgress(
-                            (state.downloadedBytes / state.totalSize) * 100,
-                            (state.totalUploaded / state.totalSize) * 100
-                        ), 99),
-                        status: 'uploading'
-                    });
-
-                    if (state.bufferSize >= MULTI_PART_UPLOAD_CHUNK_SIZE) {
-                        state = await uploadBufferedPart(state, fileName);
-                    }
-                }
-            }
-
             let retryCount = -1;
-            const sortedParts = state.completedParts.sort((a, b) => a.PartNumber - b.PartNumber);
+            while (true) {
+                try {
+                    const downloadResponse = await fetch('/api/s3-upload/link', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            url,
+                            range: state.downloadedBytes > 0 ? `bytes=${state.downloadedBytes}-` : undefined
+                        }),
+                        signal: state.abortController.signal
+                    });
+                    if (!downloadResponse.ok || !downloadResponse.body) {
+                        throw new Error('Download failed');
+                    }
 
+                    if (state.completedParts.length > 0) {
+                        updateUploadStatus(fileName, {
+                            progress: Math.min(calculateOverallProgress(
+                                (state.downloadedBytes / state.totalSize) * 100,
+                                (state.totalUploaded / state.totalSize) * 100
+                            ), 99),
+                            status: 'importing'
+                        });
+                    }
+
+                    const reader = downloadResponse.body.getReader();
+                    while (true) {
+                        const { done, value } = await reader.read();
+
+                        if (done) {
+                            if (state.bufferSize > 0) {
+                                state = await uploadBufferedPart(state, fileName);
+                            }
+                            break;
+                        }
+
+                        if (value) {
+                            state.buffer.push(value);
+                            state.bufferSize += value.length;
+                            state.downloadedBytes += value.length;
+
+                            updateUploadStatus(fileName, {
+                                progress: Math.min(calculateOverallProgress(
+                                    (state.downloadedBytes / state.totalSize) * 100,
+                                    (state.totalUploaded / state.totalSize) * 100
+                                ), 99),
+                                status: 'importing'
+                            });
+
+                            if (state.bufferSize >= MULTI_PART_UPLOAD_CHUNK_SIZE) {
+                                state = await uploadBufferedPart(state, fileName);
+                            }
+                        }
+                    }
+
+                    break;
+                } catch (error) {
+                    retryCount++;
+                    if (retryCount >= UPLOAD_MAX_RETRIES) {
+                        throw new Error(`File upload failed after ${UPLOAD_MAX_RETRIES} attempts`);
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, retryCount), 10000)));
+
+                    if (!(error instanceof Error && error.message.includes('aborted'))) {
+                        state.downloadedBytes = state.totalUploaded;
+                    }
+
+                    continue;
+                }
+            }
+
+            retryCount = -1;
+            const sortedParts = state.completedParts.sort((a, b) => a.PartNumber - b.PartNumber);
             while (retryCount <= UPLOAD_MAX_RETRIES) {
                 try {
                     await axios.post('/api/s3-upload/multi-part/complete', {
@@ -271,10 +333,11 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 } catch (error) {
                     retryCount++;
                     await handleRetryableError(error, retryCount);
+
+                    continue;
                 }
             }
         } catch (error) {
-            await cleanupUpload(fileName, state, uploadStatesRef);
             throw error;
         }
     };
@@ -297,7 +360,7 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         const initialFiles = links.map(url => ({
             name: extractFileName(url.trim()),
             size: 0,
-            fileId: uuidv4(),
+            fileId: generateUniqueId(),
             url: url.trim()
         }));
 
@@ -354,7 +417,7 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
 
                     updateUploadStatus(file.name, {
                         progress: 0,
-                        status: 'uploading'
+                        status: 'importing'
                     });
                 } catch (error) {
                     const errorMessage = axios.isAxiosError(error)
@@ -390,7 +453,7 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 try {
                     updateUploadStatus(link.fileName, {
                         progress: 0,
-                        status: 'uploading'
+                        status: 'importing'
                     });
 
                     if (link.size <= SINGLE_PART_UPLOAD_LIMIT) {
@@ -427,7 +490,7 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                         status: 'failed',
                         error: errorMessage
                     });
-                    toast.error(`Error importing ${link.fileName}: ${errorMessage}`);
+                    toast.error(`Import failed for ${link.fileName}. Please note that if you try importing the same file again after a few minutes, it will automatically resume from where it stopped.`);
                 }
             }
         } catch (error) {
@@ -444,33 +507,45 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     };
 
     return (
-        <div className='bg-white flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-primary shadow-sm'>
+        <div className='bg-white flex flex-col p-[12px] items-center justify-center rounded-[12px] border-2 border-primary shadow-sm'>
             <div className='group relative w-full flex rounded-lg px-5 py-2.5 text-center transition min-h-[13rem]'>
                 <div className='self-center w-full flex flex-col items-center justify-center gap-4 sm:px-5'>
-                    <div className='flex gap-3 text-base font-medium leading-6 text-gray-800'>
-                        <FileUp className="text-gray-800" />
-                        <h4>Link Importer</h4>
+                    <div className='flex items-center gap-1 text-base font-medium leading-6 text-gray-800'>
+                        <div className="relative w-10 h-10 flex items-center justify-center">
+                            <Image
+                                src="/assets/images/upload/link.svg"
+                                alt="Link"
+                                width={40}
+                                height={40}
+                                className="object-contain"
+                                priority
+                            />
+                        </div>
+                        <h4 className="flex items-center">Link Importer</h4>
                     </div>
-                    <div className='text-xs self-stretch mt-4 leading-5 text-center text-gray-700 max-md:mr-1 max-md:max-w-full'>
+                    <div className='text-xs self-stretch mt-4 leading-5 text-center text-gray-800 max-md:mr-1 max-md:max-w-full'>
                         Please enter the link to the media file in the box below, one per line. Please note that the file must be publicly accessible to be imported.
                     </div>
-                    <form onSubmit={handleImport} className='flex w-full items-center gap-4 mt-4'>
+                    <form onSubmit={handleImport} className='w-full flex flex-col gap-3'>
                         <textarea
                             value={urls}
                             onChange={(e) => setUrls(e.target.value)}
                             placeholder="Enter audio/video file download links, one per line, e.g. https://scribie.com/samples/example.mp3"
-                            className="flex-1 px-4 py-2 rounded-lg border border-primary placeholder:text-gray-500 focus:outline-none text-sm min-h-[80px] overflow-hidden resize-none text-gray-900"
+                            className="w-full px-4 py-2.5 rounded-lg border border-primary/30 placeholder:text-gray-500 focus:outline-none focus:border-primary text-sm resize-none text-gray-900 overflow-hidden"
                             style={{
                                 minHeight: '80px',
-                                height: `${Math.max(80, urls.split('\n').length * 24)}px`
+                                height: `${Math.max(80, urls.split('\n').length * 24)}px`,
+                                overflowY: 'hidden'
                             }}
                         />
-                        <button
-                            type="submit"
-                            className="px-5 py-2 bg-white rounded-[32px] text-gray-800 font-medium border border-primary hover:bg-gray-50 transition-colors"
-                        >
-                            Import
-                        </button>
+                        <div className="flex justify-center">
+                            <button
+                                type="submit"
+                                className="px-5 py-2 bg-primary rounded-[32px] text-white font-medium border border-primary hover:bg-[#5e3ee9] transition-colors"
+                            >
+                                Import
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>

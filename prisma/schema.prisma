@@ -77,6 +77,7 @@ model User {
   FileVersion               FileVersion[]
   SharedFile                SharedFile[]            @relation("SharedFilesFrom")
   SharedFileTo              SharedFile[]            @relation("SharedFilesTo")
+  UploadSessions            UploadSession[]
 
   @@index([role])
   @@index([email])
@@ -618,6 +619,19 @@ model SharedFile {
   @@index([toUserId])
   @@index([fileId])
   @@map("scb_shared_files")
+}
+
+model UploadSession {
+  id          Int       @id @default(autoincrement())
+  uploadId    String    @unique @map("upload_id")
+  key         String
+  userId      Int       @map("user_id") 
+  sourceInfo  Json      @map("source_info")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("scb_upload_sessions")
 }
 
 //  ███████ ███    ██ ██    ██ ███    ███ ███████

@@ -4,6 +4,7 @@ import { CreateMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from 'next/server';
 
 import logger from '@/lib/logger';
+import prisma from '@/lib/prisma';
 import { s3Client } from '@/lib/s3Client';
 import { requireCustomer } from '@/utils/checkRoles';
 
@@ -35,6 +36,21 @@ export async function POST(req: Request) {
             }
         });
         const data = await s3Client.send(command);
+
+        await prisma.uploadSession.create({
+            data: {
+                uploadId: data.UploadId!,
+                key: data.Key!,
+                userId: user.userId,
+                sourceInfo: {
+                    sourceType: fileInfo.source,
+                    sourceId: fileInfo.sourceId || null,
+                    fileName: fileInfo.originalName,
+                    fileSize: fileInfo.size
+                }
+            }
+        });
+
         return NextResponse.json({
             uploadId: data.UploadId,
             key: data.Key,

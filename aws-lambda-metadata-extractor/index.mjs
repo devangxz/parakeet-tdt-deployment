@@ -7,6 +7,7 @@ import { pipeline } from 'stream/promises';
 import { URL } from 'url';
 
 import { S3Client, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import jwt from 'jsonwebtoken';
 
 const config = {
     webhookUrls: {
@@ -18,37 +19,10 @@ const config = {
         TARUN: process.env.TARUN_WEBHOOK_URL,
         PRASAD: process.env.PRASAD_WEBHOOK_URL,
     },
-    allowedFileTypes: {
-        // Audio formats
-        '.mp3': ['audio/mpeg'],
-        '.wav': ['audio/wav', 'audio/x-wav'],
-        '.wma': ['audio/x-ms-wma'],
-        '.aac': ['audio/aac'],
-        '.flac': ['audio/flac'],
-        '.ogg': ['audio/ogg'],
-        '.aif': ['audio/aiff', 'audio/x-aiff'],
-        '.aiff': ['audio/aiff', 'audio/x-aiff'],
-        '.amr': ['audio/amr'],
-        '.opus': ['audio/opus'],
-        '.m4a': ['audio/mp4', 'audio/x-m4a'],
-
-        // Video formats
-        '.wmv': ['video/x-ms-wmv'],
-        '.avi': ['video/x-msvideo'],
-        '.flv': ['video/x-flv'],
-        '.mpg': ['video/mpeg'],
-        '.mpeg': ['video/mpeg'],
-        '.mp4': ['video/mp4'],
-        '.m4v': ['video/x-m4v'],
-        '.mov': ['video/quicktime'],
-        '.webm': ['video/webm'],
-        '.3gp': ['video/3gpp', 'audio/3gpp'],
-        '.3ga': ['audio/3gpp'],
-        '.mts': ['video/mp2t'],
-        '.ogv': ['video/ogg'],
-        '.mkv': ['video/x-matroska'],
-        '.mxf': ['video/mxf']
-    },
+    allowedFileTypes: [
+        ".mp3", ".wav", ".wma", ".aac", ".flac", ".ogg", ".aif", ".aiff", ".amr", ".opus", ".m4a",
+        ".wmv", ".avi", ".flv", ".mpg", ".mpeg", ".mp4", ".m4v", ".mov", ".webm", ".3gp", ".3ga", ".mts", ".ogv", ".mkv", ".mxf"
+    ],
     ffprobe: {
         options: [
             '-v', 'quiet',
@@ -64,12 +38,16 @@ const config = {
         temp: '/tmp'
     },
     webhook: {
+        auth: {
+            JWT_SECRET_KEY: process.env.JWT_SECRET_KEY,
+            TOKEN_EXPIRY: '2h'
+        },
         maxRetries: 2,
         retryDelay: 1000,
         timeout: 5000,
         status: {
-            SUCCESS: 'success',
-            ERROR: 'error'
+            SUCCESS: 'SUCCESS',
+            ERROR: 'ERROR'
         }
     }
 };
@@ -82,18 +60,10 @@ async function validateFileType(bucket, key) {
             new HeadObjectCommand({ Bucket: bucket, Key: key })
         );
 
-        const fileExtension = '.' + key.split('.').pop()?.toLowerCase();
+        const fileExtension = parse(key).ext;
 
-        if (!config.allowedFileTypes[fileExtension]) {
+        if (!config.allowedFileTypes.includes(fileExtension)) {
             throw new Error(`Invalid file extension: ${fileExtension}`);
-        }
-
-        if (ContentType) {
-            const isValidMimeType = config.allowedFileTypes[fileExtension].includes(ContentType.toLowerCase());
-
-            if (!isValidMimeType) {
-                throw new Error(`Invalid MIME type ${ContentType} for extension ${fileExtension}`);
-            }
         }
 
         return { ContentType, ContentLength };
@@ -276,7 +246,7 @@ const runFFprobe = (filePath) => new Promise((resolve, reject) => {
                     sample_rate: parseInt(videoStream.sample_rate) || parseInt(audioStream.sample_rate),
                 };
 
-                if(!result.duration || !result.bitrate || !result.codec_name || !result.sample_rate) {
+                if (!result.duration || !result.bitrate || !result.codec_name || !result.sample_rate) {
                     reject(new Error('Failed to parse ffprobe output: Invalid file'));
                 }
 
@@ -326,7 +296,7 @@ const runMediaInfo = (filePath) => new Promise((resolve, reject) => {
                     sample_rate: parseInt(videoTrack.SamplingRate) || parseInt(audioTrack.SamplingRate),
                 };
 
-                if(!result.duration || !result.bitrate || !result.codec_name || !result.sample_rate) {
+                if (!result.duration || !result.bitrate || !result.codec_name || !result.sample_rate) {
                     reject(new Error('Failed to parse mediainfo output: Invalid file'));
                 }
 
@@ -387,6 +357,12 @@ const sendWebhook = async (data, environment) => {
         return;
     }
 
+    const token = jwt.sign(
+        { type: 'LAMBDA-METADATA-EXTRACTOR' },
+        config.webhook.auth.JWT_SECRET_KEY,
+        { expiresIn: config.webhook.auth.TOKEN_EXPIRY }
+    );
+
     const url = new URL(webhookUrl);
     const options = {
         hostname: url.hostname,
@@ -395,6 +371,7 @@ const sendWebhook = async (data, environment) => {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
         }
     };
 

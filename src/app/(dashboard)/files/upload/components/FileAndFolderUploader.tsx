@@ -4,22 +4,21 @@ import { UploadIcon } from '@radix-ui/react-icons';
 import axios from 'axios';
 import { FileUp } from 'lucide-react';
 import { useSession } from 'next-auth/react';
-import React, { ChangeEvent, useRef, useState } from 'react';
+import React, { ChangeEvent, useRef } from 'react';
 import Dropzone from 'react-dropzone';
 import { toast } from 'sonner';
-import { v4 as uuidv4 } from 'uuid';
 
 import { useUpload } from '@/app/context/UploadProvider';
 import { MAX_FILE_SIZE, SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, ORG_REMOTELEGAL, ORG_REMOTELEGAL_FOLDER, UPLOAD_MAX_RETRIES } from '@/constants';
 import { cn } from '@/lib/utils';
 import { BaseUploadState, FileWithId, CustomInputAttributes, UploaderProps } from '@/types/upload';
+import { generateUniqueId } from '@/utils/generateUniqueId';
 import { handleRetryableError } from '@/utils/uploadUtils';
-import validateFileType, { getAllowedFileExtensions, getAllowedMimeTypes } from '@/utils/validateFileType';
+import validateFileType, { getAllowedFileExtensions } from '@/utils/validateFileType';
 
 const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
   const { data: session } = useSession();
   const { setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
-  const [uploadStates, setUploadStates] = useState<{ [key: string]: BaseUploadState }>({});
 
   const initializeUploadState = (): BaseUploadState => ({
     uploadId: null,
@@ -28,44 +27,12 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
     totalUploaded: 0,
     lastFailedPart: null
   });
-  const updateUploadState = (fileName: string, updates: Partial<BaseUploadState>) => {
-    setUploadStates(prev => ({
-      ...prev,
-      [fileName]: {
-        ...prev[fileName] || initializeUploadState(),
-        ...updates
-      }
-    }));
-  };
 
   const abortControllersRef = useRef<{ [key: string]: AbortController }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
   const isRemoteLegal = session?.user?.organizationName.toLocaleLowerCase() === ORG_REMOTELEGAL.toLocaleLowerCase();
-
-  const cleanupUpload = async (fileName: string, uploadState?: BaseUploadState) => {
-    if (abortControllersRef.current[fileName]) {
-      delete abortControllersRef.current[fileName];
-    }
-
-    if (uploadState?.uploadId && uploadState?.key) {
-      try {
-        await axios.post('/api/s3-upload/multi-part/abort', {
-          uploadId: uploadState.uploadId,
-          key: uploadState.key
-        });
-      } catch (error) {
-        toast.error(`Failed to abort multipart upload for file ${fileName}`);
-      }
-    }
-
-    setUploadStates(prev => {
-      const newState = { ...prev };
-      delete newState[fileName];
-      return newState;
-    });
-  };
 
   const singlePartUpload = async (file: FileWithId): Promise<void> => {
     const formData = new FormData();
@@ -76,7 +43,6 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
     abortControllersRef.current[file.name] = abortController;
 
     let retryCount = -1;
-
     while (retryCount <= UPLOAD_MAX_RETRIES) {
       try {
         await axios.post('/api/s3-upload/single-part', formData, {
@@ -96,55 +62,95 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
       } catch (error) {
         retryCount++;
         await handleRetryableError(error, retryCount);
+
+        continue;
       }
     }
   };
 
   const multiPartUpload = async (file: FileWithId): Promise<void> => {
-    let uploadState = uploadStates[file.name] || initializeUploadState();
+    let uploadState = initializeUploadState();
 
     const abortController = new AbortController();
     abortControllersRef.current[file.name] = abortController;
 
     try {
       let retryCount = -1;
-      while (retryCount <= UPLOAD_MAX_RETRIES && !uploadState.uploadId) {
-        try {
-          const createRes = await axios.post('/api/s3-upload/multi-part/create', {
-            fileInfo: { type: file.type, originalName: file.name, fileId: file.fileId }
-          });
-          uploadState = {
-            ...uploadState,
-            uploadId: createRes.data.uploadId,
-            key: createRes.data.key
-          };
-          updateUploadState(file.name, uploadState);
-        } catch (error) {
-          retryCount++;
-          await handleRetryableError(error, retryCount);
+
+      const checkRes = await axios.post('/api/s3-upload/multi-part/check-session', {
+        fileName: file.name,
+        fileSize: file.size,
+        sourceType: 'local',
+        sourceId: null
+      });
+
+      if (checkRes.data.exists) {
+        uploadState = {
+          uploadId: checkRes.data.uploadId,
+          key: checkRes.data.key,
+          completedParts: checkRes.data.parts.map((part: { ETag: string; PartNumber: number }) => ({
+            ETag: part.ETag,
+            PartNumber: part.PartNumber
+          })),
+          totalUploaded: 0,
+          lastFailedPart: null
+        };
+
+        const completedSize = uploadState.completedParts.length * MULTI_PART_UPLOAD_CHUNK_SIZE;
+        const totalProgress = (completedSize / file.size) * 100;
+        updateUploadStatus(file.name, {
+          progress: Math.min(totalProgress, 99),
+          status: 'uploading'
+        });
+      } else {
+        while (retryCount <= UPLOAD_MAX_RETRIES && !uploadState.uploadId) {
+          try {
+            const createRes = await axios.post('/api/s3-upload/multi-part/create', {
+              fileInfo: {
+                type: file.type,
+                originalName: file.name,
+                fileId: file.fileId,
+                size: file.size,
+                source: 'local',
+                sourceId: null
+              }
+            });
+
+            uploadState = {
+              ...uploadState,
+              uploadId: createRes.data.uploadId,
+              key: createRes.data.key
+            };
+            break;
+          } catch (error) {
+            retryCount++;
+            await handleRetryableError(error, retryCount);
+
+            continue;
+          }
         }
       }
 
       const numChunks = Math.ceil(file.size / MULTI_PART_UPLOAD_CHUNK_SIZE);
-      const startPartNumber = uploadState.lastFailedPart || 1;
+      const completedPartNumbers = new Set(uploadState.completedParts.map(p => p.PartNumber));
 
-      for (let i = startPartNumber - 1; i < numChunks; i++) {
-        const partNumber = i + 1;
-
-        if (uploadState.completedParts.some(p => p.PartNumber === partNumber)) {
+      for (let partNumber = 1; partNumber <= numChunks; partNumber++) {
+        if (completedPartNumbers.has(partNumber)) {
           continue;
         }
 
         retryCount = -1;
-
         while (retryCount <= UPLOAD_MAX_RETRIES) {
           try {
-            const start = i * MULTI_PART_UPLOAD_CHUNK_SIZE;
+            const start = (partNumber - 1) * MULTI_PART_UPLOAD_CHUNK_SIZE;
             const end = Math.min(start + MULTI_PART_UPLOAD_CHUNK_SIZE, file.size);
             const chunk = file.file.slice(start, end);
 
             const partRes = await axios.post('/api/s3-upload/multi-part/part', {
-              sendBackData: { key: uploadState.key, uploadId: uploadState.uploadId },
+              sendBackData: {
+                key: uploadState.key,
+                uploadId: uploadState.uploadId
+              },
               partNumber,
               contentLength: chunk.size,
             });
@@ -170,10 +176,9 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
               ETag: uploadResult.headers['etag'],
               PartNumber: partNumber
             });
-            uploadState.totalUploaded = uploadState.completedParts.length * MULTI_PART_UPLOAD_CHUNK_SIZE;
-            updateUploadState(file.name, uploadState);
-            break;
 
+            uploadState.totalUploaded = uploadState.completedParts.length * MULTI_PART_UPLOAD_CHUNK_SIZE;
+            break;
           } catch (error) {
             retryCount++;
             await handleRetryableError(error, retryCount);
@@ -186,7 +191,6 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
 
       retryCount = -1;
       const sortedParts = uploadState.completedParts.sort((a, b) => a.PartNumber - b.PartNumber);
-
       while (retryCount <= UPLOAD_MAX_RETRIES) {
         try {
           await axios.post('/api/s3-upload/multi-part/complete', {
@@ -201,10 +205,11 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
         } catch (error) {
           retryCount++;
           await handleRetryableError(error, retryCount);
+
+          continue;
         }
       }
     } catch (error) {
-      await cleanupUpload(file.name, uploadState);
       throw error;
     }
   };
@@ -226,8 +231,6 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
         progress: 99,
         status: 'processing'
       });
-
-      await cleanupUpload(file.name, uploadStates[file.name]);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
       updateUploadStatus(file.name, {
@@ -235,8 +238,7 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
         status: 'failed',
         error: errorMessage
       });
-      toast.error(`Error uploading ${file.name}: ${errorMessage}`);
-      await cleanupUpload(file.name, uploadStates[file.name]);
+      toast.error(`Upload failed for ${file.name}. Please note that if you try uploading the same file again after a few minutes, it will automatically resume from where it stopped.`);
     }
   };
 
@@ -265,7 +267,6 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (folderInputRef.current) folderInputRef.current.value = '';
 
-    setUploadStates({});
     setUploadingFiles([]);
     setIsUploading(true);
 
@@ -291,7 +292,7 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
           return;
         }
 
-        const commonFileId = uuidv4();
+        const commonFileId = generateUniqueId();
         filesToUpload = [
           {
             name: mp3File.name,
@@ -329,7 +330,7 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
           name: file.name,
           size: file.size,
           type: file.type,
-          fileId: uuidv4(),
+          fileId: generateUniqueId(),
           file: file,
           isRLDocx: false
         }));
@@ -373,12 +374,6 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({ onUploadSuccess }) => 
       <Dropzone
         onDrop={onDrop}
         multiple
-        accept={Object.fromEntries(
-          getAllowedMimeTypes().map(type => [
-            type,
-            getAllowedFileExtensions()
-          ])
-        )}
       >
         {({ getRootProps, getInputProps, isDragActive }) => (
           <div

@@ -2,16 +2,16 @@
 
 import { ReloadIcon } from '@radix-ui/react-icons';
 import axios from 'axios';
-import { FileUp } from 'lucide-react';
-import React, { useCallback, useRef, useState } from 'react';
+import Image from 'next/image';
+import React, { useCallback, useState } from 'react';
 import { toast } from 'sonner';
-import { v4 as uuidv4 } from 'uuid';
 
 import { useImportService } from '@/app/context/ImportServiceProvider';
 import { useUpload } from '@/app/context/UploadProvider';
 import { MAX_FILE_SIZE, SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, UPLOAD_MAX_RETRIES } from '@/constants';
 import { StreamingState, GoogleDriveFile, GooglePickerResponse, UploaderProps } from '@/types/upload';
-import { handleRetryableError, calculateOverallProgress, cleanupUpload, refreshToken } from '@/utils/uploadUtils';
+import { generateUniqueId } from '@/utils/generateUniqueId';
+import { handleRetryableError, calculateOverallProgress, refreshToken } from '@/utils/uploadUtils';
 import { getAllowedMimeTypes } from '@/utils/validateFileType';
 
 const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY!;
@@ -22,8 +22,6 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     const { setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
     const { isGoogleDriveServiceReady } = useImportService();
     const [isPickerLoading, setIsPickerLoading] = useState(false);
-
-    const uploadStatesRef = useRef<Record<string, StreamingState>>({});
 
     const singlePartUpload = async (file: GoogleDriveFile, fileId: string, token: string): Promise<void> => {
         const abortController = new AbortController();
@@ -59,7 +57,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
 
                     updateUploadStatus(file.name, {
                         progress: Math.min(calculateOverallProgress(downloadProgress, 0), 99),
-                        status: 'uploading'
+                        status: 'importing'
                     });
                 }
 
@@ -77,7 +75,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                             const uploadProgress = (progressEvent.loaded / progressEvent.total) * 100;
                             updateUploadStatus(file.name, {
                                 progress: Math.min(calculateOverallProgress(100, uploadProgress), 99),
-                                status: 'uploading'
+                                status: 'importing'
                             });
                         }
                     },
@@ -86,6 +84,8 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             } catch (error) {
                 retryCount++;
                 await handleRetryableError(error, retryCount);
+
+                continue;
             }
         }
     };
@@ -96,13 +96,42 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     ): Promise<StreamingState> => {
         let retryCount = -1;
 
+        const checkRes = await axios.post('/api/s3-upload/multi-part/check-session', {
+            fileName: file.name,
+            fileSize: file.sizeBytes,
+            sourceType: 'google-drive',
+            sourceId: file.id
+        });
+
+        if (checkRes.data.exists) {
+            return {
+                uploadId: checkRes.data.uploadId,
+                key: checkRes.data.key,
+                completedParts: checkRes.data.parts.map((part: { ETag: string; PartNumber: number }) => ({
+                    ETag: part.ETag,
+                    PartNumber: part.PartNumber
+                })),
+                totalUploaded: checkRes.data.parts.length * MULTI_PART_UPLOAD_CHUNK_SIZE,
+                lastFailedPart: null,
+                buffer: [],
+                bufferSize: 0,
+                partNumber: Math.max(...checkRes.data.parts.map((p: { PartNumber: number }) => p.PartNumber)) + 1,
+                abortController: new AbortController(),
+                downloadedBytes: checkRes.data.parts.length * MULTI_PART_UPLOAD_CHUNK_SIZE,
+                totalSize: parseInt(file.sizeBytes)
+            };
+        }
+
         while (retryCount <= UPLOAD_MAX_RETRIES) {
             try {
                 const createRes = await axios.post('/api/s3-upload/multi-part/create', {
                     fileInfo: {
                         type: file.mimeType,
                         originalName: file.name,
-                        fileId
+                        fileId,
+                        size: file.sizeBytes,
+                        source: 'google-drive',
+                        sourceId: file.id
                     }
                 });
 
@@ -122,6 +151,8 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             } catch (error) {
                 retryCount++;
                 await handleRetryableError(error, retryCount);
+
+                continue;
             }
         }
         throw new Error('Failed to initialize upload');
@@ -134,8 +165,8 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         if (state.bufferSize === 0) return state;
 
         const chunk = new Blob(state.buffer, { type: 'application/octet-stream' });
-        let retryCount = -1;
 
+        let retryCount = -1;
         while (retryCount <= UPLOAD_MAX_RETRIES) {
             try {
                 const partRes = await axios.post('/api/s3-upload/multi-part/part', {
@@ -162,7 +193,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                                 (state.downloadedBytes / state.totalSize) * 100,
                                 uploadProgress
                             ), 99),
-                            status: 'uploading'
+                            status: 'importing'
                         });
                     }
                 });
@@ -186,6 +217,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 await handleRetryableError(error, retryCount);
 
                 state.lastFailedPart = state.partNumber;
+                continue;
             }
         }
         throw new Error('Failed to upload part');
@@ -193,55 +225,96 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
 
     const multiPartUpload = async (file: GoogleDriveFile, fileId: string, token: string): Promise<void> => {
         let state = await initializeMultiPartUpload(file, fileId);
-        uploadStatesRef.current[file.name] = state;
 
         try {
-            const downloadResponse = await fetch(
-                `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,
-                {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    signal: state.abortController.signal
-                }
-            );
-
-            if (!downloadResponse.ok || !downloadResponse.body) {
-                throw new Error('Failed to get file stream from Google Drive');
-            }
-
-            const reader = downloadResponse.body.getReader();
-
-            while (true) {
-                const { done, value } = await reader.read();
-
-                if (done) {
-                    if (state.bufferSize > 0) {
-                        state = await uploadBufferedPart(state, file.name);
-                    }
-                    break;
-                }
-
-                if (value) {
-                    state.buffer.push(value);
-                    state.bufferSize += value.length;
-                    state.downloadedBytes += value.length;
-
-                    updateUploadStatus(file.name, {
-                        progress: Math.min(calculateOverallProgress(
-                            (state.downloadedBytes / state.totalSize) * 100,
-                            (state.totalUploaded / state.totalSize) * 100
-                        ), 99),
-                        status: 'uploading'
-                    });
-
-                    if (state.bufferSize >= MULTI_PART_UPLOAD_CHUNK_SIZE) {
-                        state = await uploadBufferedPart(state, file.name);
-                    }
-                }
-            }
-
             let retryCount = -1;
-            const sortedParts = state.completedParts.sort((a, b) => a.PartNumber - b.PartNumber);
+            while (true) {
+                try {
+                    const headers: Record<string, string> = {
+                        'Authorization': `Bearer ${token}`
+                    };
 
+                    if (state.downloadedBytes > 0) {
+                        headers['Range'] = `bytes=${state.downloadedBytes}-`;
+                    }
+
+                    const downloadResponse = await fetch(
+                        `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,
+                        {
+                            headers,
+                            signal: state.abortController.signal
+                        }
+                    );
+                    if (!downloadResponse.ok || !downloadResponse.body) {
+                        throw new Error('Failed to get file stream from Google Drive');
+                    }
+
+                    if (state.completedParts.length > 0) {
+                        updateUploadStatus(file.name, {
+                            progress: Math.min(calculateOverallProgress(
+                                (state.downloadedBytes / state.totalSize) * 100,
+                                (state.totalUploaded / state.totalSize) * 100
+                            ), 99),
+                            status: 'importing'
+                        });
+                    }
+
+                    const reader = downloadResponse.body.getReader();
+                    while (true) {
+                        const { done, value } = await reader.read();
+
+                        if (done) {
+                            if (state.bufferSize > 0) {
+                                state = await uploadBufferedPart(state, file.name);
+                            }
+                            break;
+                        }
+
+                        if (value) {
+                            state.buffer.push(value);
+                            state.bufferSize += value.length;
+                            state.downloadedBytes += value.length;
+
+                            updateUploadStatus(file.name, {
+                                progress: Math.min(calculateOverallProgress(
+                                    (state.downloadedBytes / state.totalSize) * 100,
+                                    (state.totalUploaded / state.totalSize) * 100
+                                ), 99),
+                                status: 'importing'
+                            });
+
+                            if (state.bufferSize >= MULTI_PART_UPLOAD_CHUNK_SIZE) {
+                                state = await uploadBufferedPart(state, file.name);
+                            }
+                        }
+                    }
+
+                    break;
+                } catch (error) {
+                    retryCount++;
+                    if (retryCount >= UPLOAD_MAX_RETRIES) {
+                        throw new Error(`File upload failed after ${UPLOAD_MAX_RETRIES} attempts`);
+                    }
+
+                    let tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
+                    if (!tokenResponse.data.token) {
+                        const refreshSuccess = await refreshToken('google-drive');
+                        if (refreshSuccess) {
+                            tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
+                        } else {
+                            throw new Error('Failed to get valid authentication token');
+                        }
+                    }
+                    if (tokenResponse.data.token) {
+                        token = tokenResponse.data.token;
+                    }
+
+                    continue;
+                }
+            }
+
+            retryCount = -1;
+            const sortedParts = state.completedParts.sort((a, b) => a.PartNumber - b.PartNumber);
             while (retryCount <= UPLOAD_MAX_RETRIES) {
                 try {
                     await axios.post('/api/s3-upload/multi-part/complete', {
@@ -256,10 +329,11 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 } catch (error) {
                     retryCount++;
                     await handleRetryableError(error, retryCount);
+
+                    continue;
                 }
             }
         } catch (error) {
-            await cleanupUpload(file.name, state, uploadStatesRef);
             throw error;
         }
     };
@@ -267,10 +341,10 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     const uploadFile = async (file: GoogleDriveFile): Promise<void> => {
         updateUploadStatus(file.name, {
             progress: 0,
-            status: 'uploading'
+            status: 'importing'
         });
 
-        const fileId = uuidv4();
+        const fileId = generateUniqueId();
 
         try {
             let tokenResponse = await axios.get('/api/s3-upload/google-drive/token');
@@ -301,7 +375,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 status: 'failed',
                 error: errorMessage
             });
-            toast.error(`Error importing ${file.name}: ${errorMessage}`);
+            toast.error(`Import failed for ${file.name}. Please note that if you try importing the same file again after a few minutes, it will automatically resume from where it stopped.`);
         }
     };
 
@@ -486,20 +560,38 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     }, [isUploading, authenticate, showPicker]);
 
     return (
-        <div className='bg-[#00ac47] flex flex-col p-[12px] items-center justify-center rounded-[12px] border border-[#00ac47] shadow-sm'>
+        <div className='bg-white flex flex-col p-[12px] items-center justify-center rounded-[12px] border-2 border-primary shadow-sm'>
             <div className='group relative w-full flex rounded-lg px-5 py-2.5 text-center transition min-h-[13rem]'>
                 <div className='self-center w-full flex flex-col items-center justify-center gap-4 sm:px-5'>
-                    <div className='flex gap-3 text-base font-medium leading-6 text-white'>
-                        <FileUp className="text-white" />
-                        <h4>Google Drive Importer</h4>
+                    <div className='flex items-center gap-1 text-base font-medium leading-6 text-gray-800'>
+                        <div className="relative w-10 h-10 flex items-center justify-center">
+                            <Image
+                                src="/assets/images/upload/google-drive.svg"
+                                alt="Google Drive"
+                                width={40}
+                                height={40}
+                                className="object-contain"
+                                priority
+                            />
+                        </div>
+                        <h4 className="flex items-center">Google Drive Importer</h4>
                     </div>
-                    <div className='text-xs self-stretch mt-4 leading-5 text-center text-white max-md:mr-1 max-md:max-w-full'>
-                        <>Select files from your Google Drive to import. Please allow Scribie.ai Importer in the popup to access your Google Drive files for the import process. We will only access the selected files. The permissions can be revoked from your <a href="https://security.google.com/settings/security/permissions" target="_blank" rel="noopener noreferrer" className="underline hover:text-white">Google Account Settings</a> page anytime.</>
+                    <div className='text-xs self-stretch mt-4 leading-5 text-center text-gray-800 max-md:mr-1 max-md:max-w-full'>
+                        Select files from your Google Drive to import. Please allow Scribie.ai Importer in the popup to access your Google Drive files for the import process. We will only access the selected files. The permissions can be revoked from your{' '}
+                        <a
+                            href="https://security.google.com/settings/security/permissions"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                            Google Account Settings
+                        </a>
+                        {' '}page anytime.
                     </div>
                     <button
                         onClick={handleDriveAction}
                         disabled={!isGoogleDriveServiceReady || isPickerLoading}
-                        className='mt-4 px-5 py-2 bg-white rounded-[32px] text-[#00ac47] font-medium border border-white hover:bg-gray-100 transition-colors'
+                        className='mt-4 px-5 py-2 bg-[#00ac47] rounded-[32px] text-white font-medium border border-[#00ac47] hover:bg-[#009940] transition-colors'
                     >
                         <div className='flex items-center justify-center'>
                             {(!isGoogleDriveServiceReady || isPickerLoading) && <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />}

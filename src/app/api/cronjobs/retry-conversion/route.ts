@@ -5,6 +5,7 @@ import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
 import { WORKER_QUEUE_NAMES, workerQueueService } from '@/services/worker-service'
+import { fileExistsInS3 } from '@/utils/backend-helper'
 
 export async function POST() {
     try {
@@ -41,12 +42,24 @@ export async function POST() {
         let processedCount = 0
 
         for (const file of unprocessedFiles) {
-            const hasExistingJob = await workerQueueService.hasExistingJob(
-                WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION,
-                file.fileId
-            )
+            try {
+                const [hasExistingJob, fileExists] = await Promise.all([
+                    workerQueueService.hasExistingJob(
+                        WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION,
+                        file.fileId
+                    ),
+                    fileExistsInS3(`${file.fileId}.mp3`)
+                ])
 
-            if (!hasExistingJob) {
+                if (hasExistingJob) {
+                    logger.info(`Skipping file ${file.fileId} - existing job found`)
+                    continue
+                }
+                if (fileExists) {
+                    logger.info(`Skipping file ${file.fileId} - file already exists in S3`)
+                    continue
+                }
+
                 await workerQueueService.createJob(
                     WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION,
                     {
@@ -65,6 +78,9 @@ export async function POST() {
                 )
 
                 processedCount++
+            } catch (error) {
+                logger.error(`Error processing file ${file.fileId}: ${error}`)
+                continue
             }
         }
 
