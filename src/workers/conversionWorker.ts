@@ -27,7 +27,7 @@ const createWorker = (queueName: QueueName, processFunction: (job: Job) => Promi
     }
 }, {
     connection: redis,
-    concurrency: 1
+    concurrency: 2
 });
 
 createWorker(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, async (job) => {

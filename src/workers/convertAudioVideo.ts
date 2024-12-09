@@ -96,11 +96,11 @@ class PersistentStorageHandler {
         }
     }
 
-    private async checkStorageSpace(): Promise<boolean> {
+    private async checkStorageSpace(fileKey: string): Promise<boolean> {
         return new Promise((resolve) => {
             fs.statfs(this.persistentPath, (err, stats) => {
                 if (err) {
-                    logger.error('Error checking storage space:', err);
+                    logger.error(`[${fileKey}] Error checking storage space: ${err}`);
                     resolve(false);
                     return;
                 }
@@ -111,8 +111,8 @@ class PersistentStorageHandler {
         });
     }
 
-    public async saveStreamToStorage(stream: Readable, fileName: string): Promise<string> {
-        const hasSpace = await this.checkStorageSpace();
+    public async saveStreamToStorage(stream: Readable, fileName: string, fileKey: string): Promise<string> {
+        const hasSpace = await this.checkStorageSpace(fileKey);
         if (!hasSpace) {
             throw new Error('Insufficient storage space');
         }
@@ -125,24 +125,24 @@ class PersistentStorageHandler {
 
             writeStream.on('finish', () => resolve(filePath));
             writeStream.on('error', async (error) => {
-                await this.deleteFile(filePath).catch(() => { });
+                await this.deleteFile(filePath, fileKey).catch(() => { });
                 reject(error);
             });
         });
     }
 
-    public async deleteFile(filePath: string): Promise<void> {
+    public async deleteFile(filePath: string, fileKey: string): Promise<void> {
         for (let attempt = 1; attempt <= this.MAX_DELETE_RETRIES; attempt++) {
             try {
                 const exists = await this.fileExists(filePath);
                 if (exists) {
                     await unlink(filePath);
-                    logger.info(`Successfully deleted file: ${filePath}`);
+                    logger.info(`[${fileKey}] Successfully deleted file: ${filePath}`);
                 }
                 return;
             } catch (error) {
                 if (attempt === this.MAX_DELETE_RETRIES) {
-                    logger.error(`Failed to delete file ${filePath} after ${this.MAX_DELETE_RETRIES} attempts:`, error);
+                    logger.error(`[${fileKey}] Failed to delete file ${filePath} after ${this.MAX_DELETE_RETRIES} attempts: ${error}`);
                     return;
                 }
                 await delay(this.DELETE_RETRY_DELAY * attempt);
@@ -178,10 +178,11 @@ async function downloadFromS3(fileKey: string): Promise<string | null> {
 
         return await storageHandler.saveStreamToStorage(
             Body as Readable,
-            path.basename(fileKey)
+            path.basename(fileKey),
+            fileKey
         );
     } catch (error) {
-        logger.error(`Failed to download file from S3: ${fileKey}`, error);
+        logger.error(`[${fileKey}] Failed to download file from S3: ${error}`);
         return null;
     }
 }
@@ -222,7 +223,7 @@ function readFileChunk(filePath: string, start: number, end: number): Promise<Bu
     });
 }
 
-async function multiPartUpload(filePath: string, key: string, fileSize: number): Promise<void> {
+async function multiPartUpload(filePath: string, key: string, fileSize: number, originalFileKey: string): Promise<void> {
     const numParts = Math.ceil(fileSize / MULTI_PART_UPLOAD_CHUNK_SIZE);
     let uploadId: string | undefined;
 
@@ -280,14 +281,14 @@ async function multiPartUpload(filePath: string, key: string, fileSize: number):
                     UploadId: uploadId
                 }));
             } catch (abortError) {
-                logger.error(`Failed to abort multipart upload for ${key}:`, abortError);
+                logger.error(`[${originalFileKey}] Failed to abort multipart upload for ${key}: ${abortError}`);
             }
         }
         throw error;
     }
 }
 
-async function uploadToS3(filePath: string, key: string): Promise<void> {
+async function uploadToS3(filePath: string, key: string, originalFileKey: string): Promise<void> {
     const stats = await fs.promises.stat(filePath);
     const fileSize = stats.size;
 
@@ -295,15 +296,15 @@ async function uploadToS3(filePath: string, key: string): Promise<void> {
         if (fileSize <= SINGLE_PART_UPLOAD_LIMIT) {
             await singlePartUpload(filePath, key);
         } else {
-            await multiPartUpload(filePath, key, fileSize);
+            await multiPartUpload(filePath, key, fileSize, originalFileKey);
         }
     } catch (error) {
-        logger.error(`Failed to upload file to S3: ${key}`, error);
+        logger.error(`[${originalFileKey}] Failed to upload file to S3: ${key} - ${error}`);
         throw new Error(`Failed to upload converted file to S3: ${key}`);
     }
 }
 
-async function deleteFromS3(key: string): Promise<void> {
+async function deleteFromS3(key: string, originalFileKey: string): Promise<void> {
     try {
         const deleteObjectCommand = new DeleteObjectCommand({
             Bucket: process.env.AWS_S3_BUCKET_NAME!,
@@ -311,7 +312,7 @@ async function deleteFromS3(key: string): Promise<void> {
         });
         await s3Client.send(deleteObjectCommand);
     } catch (error) {
-        logger.error(`Failed to delete file from S3: ${key}`, error);
+        logger.error(`[${originalFileKey}] Failed to delete file from S3: ${key} - ${error}`);
     }
 }
 
@@ -396,7 +397,7 @@ function isRetryableError(error: FFmpegError): boolean {
     return false;
 }
 
-async function convertFile(input: string, output: string, format: 'mp3' | 'mp4'): Promise<void> {
+async function convertFile(input: string, output: string, format: 'mp3' | 'mp4', fileKey: string): Promise<void> {
     let lastError: Error | undefined;
 
     for (let attempt = 1; attempt <= CONVERSION_RETRY_CONFIG.maxAttempts; attempt++) {
@@ -450,14 +451,14 @@ async function convertFile(input: string, output: string, format: 'mp3' | 'mp4')
 
                     command
                         .on('start', () => {
-                            logger.info(`Starting ${format} conversion attempt ${attempt}`);
+                            logger.info(`[${fileKey}] Starting ${format} conversion attempt ${attempt}`);
                         })
                         .on('end', () => {
-                            logger.info(`${format} conversion attempt ${attempt} completed successfully`);
+                            logger.info(`[${fileKey}] ${format} conversion attempt ${attempt} completed successfully`);
                             resolve();
                         })
                         .on('error', (err: FFmpegError, stdout, stderr) => {
-                            logger.error(`${format} conversion attempt ${attempt} failed: ${err.message}`);
+                            logger.error(`[${fileKey}] ${format} conversion attempt ${attempt} failed: ${err.message}`);
                             err.stderr = stderr ?? undefined;
                             reject(err);
                         })
@@ -469,7 +470,7 @@ async function convertFile(input: string, output: string, format: 'mp3' | 'mp4')
         } catch (error) {
             lastError = error as Error;
             if (!isRetryableError(lastError)) {
-                logger.error('Non-retryable error encountered:', lastError);
+                logger.error(`[${fileKey}] Non-retryable error encountered: ${lastError}`);
                 throw new Error(`Conversion failed: ${lastError.message} (Error not retryable)`);
             }
 
@@ -480,10 +481,7 @@ async function convertFile(input: string, output: string, format: 'mp3' | 'mp4')
             }
 
             const backoffDelay = calculateBackoffDelay(attempt);
-            logger.error(
-                `File conversion to ${format} attempt ${attempt} failed. ` +
-                `Retrying in ${backoffDelay / 1000} seconds. Error: ${error}`
-            );
+            logger.error(`[${fileKey}] File conversion to ${format} attempt ${attempt} failed. Retrying in ${backoffDelay / 1000} seconds. Error: ${error}`);
             await delay(backoffDelay);
         }
     }
@@ -508,15 +506,15 @@ async function convertToMp3Mp4(filePath: string, fileKey: string, fileId: string
         const conversionPromises = [];
 
         conversionPromises.push(
-            convertFile(filePath, mp3Path, 'mp3')
+            convertFile(filePath, mp3Path, 'mp3', fileKey)
                 .then(async () => {
                     mp3Created = true;
                     try {
-                        await uploadToS3(mp3Path, mp3Key);
+                        await uploadToS3(mp3Path, mp3Key, fileKey);
                         mp3Uploaded = true;
                     } catch (error) {
-                        logger.error(`Failed to upload MP3 for ${fileId}:`, error);
-                        await storageHandler.deleteFile(mp3Path);
+                        logger.error(`[${fileKey}] Failed to upload MP3 for ${fileId}: ${error}`);
+                        await storageHandler.deleteFile(mp3Path, fileKey);
                         throw error;
                     }
                 })
@@ -524,15 +522,15 @@ async function convertToMp3Mp4(filePath: string, fileKey: string, fileId: string
 
         if (isVideoFile) {
             conversionPromises.push(
-                convertFile(filePath, mp4Path, 'mp4')
+                convertFile(filePath, mp4Path, 'mp4', fileKey)
                     .then(async () => {
                         mp4Created = true;
                         try {
-                            await uploadToS3(mp4Path, mp4Key);
+                            await uploadToS3(mp4Path, mp4Key, fileKey);
                             mp4Uploaded = true;
                         } catch (error) {
-                            logger.error(`Failed to upload MP4 for ${fileId}:`, error);
-                            await storageHandler.deleteFile(mp4Path);
+                            logger.error(`[${fileKey}] Failed to upload MP4 for ${fileId}: ${error}`);
+                            await storageHandler.deleteFile(mp4Path, fileKey);
                             throw error;
                         }
                     })
@@ -544,27 +542,27 @@ async function convertToMp3Mp4(filePath: string, fileKey: string, fileId: string
 
         return duration;
     } catch (error) {
-        logger.error(`Conversion failed for file ${fileId}:`, error);
+        logger.error(`[${fileKey}] Conversion failed for file ${fileId}: ${error}`);
 
-        if (mp3Uploaded) await deleteFromS3(mp3Key);
-        if (mp4Uploaded) await deleteFromS3(mp4Key);
+        if (mp3Uploaded) await deleteFromS3(mp3Key,fileKey);
+        if (mp4Uploaded) await deleteFromS3(mp4Key, fileKey);
 
         throw error;
     } finally {
         const cleanup = async () => {
-            if (mp3Created) await storageHandler.deleteFile(mp3Path);
-            if (mp4Created) await storageHandler.deleteFile(mp4Path);
+            if (mp3Created) await storageHandler.deleteFile(mp3Path, fileKey);
+            if (mp4Created) await storageHandler.deleteFile(mp4Path, fileKey);
         };
 
         await cleanup().catch(error =>
-            logger.error(`Error during final cleanup for ${fileId}:`, error)
+            logger.error(`[${fileKey}] Error during final cleanup for ${fileId}: ${error}`)
         );
     }
 }
 
 export async function convertAudioVideo(userId: string, fileId: string, fileKey: string): Promise<ConversionResult> {
-    logger.info(`Starting processing for file: ${fileKey}`);
-    const startTime = Date.now();
+    logger.info(`[${fileKey}] Starting processing for file`);
+
     let downloadedFilePath: string | null = null;
     let conversionError: Error | null = null;
 
@@ -582,8 +580,7 @@ export async function convertAudioVideo(userId: string, fileId: string, fileKey:
             throw error;
         }
 
-        const endTime = Date.now();
-        logger.info(`[${fileKey}] Processing completed. Total time: ${(endTime - startTime) / 1000} seconds`);
+        logger.info(`[${fileKey}] Processing completed`);
 
         return {
             status: 'SUCCESS',
@@ -592,7 +589,7 @@ export async function convertAudioVideo(userId: string, fileId: string, fileKey:
             duration
         };
     } catch (error) {
-        logger.error(`Error processing file ${fileKey}:`, error);
+        logger.error(`[${fileKey}] Error processing file: ${error}`);
 
         if (conversionError) {
             return {
@@ -607,9 +604,9 @@ export async function convertAudioVideo(userId: string, fileId: string, fileKey:
     } finally {
         if (downloadedFilePath) {
             try {
-                await storageHandler.deleteFile(downloadedFilePath);
+                await storageHandler.deleteFile(downloadedFilePath, fileKey);
             } catch (error) {
-                logger.error(`Final attempt to clean up downloaded file ${downloadedFilePath} failed:`, error);
+                logger.error(`[${fileKey}] Final attempt to clean up downloaded file ${downloadedFilePath} failed: ${error}`);
             }
         }
     }
