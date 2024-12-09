@@ -104,7 +104,7 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         if (!quill) return
         const text = quill.getText()
         setContent([{ insert: text }])
-        // localStorage.setItem('transcript', JSON.stringify({ [orderDetails.fileId]: text }))
+        localStorage.setItem('transcript', JSON.stringify({ [orderDetails.fileId]: text }))
     }, [])
 
     const handleEditorClick = useCallback(() => {
@@ -164,14 +164,27 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
 
         const quill = quillRef.current.getEditor();
         const currentTime = audioPlayer.currentTime;
-
         const formattedTime = convertSecondsToTimestamp(currentTime);
-
         const currentSelection = quill.getSelection();
 
         let paragraphStart = currentSelection ? currentSelection.index : 0;
         while (paragraphStart > 0 && quill.getText(paragraphStart - 1, 1) !== '\n') {
             paragraphStart--;
+        }
+
+        // Check for existing timestamp and speaker pattern at start of line
+        const lineText = quill.getText(paragraphStart, 14); // Get enough text to check pattern
+        const timestampSpeakerPattern = /^\d{1}:\d{2}:\d{2}\.\d{1} S\d+: /;
+
+        console.log(lineText)
+        console.log(timestampSpeakerPattern)
+
+        if (timestampSpeakerPattern.test(lineText)) {
+            // If pattern exists, delete it before inserting new one
+            const match = lineText.match(timestampSpeakerPattern);
+            if (match) {
+                quill.deleteText(paragraphStart, match[0].length);
+            }
         }
 
         quill.insertText(paragraphStart, formattedTime + ' S1: ', 'user');

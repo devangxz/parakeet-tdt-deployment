@@ -77,24 +77,52 @@ export async function GET(req: NextRequest) {
         },
       })
     } else if (order.status === OrderStatus.REVIEWER_ASSIGNED) {
-      const response = await axios.get(
-        `${FILE_CACHE_URL}/get-cf-docx/${fileId}?type=${type}&orgName=${orgName.toLowerCase()}&templateName=${templateName}&userId=${userId}`,
-        {
-          responseType: 'arraybuffer',
+      if (type === 'marking') {
+        const response = await axios.get(
+          `${FILE_CACHE_URL}/get-cf-docx/${fileId}?type=${type}&orgName=${orgName.toLowerCase()}&templateName=${templateName}&userId=${userId}`,
+          {
+            responseType: 'arraybuffer',
+            headers: {
+              'x-api-key': process.env.SCRIBIE_API_KEY,
+            },
+          }
+        )
+        const fileBuffer = Buffer.from(response.data)
+        return new NextResponse(fileBuffer, {
+          status: 200,
           headers: {
-            'x-api-key': process.env.SCRIBIE_API_KEY,
+            'Content-Disposition': `attachment; filename="${fileId}.docx"`,
+            'Content-Type':
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           },
+        })
+      } else {
+        const fileVersion = await prisma.fileVersion.findFirst({
+          where: {
+            fileId,
+            tag: FileTag.QC_DELIVERED
+          },
+          orderBy: {
+            updatedAt: 'desc'
+          }
+        })
+
+        if (!fileVersion || !fileVersion.s3VersionId) {
+          logger.error(`File version not found for ${fileId}`)
+          return NextResponse.json({ message: 'File version not found' }, { status: 404 })
         }
-      )
-      const fileBuffer = Buffer.from(response.data)
-      return new NextResponse(fileBuffer, {
-        status: 200,
-        headers: {
-          'Content-Disposition': `attachment; filename="${fileId}.docx"`,
-          'Content-Type':
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        },
-      })
+
+        const transcript = (await getFileVersionFromS3(`${fileId}.txt`, fileVersion?.s3VersionId)).toString();
+        return new NextResponse(transcript, {
+          status: 200,
+          headers: {
+            'Content-Disposition': `attachment; filename="${fileId}.docx"`,
+            'Content-Type':
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          },
+        })
+      }
+
     } else if (
       order.status === OrderStatus.PRE_DELIVERED &&
       order.orderType === OrderType.TRANSCRIPTION_FORMATTING
