@@ -55,6 +55,7 @@ export interface DropboxChooserFile {
 }
 
 export interface DropboxFile {
+    id: string;
     name: string;
     size: number;
     mimeType: string;
@@ -131,6 +132,7 @@ export interface GoogleDriveFile {
     name: string;
     mimeType: string;
     sizeBytes: string;
+    fileId: string;
 }
 
 export interface GooglePickerResponse {

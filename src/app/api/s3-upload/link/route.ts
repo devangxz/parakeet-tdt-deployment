@@ -11,7 +11,7 @@ interface ValidationResponse {
     contentLength?: string;
 }
 
-function validateContentType(contentType: string): ValidationResponse {  
+function validateContentType(contentType: string): ValidationResponse {
     if (!contentType) {
         return {
             isValid: false,
@@ -147,7 +147,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const { url, method = 'GET' } = await req.json();
+        const { url, method = 'GET', range } = await req.json();
 
         if (method === 'HEAD') {
             const validationResult = await validateURL(url);
@@ -164,17 +164,32 @@ export async function POST(req: Request) {
             });
         }
 
-        const response = await fetch(url);
+        const headers: Record<string, string> = {};
+        if (range) {
+            headers['Range'] = range;
+        }
+
+        const response = await fetch(url, { headers });
+
         if (!response.ok) {
             throw new Error(`Failed to fetch: ${response.statusText}`);
         }
 
-        return new NextResponse(response.body, {
-            headers: {
-                'Content-Type': response.headers.get('content-type') || 'application/octet-stream',
-                'Content-Length': response.headers.get('content-length') || '',
-            },
-        });
+        const responseHeaders: Record<string, string> = {
+            'Content-Type': response.headers.get('content-type') || 'application/octet-stream',
+        };
+
+        const contentLength = response.headers.get('content-length');
+        if (contentLength) {
+            responseHeaders['Content-Length'] = contentLength;
+        }
+
+        const contentRange = response.headers.get('content-range');
+        if (contentRange) {
+            responseHeaders['Content-Range'] = contentRange;
+        }
+
+        return new NextResponse(response.body, { headers: responseHeaders });
 
     } catch (error) {
         return NextResponse.json({

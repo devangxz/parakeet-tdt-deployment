@@ -5,7 +5,6 @@ import { NextResponse } from 'next/server';
 
 import logger from '@/lib/logger';
 import { s3Client } from '@/lib/s3Client';
-import { WORKER_QUEUE_NAMES, workerQueueService } from '@/services/worker-service';
 import { requireCustomer } from '@/utils/checkRoles';
 
 export async function POST(req: Request) {
@@ -28,7 +27,8 @@ export async function POST(req: Request) {
         const buffer = await file.arrayBuffer();
 
         const fileExtension = path.extname(file.name);
-        const fileKey = fileId + fileExtension;
+        const fileName = path.parse(file.name).name;
+        const fileKey = `${fileName}_${fileId}${fileExtension}`;
 
         const uploadParams = {
             Bucket: process.env.AWS_S3_BUCKET_NAME,
@@ -40,19 +40,15 @@ export async function POST(req: Request) {
                 type: 'ORIGINAL_FILE',
                 user_id: user?.userId?.toString(),
                 team_user_id: user?.internalTeamUserId?.toString() || user?.userId?.toString(),
-                file_name: path.parse(file.name).name
+                file_id: fileId,
+                file_name: fileName
             }
         };
 
         const command = new PutObjectCommand(uploadParams);
         const result = await s3Client.send(command);
 
-        logger.info(`File uploaded successfully. File ID: ${fileKey}`);
-
-        // Create audio video conversion job
-        if (fileExtension.toLowerCase() !== '.docx') { // Check for remote legal docx files
-            await workerQueueService.createJob(WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION, { fileKey, userEmailId: user.email });
-        }
+        logger.info(`File uploaded successfully. File: ${fileKey}`);
 
         return NextResponse.json({ message: 'File uploaded successfully', result }, { status: 200 });
     } catch (error) {

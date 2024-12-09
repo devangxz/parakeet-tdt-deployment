@@ -1,8 +1,6 @@
 import axios from 'axios';
-import { toast } from 'sonner';
 
 import { UPLOAD_MAX_RETRIES, UPLOAD_RETRY_DELAY } from '@/constants';
-import { StreamingState } from '@/types/upload';
 import sleep from '@/utils/sleep';
 
 export const isRetryableError = (error: unknown): boolean => {
@@ -35,29 +33,6 @@ export const calculateOverallProgress = (
     downloadWeight: number = 0.3,
     uploadWeight: number = 0.7
 ): number => (downloadProgress * downloadWeight + uploadProgress * uploadWeight);
-
-export const cleanupUpload = async (
-    fileName: string,
-    uploadState: StreamingState | undefined,
-    uploadStatesRef: React.MutableRefObject<Record<string, StreamingState>>
-): Promise<void> => {
-    if (uploadState?.uploadId && uploadState?.key) {
-        try {
-            await axios.post('/api/s3-upload/multi-part/abort', {
-                uploadId: uploadState.uploadId,
-                key: uploadState.key
-            });
-        } catch (error) {
-            toast.error(`Failed to abort multipart upload for file ${fileName}`);
-        }
-    }
-
-    if (uploadState?.abortController) {
-        uploadState.abortController.abort();
-    }
-
-    delete uploadStatesRef.current[fileName];
-};
 
 export const refreshToken = async (
     serviceName: string,

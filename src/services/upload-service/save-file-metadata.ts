@@ -11,6 +11,7 @@ interface Metadata {
     converted?: boolean;
     fileName?: string;
     fileId?: string;
+    fileKey?: string;
     parentId?: string;
     fullPath?: string;
     risData?: string;
@@ -45,12 +46,14 @@ const saveFileMetadata = async (metadata: Metadata): Promise<void> => {
         userId: teamUserId,
         filename: metadata?.fileName ?? '',
         fileId: metadata?.fileId ?? '',
+        fileKey: metadata?.fileKey,
         duration: duration,
         bitRate: metadata?.bitRate ? Number(metadata.bitRate) : null,
         sampleRate: metadata?.sampleRate ? Number(metadata.sampleRate) : null,
         filesize: fileSize,
         uploadedBy: userId,
         fileStatus: isDuplicate ? FileStatus.DUPLICATE : FileStatus.NONE,
+        converted: null,
     };
 
     await prisma.file.create({

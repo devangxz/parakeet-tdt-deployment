@@ -20,7 +20,7 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/comp
 
 interface UploadStatus {
     progress: number;
-    status: 'validating' | 'uploading' | 'processing' | 'completed' | 'failed';
+    status: 'validating' | 'uploading' | 'importing' | 'processing' | 'completed' | 'failed';
     error?: string;
 }
 
@@ -84,6 +84,7 @@ const UploadProgressItem = ({ file, status }: { file: UploadFile; status: Upload
                     </TooltipProvider>
                 );
             case 'uploading':
+            case 'importing':
                 return (
                     <TooltipProvider>
                         <Tooltip>
@@ -181,6 +182,7 @@ const UploadProgress = () => {
     const lastUpdateTimeRef = useRef(Date.now());
     const lastEstimateRef = useRef<number | null>(null);
     const activeUploadIdRef = useRef<string | null>(null);
+    const hasActualSpeedRef = useRef(false);
 
     const formatTimeLeft = (seconds: number) => {
         seconds = Math.max(1, Math.round(seconds));
@@ -212,7 +214,12 @@ const UploadProgress = () => {
                 lastEstimateRef.current = null;
                 lastUpdateTimeRef.current = Date.now();
                 activeUploadIdRef.current = newUploadId;
-                setTimeLeft('Calculating time left...');
+                hasActualSpeedRef.current = false;
+
+                const isImporting = uploadingFiles.some(
+                    file => uploadStatus[file.name]?.status === 'importing'
+                );
+                setTimeLeft(isImporting ? 'Starting import...' : 'Starting upload...');
             }
         }
     }, [uploadingFiles]);
@@ -234,7 +241,7 @@ const UploadProgress = () => {
 
         // Check if any files are still uploading
         const hasUploadingFiles = uploadingFiles.some(
-            file => uploadStatus[file.name]?.status === 'uploading'
+            file => uploadStatus[file.name]?.status === 'uploading' || uploadStatus[file.name]?.status === 'importing'
         );
 
         if (!hasUploadingFiles) {
@@ -249,6 +256,7 @@ const UploadProgress = () => {
         if (elapsedTime > 0 && uploadedDelta > 0) {
             const currentSpeed = uploadedDelta / elapsedTime; // bytes per second
             speedEstimatesRef.current.push(currentSpeed);
+            hasActualSpeedRef.current = true;
 
             // Keep only the last 10 speed estimates
             if (speedEstimatesRef.current.length > 10) {
@@ -271,11 +279,11 @@ const UploadProgress = () => {
                 lastEstimateRef.current = estimatedTimeLeft;
                 setTimeLeft(formatTimeLeft(estimatedTimeLeft));
             }
-        } else if (speedEstimatesRef.current.length === 0) {
-            // Initial estimate based on total size (assuming 500 KB/s as starting speed)
-            const initialEstimate = totalSize / (500 * 1024);
-            lastEstimateRef.current = initialEstimate;
-            setTimeLeft(formatTimeLeft(initialEstimate));
+        } else if (!hasActualSpeedRef.current) {
+            const isImporting = uploadingFiles.some(
+                file => uploadStatus[file.name]?.status === 'importing'
+            );
+            setTimeLeft(isImporting ? 'Starting import...' : 'Starting upload...');
         }
 
         prevProgressRef.current = overallProgress;
@@ -294,7 +302,7 @@ const UploadProgress = () => {
         return counts;
     }, {} as Record<string, number>);
 
-    const inProgressFiles = fileCountsByStatus['uploading'] || 0;
+    const inProgressFiles = (fileCountsByStatus['uploading'] ?? 0) + (fileCountsByStatus['importing'] ?? 0);
     const failedFiles = fileCountsByStatus['failed'] || 0;
     const completedFiles = fileCountsByStatus['completed'] || 0;
     const totalFiles = uploadingFiles.length;
@@ -315,11 +323,13 @@ const UploadProgress = () => {
         }
 
         if (inProgressFiles > 0) {
+            const isImporting = uploadingFiles.some(file => uploadStatus[file.name]?.status === 'importing');
+            const status = isImporting ? 'Importing' : 'Uploading';
             return {
-                title: totalFiles === 1
-                    ? 'Uploading 1 file'
-                    : `Uploading ${inProgressFiles}/${totalFiles} files`,
-                subtitle: timeLeft || 'Calculating time left...'
+                title: inProgressFiles === 1
+                    ? `${status} 1 file`
+                    : `${status} ${inProgressFiles} files`,
+                subtitle: timeLeft || (isImporting ? 'Starting import...' : 'Starting upload...')
             };
         }
 
