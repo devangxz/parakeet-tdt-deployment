@@ -2,6 +2,7 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
+import axios from 'axios'
 import { diffWords } from 'diff'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
@@ -28,7 +29,6 @@ import { LEGAL_QC_TRANSCRIBER_RATE } from '@/constants'
 import { BaseTranscriberFile } from '@/types/files'
 import formatDuration from '@/utils/formatDuration'
 import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
-import axios from 'axios'
 
 interface File extends BaseTranscriberFile {
   qc_cost: number
