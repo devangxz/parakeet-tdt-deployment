@@ -1,0 +1,135 @@
+# Team Invitations
+
+Manage team invitations.
+
+## List Invitations
+
+### Endpoint
+
+```http
+GET ${baseUrl}/teams/{teamId}/invitations
+```
+
+### Response
+
+```typescript
+interface TeamInvitationsResponse {
+  success: boolean
+  data: {
+    invitations: {
+      id: number
+      email: string
+      role: 'MANAGER' | 'USER' | 'SUPERVISOR'
+      status: 'PENDING' | 'ACCEPTED' | 'DECLINED'
+      invitedBy: {
+        id: number
+        email: string
+        firstname: string
+        lastname: string
+      }
+      createdAt: string
+      expiresAt: string
+    }[]
+    total: number
+  }
+}
+```
+
+## Create Invitation
+
+### Endpoint
+
+```http
+POST ${baseUrl}/teams/{teamId}/invitations
+```
+
+### Request Body
+
+```typescript
+interface CreateTeamInvitationRequest {
+  email: string
+  role: 'MANAGER' | 'USER' | 'SUPERVISOR'
+  message?: string
+}
+```
+
+### Response
+
+```typescript
+interface CreateTeamInvitationResponse {
+  success: boolean
+  data: {
+    id: number
+    email: string
+    role: string
+    inviteKey: string
+    expiresAt: string
+  }
+}
+```
+
+## Update Invitation Status
+
+### Endpoint
+
+```http
+PUT ${baseUrl}/teams/{teamId}/invitations/{invitationId}
+```
+
+### Request Body
+
+```typescript
+interface UpdateInvitationRequest {
+  status: 'ACCEPTED' | 'DECLINED'
+}
+```
+
+### Example Requests
+
+```typescript
+// List invitations
+const invitations = await fetch('${baseUrl}/teams/123/invitations', {
+  headers: {
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+})
+
+// Create invitation
+const createInvite = await fetch('${baseUrl}/teams/123/invitations', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    email: 'newmember@example.com',
+    role: 'USER',
+    message: 'Please join our team!',
+  }),
+})
+
+// Accept invitation
+const acceptInvite = await fetch('${baseUrl}/teams/123/invitations/456', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    status: 'ACCEPTED',
+  }),
+})
+```
+
+## Error Codes
+
+| Status Code | Description                  |
+| ----------- | ---------------------------- |
+| 200         | Success                      |
+| 201         | Invitation Created           |
+| 400         | Invalid Request              |
+| 401         | Unauthorized                 |
+| 403         | Forbidden                    |
+| 404         | Team or Invitation Not Found |
+| 409         | User Already Invited         |
+| 500         | Server Error                 |

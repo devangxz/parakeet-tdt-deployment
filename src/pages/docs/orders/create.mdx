@@ -1,0 +1,83 @@
+# Create Order
+
+Create a new transcription order.
+
+## Endpoint
+
+```http
+POST ${baseUrl}/orders
+```
+
+## Request Body
+
+```typescript
+interface CreateOrderRequest {
+  fileId: string
+  priority?: number
+  tat?: number
+  instructions?: string
+  options?: {
+    customFormatting?: boolean
+    timestamping?: boolean
+    verbatim?: boolean
+    rushDelivery?: boolean
+  }
+}
+```
+
+## Response
+
+```typescript
+interface CreateOrderResponse {
+  success: boolean
+  data: {
+    id: number
+    fileId: string
+    status: OrderStatus
+    orderTs: string
+    deadlineTs: string
+    priority: number
+    tat: number
+    instructions?: string
+    options: {
+      customFormatting: boolean
+      timestamping: boolean
+      verbatim: boolean
+      rushDelivery: boolean
+    }
+  }
+}
+```
+
+## Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/orders', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    fileId: 'abc123',
+    priority: 1,
+    instructions: 'Please include speaker labels',
+    options: {
+      timestamping: true,
+      verbatim: true,
+    },
+  }),
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description                |
+| ----------- | -------------------------- |
+| 201         | Order Created Successfully |
+| 400         | Invalid Request            |
+| 401         | Unauthorized               |
+| 404         | File Not Found             |
+| 500         | Server Error               |

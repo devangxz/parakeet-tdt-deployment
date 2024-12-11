@@ -1,0 +1,80 @@
+# Update User
+
+Update an existing user's information.
+
+## Endpoint
+
+```http
+PUT ${baseUrl}/users/{userId}
+```
+
+## Path Parameters
+
+| Parameter | Type   | Description                  |
+| --------- | ------ | ---------------------------- |
+| userId    | number | The ID of the user to update |
+
+## Request Body
+
+```typescript
+interface UpdateUserRequest {
+  firstname?: string
+  lastname?: string
+  email?: string
+  role?: Role
+  status?: Status
+  preferences?: {
+    language?: string
+    notifications?: boolean
+  }
+}
+```
+
+## Response
+
+```typescript
+interface UpdateUserResponse {
+  success: boolean
+  data: {
+    id: number
+    email: string
+    firstname: string
+    lastname: string
+    role: Role
+    status: Status
+    updatedAt: string
+  }
+}
+```
+
+## Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/users/123', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    firstname: 'John',
+    lastname: 'Smith',
+    preferences: {
+      language: 'en',
+    },
+  }),
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description               |
+| ----------- | ------------------------- |
+| 200         | User Updated Successfully |
+| 400         | Invalid Request Body      |
+| 401         | Unauthorized              |
+| 403         | Forbidden                 |
+| 404         | User Not Found            |
+| 500         | Server Error              |

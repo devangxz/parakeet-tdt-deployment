@@ -1,0 +1,71 @@
+# Request Withdrawal
+
+Create a new withdrawal request.
+
+## Endpoint
+
+```http
+POST ${baseUrl}/users/{userId}/withdrawals
+```
+
+## Path Parameters
+
+| Parameter | Type   | Description    |
+| --------- | ------ | -------------- |
+| userId    | number | ID of the user |
+
+## Request Body
+
+```typescript
+interface CreateWithdrawalRequest {
+  amount: number
+  paypalId: string
+}
+```
+
+## Response
+
+```typescript
+interface CreateWithdrawalResponse {
+  success: boolean
+  data: {
+    id: number
+    amount: number
+    fee: number
+    status: WithdrawalStatus
+    toPaypalId: string
+    requestedAt: string
+    invoiceId: string
+  }
+}
+```
+
+## Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/users/123/withdrawals', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    amount: 100.0,
+    paypalId: 'user@example.com',
+  }),
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description                       |
+| ----------- | --------------------------------- |
+| 201         | Withdrawal Requested Successfully |
+| 400         | Invalid Request                   |
+| 401         | Unauthorized                      |
+| 403         | Forbidden                         |
+| 404         | User Not Found                    |
+| 422         | Insufficient Balance              |
+| 500         | Server Error                      |

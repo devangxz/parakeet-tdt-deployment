@@ -1,0 +1,96 @@
+# Order Options
+
+Get or update order options.
+
+## Get Options
+
+### Endpoint
+
+```http
+GET ${baseUrl}/orders/{orderId}/options
+```
+
+### Response
+
+```typescript
+interface OrderOptionsResponse {
+  success: boolean
+  data: {
+    options: {
+      customFormatting: boolean
+      timestamping: boolean
+      verbatim: boolean
+      rushDelivery: boolean
+      additionalProofing: boolean
+      speakerLabels: boolean
+      customInstructions?: string
+    }
+    pricing: {
+      basePrice: number
+      customFormattingPrice?: number
+      rushDeliveryPrice?: number
+      additionalProofingPrice?: number
+      total: number
+    }
+  }
+}
+```
+
+## Update Options
+
+### Endpoint
+
+```http
+PUT ${baseUrl}/orders/{orderId}/options
+```
+
+### Request Body
+
+```typescript
+interface UpdateOrderOptionsRequest {
+  customFormatting?: boolean
+  timestamping?: boolean
+  verbatim?: boolean
+  rushDelivery?: boolean
+  additionalProofing?: boolean
+  speakerLabels?: boolean
+  customInstructions?: string
+}
+```
+
+### Example Requests
+
+```typescript
+// Get options
+const getOptions = await fetch('${baseUrl}/orders/123/options', {
+  headers: {
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+})
+
+// Update options
+const updateOptions = await fetch('${baseUrl}/orders/123/options', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    customFormatting: true,
+    timestamping: true,
+    additionalProofing: true,
+    customInstructions: 'Please mark speaker changes',
+  }),
+})
+```
+
+## Error Codes
+
+| Status Code | Description     |
+| ----------- | --------------- |
+| 200         | Success         |
+| 400         | Invalid Request |
+| 401         | Unauthorized    |
+| 403         | Forbidden       |
+| 404         | Order Not Found |
+| 500         | Server Error    |

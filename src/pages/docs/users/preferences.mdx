@@ -1,0 +1,99 @@
+# User Preferences
+
+Get or update a user's preferences settings.
+
+## Get Preferences
+
+### Endpoint
+
+```http
+GET ${baseUrl}/users/{userId}/preferences
+```
+
+### Response
+
+```typescript
+interface UserPreferencesResponse {
+  success: boolean
+  data: {
+    language: string
+    recordsPerPage: number
+    notifications: {
+      transcriptOrder: boolean
+      newsletter: boolean
+      transcriptDelivered: boolean
+      transcriptCancelled: boolean
+      transcriptRefund: boolean
+      teamMemberWhoOrdered: boolean
+    }
+    splInstructions?: string
+    defaultOptions?: {
+      options: string
+      instructions: string
+    }
+  }
+}
+```
+
+## Update Preferences
+
+### Endpoint
+
+```http
+PUT ${baseUrl}/users/{userId}/preferences
+```
+
+### Request Body
+
+```typescript
+interface UpdatePreferencesRequest {
+  language?: string
+  recordsPerPage?: number
+  notifications?: {
+    transcriptOrder?: boolean
+    newsletter?: boolean
+    transcriptDelivered?: boolean
+    transcriptCancelled?: boolean
+    transcriptRefund?: boolean
+    teamMemberWhoOrdered?: boolean
+  }
+  splInstructions?: string
+  defaultOptions?: {
+    options?: string
+    instructions?: string
+  }
+}
+```
+
+### Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/users/123/preferences', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    language: 'en',
+    recordsPerPage: 20,
+    notifications: {
+      transcriptOrder: true,
+      newsletter: false,
+    },
+  }),
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description          |
+| ----------- | -------------------- |
+| 200         | Success              |
+| 400         | Invalid Request Body |
+| 401         | Unauthorized         |
+| 403         | Forbidden            |
+| 404         | User Not Found       |
+| 500         | Server Error         |

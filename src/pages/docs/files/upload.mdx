@@ -1,0 +1,69 @@
+# Upload File
+
+Upload a new file to the system.
+
+## Endpoint
+
+```http
+POST ${baseUrl}/files/upload
+```
+
+## Request Body
+
+Multipart form data with the following fields:
+
+| Field        | Type   | Description                  |
+| ------------ | ------ | ---------------------------- |
+| file         | File   | The file to upload           |
+| folderId     | number | Optional folder ID           |
+| instructions | string | Optional custom instructions |
+
+## Response
+
+```typescript
+interface FileUploadResponse {
+  success: boolean
+  data: {
+    id: number
+    fileId: string
+    filename: string
+    duration: number
+    filesize: string
+    status: FileStatus
+    uploadedBy: {
+      id: number
+      email: string
+    }
+    createdAt: string
+  }
+}
+```
+
+## Example Request
+
+```typescript
+const formData = new FormData()
+formData.append('file', file)
+formData.append('url', 'https://example.com/file.mp3')
+
+const response = await fetch('${baseUrl}/files/upload', {
+  method: 'POST',
+  headers: {
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: formData,
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description                |
+| ----------- | -------------------------- |
+| 201         | File Uploaded Successfully |
+| 400         | Invalid File or Request    |
+| 401         | Unauthorized               |
+| 413         | File Too Large             |
+| 415         | Unsupported File Type      |
+| 500         | Server Error               |

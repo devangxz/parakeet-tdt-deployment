@@ -1,0 +1,61 @@
+# List Teams
+
+Get a list of teams that the authenticated user has access to.
+
+## Endpoint
+
+```http
+GET ${baseUrl}/teams
+```
+
+## Query Parameters
+
+| Parameter | Type   | Description                             |
+| --------- | ------ | --------------------------------------- |
+| page      | number | Page number for pagination (default: 1) |
+| limit     | number | Number of teams per page (default: 10)  |
+
+## Response
+
+```typescript
+interface TeamListResponse {
+  success: boolean
+  data: {
+    teams: {
+      id: number
+      name: string
+      owner: {
+        id: number
+        email: string
+        firstname: string
+        lastname: string
+      }
+      membersCount: number
+      createdAt: string
+    }[]
+    total: number
+    page: number
+    limit: number
+  }
+}
+```
+
+## Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/teams?page=1&limit=10', {
+  headers: {
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description  |
+| ----------- | ------------ |
+| 200         | Success      |
+| 401         | Unauthorized |
+| 500         | Server Error |

@@ -1,0 +1,67 @@
+# Create Team
+
+Create a new team.
+
+## Endpoint
+
+```http
+POST ${baseUrl}/teams
+```
+
+## Request Body
+
+```typescript
+interface CreateTeamRequest {
+  name: string
+  members?: {
+    email: string
+    role: 'MANAGER' | 'USER' | 'SUPERVISOR'
+  }[]
+}
+```
+
+## Response
+
+```typescript
+interface CreateTeamResponse {
+  success: boolean
+  data: {
+    id: number
+    name: string
+    owner: {
+      id: number
+      email: string
+      firstname: string
+      lastname: string
+    }
+    createdAt: string
+  }
+}
+```
+
+## Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/teams', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    name: 'Engineering Team',
+    members: [{ email: 'member@example.com', role: 'MANAGER' }],
+  }),
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description          |
+| ----------- | -------------------- |
+| 201         | Team Created         |
+| 400         | Invalid Request Body |
+| 401         | Unauthorized         |
+| 500         | Server Error         |

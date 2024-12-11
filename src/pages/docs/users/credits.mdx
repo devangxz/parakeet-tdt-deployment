@@ -1,0 +1,95 @@
+# User Credits
+
+Manage user credit balance and transactions.
+
+## Get Credits
+
+### Endpoint
+
+```http
+GET ${baseUrl}/users/credits
+```
+
+### Response
+
+```typescript
+interface UserCreditsResponse {
+  success: boolean
+  data: {
+    balance: number
+    transactions: {
+      id: number
+      amount: number
+      type: 'ADD' | 'USE' | 'REFUND'
+      description: string
+      createdAt: string
+    }[]
+  }
+}
+```
+
+## Add Credits
+
+### Endpoint
+
+```http
+POST ${baseUrl}/users/{userId}/credits
+```
+
+### Request Body
+
+```typescript
+interface AddCreditsRequest {
+  amount: number
+  source: 'PURCHASE' | 'REFUND' | 'BONUS'
+  description?: string
+}
+```
+
+### Response
+
+```typescript
+interface AddCreditsResponse {
+  success: boolean
+  data: {
+    balance: number
+    transaction: {
+      id: number
+      amount: number
+      type: 'ADD'
+      description: string
+      createdAt: string
+    }
+  }
+}
+```
+
+### Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/users/123/credits', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    amount: 100,
+    source: 'PURCHASE',
+    description: 'Credit purchase',
+  }),
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description          |
+| ----------- | -------------------- |
+| 200         | Success              |
+| 400         | Invalid Request Body |
+| 401         | Unauthorized         |
+| 403         | Forbidden            |
+| 404         | User Not Found       |
+| 500         | Server Error         |

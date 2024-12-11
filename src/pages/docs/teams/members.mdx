@@ -1,0 +1,100 @@
+# Team Members
+
+Manage team members.
+
+## List Members
+
+### Endpoint
+
+```http
+GET ${baseUrl}/teams/{teamId}/members
+```
+
+### Response
+
+```typescript
+interface TeamMembersResponse {
+  success: boolean
+  data: {
+    members: {
+      id: number
+      email: string
+      firstname: string
+      lastname: string
+      role: 'MANAGER' | 'USER' | 'SUPERVISOR'
+      joinedAt: string
+    }[]
+    total: number
+  }
+}
+```
+
+## Add Member
+
+### Endpoint
+
+```http
+POST ${baseUrl}/teams/{teamId}/members
+```
+
+### Request Body
+
+```typescript
+interface AddTeamMemberRequest {
+  email: string
+  role: 'MANAGER' | 'USER' | 'SUPERVISOR'
+}
+```
+
+## Remove Member
+
+### Endpoint
+
+```http
+DELETE ${baseUrl}/teams/{teamId}/members/{userId}
+```
+
+### Example Requests
+
+```typescript
+// List members
+const members = await fetch('${baseUrl}/teams/123/members', {
+  headers: {
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+})
+
+// Add member
+const addMember = await fetch('${baseUrl}/teams/123/members', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    email: 'newmember@example.com',
+    role: 'USER',
+  }),
+})
+
+// Remove member
+const removeMember = await fetch('${baseUrl}/teams/123/members/456', {
+  method: 'DELETE',
+  headers: {
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+})
+```
+
+## Error Codes
+
+| Status Code | Description                 |
+| ----------- | --------------------------- |
+| 200         | Success                     |
+| 201         | Member Added Successfully   |
+| 204         | Member Removed Successfully |
+| 400         | Invalid Request             |
+| 401         | Unauthorized                |
+| 403         | Forbidden                   |
+| 404         | Team or Member Not Found    |
+| 500         | Server Error                |

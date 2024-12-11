@@ -1,0 +1,86 @@
+# File Transcripts
+
+Manage transcripts for a file.
+
+## Get Transcripts
+
+### Endpoint
+
+```http
+GET ${baseUrl}/files/{fileId}/transcripts
+```
+
+### Response
+
+```typescript
+interface FileTranscriptsResponse {
+  success: boolean
+  data: {
+    transcripts: {
+      id: number
+      version: number
+      content: string
+      status: 'DRAFT' | 'FINAL'
+      createdBy: {
+        id: number
+        email: string
+      }
+      createdAt: string
+      updatedAt: string
+    }[]
+  }
+}
+```
+
+## Create Transcript
+
+### Endpoint
+
+```http
+POST ${baseUrl}/files/{fileId}/transcripts
+```
+
+### Request Body
+
+```typescript
+interface CreateTranscriptRequest {
+  content: string
+  status?: 'DRAFT' | 'FINAL'
+}
+```
+
+### Example Requests
+
+```typescript
+// Get transcripts
+const transcripts = await fetch('${baseUrl}/files/abc123/transcripts', {
+  headers: {
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+})
+
+// Create transcript
+const createTranscript = await fetch('${baseUrl}/files/abc123/transcripts', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    content: 'Transcript content here...',
+    status: 'DRAFT',
+  }),
+})
+```
+
+## Error Codes
+
+| Status Code | Description                     |
+| ----------- | ------------------------------- |
+| 200         | Success                         |
+| 201         | Transcript Created Successfully |
+| 400         | Invalid Request                 |
+| 401         | Unauthorized                    |
+| 403         | Forbidden                       |
+| 404         | File Not Found                  |
+| 500         | Server Error                    |

@@ -1,0 +1,75 @@
+# Update Job
+
+Update a job's status or details.
+
+## Endpoint
+
+```http
+PUT ${baseUrl}/jobs/{jobId}
+```
+
+## Path Parameters
+
+| Parameter | Type   | Description             |
+| --------- | ------ | ----------------------- |
+| jobId     | number | The ID of job to update |
+
+## Request Body
+
+```typescript
+interface UpdateJobRequest {
+  status: JobStatus
+  completedTs?: string
+  extensionRequested?: boolean
+  comment?: string
+}
+```
+
+## Response
+
+```typescript
+interface UpdateJobResponse {
+  success: boolean
+  data: {
+    id: number
+    orderId: number
+    status: JobStatus
+    type: JobType
+    acceptedTs: string
+    completedTs?: string
+    earnings: number
+    extensionRequested: boolean
+    updatedAt: string
+  }
+}
+```
+
+## Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/jobs/123', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    status: 'COMPLETED',
+    completedTs: new Date().toISOString(),
+    comment: 'Job completed successfully',
+  }),
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description              |
+| ----------- | ------------------------ |
+| 200         | Job Updated Successfully |
+| 400         | Invalid Request          |
+| 401         | Unauthorized             |
+| 403         | Forbidden                |
+| 404         | Job Not Found            |
+| 500         | Server Error             |

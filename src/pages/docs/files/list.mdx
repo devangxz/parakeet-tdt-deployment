@@ -1,0 +1,69 @@
+# List Files
+
+Get a list of files that the authenticated user has access to.
+
+## Endpoint
+
+```http
+GET ${baseUrl}/files
+```
+
+## Query Parameters
+
+| Parameter | Type   | Description                             |
+| --------- | ------ | --------------------------------------- |
+| page      | number | Page number for pagination (default: 1) |
+| limit     | number | Number of files per page (default: 10)  |
+| status    | string | Filter by file status                   |
+| folderId  | number | Filter by folder ID                     |
+| search    | string | Search in file names                    |
+
+## Response
+
+```typescript
+interface FileListResponse {
+  success: boolean
+  data: {
+    files: {
+      id: number
+      fileId: string
+      filename: string
+      duration: number
+      filesize: string
+      status: FileStatus
+      uploadedBy: {
+        id: number
+        email: string
+        firstname: string
+        lastname: string
+      }
+      createdAt: string
+      customInstructions?: string
+      downloadCount: number
+    }[]
+    total: number
+    page: number
+    limit: number
+  }
+}
+```
+
+## Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/files?page=1&limit=20&status=NONE', {
+  headers: {
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description  |
+| ----------- | ------------ |
+| 200         | Success      |
+| 401         | Unauthorized |
+| 500         | Server Error |
