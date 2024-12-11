@@ -299,5 +299,14 @@
     "SUBJECT": "Scribie.ai File Shared",
     "HTML": "FILE_SHARED.html",
     "TEXT": ""
+  },
+  "REFUND_FILE": {
+    "FROM": "$$SUPPORT_EMAIL_ID$$",
+    "TO": ["$$USER_EMAIL_ID$$"],
+    "CC": ["$$SUPPORT_EMAIL_ID$$"],
+    "BCC": ["$$CONTACT_EMAIL_ID$$"],
+    "SUBJECT": "Scribie.ai Automatic Refund",
+    "HTML": "REFUND_FILE.html",
+    "TEXT": ""
   }
 }

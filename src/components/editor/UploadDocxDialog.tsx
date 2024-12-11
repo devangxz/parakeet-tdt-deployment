@@ -20,7 +20,7 @@ type UploadDocxDialogProps = {
 const UploadDocxDialog = ({ orderDetails, setButtonLoading, buttonLoading, setFileToUpload, fileToUpload, session }: UploadDocxDialogProps) => (
     <Dialog>
         <DialogTrigger>
-            <Button className='ml-2'>Upload File</Button>
+            <Button variant="outline" className='ml-2'>Upload File</Button>
         </DialogTrigger>
         <DialogContent>
             <DialogHeader>

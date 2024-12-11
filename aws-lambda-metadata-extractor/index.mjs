@@ -7,6 +7,7 @@ import { pipeline } from 'stream/promises';
 import { URL } from 'url';
 
 import { S3Client, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import jwt from 'jsonwebtoken';
 
 const config = {
     webhookUrls: {
@@ -18,37 +19,10 @@ const config = {
         TARUN: process.env.TARUN_WEBHOOK_URL,
         PRASAD: process.env.PRASAD_WEBHOOK_URL,
     },
-    allowedFileTypes: {
-        // Audio formats
-        '.mp3': ['audio/mpeg'],
-        '.wav': ['audio/wav', 'audio/x-wav'],
-        '.wma': ['audio/x-ms-wma'],
-        '.aac': ['audio/aac'],
-        '.flac': ['audio/flac'],
-        '.ogg': ['audio/ogg'],
-        '.aif': ['audio/aiff', 'audio/x-aiff'],
-        '.aiff': ['audio/aiff', 'audio/x-aiff'],
-        '.amr': ['audio/amr'],
-        '.opus': ['audio/opus'],
-        '.m4a': ['audio/mp4', 'audio/x-m4a'],
-
-        // Video formats
-        '.wmv': ['video/x-ms-wmv'],
-        '.avi': ['video/x-msvideo'],
-        '.flv': ['video/x-flv'],
-        '.mpg': ['video/mpeg'],
-        '.mpeg': ['video/mpeg'],
-        '.mp4': ['video/mp4'],
-        '.m4v': ['video/x-m4v'],
-        '.mov': ['video/quicktime'],
-        '.webm': ['video/webm'],
-        '.3gp': ['video/3gpp', 'audio/3gpp'],
-        '.3ga': ['audio/3gpp'],
-        '.mts': ['video/mp2t'],
-        '.ogv': ['video/ogg'],
-        '.mkv': ['video/x-matroska'],
-        '.mxf': ['video/mxf']
-    },
+    allowedFileTypes: [
+        ".mp3", ".wav", ".wma", ".aac", ".flac", ".ogg", ".aif", ".aiff", ".amr", ".opus", ".m4a",
+        ".wmv", ".avi", ".flv", ".mpg", ".mpeg", ".mp4", ".m4v", ".mov", ".webm", ".3gp", ".3ga", ".mts", ".ogv", ".mkv", ".mxf"
+    ],
     ffprobe: {
         options: [
             '-v', 'quiet',
@@ -64,12 +38,16 @@ const config = {
         temp: '/tmp'
     },
     webhook: {
+        auth: {
+            JWT_SECRET_KEY: process.env.JWT_SECRET_KEY,
+            TOKEN_EXPIRY: '2h'
+        },
         maxRetries: 2,
         retryDelay: 1000,
         timeout: 5000,
         status: {
-            SUCCESS: 'success',
-            ERROR: 'error'
+            SUCCESS: 'SUCCESS',
+            ERROR: 'ERROR'
         }
     }
 };
@@ -82,18 +60,10 @@ async function validateFileType(bucket, key) {
             new HeadObjectCommand({ Bucket: bucket, Key: key })
         );
 
-        const fileExtension = '.' + key.split('.').pop()?.toLowerCase();
+        const fileExtension = parse(key).ext;
 
-        if (!config.allowedFileTypes[fileExtension]) {
+        if (!config.allowedFileTypes.includes(fileExtension)) {
             throw new Error(`Invalid file extension: ${fileExtension}`);
-        }
-
-        if (ContentType) {
-            const isValidMimeType = config.allowedFileTypes[fileExtension].includes(ContentType.toLowerCase());
-
-            if (!isValidMimeType) {
-                throw new Error(`Invalid MIME type ${ContentType} for extension ${fileExtension}`);
-            }
         }
 
         return { ContentType, ContentLength };
@@ -127,9 +97,10 @@ export const handler = async (event) => {
         const uploadEnvironment = s3Metadata.upload_environment;
         const userId = s3Metadata.user_id;
         const teamUserId = s3Metadata.team_user_id;
+        const fileId = s3Metadata.file_id;
         const fileName = s3Metadata.file_name;
 
-        const fileExtension = objectKey.split('.').pop();
+        const fileExtension = parse(objectKey).ext.slice(1);
         const fileNameWithExtension = `${fileName}.${fileExtension}`;
 
         console.log(`Processing file - ${bucketName}/${objectKey} of user - ${userId}`);
@@ -156,7 +127,8 @@ export const handler = async (event) => {
                 bitRate: metadata.bitrate,
                 fileName,
                 fileNameWithExtension,
-                fileId: parse(objectKey).name,
+                fileId,
+                fileKey: objectKey,
                 fileType: contentInfo.ContentType,
                 timeTakenToExtractMetadata: processingTimeInSeconds,
                 userId,
@@ -180,7 +152,8 @@ export const handler = async (event) => {
                 fileSize: contentInfo.ContentLength,
                 fileName,
                 fileNameWithExtension,
-                fileId: parse(objectKey).name,
+                fileId,
+                fileKey: objectKey,
                 fileType: contentInfo.ContentType,
                 timeTakenToProcess: processingTimeInSeconds,
                 userId,
@@ -263,14 +236,20 @@ const runFFprobe = (filePath) => new Promise((resolve, reject) => {
             try {
                 const parsedMetadata = JSON.parse(output);
                 const format = parsedMetadata.format || {};
-                const stream = (parsedMetadata.streams && parsedMetadata.streams[0]) || {};
+                const videoStream = (parsedMetadata.streams || []).find(s => s.codec_type === 'video') || {};
+                const audioStream = (parsedMetadata.streams || []).find(s => s.codec_type === 'audio') || {};
 
                 const result = {
-                    duration: parseFloat(format.duration) || 0,
-                    bitrate: parseInt(format.bit_rate) || 0,
-                    codec_name: stream.codec_name || 'unknown',
-                    sample_rate: parseInt(stream.sample_rate) || 0,
+                    duration: parseFloat(format.duration),
+                    bitrate: parseInt(format.bit_rate) || parseInt(videoStream.bit_rate) || parseInt(audioStream.bit_rate),
+                    codec_name: videoStream.codec_name || audioStream.codec_name,
+                    sample_rate: parseInt(videoStream.sample_rate) || parseInt(audioStream.sample_rate),
                 };
+
+                if (!result.duration || !result.bitrate || !result.codec_name || !result.sample_rate) {
+                    reject(new Error('Failed to parse ffprobe output: Invalid file'));
+                }
+
                 console.log('Ffprobe parsed metadata:', JSON.stringify(result));
                 resolve(result);
             } catch (err) {
@@ -306,15 +285,21 @@ const runMediaInfo = (filePath) => new Promise((resolve, reject) => {
         } else {
             try {
                 const parsedOutput = JSON.parse(output);
-                const track = parsedOutput.media.track[0];
-                const audioTrack = parsedOutput.media.track.find(t => t['@type'] === 'Audio');
+                const generalTrack = parsedOutput.media.track.find(t => t['@type'] === 'General') || {};
+                const videoTrack = parsedOutput.media.track.find(t => t['@type'] === 'Video') || {};
+                const audioTrack = parsedOutput.media.track.find(t => t['@type'] === 'Audio') || {};
 
                 const result = {
-                    duration: parseFloat(track.Duration) || 0,
-                    bitrate: parseInt(track.OverallBitRate) || 0,
-                    codec_name: audioTrack?.Format || track.Format || 'unknown',
-                    sample_rate: parseInt(audioTrack?.SamplingRate) || 0,
+                    duration: parseFloat(generalTrack.Duration),
+                    bitrate: parseInt(generalTrack.OverallBitRate) || parseInt(videoTrack.BitRate) || parseInt(audioTrack.BitRate),
+                    codec_name: videoTrack.Format || audioTrack.Format,
+                    sample_rate: parseInt(videoTrack.SamplingRate) || parseInt(audioTrack.SamplingRate),
                 };
+
+                if (!result.duration || !result.bitrate || !result.codec_name || !result.sample_rate) {
+                    reject(new Error('Failed to parse mediainfo output: Invalid file'));
+                }
+
                 console.log('MediaInfo parsed metadata:', JSON.stringify(result));
                 resolve(result);
             } catch (err) {
@@ -353,7 +338,6 @@ const sendWebhookRequest = (url, data, options) => new Promise((resolve) => {
         resolve({ success: false, error: error.message });
     });
 
-    // Add timeout handling
     req.setTimeout(config.webhook.timeout, () => {
         req.destroy();
         resolve({ success: false, error: 'Request timeout' });
@@ -373,6 +357,12 @@ const sendWebhook = async (data, environment) => {
         return;
     }
 
+    const token = jwt.sign(
+        { type: 'LAMBDA-METADATA-EXTRACTOR' },
+        config.webhook.auth.JWT_SECRET_KEY,
+        { expiresIn: config.webhook.auth.TOKEN_EXPIRY }
+    );
+
     const url = new URL(webhookUrl);
     const options = {
         hostname: url.hostname,
@@ -381,6 +371,7 @@ const sendWebhook = async (data, environment) => {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
         }
     };
 

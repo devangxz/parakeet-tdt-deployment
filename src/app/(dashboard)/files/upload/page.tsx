@@ -36,12 +36,12 @@ const FileFormatDisplay = ({ formats }: { formats: string[] }) => (
 )
 
 const Dashboard = () => {
-  const [selectedTab, setSelectedTab] = useState('computer')
-  const [uploadSuccess, setUploadSuccess] = useState(false)
+  const [selectedTab, setSelectedTab] = useState('local');
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   const uploadTypes: UploadType[] = [
     {
-      id: 'computer',
+      id: 'local',
       icon: '/assets/images/upload/computer.svg',
       title: 'Upload files via Computer',
     },
@@ -94,8 +94,8 @@ const Dashboard = () => {
 
   const renderContent = () => {
     switch (selectedTab) {
-      case 'computer':
-        return <FileAndFolderUploader onUploadSuccess={setUploadSuccess} />
+      case 'local':
+        return <FileAndFolderUploader onUploadSuccess={setUploadSuccess} />;
       // case 'link':
       //   return <LinkImporter onUploadSuccess={setUploadSuccess} />;
       // case 'dropbox':

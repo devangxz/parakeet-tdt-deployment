@@ -99,5 +99,6 @@ export const config = {
     '/dev/:path*',
     '/transcribe/:path*',
     '/api/:path*',
+    '/editor/:path*',
   ],
 }

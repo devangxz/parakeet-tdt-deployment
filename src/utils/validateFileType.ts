@@ -14,20 +14,7 @@ export const getFileTypeFromExtension = (fileName: string): string => {
 
 const validateFileType = (file: File): boolean => {
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-    const fileType = file.type.toLowerCase();
-
-    // Check if extension is allowed
-    if (!ALLOWED_FILE_TYPES[fileExtension as keyof typeof ALLOWED_FILE_TYPES]) {
-        return false;
-    }
-
-    // If file has a MIME type, validate it against allowed MIME types for that extension
-    if (fileType) {
-        return ALLOWED_FILE_TYPES[fileExtension as keyof typeof ALLOWED_FILE_TYPES].includes(fileType);
-    }
-
-    // If no MIME type is available, allow based on extension only
-    return true;
+    return !!ALLOWED_FILE_TYPES[fileExtension as keyof typeof ALLOWED_FILE_TYPES];
 };
 
 export default validateFileType;

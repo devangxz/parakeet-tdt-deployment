@@ -73,6 +73,7 @@ export const EMAIL_PLACEHOLDERS = emailPlaceholders
 export const EMAIL_TEMPLATES = emailTemplates
 
 // Upload
+export const MAX_FILE_SIZE = config.max_file_size
 export const ALLOWED_FILE_TYPES = config.allowed_file_types
 export const SINGLE_PART_UPLOAD_LIMIT = config.single_part_upload_limit
 export const MULTI_PART_UPLOAD_CHUNK_SIZE = config.multi_part_upload_chunk_size

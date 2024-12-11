@@ -24,11 +24,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { BACKEND_URL, LEGAL_QC_TRANSCRIBER_RATE } from '@/constants'
+import { LEGAL_QC_TRANSCRIBER_RATE } from '@/constants'
 import { BaseTranscriberFile } from '@/types/files'
-import axiosInstance from '@/utils/axios'
 import formatDuration from '@/utils/formatDuration'
 import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
+import axios from 'axios'
 
 interface File extends BaseTranscriberFile {
   qc_cost: number
@@ -306,11 +306,11 @@ export default function HistoryFilesPage() {
   const diffHandler = async (fileId: string, index: number) => {
     setLoadingFileOrder((prev) => ({ ...prev, [index]: true }))
     try {
-      const res = await axiosInstance.get(
-        `${BACKEND_URL}/get-files?fileId=${fileId}&fileType=asr,qc`
+      const res = await axios.get(
+        `/api/om/get-compare-files?fileId=${fileId}&reviewDiff=asr&verificationDiff=qc`
       )
-      const { file1, file2 } = res.data
-      const diff = diffParagraphs(file1, file2)
+      const { reviewFile, verificationFile } = res.data
+      const diff = diffParagraphs(reviewFile, verificationFile)
       setDiff(diff)
       setIsDiffModalOpen(true)
       toast.success('Diff loaded successfully')

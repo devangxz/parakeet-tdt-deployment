@@ -12,7 +12,7 @@ interface UploadFile {
 
 interface UploadStatus {
     progress: number;
-    status: 'validating' | 'uploading' | 'processing' | 'completed' | 'failed';
+    status: 'validating' | 'uploading' | 'importing' | 'processing' | 'completed' | 'failed';
     error?: string;
 }
 
@@ -111,7 +111,7 @@ const UploadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =
             eventSourceRef.current.onmessage = async (event) => {
                 const data = JSON.parse(event.data);
                 if (data?.type === 'METADATA_EXTRACTION') {
-                    if (data?.file?.status === 'success') {
+                    if (data?.file?.status === 'SUCCESS') {
                         updateUploadStatus(data?.file?.fileNameWithExtension, {
                             progress: 100,
                             status: 'completed'
@@ -204,15 +204,22 @@ const UploadProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =
     }, [uploadingFiles.length, closeSSEConnection]);
 
     useEffect(() => {
-        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+        const handleBeforeAction = (event: BeforeUnloadEvent) => {
             if (uploadingFiles.length > 0) {
                 event.preventDefault();
                 event.returnValue = '';
+                return 'You have uploads in progress. Are you sure you want to leave?';
             }
         };
 
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('beforeunload', handleBeforeAction);
+
+        window.onbeforeunload = handleBeforeAction;
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeAction);
+            window.onbeforeunload = null;
+        };
     }, [uploadingFiles]);
 
     const contextValue = {

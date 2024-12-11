@@ -481,7 +481,11 @@ const fetchFileDetails = async ({
         setPlayerEvents([]); // TODO: Implement player events
         return orderRes.data
     } catch (error) {
-        console.log(error)
+        if (error instanceof Error && 'response' in error && typeof error.response === 'object' && error.response && 'data' in error.response && error.response.data === 'Unauthorized') {
+            toast.error('You are not authorized to access this file')
+            window.location.href = "/"
+            return
+        }
         toast.error('Failed to fetch file details')
     }
 }

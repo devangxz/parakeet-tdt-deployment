@@ -29,6 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
 import { RenderPDFDocument } from '@/components/utils'
 import { AUTOSAVE_INTERVAL } from '@/constants'
 import usePreventMultipleTabs from '@/hooks/usePreventMultipleTabs'
@@ -448,12 +449,17 @@ function EditorPage() {
     setLines(lineData)
   }
 
+  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value
+    setNotes(text)
+  }
+
   return (
     <div className='bg-[#F7F5FF] h-screen flex flex-col overflow-hidden'>
-      <div className="w-full px-2">
-        <div className='flex justify-between bg-white'>
-          <p className='font-semibold'>{orderDetails.filename}</p>
-          {session?.user?.role !== 'CUSTOMER' && <span className={`text-red-600 ${orderDetails.remainingTime === '0' ? 'animate-pulse' : ''}`}>{timeoutCount}</span>}
+      <div className="mx-2">
+        <div className='flex justify-between bg-white rounded-t-2xl'>
+          <p className='font-semibold px-2'>{orderDetails.filename}</p>
+          {session?.user?.role !== 'CUSTOMER' && <span className={`text-red-600 ${orderDetails.remainingTime === '0' ? 'animate-pulse' : ''} mr-2`}>{timeoutCount}</span>}
         </div>
       </div>
       <Header
@@ -464,7 +470,6 @@ function EditorPage() {
         editorModeOptions={editorModeOptions}
         getEditorMode={getEditorMode}
         notes={notes}
-        setNotes={setNotes}
         orderDetails={orderDetails}
         submitting={submitting}
         setIsSubmitModalOpen={setIsSubmitModalOpen}
@@ -498,7 +503,7 @@ function EditorPage() {
               className="flex flex-col justify-between h-full"
             >
               <div className='flex w-[100vw] px-2 h-full'>
-                <div className='w-full h-full pb-12'>
+                <div className='w-4/5 h-full pb-12'>
                   {selectedSection === 'proceedings' && (
                     <Tabs
                       onValueChange={handleTabChange}
@@ -545,6 +550,20 @@ function EditorPage() {
                     </div>
                   )}
                 </div>
+                <div className='w-1/5'>
+                  <div className="fixed w-[19%] h-[84%] bg-white ml-2 overflow-auto py-4 px-3 rounded-lg overflow-y-hidden border">
+                    <div className='border-b flex justify-between items-center pb-1'>
+                      <p className='text-lg font-semibold'>Notes</p>
+                    </div>
+                    <Textarea
+                      placeholder='Start typing...'
+                      className='resize-none mt-3 h-[94%] border-none outline-none focus:outline-none focus-visible:ring-0 shadow-none'
+                      value={notes}
+                      onChange={handleNotesChange}
+                    />
+                  </div>
+                </div>
+
               </div>
             </div>
             {step !== 'QC' && editorMode === 'Editor' && (

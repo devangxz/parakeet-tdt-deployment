@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
-import { ReloadIcon } from '@radix-ui/react-icons'
+import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
@@ -11,6 +11,12 @@ import { determinePwerLevel } from './utils'
 import { getAssignedFiles } from '@/app/actions/cf/assigned-files'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Tooltip,
   TooltipContent,
@@ -254,46 +260,61 @@ export default function AssignedFilesPage({ changeTab }: Props) {
         <div className='flex items-center gap-4'>
           <Button
             variant='order'
-            className='not-rounded w-[140px]'
-            onClick={() =>
-              window.open(
-                `/editor/${row.original.fileId}`,
-                '_blank',
-                'toolbar=no,location=no,menubar=no,width=' +
-                  window.screen.width +
-                  ',height=' +
-                  window.screen.height +
-                  ',left=0,top=0'
-              )
-            }
+            className='w-[140px] format-button'
+            onClick={() => {
+              window.open(`/editor/${row.original.fileId}`, '_blank')
+            }}
           >
-            Start
+            Open in new tab
           </Button>
-          {loadingFileOrder[row.original.orderId] ? (
-            <Button
-              disabled
-              variant='order'
-              className='format-button w-[140px]'
-            >
-              Please wait
-              <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-            </Button>
-          ) : (
-            <Button
-              className='shadow-none font-normal not-rounded w-[140px]'
-              variant='destructive'
-              onClick={() =>
-                unassignmentHandler({
-                  id: row.original.orderId,
-                  setLoadingFileOrder,
-                  changeTab,
-                  type: 'CF',
-                })
-              }
-            >
-              Cancel
-            </Button>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant='order'
+                className='h-9 w-8 p-0 format-icon-button'
+              >
+                <span className='sr-only'>Open menu</span>
+                <ChevronDownIcon className='h-4 w-4' />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuItem
+                onClick={() => {
+                  window.open(
+                    `/editor/${row.original.fileId}`,
+                    '_blank',
+                    'toolbar=no,location=no,menubar=no,width=' +
+                      window.screen.width +
+                      ',height=' +
+                      window.screen.height +
+                      ',left=0,top=0'
+                  )
+                }}
+              >
+                Open in new window
+              </DropdownMenuItem>
+              {loadingFileOrder[row.original.orderId] ? (
+                <DropdownMenuItem disabled>
+                  Please wait
+                  <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  className='text-destructive'
+                  onClick={() =>
+                    unassignmentHandler({
+                      id: row.original.orderId,
+                      setLoadingFileOrder,
+                      changeTab,
+                      type: 'CF',
+                    })
+                  }
+                >
+                  Cancel
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ),
     },
