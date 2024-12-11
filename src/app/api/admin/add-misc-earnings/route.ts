@@ -1,36 +1,19 @@
 import { NextResponse } from 'next/server'
 
 import logger from '@/lib/logger'
-import prisma from '@/lib/prisma'
+import { addMiscEarnings } from '@/services/admin/misc-earnings-service'
 
 export async function POST(req: Request) {
   try {
     const { transcriberEmail, amount, reason } = await req.json()
-
-    const transcriberInfo = await prisma.user.findUnique({
-      where: { email: transcriberEmail.toLowerCase() },
+    const response = await addMiscEarnings({
+      transcriberEmail,
+      amount,
+      reason,
     })
-
-    if (!transcriberInfo) {
-      logger.error(`Transcriber not found ${transcriberInfo}`)
-      return NextResponse.json({ s: 'User not found' })
-    }
-
-    await prisma.miscEarnings.create({
-      data: {
-        userId: transcriberInfo.id,
-        amount: Number(amount),
-        reason,
-      },
-    })
-
-    logger.info(`Successfully added misc earnings to ${transcriberEmail}`)
-    return NextResponse.json({
-      success: true,
-      s: 'Successfully added misc earnings',
-    })
+    return NextResponse.json(response)
   } catch (error) {
-    logger.error(`Failed to add misc earnings`, error)
+    logger.error(`Error while adding misc earnings`, error)
     return NextResponse.json({
       success: false,
       s: 'An error occurred. Please try again after some time.',

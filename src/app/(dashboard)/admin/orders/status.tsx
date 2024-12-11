@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import AudioPlayer from './components/AudioPlayer'
+import { fetchFileOrderInformation } from '@/app/actions/om/fetch-file-order-information'
 import AssignFinalizerDialog from '@/components/admin-components/assign-finalizer'
 import AssignQcDialog from '@/components/admin-components/assign-qc-dialog'
 import ReassignFinalizer from '@/components/admin-components/re-assign-finalizer-dialog'
@@ -82,12 +83,10 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
   const handleSearch = async () => {
     try {
       setIsLoading(true)
-      const response = await axios.get(
-        `/api/om/fetch-file-order-information?fileId=${fileId}`
-      )
+      const response = await fetchFileOrderInformation(fileId)
 
-      if (response.data.success) {
-        const orderDetails = response.data.details
+      if (response.success && response.details) {
+        const orderDetails = response.details as any
         const qcNames = orderDetails.Assignment.filter(
           (a: { status: string }) =>
             a.status === 'ACCEPTED' || a.status === 'COMPLETED'
@@ -127,15 +126,10 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
 
         setOrderInformation(order)
       } else {
-        toast.error(response.data.s)
+        toast.error(response.message)
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to get file status`)
-      }
+      toast.error('Failed to get file status')
     } finally {
       setIsLoading(false)
     }

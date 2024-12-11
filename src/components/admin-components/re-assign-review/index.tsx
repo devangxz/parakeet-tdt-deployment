@@ -1,8 +1,10 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { reassignReview } from '@/app/actions/om/reassign-review'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -45,32 +47,27 @@ const ReassignReview = ({
     }
     setLoading(true)
     try {
-      const response = await axios.post(`/api/om/reassign-review`, {
-        orderId,
+      const result = await reassignReview({
+        orderId: Number(orderId),
         userEmail,
         retainEarnings: retainEarnings === 'yes',
         isCompleted,
       })
-      if (response.data.success) {
+      if (result.success) {
         const successToastId = toast.success(`Successfully re-assigned review`)
         toast.dismiss(successToastId)
-        setLoading(false)
         onClose()
         refetch()
       } else {
-        toast.error(response.data.message)
-        setLoading(false)
+        toast.error(result.message)
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Error re-assigning review`)
-      }
+      toast.error(`Error re-assigning review`)
+    } finally {
       setLoading(false)
     }
   }
+
   return (
     <AlertDialog open={open}>
       <AlertDialogContent>

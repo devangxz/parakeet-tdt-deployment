@@ -2,13 +2,13 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 
 import { DataTable } from './data-table'
 import { unassignmentHandler } from './unassignmentHandler'
 import { determinePwerLevel } from './utils'
+import { getAssignedFiles } from '@/app/actions/cf/assigned-files'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -57,66 +57,45 @@ export default function AssignedFilesPage({ changeTab }: Props) {
       setIsLoading(false)
     }
     try {
-      const url = isLegalPage
-        ? `/api/cf/assigned-files?type=legal`
-        : `/api/cf/assigned-files?type=general`
-      const response = await axios.get(url)
+      const type = isLegalPage ? 'legal' : 'general'
+      const response = await getAssignedFiles(type)
+
+      if (!response.success) {
+        throw new Error('An error occurred')
+      }
 
       if (response.data) {
-        const orders = response.data.map(
-          (
-            assignment: {
-              acceptedTs: string
-              order: {
-                pwer: number
-                orderTs: string
-                id: number
-                fileId: string
-                File: { filename: string; duration: number }
-                status: string
-                priority: number
-                cf_cost: number
-                deliveryTs: string
-                highDifficulty: boolean
-                orderType: string
-                rateBonus: number
-                instructions: string | null
-                cf_rate: number
-              }
-            },
-            index: number
-          ) => {
-            const diff = determinePwerLevel(assignment.order.pwer)
+        const orders = response.data.map((assignment: any, index: number) => {
+          const diff = determinePwerLevel(assignment.order.pwer)
 
-            const { timeString, dateString } = getFormattedTimeStrings(
-              assignment.acceptedTs
-            )
+          const { timeString, dateString } = getFormattedTimeStrings(
+            assignment.acceptedTs
+          )
 
-            return {
-              index: index + 1,
-              orderId: assignment.order.id,
-              fileId: assignment.order.fileId,
-              filename: assignment.order.File.filename,
-              orderTs: assignment.order.orderTs,
-              pwer: assignment.order.pwer,
-              status: assignment.order.status,
-              priority: assignment.order.priority,
-              cf_cost: assignment.order.cf_cost,
-              duration: assignment.order.File.duration,
-              qc: '-',
-              deliveryTs: assignment.order.deliveryTs,
-              hd: assignment.order.highDifficulty,
-              orderType: assignment.order.orderType,
-              rateBonus: assignment.order.rateBonus,
-              timeString,
-              dateString,
-              diff,
-              rate: assignment.order.cf_rate,
-              instructions: assignment.order.instructions,
-            }
+          return {
+            index: index + 1,
+            orderId: assignment.order.id,
+            fileId: assignment.order.fileId,
+            filename: assignment.order.File.filename,
+            orderTs: assignment.order.orderTs,
+            pwer: assignment.order.pwer,
+            status: assignment.order.status,
+            priority: assignment.order.priority,
+            cf_cost: assignment.order.cf_cost,
+            duration: assignment.order.File.duration,
+            qc: '-',
+            deliveryTs: assignment.order.deliveryTs,
+            hd: assignment.order.highDifficulty,
+            orderType: assignment.order.orderType,
+            rateBonus: assignment.order.rateBonus,
+            timeString,
+            dateString,
+            diff,
+            rate: assignment.order.cf_rate,
+            instructions: assignment.order.instructions,
           }
-        )
-        setAssginedFiles(orders ?? [])
+        })
+        setAssginedFiles((orders as any) ?? [])
         setError(null)
       }
     } catch (err) {
@@ -280,7 +259,11 @@ export default function AssignedFilesPage({ changeTab }: Props) {
               window.open(
                 `/editor/${row.original.fileId}`,
                 '_blank',
-                'toolbar=no,location=no,menubar=no,width=' + window.screen.width + ',height=' + window.screen.height + ',left=0,top=0'
+                'toolbar=no,location=no,menubar=no,width=' +
+                  window.screen.width +
+                  ',height=' +
+                  window.screen.height +
+                  ',left=0,top=0'
               )
             }
           >

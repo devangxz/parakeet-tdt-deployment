@@ -39,9 +39,9 @@ const calculateFileCost = async (order: any) => {
   const customFormatCost = +(customFormatRate * duration).toFixed(2)
 
   return {
-    transcriptionRate: rates.transcription.toFixed(2),
+    transcriptionRate: Number(rates.transcription.toFixed(2)),
     transcriptionCost,
-    customFormatRate: rates.customFormat.toFixed(2),
+    customFormatRate: Number(rates.customFormat.toFixed(2)),
     customFormatCost,
   }
 }

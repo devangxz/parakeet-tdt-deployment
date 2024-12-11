@@ -1,11 +1,11 @@
 'use client'
 
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import { useSession } from 'next-auth/react'
 import React, { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
+import { resendVerificationEmail } from '@/app/actions/resend-verify-email'
 import SideImage from '@/components/side-image'
 import { Button } from '@/components/ui/button'
 
@@ -19,19 +19,19 @@ const VerifyAccount = () => {
     }
   }, [session])
 
-  const resendVerificationEmail = async () => {
+  const handleResendVerificationEmail = async () => {
     try {
       setIsLoading(true)
-      const response = await axios.post(`/api/resend-verify-email`)
-      if (response.data.success) {
+      const response = await resendVerificationEmail()
+      if (response.success) {
         const tId = toast.success(`Successfully resend verification email!`)
         toast.dismiss(tId)
       } else {
-        toast.error(`Failed to resend verification email`)
+        toast.error(response.message || 'Failed to resend verification email')
       }
-      setIsLoading(false)
     } catch (error) {
       toast.error(`Failed to resend verification email`)
+    } finally {
       setIsLoading(false)
     }
   }
@@ -67,7 +67,7 @@ const VerifyAccount = () => {
               <Button
                 type='submit'
                 className='w-full'
-                onClick={resendVerificationEmail}
+                onClick={handleResendVerificationEmail}
               >
                 Resent Verification Email
               </Button>

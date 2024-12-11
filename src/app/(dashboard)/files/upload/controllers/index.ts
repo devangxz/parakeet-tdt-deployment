@@ -1,4 +1,6 @@
-import axios from 'axios'
+'use server'
+
+import { deleteFilesAction } from '@/app/actions/files/delete'
 
 export const listController = async (
   payload: { fileId: string; newFilename?: string },
@@ -7,10 +9,8 @@ export const listController = async (
 
 const deleteFile = async ({ fileId }: Record<string, unknown>) => {
   try {
-    const response = await axios.post(`/api/files/delete`, {
-      fileIds: [fileId],
-    })
-    return response?.data?.message
+    const response = await deleteFilesAction([fileId as string])
+    return response.s
   } catch (err) {
     throw err
   }

@@ -1,5 +1,4 @@
 'use client'
-import axios from 'axios'
 import {
   Ban,
   BadgeCheck,
@@ -12,6 +11,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import React, { useState, useEffect } from 'react'
 
+import { getCreditBalanceAction } from '@/app/actions/credit-balance'
 import TeamSwitcher from '@/components/team-switcher'
 import { Separator } from '@/components/ui/separator'
 
@@ -21,8 +21,10 @@ export function SidebarNav() {
 
   const fetchCreditsBalance = async () => {
     try {
-      const response = await axios.get(`/api/payment/credit-balance`)
-      setCreditsBalance(response.data.creditsBalance)
+      const response = await getCreditBalanceAction()
+      if (response.success && response.creditsBalance) {
+        setCreditsBalance(response.creditsBalance)
+      }
     } catch (err) {
       console.error('Failed to fetch credits balance:', err)
     }

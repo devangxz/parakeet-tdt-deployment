@@ -1,5 +1,7 @@
-import axios, { AxiosError } from 'axios'
 import { toast } from 'sonner'
+
+import { unassignFile } from '@/app/actions/cf/unassign'
+import { unassignQCFile } from '@/app/actions/qc/unassign'
 
 interface UnassignFileParams {
   id: number
@@ -19,20 +21,21 @@ export const unassignmentHandler = async ({
   setLoadingFileOrder((prev) => ({ ...prev, [id]: true }))
 
   try {
-    const url = type === 'QC' ? 'qc/unassign' : 'cf/unassign'
-    await axios.post(`/api/${url}`, {
-      orderId: id,
-      type,
-    })
-    toast.success('File unassigned successfully')
-    changeTab('available')
-  } catch (error) {
-    if (error instanceof AxiosError && error.response) {
-      const errorToastId = toast.error(error.response.data.error)
-      toast.dismiss(errorToastId)
+    let response
+    if (type === 'QC') {
+      response = await unassignQCFile(id)
     } else {
-      toast.error('Error unassigning file')
+      response = await unassignFile(id)
     }
+
+    if (response.success) {
+      toast.success('File unassigned successfully')
+      changeTab('available')
+    } else {
+      toast.error(response.message)
+    }
+  } catch (error) {
+    toast.error('Error unassigning file')
   } finally {
     setLoadingFileOrder((prev) => ({ ...prev, [id]: false }))
   }

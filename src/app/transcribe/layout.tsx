@@ -1,10 +1,8 @@
-'use client'
-import axios from 'axios'
 import { useSession } from 'next-auth/react'
-import { useEffect, useState } from 'react'
 
 import Header from './components/header'
 import Sidebar, { SidebarItemType } from './components/sidebar'
+import { getTranscriberEarnings } from '@/app/actions/transcriber/earnings'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Earnings } from '@/types/earnings'
 
@@ -12,24 +10,13 @@ type AllSidebarItemType = SidebarItemType & {
   type: string
 }
 
-export default function FilesLayout({
+export default async function FilesLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   const { data: session } = useSession()
-  const [earnings, setEarnings] = useState<Earnings | null>(null)
-
-  const fetchEarnings = async () => {
-    const res = await axios.get(`/api/transcriber/earnings`)
-    setEarnings(res.data)
-  }
-
-  useEffect(() => {
-    if (!earnings) {
-      fetchEarnings()
-    }
-  }, [])
+  const earnings = await getTranscriberEarnings()
 
   const allSidebarItems: AllSidebarItemType[] = [
     {
@@ -118,7 +105,10 @@ export default function FilesLayout({
       <div className='grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]'>
         <div className='hidden border-r-2 border-customBorder md:block'>
           <div className='flex h-full max-h-screen flex-col gap-2'>
-            <Sidebar earnings={earnings} sidebarItems={sidebarItems} />
+            <Sidebar
+              earnings={earnings.earnings as unknown as Earnings}
+              sidebarItems={sidebarItems}
+            />
           </div>
         </div>
         <div className='flex flex-col'>{children}</div>

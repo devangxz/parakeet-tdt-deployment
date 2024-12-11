@@ -2,28 +2,22 @@ export const dynamic = 'force-dynamic'
 import { NextResponse, NextRequest } from 'next/server'
 
 import logger from '@/lib/logger'
-import { checkTranscriberPayment } from '@/utils/backend-helper'
+import { checkWithdrawalStatus } from '@/services/admin/withdrawal-service'
 
 export async function GET(req: NextRequest) {
-  const batchId = req.nextUrl.searchParams.get('batchId')
-
   try {
-    const checkStatus = await checkTranscriberPayment(batchId as string)
-    if (!checkStatus) {
-      logger.error(`Error checking batch status`)
+    const batchId = req.nextUrl.searchParams.get('batchId')
+    if (!batchId) {
       return NextResponse.json({
         success: false,
-        message: 'Batch status failed, pls check batchId',
+        s: 'Batch ID is required',
       })
     }
 
-    logger.info(`Batch status checked successfully`)
-    return NextResponse.json({
-      success: true,
-      details: checkStatus,
-    })
+    const response = await checkWithdrawalStatus(batchId)
+    return NextResponse.json(response)
   } catch (error) {
-    logger.error(`Error checking batch payment status`, error)
+    logger.error(`Error while checking withdrawal status`, error)
     return NextResponse.json({
       success: false,
       s: 'An error occurred. Please try again after some time.',

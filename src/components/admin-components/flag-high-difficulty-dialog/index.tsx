@@ -1,8 +1,10 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { flagHighDifficulty } from '@/app/actions/om/flag-high-difficulty'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -124,35 +126,30 @@ const FlagHighDifficulyDialog = ({
     }
     setLoading(true)
     try {
-      const response = await axios.post(`/api/om/flag-high-difficulty`, {
-        orderId,
+      const result = await flagHighDifficulty({
+        orderId: Number(orderId),
         issues: selectedItems.join(','),
         rate: formData.rate,
         delayPeriod: formData.delayPeriod,
         refundTrigger: formData.refundTrigger,
       })
-      if (response.data.success) {
+      if (result.success) {
         const successToastId = toast.success(
           `Successfully flagged file as high difficulty`
         )
         toast.dismiss(successToastId)
-        setLoading(false)
         refetch()
         onClose()
       } else {
-        toast.error(response.data.message)
-        setLoading(false)
+        toast.error(result.message)
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Error flagging file as high difficulty`)
-      }
+      toast.error(`Error flagging file as high difficulty`)
+    } finally {
       setLoading(false)
     }
   }
+
   return (
     <AlertDialog open={open}>
       <AlertDialogContent className='sm:max-w-[792px]'>

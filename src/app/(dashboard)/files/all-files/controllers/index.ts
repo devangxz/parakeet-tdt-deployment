@@ -1,5 +1,4 @@
-import axios from 'axios'
-
+import { deleteFilesAction } from '@/app/actions/files/delete'
 import { BACKEND_URL } from '@/constants'
 import axiosInstance from '@/utils/axios'
 
@@ -28,10 +27,8 @@ const downloadFile = async ({ fileId }: Record<string, unknown>) => {
 
 const deleteFile = async ({ fileId }: Record<string, unknown>) => {
   try {
-    const response = await axios.post(`/api/files/delete`, {
-      fileIds: [fileId],
-    })
-    return response?.data?.message
+    const response = await deleteFilesAction([fileId as string])
+    return response?.s
   } catch (err) {
     throw err
   }

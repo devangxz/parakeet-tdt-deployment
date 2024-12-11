@@ -1,8 +1,10 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { reassignApprovalOrder } from '@/app/actions/om/reassign-approval-order'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -44,34 +46,29 @@ const ReassignApprovalFile = ({
     }
     setLoading(true)
     try {
-      const response = await axios.post(`/api/om/reassign-approval-order`, {
-        orderId,
+      const result = await reassignApprovalOrder({
+        orderId: Number(orderId),
         userEmail,
         retainEarnings: retainEarnings === 'yes',
         retainTranscript: retainTranscript === 'yes',
       })
-      if (response.data.success) {
+      if (result.success) {
         const successToastId = toast.success(
           `Successfully re-assigned finalizer`
         )
         toast.dismiss(successToastId)
-        setLoading(false)
         onClose()
         refetch()
       } else {
-        toast.error(response.data.message)
-        setLoading(false)
+        toast.error(result.message)
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Error re-assigning finalizer`)
-      }
+      toast.error(`Error re-assigning finalizer`)
+    } finally {
       setLoading(false)
     }
   }
+
   return (
     <AlertDialog open={open}>
       <AlertDialogContent>

@@ -1,10 +1,10 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useSession } from 'next-auth/react'
 import React, { useState } from 'react'
 import { toast } from 'sonner'
 
+import { saveDefaultPreferences } from '@/app/actions/user/default-preferences'
 import HeadingDescription from '@/components/heading-description'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -188,6 +188,7 @@ const Page = ({ data }: { data: PreferencesResponse }) => {
   } else {
     preferences.push(...transcriberPreferences)
   }
+
   async function handlePreferences() {
     setLoading(true)
     try {
@@ -215,21 +216,20 @@ const Page = ({ data }: { data: PreferencesResponse }) => {
       keys.forEach((key) => {
         formData[key] = preferencesOptions[key as keyof preferecesOptoinsType]
       })
-      const response = await axios.post(`/api/user/default-preferences`, {
-        preferences: formData,
-        recordsPerPage,
-      })
-      const message = mapKeyToMessage(response.data.message)
-      const successToastId = toast.success(message)
-      toast.dismiss(successToastId)
-    } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const message = mapKeyToMessage(error.response.data.message)
+
+      const response = await saveDefaultPreferences(formData, recordsPerPage)
+
+      if (response.success) {
+        const message = mapKeyToMessage(response.message)
+        const successToastId = toast.success(message)
+        toast.dismiss(successToastId)
+      } else {
+        const message = mapKeyToMessage(response.message)
         const errorToastId = toast.error(message)
         toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Error${error}`)
       }
+    } catch (error) {
+      toast.error(`Error: ${error}`)
     } finally {
       setLoading(false)
     }

@@ -1,9 +1,9 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { generateInvoiceAction } from '@/app/actions/admin/generate-invoice'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -29,25 +29,16 @@ export default function AdminDashboard() {
   const handleSubmit = async () => {
     try {
       setLoading(true)
-      const response = await axios.post(`/api/admin/generate-invoice`, {
-        data: formData,
-      })
-      if (response.data.success) {
+      const response = await generateInvoiceAction(formData)
+      if (response.success) {
         toast.success('Successfully generated invoice.')
-        setInvoiceUrl(response.data.url)
-        setLoading(false)
-        setInvoiceUrl(response.data.invoiceId)
+        setInvoiceUrl(response.invoiceId || '')
       } else {
-        toast.error(response.data.message)
-        setLoading(false)
+        toast.error(response.s)
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.message)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to generate invoice.`)
-      }
+      toast.error('Failed to generate invoice.')
+    } finally {
       setLoading(false)
     }
   }

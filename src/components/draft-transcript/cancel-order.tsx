@@ -1,8 +1,9 @@
+'use client'
 import { Cross1Icon, ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { cancelOrderAction } from '@/app/actions/file/cancel-order'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -24,7 +25,7 @@ interface CancelOrderProps {
   amount: number
 }
 
-const CanceOrderDialog = ({
+const CancelOrderDialog = ({
   open,
   onClose,
   fileId,
@@ -34,25 +35,28 @@ const CanceOrderDialog = ({
 }: CancelOrderProps) => {
   const [cancelLoading, setCancelLoading] = useState(false)
 
-  const renameFile = async () => {
+  const handleCancelOrder = async () => {
     setCancelLoading(true)
     try {
-      await axios.post(`/api/file/cancel-order`, { fileId })
-      const successToastId = toast.success(
-        `Successfully cancelled the order of ${filename}`
-      )
-      toast.dismiss(successToastId)
-      refetch()
-      setCancelLoading(false)
-      onClose()
-    } catch (err) {
-      const errorToastId = toast.error(
+      const response = await cancelOrderAction(fileId)
+      if (response.success) {
+        toast.success(`Successfully cancelled the order of ${filename}`)
+        refetch()
+        onClose()
+      } else {
+        toast.error(
+          `Your file has already reached >${ORDER_CANCEL_PROGRESS} completion and cannot be canceled. Please refer to our cancelation policy for more details.`
+        )
+      }
+    } catch (error) {
+      toast.error(
         `Your file has already reached >${ORDER_CANCEL_PROGRESS} completion and cannot be canceled. Please refer to our cancelation policy for more details.`
       )
-      toast.dismiss(errorToastId)
+    } finally {
       setCancelLoading(false)
     }
   }
+
   return (
     <AlertDialog open={open}>
       <AlertDialogContent>
@@ -68,7 +72,7 @@ const CanceOrderDialog = ({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={renameFile}>
+          <AlertDialogAction onClick={handleCancelOrder}>
             {cancelLoading ? (
               <>
                 Please wait
@@ -84,4 +88,4 @@ const CanceOrderDialog = ({
   )
 }
 
-export default CanceOrderDialog
+export default CancelOrderDialog

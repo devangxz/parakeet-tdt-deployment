@@ -3,7 +3,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -11,6 +10,9 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { DataTable } from './components/data-table'
+import { getCredits } from '@/app/actions/payment/credits'
+import { getAddCreditsInvoice } from '@/app/actions/payment/credits/get-add-credits-invoice'
+import { updateCreditPreferences } from '@/app/actions/payment/credits/preferences'
 import AddCreditsDialog from '@/components/pay-add-credits'
 import {
   AlertDialog,
@@ -77,17 +79,17 @@ const Invoice = () => {
     }
 
     try {
-      const response = await axios.get(`/api/payment/credits`)
+      const response = await getCredits()
 
-      if (response.data.success) {
-        setCreditsBalance(response.data.s.credits_balance)
+      if (response.success && response.s) {
+        setCreditsBalance(response.s.credits_balance)
         form.reset({
           ...form.getValues(),
-          ucd: response.data.s.credits_preference.ucd === 1 ? true : false,
-          rtc: response.data.s.credits_preference.rtc === 1 ? true : false,
+          ucd: response.s.credits_preference.ucd === 1 ? true : false,
+          rtc: response.s.credits_preference.rtc === 1 ? true : false,
         })
 
-        const invoices = response.data.s.credit_history.map(
+        const invoices = response.s.credit_history.map(
           (invoice: { id: string; amt: number; ts: string; dn: string }) => ({
             type: invoice.dn,
             id: invoice.id,
@@ -140,23 +142,6 @@ const Invoice = () => {
         </div>
       ),
     },
-    //TODO: Implement this feature later
-    // {
-    //   id: 'actions',
-    //   header: 'Actions',
-    //   enableHiding: false,
-    //   cell: ({ row }) => (
-    //     <div className='flex items-center'>
-    //       <Button
-    //         variant='order'
-    //         className='not-rounded'
-    //         onClick={() => details(row.original.id)}
-    //       >
-    //         Transfer Credit
-    //       </Button>
-    //     </div>
-    //   ),
-    // },
   ]
 
   const form = useForm<z.infer<typeof FormSchema>>({
@@ -169,11 +154,12 @@ const Invoice = () => {
   const onSubmit = async (data: z.infer<typeof FormSchema>) => {
     setIsCreditPreferenceLoading(true)
     try {
-      const response = await axios.post(`/api/payment/credits/preferences`, {
+      const response = await updateCreditPreferences({
         uc: data.ucd ? 1 : 0,
         rc: data.rtc ? 1 : 0,
       })
-      if (response.status === 200) {
+
+      if (response.success) {
         const tId = toast.success('Successfully updated credits preferences')
         toast.dismiss(tId)
       } else {
@@ -231,27 +217,18 @@ const Invoice = () => {
     setWarningDialog(false)
     try {
       setIsAddCreditsLoading(true)
-      const response = await fetch(
-        `/api/payment/credits/get-add-credits-invoice?amount=${amount}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.user?.token}`,
-          },
-        }
-      )
-      const responseData = await response.json()
-      if (responseData.success) {
+      const response = await getAddCreditsInvoice({ amount })
+
+      if (response.success && response.data) {
         setIsAddCreditsLoading(false)
         setAddCreditsData({
-          clientToken: responseData.s.token,
-          invoiceId: responseData.s.invoiceId,
+          clientToken: response.data.token,
+          invoiceId: response.data.invoiceId,
         })
         setOpenDetailsDialog(true)
       } else {
         setIsAddCreditsLoading(false)
-        toast.error(`Failed to add credits: ${responseData.message}`)
+        toast.error(`Failed to add credits: ${response.message}`)
       }
     } catch (error) {
       setIsCreditPreferenceLoading(false)
