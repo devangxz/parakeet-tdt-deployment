@@ -6,7 +6,7 @@ import { updateIndustry } from '@/services/admin/industry-service'
 export async function POST(req: Request) {
   try {
     const { userEmail, industry } = await req.json()
-    const response = await updateIndustry({ userEmail, industry })
+    const response = await updateIndustry({ id: userEmail, industry })
     return NextResponse.json(response)
   } catch (error) {
     logger.error(`Error while updating industry`, error)
