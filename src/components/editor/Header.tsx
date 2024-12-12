@@ -63,12 +63,12 @@ import {
   SelectValue,
 } from '../ui/select'
 import { Textarea } from '../ui/textarea'
-import { getFormattingOptionsAction } from '@/app/actions/editor/get-formatting-options/route'
-import { getSpeakerNamesAction } from '@/app/actions/editor/get-speaker-names/route'
-import { requestReReviewAction } from '@/app/actions/editor/re-review/route'
-import { requestExtensionAction } from '@/app/actions/editor/request-extension/route'
-import { setFormattingOptionsAction } from '@/app/actions/editor/set-formatting-options/route'
-import { updateSpeakerNameAction } from '@/app/actions/editor/update-speaker-name/route'
+import { getFormattingOptionsAction } from '@/app/actions/editor/get-formatting-options'
+import { getSpeakerNamesAction } from '@/app/actions/editor/get-speaker-names'
+import { requestReReviewAction } from '@/app/actions/editor/re-review'
+import { requestExtensionAction } from '@/app/actions/editor/request-extension'
+import { setFormattingOptionsAction } from '@/app/actions/editor/set-formatting-options'
+import { updateSpeakerNameAction } from '@/app/actions/editor/update-speaker-name'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import {
   TooltipProvider,
