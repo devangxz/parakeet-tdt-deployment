@@ -75,7 +75,7 @@ export default function AssignedFilesPage({ changeTab }: Props) {
           const diff = determinePwerLevel(assignment.order.pwer)
 
           const { timeString, dateString } = getFormattedTimeStrings(
-            assignment.acceptedTs
+            assignment.acceptedTs.toISOString()
           )
 
           return {

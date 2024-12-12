@@ -2,7 +2,6 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { diffWords } from 'diff'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
@@ -10,6 +9,7 @@ import { toast } from 'sonner'
 
 import { DataTable } from './data-table'
 import { determinePwerLevel, determineRate } from './utils'
+import { getCompareFiles } from '@/app/actions/om/get-compare-files'
 import { getHistoryQCFiles } from '@/app/actions/qc/history'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -70,10 +70,10 @@ export default function HistoryFilesPage() {
 
             const { timeString, dateString } = getFormattedTimeStrings(
               assignment.status === 'COMPLETED'
-                ? assignment.completedTs
+                ? assignment.completedTs.toISOString()
                 : assignment.status === 'ACCEPTED'
-                ? assignment.acceptedTs
-                : assignment.cancelledTs
+                ? assignment.acceptedTs.toISOString()
+                : assignment.cancelledTs.toISOString()
             )
 
             return {
@@ -306,11 +306,13 @@ export default function HistoryFilesPage() {
   const diffHandler = async (fileId: string, index: number) => {
     setLoadingFileOrder((prev) => ({ ...prev, [index]: true }))
     try {
-      const res = await axios.get(
-        `/api/om/get-compare-files?fileId=${fileId}&reviewDiff=asr&verificationDiff=qc`
-      )
-      const { reviewFile, verificationFile } = res.data
-      const diff = diffParagraphs(reviewFile, verificationFile)
+      const res = await getCompareFiles('asr', 'qc', fileId)
+      if (!res.success) {
+        toast.error(res.message)
+        return
+      }
+      const { reviewFile, verificationFile } = res
+      const diff = diffParagraphs(reviewFile ?? '', verificationFile ?? '')
       setDiff(diff)
       setIsDiffModalOpen(true)
       toast.success('Diff loaded successfully')

@@ -21,7 +21,7 @@ function HistoryFile({ history }: { history: any }) {
   const { pwer } = history.order
   const { duration, filename } = history.order.File
   const { timeString, dateString } = getFormattedTimeStrings(
-    history.order.orderTs
+    history.order.orderTs.toISOString()
   )
 
   const diff = determinePwerLevel(pwer)

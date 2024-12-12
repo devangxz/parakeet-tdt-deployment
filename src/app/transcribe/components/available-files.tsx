@@ -69,7 +69,7 @@ export default function AvailableFilesPage({ changeTab }: Props) {
           const diff = determinePwerLevel(order.pwer)
 
           const { timeString, dateString } = getFormattedTimeStrings(
-            order.orderTs
+            order.orderTs.toISOString()
           )
 
           return {

@@ -17,8 +17,8 @@ interface Withdrawals {
   invoiceId: string | null
   toPaypalId: string | null
   status: string
-  requestedAt: string
-  completedAt: string
+  requestedAt: Date
+  completedAt: Date
   ppAddFundsInv: string | null
 }
 
@@ -96,7 +96,7 @@ export default function WithdrawalsPage() {
       header: 'Details',
       cell: ({ row }) => {
         const { timeString, dateString } = getFormattedTimeStrings(
-          row.original.requestedAt
+          row.original.requestedAt.toISOString()
         )
         return (
           <div>
