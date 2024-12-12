@@ -4,6 +4,7 @@ import { CreateMultipartUploadCommand } from "@aws-sdk/client-s3";
 import { NextResponse } from 'next/server';
 
 import logger from '@/lib/logger';
+import prisma from '@/lib/prisma';
 import { s3Client } from '@/lib/s3Client';
 import { requireCustomer } from '@/utils/checkRoles';
 
@@ -18,7 +19,8 @@ export async function POST(req: Request) {
 
         const { fileInfo } = await req.json();
 
-        const fileKey = fileInfo.fileId + path.extname(fileInfo.originalName);
+        const fileName = path.parse(fileInfo.originalName).name;
+        const fileKey = `${fileName}_${fileInfo.fileId}${path.extname(fileInfo.originalName)}`;
 
         const command = new CreateMultipartUploadCommand({
             Bucket: process.env.AWS_S3_BUCKET_NAME,
@@ -29,10 +31,26 @@ export async function POST(req: Request) {
                 type: 'ORIGINAL_FILE',
                 user_id: user?.userId?.toString(),
                 team_user_id: user?.internalTeamUserId?.toString() || user?.userId?.toString(),
+                file_id: fileInfo.fileId,
                 file_name: path.parse(fileInfo.originalName).name
             }
         });
         const data = await s3Client.send(command);
+
+        await prisma.uploadSession.create({
+            data: {
+                uploadId: data.UploadId!,
+                key: data.Key!,
+                userId: user.userId,
+                sourceInfo: {
+                    sourceType: fileInfo.source,
+                    sourceId: fileInfo.sourceId || null,
+                    fileName: fileInfo.originalName,
+                    fileSize: fileInfo.size
+                }
+            }
+        });
+
         return NextResponse.json({
             uploadId: data.UploadId,
             key: data.Key,

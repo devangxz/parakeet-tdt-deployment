@@ -10,7 +10,8 @@ type RateLimitConfig = {
 
 export async function rateLimiter(req: NextRequest, config: RateLimitConfig) {
   const ip = req.ip ?? '127.0.0.1';
-  const key = `rate_limit:${ip}`;
+  const endpoint = req.nextUrl.pathname.split('/').pop() || 'default';
+  const key = `rate_limit:${endpoint}:${ip}`;
 
   const [[, count]] = (await redis
     .multi()
@@ -19,7 +20,6 @@ export async function rateLimiter(req: NextRequest, config: RateLimitConfig) {
     .exec()) as [null | Error, number][];
 
   if (typeof count !== 'number') {
-    console.error('Unexpected response from Redis');
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 
