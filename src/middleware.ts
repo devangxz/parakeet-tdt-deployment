@@ -9,13 +9,7 @@ export async function middleware(req: NextRequest) {
   const requestedUrl = req.nextUrl.pathname
 
   // Skip middleware for /api/auth* and /api/webhook*
-  if (
-    requestedUrl.startsWith('/api/auth') ||
-    requestedUrl.startsWith('/api/webhook') ||
-    requestedUrl.startsWith('/api/static-mails') ||
-    requestedUrl.startsWith('/api/public') ||
-    requestedUrl.startsWith('/api/team/member/join')
-  ) {
+  if (requestedUrl.startsWith('/api/auth')) {
     return NextResponse.next()
   }
 
