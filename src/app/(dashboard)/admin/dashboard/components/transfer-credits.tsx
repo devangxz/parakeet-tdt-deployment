@@ -1,9 +1,9 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { transferCreditAction } from '@/app/actions/admin/transfer-credit'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -46,26 +46,23 @@ export default function TransferCredits() {
 
     try {
       setLoading(true)
-      const response = await axios.post(`/api/admin/transfer-credit`, {
-        invd: formData.invoiceId,
-        em: formData.email.toLowerCase(),
-      })
-      if (response.data.success) {
+      const response = await transferCreditAction(
+        formData.invoiceId,
+        formData.email.toLowerCase()
+      )
+
+      if (response.success) {
         toast.success('Successfully transferred credits.')
       } else {
-        toast.error(response.data.message || 'Failed to transfer credits')
+        toast.error(response.s || 'Failed to transfer credits')
       }
-      setLoading(false)
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to transfer credits`)
-      }
+      toast.error('Failed to transfer credits')
+    } finally {
       setLoading(false)
     }
   }
+
   return (
     <>
       <Card>

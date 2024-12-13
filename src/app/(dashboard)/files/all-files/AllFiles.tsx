@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios, { AxiosError } from 'axios'
 import { FileWarning, FolderClosed, X } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -8,10 +9,14 @@ import { Session } from 'next-auth'
 import { useSession } from 'next-auth/react'
 import React, { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { ZodNumberCheck } from 'zod'
 
 import { DataTable } from './components/data-table'
 import { CheckAndDownload } from '../delivered/components/check-download'
+import { getAllFilesAction } from '@/app/actions/all-files'
+import { downloadMp3 } from '@/app/actions/file/download-mp3'
+import { getFolders } from '@/app/actions/folders'
+import { getFolderHierarchy } from '@/app/actions/folders/parent'
+import { createOrder } from '@/app/actions/order'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
 import DraftTranscriptFileDialog from '@/components/draft-transcript'
@@ -118,34 +123,25 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
     setFileIdsLength(fileIds?.length || null)
   }, [fileIds])
 
-  const getAllFiles = async () => {
+  const fetchAllFiles = async () => {
     try {
-      const response = await axios.get(
-        `/api/all-files?parentId=${folderId}&fileIds=${fileIds}`
+      const response = await getAllFilesAction(
+        folderId,
+        fileIds?.join(',') || null
       )
-
-      const files = response?.data?.filesWithStatus?.map(
-        (file: {
-          fileId: string
-          filename: string
-          createdAt: string
-          duration: ZodNumberCheck
-          fileStatus: string
-          status: string
-          orderType: string
-          orderId: string
-        }) => ({
-          id: file.fileId,
-          name: file.filename,
-          date: file.createdAt,
-          duration: file.duration,
-          fileStatus: file?.fileStatus,
-          status: file?.status,
-          orderType: file?.orderType,
-          orderId: file?.orderId,
-        })
-      )
-
+      if (!response?.success) {
+        throw new Error(response?.message)
+      }
+      const files = response?.data?.filesWithStatus?.map((file: any) => ({
+        id: file.fileId,
+        name: file.filename,
+        date: file.createdAt,
+        duration: file.duration,
+        fileStatus: file?.fileStatus,
+        status: file?.status,
+        orderType: file?.orderType,
+        orderId: file?.orderId,
+      }))
       setAllFiles(files ?? [])
     } catch (err) {
       console.error('Failed to fetch all files:', err)
@@ -154,35 +150,50 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
     }
   }
 
-  const getAllFolders = async () => {
+  const fetchAllFolders = async () => {
     try {
-      const response = await axios.get(`/api/folders?parentId=${folderId}`)
-
-      setAllFolders(response.data.folders ?? [])
+      const folders = await getFolders(folderId ?? '')
+      if (!folders?.success) {
+        throw new Error(folders?.message)
+      }
+      const formattedFolders =
+        folders?.folders?.map((folder) => ({
+          ...folder,
+          createdAt: folder.createdAt.toString(),
+          updatedAt: folder.updatedAt.toString(),
+        })) ?? []
+      setAllFolders(formattedFolders)
     } catch (err) {
-      console.error('Failed to fetch pending files:', err)
+      console.error('Failed to fetch folders:', err)
     } finally {
       setIsAllFoldersLoading(false)
     }
   }
-  const getParentFolders = async () => {
-    try {
-      const response = await axios.get(
-        `/api/folders/parent?folderId=${folderId}`
-      )
 
-      setParentFolders(response.data.folderHierarchy ?? [])
+  const fetchParentFolders = async () => {
+    try {
+      const folders = await getFolderHierarchy(folderId ?? '')
+      if (!folders?.success) {
+        throw new Error(folders?.message)
+      }
+      const formattedHierarchy =
+        folders?.folderHierarchy?.map((folder) => ({
+          ...folder,
+          createdAt: folder.createdAt.toString(),
+          updatedAt: folder.updatedAt.toString(),
+        })) ?? []
+      setParentFolders(formattedHierarchy)
     } catch (err) {
-      console.error('Failed to fetch pending files:', err)
+      console.error('Failed to fetch parent folders:', err)
     } finally {
       setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    getAllFiles()
-    getAllFolders()
-    getParentFolders()
+    fetchAllFiles()
+    fetchAllFolders()
+    fetchParentFolders()
   }, [folderId])
 
   const isPageLoading = isAllFilesLoading || isAllFoldersLoading || isLoading
@@ -209,28 +220,25 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
     )
   }
 
-  const orderFile = async (fileId: string, orderType: string) => {
+  const handleOrderFile = async (fileId: string, orderType: string) => {
     if (session?.user?.status !== 'VERIFIED') {
       router.push('/verify-email')
       return
     }
     setLoadingFileOrder((prev) => ({ ...prev, [fileId]: true }))
     try {
-      const response = await axios.post(`/api/order`, {
-        fids: fileId,
-        orderType,
-      })
-
-      if (response.status === 200) {
+      const response = await createOrder([fileId], orderType)
+      if (!response?.success) {
+        throw new Error(response?.message || 'Unknown error')
+      }
+      if (response.success && 'inv' in response) {
         window.location.assign(
-          `/payments/invoice/${response.data.inv}?orderType=${orderType}`
+          `/payments/invoice/${response.inv}?orderType=${orderType}`
         )
-        setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
-      } else {
-        setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
-        console.error('Failed to process the order', response.data)
       }
     } catch (error) {
+      console.error('Failed to create order:', error)
+    } finally {
       setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
     }
   }
@@ -244,7 +252,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
             : 'Transcribe',
         text: 'text-black',
         controller: (fileId: string, orderType: string) =>
-          orderFile(fileId, orderType),
+          handleOrderFile(fileId, orderType),
       },
       DELIVERED: {
         label: 'Check & Download',
@@ -252,7 +260,6 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
         controller: (fileId: string, orderType: string) => {
           setSelected(fileId)
           setToggleCheckAndDownload(true)
-          console.log(orderType)
         },
       },
       REFUNDED: {
@@ -281,7 +288,6 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
 
     return statuses[status as keyof typeof statuses] || statuses.DEFAULT
   }
-
   const columns: ColumnDef<CustomFile>[] = [
     {
       id: 'select',
@@ -418,7 +424,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
                   {session?.user?.orderType !== 'TRANSCRIPTION' && (
                     <DropdownMenuItem
                       onClick={() =>
-                        orderFile(row.original.id, 'TRANSCRIPTION')
+                        handleOrderFile(row.original.id, 'TRANSCRIPTION')
                       }
                     >
                       Transcribe
@@ -437,19 +443,19 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
                   </DropdownMenuItem>
                   {getStatus(row.original.status)?.label !==
                     'Draft Transcript' && (
-                      <DropdownMenuItem
-                        className='text-red-500'
-                        onClick={() => {
-                          setSeletedFile({
-                            fileId: row.original.id,
-                            name: row.original.name,
-                          })
-                          setOpenDeleteDialog(true)
-                        }}
-                      >
-                        Delete
-                      </DropdownMenuItem>
-                    )}
+                    <DropdownMenuItem
+                      className='text-red-500'
+                      onClick={() => {
+                        setSeletedFile({
+                          fileId: row.original.id,
+                          name: row.original.name,
+                        })
+                        setOpenDeleteDialog(true)
+                      }}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -496,21 +502,23 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
 
     setBulkLoading(true)
     try {
-      const response = await axios.post(`/api/order`, {
-        fids: pendingFiles.map((file) => file.id).join(','),
-        orderType,
-      })
+      const response = await createOrder(
+        pendingFiles.map((file) => file.id),
+        orderType
+      )
 
-      if (response.status === 200) {
+      if (!response?.success) {
+        throw new Error(response?.message || 'Unknown error')
+      }
+
+      if (response.success && 'inv' in response) {
         window.location.assign(
-          `/payments/invoice/${response.data.inv}?orderType=${orderType}`
+          `/payments/invoice/${response.inv}?orderType=${orderType}`
         )
-        setBulkLoading(false)
-      } else {
-        setBulkLoading(false)
-        console.error('Failed to process the order', response.data)
       }
     } catch (error) {
+      console.error('Failed to create order:', error)
+    } finally {
       setBulkLoading(false)
     }
   }
@@ -518,19 +526,14 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
   const handleMP3Download = async (fileId: string) => {
     try {
       setLoadingFileOrder((prev) => ({ ...prev, [fileId]: true }))
-      const response = await axios.get(
-        `/api/file/download-mp3?fileId=${fileId}`
-      )
-      if (response.status === 200) {
-        const data = response.data
-        window.open(data.url, '_blank')
-        setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
+      const url = await downloadMp3(fileId)
+      if (!url?.success) {
+        throw new Error('Failed to download MP3')
       }
+      window.open(url.url, '_blank')
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.message)
-        toast.dismiss(errorToastId)
-      }
+      toast.error('Failed to download MP3')
+    } finally {
       setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
     }
   }
@@ -663,14 +666,14 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
         onClose={() => setOpenRenameDialog(false)}
         fileId={selectedFile?.fileId || ''}
         filename={selectedFile?.name || ''}
-        refetch={getAllFiles}
+        refetch={fetchAllFiles}
       />
       <DeleteFileDialog
         open={openDeleteDialog}
         onClose={() => setOpenDeleteDialog(false)}
         fileId={selectedFile?.fileId || ''}
         filename={selectedFile?.name || ''}
-        refetch={getAllFiles}
+        refetch={fetchAllFiles}
       />
       <DeleteBulkFileModal
         open={openBulkDeleteDialog}
@@ -681,7 +684,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
             .filter((file) => file.status === 'NOT_ORDERED')
             .map((file) => file.id) || []
         }
-        refetch={getAllFiles}
+        refetch={fetchAllFiles}
       />
     </div>
   )

@@ -1,8 +1,10 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { reassignPreDeliveryOrder } from '@/app/actions/om/reassign-pre-delivery-order'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -44,32 +46,27 @@ const ReassignPreDeliveryFile = ({
     }
     setLoading(true)
     try {
-      const response = await axios.post(`/api/om/reassign-pre-delivery-order`, {
-        orderId,
+      const result = await reassignPreDeliveryOrder({
+        orderId: Number(orderId),
         userEmail,
         retainEarnings: retainEarnings === 'yes',
         retainTranscript: retainTranscript === 'yes',
       })
-      if (response.data.success) {
+      if (result.success) {
         const successToastId = toast.success(`Successfully re-assigned Editor`)
         toast.dismiss(successToastId)
-        setLoading(false)
         onClose()
         refetch()
       } else {
-        toast.error(response.data.message)
-        setLoading(false)
+        toast.error(result.message)
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Error re-assigning Editor`)
-      }
+      toast.error(`Error re-assigning Editor`)
+    } finally {
       setLoading(false)
     }
   }
+
   return (
     <AlertDialog open={open}>
       <AlertDialogContent>

@@ -1,8 +1,10 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { updateRate } from '@/app/actions/om/update-rate'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -29,29 +31,24 @@ const SetFileRateDialog = ({ open, onClose, fileId }: DialogProps) => {
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      const response = await axios.post(`/api/om/update-rate`, {
+      const result = await updateRate({
         fileId,
         rate: Number(rate),
       })
-      if (response.data.success) {
+      if (result.success) {
         const successToastId = toast.success(`Successfully updated file rate`)
         toast.dismiss(successToastId)
-        setLoading(false)
         onClose()
       } else {
-        toast.error(response.data.message)
-        setLoading(false)
+        toast.error(result.message)
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Error updating file rate`)
-      }
+      toast.error(`Error updating file rate`)
+    } finally {
       setLoading(false)
     }
   }
+
   return (
     <AlertDialog open={open}>
       <AlertDialogContent>

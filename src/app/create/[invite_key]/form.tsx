@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import Link from 'next/link'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -11,6 +10,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { formSchema } from './controllers'
+import { createUser } from '@/app/actions/user/create'
 import SideImage from '@/components/side-image'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -26,7 +26,6 @@ import { Input } from '@/components/ui/input'
 
 const JoinTeamForm = ({ initialEmail }: { initialEmail: string }) => {
   const params = useParams()
-  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -44,24 +43,16 @@ const JoinTeamForm = ({ initialEmail }: { initialEmail: string }) => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setLoading(true)
-      const referralCode = searchParams?.get('rc') || ''
 
-      const response = await fetch(`/api/public/create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: values.email,
-          pass: values.password,
-          fn: values.firstName,
-          ln: values.lastName,
-          inviteKey: params?.invite_key,
-          rc: referralCode,
-        }),
+      const response = await createUser({
+        email: values.email,
+        pass: values.password,
+        fn: values.firstName,
+        ln: values.lastName,
+        inviteKey: params?.invite_key as string,
       })
-      const responseData = await response.json()
-      if (responseData.success) {
+
+      if (response.success) {
         const result = await signIn('credentials', {
           redirect: false,
           email: values.email,
@@ -83,7 +74,7 @@ const JoinTeamForm = ({ initialEmail }: { initialEmail: string }) => {
         }
       } else {
         setLoading(false)
-        toast.error(`Failed to create account: ${responseData.message}`)
+        toast.error(`Failed to create account: ${response.message}`)
       }
     } catch (error) {
       setLoading(false)

@@ -1,12 +1,16 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 import { DialogClose } from '@radix-ui/react-dialog'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState, useMemo } from 'react'
 import { toast } from 'sonner'
 
+import { getTranscriberBonusDetails } from '@/app/actions/transcriber/bonus'
+import { getTranscriberEarnings } from '@/app/actions/transcriber/earnings'
+import { getTranscriberMiscEarnings } from '@/app/actions/transcriber/misc-earnings'
+import { createWithdrawal } from '@/app/actions/transcriber/withdrawal'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -112,8 +116,12 @@ export default function EarningsPage() {
       setIsLoading(false)
     }
     try {
-      const response = await axios.get(`/api/transcriber/earnings`)
-      setEarnings(response.data)
+      const data = await getTranscriberEarnings()
+      if (data.success && data.earnings) {
+        setEarnings(data.earnings as any)
+      } else {
+        setError(data.message || 'Failed to fetch earnings')
+      }
     } catch (err) {
       setError('an error occurred')
     } finally {
@@ -127,8 +135,12 @@ export default function EarningsPage() {
 
   const fetchBonusDetails = async () => {
     try {
-      const response = await axios.get(`/api/transcriber/bonus`)
-      setBonuses(response.data.bonusDetails || [])
+      const data = await getTranscriberBonusDetails()
+      if (data.success && data.bonusDetails) {
+        setBonuses(data.bonusDetails as any)
+      } else {
+        setError(data.message || 'Failed to fetch bonus details')
+      }
     } catch (err) {
       toast.error('Failed to load bonus details')
       setEarningsDetailsDialog(false)
@@ -139,8 +151,12 @@ export default function EarningsPage() {
 
   const fetchMiscEarningsDetails = async () => {
     try {
-      const response = await axios.get(`/api/transcriber/misc-earnings`)
-      setMiscEarnings(response.data.earningDetails || [])
+      const data = await getTranscriberMiscEarnings()
+      if (data.success && data.earningDetails) {
+        setMiscEarnings(data.earningDetails as any)
+      } else {
+        setError(data.message || 'Failed to fetch misc earnings details')
+      }
     } catch (err) {
       toast.error('Failed to load misc earnings details')
       setMiscEarningsDialog(false)
@@ -161,17 +177,15 @@ export default function EarningsPage() {
     await fetchMiscEarningsDetails()
   }
 
-  const submitWithdrawalRequest = async () => {
+  const handleWithdrawalRequest = async () => {
     const toastId = toast.loading(`Submitting Withdrawal Request...`)
     try {
-      const response = await axios.post(`/api/transcriber/withdrawal`)
+      await createWithdrawal()
       toast.dismiss(toastId)
-      if (response.status === 200) {
-        const successToastId = toast.success(
-          `Withdrawal Request Submitted Successfully`
-        )
-        toast.dismiss(successToastId)
-      }
+      const successToastId = toast.success(
+        `Withdrawal Request Submitted Successfully`
+      )
+      toast.dismiss(successToastId)
     } catch (error) {
       toast.error(`Failed to submit the withdrawal request`)
     } finally {
@@ -340,7 +354,7 @@ export default function EarningsPage() {
                     &apos;.
                   </p>
                   <DialogClose>
-                    <Button onClick={submitWithdrawalRequest}>Confirm</Button>
+                    <Button onClick={handleWithdrawalRequest}>Confirm</Button>
                   </DialogClose>
                 </DialogHeader>
               </DialogContent>

@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { Dropin } from 'braintree-web-drop-in'
 import DropIn from 'braintree-web-drop-in-react'
@@ -6,6 +8,7 @@ import { Session } from 'next-auth'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { addPaymentMethod } from '@/app/actions/payment/add-payment-method'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -33,38 +36,26 @@ const AddPaymentMethodDialog = ({
   const [isLoading, setIsLoading] = useState(false)
 
   const handlePaymentMethod = async () => {
-    if (instance) {
-      instance
-        .requestPaymentMethod()
-        .then(({ nonce }: { nonce: string }) => {
-          setIsLoading(true)
-          fetch(`/api/payment/add-payment-method`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${session?.user?.token}`,
-            },
-            body: JSON.stringify({
-              paymentMethodNonce: nonce,
-            }),
-          })
-            .then((response) => response.json())
-            .then((data) => {
-              setIsLoading(false)
-              if (data.success) {
-                onClose()
-                toast.success('Payment Method Added Successfully')
-              }
-            })
-            .catch((err) => {
-              setIsLoading(false)
-              toast.error('Error adding payment method')
-            })
-        })
-        .catch((err) => {
-          setIsLoading(false)
-          toast.error('Error adding payment method')
-        })
+    if (!instance) return
+
+    try {
+      setIsLoading(true)
+      const { nonce } = await instance.requestPaymentMethod()
+
+      const result = await addPaymentMethod({
+        paymentMethodNonce: nonce,
+      })
+
+      if (result.success) {
+        onClose()
+        toast.success('Payment Method Added Successfully')
+      } else {
+        throw new Error('Failed to add payment method')
+      }
+    } catch (err) {
+      toast.error('Error adding payment method')
+    } finally {
+      setIsLoading(false)
     }
   }
 

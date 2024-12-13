@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { formSchema } from './controllers'
+import { resetPassword } from '@/app/actions/auth/forgot-password/resetPasswordToken'
 import SideImage from '@/components/side-image'
 import { Button } from '@/components/ui/button'
 import {
@@ -36,31 +37,25 @@ const ResetPassword = () => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setLoading(true)
-      const response = await fetch(
-        `/api/auth/forgot-password/${params?.reset_password_token}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            password: values.password,
-          }),
-        }
+      const result = await resetPassword(
+        params?.reset_password_token as string,
+        values.password
       )
-      const responseData = await response.json()
-      if (responseData.success) {
+
+      if (result.success) {
         const tId = toast.success(`Successfully reset password!`)
         toast.dismiss(tId)
         window.location.href = '/signin'
       } else {
-        toast.error(`Failed to update password`)
+        toast.error(result.message || 'Failed to update password')
       }
-      setLoading(false)
     } catch (error) {
-      toast.error(`Failed to update password`)
+      toast.error('Failed to update password')
+    } finally {
+      setLoading(false)
     }
   }
+
   return (
     <>
       <div className='w-full lg:grid lg:min-h-[600px] lg:grid-cols-2 xl:min-h-[800px]'>
@@ -124,7 +119,7 @@ const ResetPassword = () => {
               </form>
             </Form>
             <div className='mt-4 text-center text-sm'>
-              <Link href='#' className='font-bold text-primary'>
+              <Link href='/signin' className='font-bold text-primary'>
                 Back to Sign in
               </Link>
             </div>

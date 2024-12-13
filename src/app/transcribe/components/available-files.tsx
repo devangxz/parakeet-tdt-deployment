@@ -2,13 +2,14 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios, { AxiosError } from 'axios'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './data-table'
 import { determinePwerLevel } from './utils'
+import { assignQC } from '@/app/actions/qc/assign'
+import { getAvailableQCFiles } from '@/app/actions/qc/available-files'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -47,7 +48,6 @@ export default function AvailableFilesPage({ changeTab }: Props) {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
     setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
-
   }, [playing])
 
   const fetchAvailableFiles = async (showLoader = false) => {
@@ -57,62 +57,44 @@ export default function AvailableFilesPage({ changeTab }: Props) {
       setIsLoading(false)
     }
     try {
-      const url = isLegalQCPage
-        ? `/api/qc/available-files?type=legal`
-        : `/api/qc/available-files?type=general`
-      const response = await axios.get(url)
+      const type = isLegalQCPage ? 'legal' : 'general'
+      const response = await getAvailableQCFiles(type)
+
+      if (!response.success) {
+        throw new Error(response.error || 'An error occurred')
+      }
 
       if (response.data) {
-        const orders = response.data.map(
-          (
-            order: {
-              pwer: number
-              orderTs: string
-              id: string
-              fileId: string
-              File: { filename: string; duration: string }
-              status: string
-              priority: number
-              qc_cost: number
-              deliveryTs: string
-              highDifficulty: boolean
-              orderType: string
-              rateBonus: number
-              instructions: string | null
-              rate: number
-            },
-            index: number
-          ) => {
-            const diff = determinePwerLevel(order.pwer)
+        const orders = response.data.map((order: any, index: number) => {
+          const diff = determinePwerLevel(order.pwer)
 
-            const { timeString, dateString } = getFormattedTimeStrings(
-              order.orderTs
-            )
+          const { timeString, dateString } = getFormattedTimeStrings(
+            order.orderTs.toISOString()
+          )
 
-            return {
-              index: index + 1,
-              orderId: order.id,
-              fileId: order.fileId,
-              filename: order.File.filename,
-              orderTs: order.orderTs,
-              pwer: order.pwer,
-              status: order.status,
-              priority: order.priority,
-              qc_cost: order.qc_cost,
-              duration: order.File.duration,
-              qc: '-',
-              deliveryTs: order.deliveryTs,
-              hd: order.highDifficulty,
-              orderType: order.orderType,
-              rateBonus: order.rateBonus,
-              timeString,
-              dateString,
-              diff,
-              rate: order.rate,
-              instructions: order.instructions,
-            }
+          return {
+            index: index + 1,
+            orderId: order.id,
+            fileId: order.fileId,
+            filename: order.File.filename,
+            orderTs: order.orderTs,
+            pwer: order.pwer,
+            status: order.status,
+            priority: order.priority,
+            qc_cost: order.qc_cost,
+            duration: order.File.duration,
+            qc: '-',
+            deliveryTs: order.deliveryTs,
+            hd: order.highDifficulty,
+            orderType: order.orderType,
+            rateBonus: order.rateBonus,
+            timeString,
+            dateString,
+            diff,
+            rate: order.rate,
+            instructions: order.instructions,
           }
-        )
+        })
         setAvailableFiles(orders ?? [])
         setError(null)
       }
@@ -298,9 +280,7 @@ export default function AvailableFilesPage({ changeTab }: Props) {
             <Button
               variant='order'
               className='not-rounded w-[140px]'
-              onClick={() =>
-                assignmentHandler(row.original.orderId, row.original.orderType)
-              }
+              onClick={() => assignmentHandler(row.original.orderId)}
             >
               Assign to Me
             </Button>
@@ -310,21 +290,20 @@ export default function AvailableFilesPage({ changeTab }: Props) {
     },
   ]
 
-  const assignmentHandler = async (id: number, orderType: string) => {
+  const assignmentHandler = async (id: number) => {
     setLoadingFileOrder((prev) => ({ ...prev, [id]: true }))
     try {
-      await axios.post(`/api/qc/assign`, {
-        orderId: id,
-        orderType,
-      })
+      const response = await assignQC(id)
+      if (!response.success) {
+        throw new Error(response.error)
+      }
       toast.success('File assigned successfully')
       changeTab('assigned')
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.error)
-        toast.dismiss(errorToastId)
+      if (error instanceof Error) {
+        toast.error(error.message)
       } else {
-        toast.error(`Error selecting file`)
+        toast.error('Error selecting file')
       }
     } finally {
       setLoadingFileOrder((prev) => ({ ...prev, [id]: false }))

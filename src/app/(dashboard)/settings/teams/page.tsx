@@ -1,7 +1,6 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -11,6 +10,10 @@ import RenameTeamDialog from './components/rename-team'
 import TeamDetailsDialog from './components/team-details'
 import { InvitationDetails } from './components/types'
 import UserPermissions from './components/user-permissions'
+import { acceptTeamJoinRequest } from '@/app/actions/team/accept-join-request'
+import { createTeam } from '@/app/actions/team/create'
+import { declineTeamJoinRequest } from '@/app/actions/team/decline-join-request'
+import { getTeams } from '@/app/actions/teams'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -42,17 +45,21 @@ export default function TeamsPage() {
     }
 
     try {
-      const response = await axios.get(`/api/teams`)
+      const response = await getTeams()
 
-      const teams = response.data.teams.map(
-        (team: { team: { id: number; name: string; members: string[] } }) => ({
+      if (!response.success) {
+        setError(response.message || 'An error occurred')
+        return
+      }
+
+      const teams =
+        response.teams?.map((team) => ({
           id: team.team.id,
           name: team.team.name,
-          members: team.team.members.length,
-        })
-      )
-      const showInvite = response.data.invitations.length > 0
-      const invitations = response.data.invitations.map(
+          members: team.team.members.length.toString(),
+        })) ?? []
+      const showInvite = Boolean(response.invitations?.length)
+      const invitations = response.invitations?.map(
         (invitation: {
           group_id: number
           name: string
@@ -174,11 +181,9 @@ export default function TeamsPage() {
     }
     setIsCreateTeamLoading(true)
     try {
-      const responseCreateTeam = await axios.post(`/api/team/create`, {
-        name: newTeamName,
-      })
-      if (responseCreateTeam.status === 200) {
-        const tId = toast.success(responseCreateTeam.data.message)
+      const response = await createTeam(newTeamName)
+      if (response.success) {
+        const tId = toast.success(response.message)
         toast.dismiss(tId)
         fetchAllTeams()
       } else {
@@ -194,11 +199,9 @@ export default function TeamsPage() {
   const handleAcceptInvite = async (teamId: number) => {
     setIsAcceptInviteLoading(true)
     try {
-      const response = await axios.post(`/api/team/accept-join-request`, {
-        teamId,
-      })
-      if (response.status === 200) {
-        const tId = toast.success(response.data.message)
+      const response = await acceptTeamJoinRequest(teamId)
+      if (response.success) {
+        const tId = toast.success(response.message)
         toast.dismiss(tId)
         fetchAllTeams()
       } else {
@@ -214,11 +217,9 @@ export default function TeamsPage() {
   const handleDeclineInvite = async (teamId: number) => {
     setIsDeclineInviteLoading(true)
     try {
-      const response = await axios.post(`/api/team/decline-join-request`, {
-        teamId,
-      })
-      if (response.status === 200) {
-        const tId = toast.success(response.data.s)
+      const response = await declineTeamJoinRequest(teamId)
+      if (response.success) {
+        const tId = toast.success(response.message)
         toast.dismiss(tId)
         fetchAllTeams()
       } else {

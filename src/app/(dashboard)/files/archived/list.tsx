@@ -1,12 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { useSession } from 'next-auth/react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
+import { unarchiveFileAction } from '@/app/actions/file/un-archive'
+import { refetchFiles } from '@/app/actions/files'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -57,24 +59,17 @@ export default function ArchivedFilesPage({ files }: { files: File[] }) {
     }
 
     try {
-      const response = await axios.get(`/api/files?status=archived`)
+      const updatedFiles = await refetchFiles('archived')
 
-      const files = response.data.data.map(
-        (file: {
-          fileId: string
-          filename: string
-          createdAt: string
-          duration: number
-          uploadedByUser: User
-        }) => ({
+      const files =
+        updatedFiles?.map((file: any) => ({
           id: file.fileId,
           filename: file.filename,
           date: file.createdAt,
           duration: file.duration,
           uploadedByUser: file.uploadedByUser,
-        })
-      )
-      setArchivedFiles(files ?? [])
+        })) || []
+      setArchivedFiles(files)
       setError(null)
     } catch (err) {
       setError('an error occurred')
@@ -126,11 +121,9 @@ export default function ArchivedFilesPage({ files }: { files: File[] }) {
   const unarchiveFile = async (fileId: string) => {
     setLoadingFileOrder((prev) => ({ ...prev, [fileId]: true }))
     try {
-      const response = await axios.post(`/api/file/un-archive`, {
-        fileIds: fileId,
-      })
+      const response = await unarchiveFileAction(fileId)
 
-      if (response.status === 200) {
+      if (response.success) {
         toast.success('File unarchived successfully')
         setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
         fetchArchivedFiles()
@@ -288,21 +281,19 @@ export default function ArchivedFilesPage({ files }: { files: File[] }) {
 
     setBulkLoading(true)
     try {
-      const response = await axios.post(`/api/file/un-archive`, {
-        fileIds: selectedFiles.join(','),
-      })
+      const response = await unarchiveFileAction(selectedFiles.join(','))
 
-      if (response.status === 200) {
-        toast.success('File unarchived successfully')
+      if (response.success) {
+        toast.success('Files unarchived successfully')
         setBulkLoading(false)
         fetchArchivedFiles()
       } else {
         setBulkLoading(false)
-        toast.error('Failed to unarchive file')
+        toast.error('Failed to unarchive files')
       }
     } catch (error) {
       setBulkLoading(false)
-      toast.error('Failed to unarchive file')
+      toast.error('Failed to unarchive files')
     }
   }
 

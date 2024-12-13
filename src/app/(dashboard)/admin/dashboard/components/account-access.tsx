@@ -1,10 +1,11 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
+import { AxiosError } from 'axios'
 import { useSession } from 'next-auth/react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { switchUserAccount } from '@/app/actions/admin/access-account'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -32,36 +33,33 @@ export default function AccountAccess() {
 
     try {
       setLoading(true)
-      const response = await axios.post(`/api/admin/access-account`, {
-        email: email.toLowerCase(),
-      })
-      if (response.data.success) {
-        const data = response.data.details
+      const response = await switchUserAccount(email.toLowerCase())
+      if (response.success) {
+        const data = response?.details
         await update({
           ...session,
           user: {
             ...session?.user,
-            token: data.token,
-            role: data.role,
-            userId: data.userId,
-            user: data.user,
-            email: data.email,
-            tempFlag: data.tempFlag,
-            referralCode: data.referralCode,
-            legalEnabled: data.legalEnabled,
-            reviewEnabled: data.reviewEnabled,
+            token: data?.token,
+            role: data?.role,
+            userId: data?.userId,
+            user: data?.user,
+            email: data?.email,
+            referralCode: data?.referralCode,
+            legalEnabled: data?.legalEnabled,
+            reviewEnabled: data?.reviewEnabled,
             adminAccess: true,
             readonly: true,
-            internalTeamUserId: data.internalTeamUserId,
-            teamName: data.teamName,
-            selectedUserTeamRole: data.selectedUserTeamRole,
+            internalTeamUserId: data?.internalTeamUserId,
+            teamName: data?.teamName,
+            selectedUserTeamRole: data?.selectedUserTeamRole,
           },
         })
         toast.success('Sucessfully switched to user')
-        const redirectUrl = getRedirectPathByRole(data.role)
+        const redirectUrl = getRedirectPathByRole(data?.role || '')
         window.location.href = redirectUrl
       } else {
-        toast.error(response.data.s || 'Failed to access account')
+        toast.error(response?.s || 'Failed to access account')
       }
       setLoading(false)
     } catch (error) {

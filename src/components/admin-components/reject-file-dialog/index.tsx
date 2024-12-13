@@ -1,8 +1,10 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { rejectOrder } from '@/app/actions/om/reject-order'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -28,29 +30,24 @@ const RejectFileDialog = ({ open, onClose, orderId, refetch }: DialogProps) => {
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      const response = await axios.post(`/api/om/reject-order`, {
-        orderId,
+      const result = await rejectOrder({
+        orderId: Number(orderId),
       })
-      if (response.data.success) {
+      if (result.success) {
         const successToastId = toast.success(`Successfully rejected file`)
         toast.dismiss(successToastId)
-        setLoading(false)
-        refetch()
         onClose()
+        refetch()
       } else {
-        toast.error(response.data.message)
-        setLoading(false)
+        toast.error(result.message)
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Error rejecting file`)
-      }
+      toast.error(`Error rejecting file`)
+    } finally {
       setLoading(false)
     }
   }
+
   return (
     <AlertDialog open={open}>
       <AlertDialogContent>

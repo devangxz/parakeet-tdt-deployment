@@ -1,7 +1,6 @@
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { Session } from 'next-auth'
 import { useSession } from 'next-auth/react'
 import { useState } from 'react'
@@ -9,6 +8,8 @@ import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
 import { CheckAndDownload } from '../delivered/components/check-download'
+import { getFiles } from '@/app/actions/share-file/get-files'
+import { removeSharedFiles } from '@/app/actions/share-file/remove'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,12 +76,17 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
     }
 
     try {
-      const response = await axios.get(`/api/share-file/get-files`)
-
-      setSharedFiles(response.data.success ? response.data.data : [])
-      setError(null)
+      const response = await getFiles()
+      if (response.success && 'data' in response) {
+        setSharedFiles(response.data ?? [])
+        setError(null)
+      } else {
+        setSharedFiles([])
+        setError('Failed to load files')
+      }
     } catch (err) {
-      setError('an error occurred')
+      setSharedFiles([])
+      setError('An error occurred while loading files')
     } finally {
       setIsLoading(false)
     }
@@ -263,11 +269,9 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
 
     setDeleteLoading(true)
     try {
-      const response = await axios.post(`/api/share-file/remove`, {
-        files: selectedFiles,
-      })
+      const response = await removeSharedFiles(selectedFiles)
 
-      if (response.data.success) {
+      if (response.success) {
         toast.success('Files removed successfully')
         setDeleteLoading(false)
         fetchSharedFiles()

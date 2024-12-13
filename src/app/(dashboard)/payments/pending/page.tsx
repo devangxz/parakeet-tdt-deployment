@@ -2,12 +2,14 @@
 
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
+import { deleteInvoiceAction } from '@/app/actions/invoice/delete'
+import { getPendingInvoices } from '@/app/actions/invoice/pending'
+import { getClientTokenAction } from '@/app/actions/payment/client-token'
 import AddCreditsDialog from '@/components/pay-add-credits'
 import AdditionalProofreadingDialog from '@/components/pay-additional-charge-dialog'
 import { Button } from '@/components/ui/button'
@@ -41,21 +43,23 @@ const Invoice = () => {
   const [loadingFileOrder, setLoadingFileOrder] = useState<
     Record<string, boolean>
   >({})
+
   const fetchPendingInvoices = async () => {
     setIsLoading(true)
     try {
-      const response = await axios.get(`/api/invoice/pending`)
-
-      const invoices = response.data.data.map(
-        (invoice: { id: string; amt: number; ts: string; t: string }) => ({
+      const response = await getPendingInvoices()
+      if (response.success && response.data) {
+        const invoices = response.data.map((invoice) => ({
           id: invoice.id,
           amount: invoice.amt,
-          date: invoice.ts,
+          date: invoice.ts.toISOString(),
           type: invoice.t,
-        })
-      )
-      setPendingInvoices(invoices ?? [])
-      setError(null)
+        }))
+        setPendingInvoices(invoices ?? [])
+        setError(null)
+      } else {
+        setError(response.message || 'Failed to fetch pending invoices')
+      }
     } catch (err) {
       setError('an error occurred')
     } finally {
@@ -204,10 +208,14 @@ const Invoice = () => {
   const payAddCredits = async (id: string) => {
     try {
       setLoadingFileOrder((prev) => ({ ...prev, [id]: true }))
-      const tokenResponse = await axios.get(`/api/payment/client-token`)
-      setClientToken(tokenResponse.data.clientToken)
-      setLoadingFileOrder((prev) => ({ ...prev, [id]: false }))
-      setOpenDetailsDialog(true)
+      const tokenResponse = await getClientTokenAction()
+      if (tokenResponse.success && tokenResponse.clientToken) {
+        setClientToken(tokenResponse.clientToken)
+        setLoadingFileOrder((prev) => ({ ...prev, [id]: false }))
+        setOpenDetailsDialog(true)
+      } else {
+        toast.error(tokenResponse.message || 'Failed to generate token')
+      }
     } catch (error) {
       setLoadingFileOrder((prev) => ({ ...prev, [id]: false }))
       toast.error(`Failed to pay: ${error}`)
@@ -217,10 +225,14 @@ const Invoice = () => {
   const payAdditionalCharge = async (id: string) => {
     try {
       setLoadingFileOrder((prev) => ({ ...prev, [id]: true }))
-      const tokenResponse = await axios.get(`/api/payment/client-token`)
-      setClientToken(tokenResponse.data.clientToken)
-      setLoadingFileOrder((prev) => ({ ...prev, [id]: false }))
-      setOpenAdditionalProofreadingDialog(true)
+      const tokenResponse = await getClientTokenAction()
+      if (tokenResponse.success && tokenResponse.clientToken) {
+        setClientToken(tokenResponse.clientToken)
+        setLoadingFileOrder((prev) => ({ ...prev, [id]: false }))
+        setOpenAdditionalProofreadingDialog(true)
+      } else {
+        toast.error(tokenResponse.message || 'Failed to generate token')
+      }
     } catch (error) {
       setLoadingFileOrder((prev) => ({ ...prev, [id]: false }))
       toast.error(`Failed to pay: ${error}`)
@@ -229,11 +241,9 @@ const Invoice = () => {
 
   const deleteInvoice = async (id: string) => {
     try {
-      const response = await axios.post(`/api/invoice/delete`, {
-        invoiceId: id,
-      })
-      if (response.status === 200) {
-        const tId = toast.success(response.data.s)
+      const response = await deleteInvoiceAction(id)
+      if (response.success) {
+        const tId = toast.success(response.message)
         toast.dismiss(tId)
         fetchPendingInvoices()
       } else {

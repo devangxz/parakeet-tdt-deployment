@@ -1,9 +1,9 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { addCoupon } from '@/app/actions/admin/add-coupon'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -60,25 +60,21 @@ export default function Coupon() {
 
     try {
       setLoading(true)
-      const response = await axios.post(`/api/admin/add-coupon`, {
-        userEmail: email,
+      const result = await addCoupon(
         couponCode,
-        discount,
-        validity,
-      })
-      if (response.data.success) {
+        Number(discount),
+        Number(validity),
+        email.toLowerCase()
+      )
+
+      if (result.success) {
         toast.success('Successfully Added Coupon.')
       } else {
-        toast.error(response.data.s || 'Failed to add coupon')
+        toast.error(result.s || 'Failed to add coupon')
       }
-      setLoading(false)
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to add coupon.`)
-      }
+      toast.error('Failed to add coupon')
+    } finally {
       setLoading(false)
     }
   }
