@@ -6,6 +6,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
+import { getTeamAdminUserDetails } from '@/utils/backend-helper'
 
 export async function updateBonus(formData: { fileId: string; rate: number }) {
   const session = await getServerSession(authOptions)
@@ -32,6 +33,21 @@ export async function updateBonus(formData: { fileId: string; rate: number }) {
       }
     }
 
+    let email = ''
+
+    const teamAdminUserDetails = await getTeamAdminUserDetails(
+      fileInformation.userId
+    )
+
+    if (!teamAdminUserDetails) {
+      const userInformation = await prisma.user.findUnique({
+        where: { id: fileInformation.userId },
+      })
+      email = userInformation?.email ?? ''
+    } else {
+      email = teamAdminUserDetails.email
+    }
+
     await prisma.order.update({
       where: { fileId: fileId },
       data: { rateBonus: Number(rate), updatedAt: new Date() },
@@ -40,7 +56,7 @@ export async function updateBonus(formData: { fileId: string; rate: number }) {
     const awsSes = getAWSSesInstance()
     await awsSes.sendAlert(
       `File Bonus Updated`,
-      `${fileInformation.fileId} file bonus updated to $${rate}/ah by ${user?.email}`,
+      `${fileInformation.fileId} (${email}) file bonus updated to $${rate}/ah by ${user?.email}`,
       'software'
     )
 
