@@ -26,9 +26,11 @@ export async function POST(req: Request) {
 
         const buffer = await file.arrayBuffer();
 
-        const fileExtension = path.extname(file.name);
         const fileName = path.parse(file.name).name;
-        const fileKey = `${fileName}_${fileId}${fileExtension}`;
+        const fileExtension = path.extname(file.name);
+        const fileKey = fileExtension.toLowerCase() === '.docx'
+            ? fileId + fileExtension
+            : `${fileName}_${fileId}${fileExtension}`;
 
         const uploadParams = {
             Bucket: process.env.AWS_S3_BUCKET_NAME,
