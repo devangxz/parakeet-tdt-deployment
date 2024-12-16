@@ -358,10 +358,22 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
     if (activeStep === 2) {
       try {
         const response = await updateFilesInfo(
-          files.map((file) => ({
-            ...file,
-            dueDate: file.dueDate?.toISOString() ?? '',
-          }))
+          files.map((file) => {
+            let dueDate = ''
+            if (file.dueDate instanceof Date) {
+              dueDate = file.dueDate.toISOString()
+            } else if (
+              typeof file.dueDate === 'string' &&
+              file.dueDate !== ''
+            ) {
+              dueDate = file.dueDate
+            }
+
+            return {
+              ...file,
+              dueDate,
+            }
+          })
         )
 
         if (response.success) {
