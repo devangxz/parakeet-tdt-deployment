@@ -2,12 +2,12 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 
 import { DataTable } from './data-table'
 import { determinePwerLevel } from './utils'
+import { getHistoryFiles } from '@/app/actions/cf/history'
 import { Badge } from '@/components/ui/badge'
 import {
   Tooltip,
@@ -17,6 +17,7 @@ import {
 import { BaseTranscriberFile } from '@/types/files'
 import formatDuration from '@/utils/formatDuration'
 import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
+
 interface File extends BaseTranscriberFile {
   qc_cost: number
   jobId: number
@@ -36,78 +37,48 @@ export default function HistoryFilesPage() {
       setIsLoading(false)
     }
     try {
-      const url = isLegalPage
-        ? `/api/cf/history?type=legal`
-        : `/api/cf/history?type=general`
-      const response = await axios.get(url)
+      const response = await getHistoryFiles(isLegalPage ? 'legal' : 'general')
 
-      if (response.data) {
+      if (response.success && response.data) {
         const orders = response.data
-          .map(
-            (
-              assignment: {
-                id: number
-                completedTs: string
-                cancelledTs: string
-                earnings: number
-                status: string
-                acceptedTs: string
-                order: {
-                  pwer: number
-                  orderTs: string
-                  id: number
-                  fileId: string
-                  File: { filename: string; duration: number }
-                  status: string
-                  priority: number
-                  qc_cost: number
-                  deliveryTs: string
-                  highDifficulty: boolean
-                  orderType: string
-                  rateBonus: number
-                  instructions: string | null
-                }
-              },
-              index: number
-            ) => {
-              const diff = determinePwerLevel(assignment.order.pwer)
+          .map((assignment: any, index: number) => {
+            const diff = determinePwerLevel(assignment.order.pwer)
 
-              const { timeString, dateString } = getFormattedTimeStrings(
-                assignment.status === 'COMPLETED'
-                  ? assignment.completedTs
-                  : assignment.status === 'ACCEPTED'
-                  ? assignment.acceptedTs
-                  : assignment.cancelledTs
-              )
+            const { timeString, dateString } = getFormattedTimeStrings(
+              assignment.status === 'COMPLETED'
+                ? assignment.completedTs.toISOString()
+                : assignment.status === 'ACCEPTED'
+                ? assignment.acceptedTs.toISOString()
+                : assignment.cancelledTs.toISOString()
+            )
 
-              return {
-                jobId: assignment.id,
-                index: index + 1,
-                orderId: assignment.order.id,
-                fileId: assignment.order.fileId,
-                filename: assignment.order.File.filename,
-                orderTs: assignment.order.orderTs,
-                pwer: assignment.order.pwer,
-                status: assignment.status,
-                priority: assignment.order.priority,
-                qc_cost: assignment.earnings,
-                duration: assignment.order.File.duration,
-                deliveryTs: assignment.order.deliveryTs,
-                hd: assignment.order.highDifficulty,
-                orderType: assignment.order.orderType,
-                rateBonus: assignment.order.rateBonus,
-                timeString,
-                dateString,
-                diff,
-                rate: assignment.earnings,
-                instructions: null,
-              }
+            return {
+              jobId: assignment.id,
+              index: index + 1,
+              orderId: assignment.order.id,
+              fileId: assignment.order.fileId,
+              filename: assignment.order.File.filename,
+              orderTs: assignment.order.orderTs,
+              pwer: assignment.order.pwer,
+              status: assignment.status,
+              priority: assignment.order.priority,
+              qc_cost: assignment.earnings,
+              duration: assignment.order.File.duration,
+              deliveryTs: assignment.order.deliveryTs,
+              hd: assignment.order.highDifficulty,
+              orderType: assignment.order.orderType,
+              rateBonus: assignment.order.rateBonus,
+              timeString,
+              dateString,
+              diff,
+              rate: assignment.earnings,
+              instructions: null,
             }
-          )
+          })
           .sort(
             (a: { jobId: number }, b: { jobId: number }) => b.jobId - a.jobId
           )
-        setAssginedFiles(orders ?? [])
+        setAssginedFiles((orders as any) ?? [])
         setError(null)
       }
     } catch (err) {

@@ -1,5 +1,4 @@
 import { ReloadIcon, StarFilledIcon, StarIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import { Session } from 'next-auth'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -7,6 +6,7 @@ import { toast } from 'sonner'
 import { SpecialInstructions } from './special-instructions'
 import { Tip } from '../../all-files/AllFiles'
 import { orderController } from '../controllers'
+import { getOrderRating } from '@/app/actions/order/rating'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -160,13 +160,14 @@ export function CheckAndDownload({
   }
   // Rating
   useEffect(() => {
-    axios
-      .get(`/api/order/rating?fileId=${selected}`)
-      .then((response) => {
-        localStorage.setItem('rating', response.data.rating)
-        setRating(response.data.rating)
-      })
-      .catch((err) => console.log(err))
+    async function fetchRating() {
+      const response = await getOrderRating(selected)
+      if (response.success && response.rating) {
+        localStorage.setItem('rating', response.rating.toString())
+        setRating(response.rating)
+      }
+    }
+    fetchRating()
   }, [rating, storedrating, selected])
   return (
     <Dialog
@@ -199,7 +200,19 @@ export function CheckAndDownload({
                 >
                   Open Editor
                 </Button> */}
-                <Button onClick={() => window.open(`/editor/${id}`, '_blank', 'toolbar=no,location=no,menubar=no,width=' + window.screen.width + ',height=' + window.screen.height + ',left=0,top=0')}>
+                <Button
+                  onClick={() =>
+                    window.open(
+                      `/editor/${id}`,
+                      '_blank',
+                      'toolbar=no,location=no,menubar=no,width=' +
+                        window.screen.width +
+                        ',height=' +
+                        window.screen.height +
+                        ',left=0,top=0'
+                    )
+                  }
+                >
                   Open Editor
                 </Button>
                 <Button onClick={subTitile?.getSubtitleFile}>

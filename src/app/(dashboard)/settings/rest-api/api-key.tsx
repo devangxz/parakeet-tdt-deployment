@@ -1,9 +1,11 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import React, { useState } from 'react'
 import { toast } from 'sonner'
 
+import { createApiKeyAction } from '@/app/actions/api-key/create'
+import { removeApiKeyAction } from '@/app/actions/api-key/remove'
+import { updateWebhookAction } from '@/app/actions/api-key/webhook'
 import HeadingDescription from '@/components/heading-description'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,11 +27,11 @@ const Page = ({ apiKeys }: { apiKeys: OptionProps }) => {
   const handleGenerateApiKey = async () => {
     try {
       setIsLoading(true)
-      const response = await axios.post('/api/api-key/create')
-      if (response.data.success) {
-        setApiKey(response.data.apiKey)
+      const response = await createApiKeyAction()
+      if (response.success && response.apiKey) {
+        setApiKey(response.apiKey)
       } else {
-        toast.error(response.data.message)
+        toast.error(response.message)
       }
     } catch (error) {
       toast.error('Failed to generate API key')
@@ -46,11 +48,11 @@ const Page = ({ apiKeys }: { apiKeys: OptionProps }) => {
   const handleRemoveApiKey = async () => {
     try {
       setIsRemoving(true)
-      const response = await axios.delete('/api/api-key/remove')
-      if (response.data.success) {
+      const response = await removeApiKeyAction()
+      if (response.success) {
         setApiKey(null)
       } else {
-        toast.error(response.data.message)
+        toast.error(response.message)
       }
     } catch (error) {
       toast.error('Failed to remove API key')
@@ -60,15 +62,17 @@ const Page = ({ apiKeys }: { apiKeys: OptionProps }) => {
   }
 
   const handleUpdateWebhook = async () => {
+    if (!webhook) {
+      toast.error('Webhook URL is required')
+      return
+    }
     try {
       setIsUpdating(true)
-      const response = await axios.post('/api/api-key/webhook', {
-        webhook: encodeURIComponent(webhook ?? ''),
-      })
-      if (response.data.success) {
+      const response = await updateWebhookAction(webhook)
+      if (response.success) {
         toast.success('Webhook updated')
       } else {
-        toast.error(response.data.message)
+        toast.error(response.message)
       }
     } catch (error) {
       toast.error('Failed to update webhook')

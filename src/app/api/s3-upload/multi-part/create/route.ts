@@ -20,7 +20,10 @@ export async function POST(req: Request) {
         const { fileInfo } = await req.json();
 
         const fileName = path.parse(fileInfo.originalName).name;
-        const fileKey = `${fileName}_${fileInfo.fileId}${path.extname(fileInfo.originalName)}`;
+        const fileExtension = path.extname(fileInfo.originalName);
+        const fileKey = fileExtension.toLowerCase() === '.docx'
+            ? fileInfo.fileId + fileExtension
+            : `${fileName}_${fileInfo.fileId}${fileExtension}`;
 
         const command = new CreateMultipartUploadCommand({
             Bucket: process.env.AWS_S3_BUCKET_NAME,

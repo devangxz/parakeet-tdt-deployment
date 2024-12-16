@@ -1,7 +1,6 @@
 'use client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -9,6 +8,11 @@ import { z } from 'zod'
 
 import { formEmailSchema, formSchema } from './controllers'
 import countries from '../../../../../countries.json'
+import {
+  updatePersonalInfo,
+  getPersonalInfo,
+} from '@/app/actions/user/personal-info'
+import { updateSecondaryEmail } from '@/app/actions/user/secondary-email'
 import HeadingDescription from '@/components/heading-description'
 import { PhoneInput } from '@/components/phone-input/phone-input'
 import { Button } from '@/components/ui/button'
@@ -30,6 +34,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { mapKeyToMessage } from '@/utils/error-util'
+
 const Page = () => {
   const [loadingOptions, setLoadingOptions] = useState(false)
   const [loadingEmail, setLoadingEmail] = useState(false)
@@ -60,20 +65,27 @@ const Page = () => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoadingOptions(true)
     try {
-      const response = await axios.post(`/api/user/personal-info`, {
-        payload: values,
+      const response = await updatePersonalInfo({
+        ...values,
+        country: values.country || undefined,
+        state: values.state || undefined,
+        city: values.city || undefined,
+        add1: values.add1 || undefined,
+        add2: values.add2 || undefined,
+        postalCode: values.postalCode || undefined,
+        industry: values.industry || undefined,
       })
-      const message = mapKeyToMessage(response.data.message)
-      const successToastId = toast.success(message)
-      toast.dismiss(successToastId)
-    } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const message = mapKeyToMessage(error.response.data.message)
+      if (response.success) {
+        const message = mapKeyToMessage(response.message)
+        const successToastId = toast.success(message)
+        toast.dismiss(successToastId)
+      } else {
+        const message = mapKeyToMessage(response.message)
         const errorToastId = toast.error(message)
         toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Error: ${error}`)
       }
+    } catch (error) {
+      toast.error(`Error: ${error}`)
     } finally {
       setLoadingOptions(false)
     }
@@ -86,81 +98,66 @@ const Page = () => {
     e.preventDefault()
     setLoadingEmail(true)
     try {
-      const response = await axios.post(`/api/user/secondary-email`, {
-        payload: values,
-      })
-      const message = mapKeyToMessage(response.data.message)
-      const successToastId = toast.success(message)
-      toast.dismiss(successToastId)
-    } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const message = mapKeyToMessage(error.response.data.message)
+      const response = await updateSecondaryEmail(values)
+      if (response.success) {
+        const message = mapKeyToMessage(response.message)
+        const successToastId = toast.success(message)
+        toast.dismiss(successToastId)
+      } else {
+        const message = mapKeyToMessage(response.message)
         const errorToastId = toast.error(message)
         toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Error: ${error}`)
       }
+    } catch (error) {
+      toast.error(`Error: ${error}`)
     } finally {
       setLoadingEmail(false)
     }
   }
 
-  // const handleChangeRole = async () => {
-  //   try {
-  //     const response = await axiosInstance.patch('/switch-to-customer')
-  //     const message = mapKeyToMessage(response.data.message)
-  //     const successToastId = toast.success(message)
-  //     toast.dismiss(successToastId)
-  //     signOut()
-  //   } catch (error) {
-  //     let errorMessage = 'Error switching role.'
-  //     if (error instanceof AxiosError && error.response) {
-  //       errorMessage = mapKeyToMessage(error.response.data.message) as string
-  //     }
-  //     const errorToastId = toast.error(errorMessage)
-  //     toast.dismiss(errorToastId)
-  //   } finally {
-  //     setloadingSwitchAccount(false)
-  //   }
-  // }
-
-  // Personal info
   useEffect(() => {
-    axios
-      .get(`/api/user/personal-info`)
-      .then((response) => {
-        const payload = response.data.info
-        const data = {
-          firstName: payload.firstname,
-          lastName: payload.lastname,
-          phone: payload.phoneNumber,
-          country: payload.country,
-          state: payload.state,
-          city: payload.city,
-          postalCode: payload.postalCode,
-          add1: payload.address1,
-          add2: payload.address2,
-          industry: payload.industry,
-        }
-        for (const [key, value] of Object.entries(data)) {
-          form.setValue(key as keyof z.infer<typeof formSchema>, value)
-        }
+    const fetchPersonalInfo = async () => {
+      try {
+        const response = await getPersonalInfo()
+        if (response.success && response.data) {
+          const payload = response.data.info
+          const data = {
+            firstName: payload?.firstname ?? '',
+            lastName: payload?.lastname ?? '',
+            phone: payload?.phoneNumber ?? '',
+            country: payload?.country ?? '',
+            state: payload?.state ?? '',
+            city: payload?.city ?? '',
+            postalCode: payload?.postalCode ?? '',
+            add1: payload?.address1 ?? '',
+            add2: payload?.address2 ?? '',
+            industry: payload?.industry ?? '',
+          }
+          for (const [key, value] of Object.entries(data)) {
+            form.setValue(key as keyof z.infer<typeof formSchema>, value)
+          }
 
-        const { secondaryEmail } = response.data.secondaryEmail
-        for (const [key, value] of Object.entries({
-          secondaryEmail: secondaryEmail,
-        })) {
-          emailForm.setValue(
-            key as keyof z.infer<typeof formEmailSchema>,
-            value
-          )
+          const secondaryEmail =
+            response.data.secondaryEmail?.secondaryEmail ?? ''
+          for (const [key, value] of Object.entries({
+            secondaryEmail: secondaryEmail,
+          })) {
+            emailForm.setValue(
+              key as keyof z.infer<typeof formEmailSchema>,
+              value
+            )
+          }
+        } else {
+          toast.error(`Error fetching personal info`)
         }
-      })
-      .catch((error) => {
-        toast.error(`Error fetching default options ${error}`)
-      })
-      .finally(() => {})
+      } catch (error) {
+        toast.error(`Error fetching personal info ${error}`)
+      }
+    }
+
+    fetchPersonalInfo()
   }, [])
+
   return (
     <div className='w-[80%] space-y-[1.25rem]'>
       <HeadingDescription heading='Personal Info' />
@@ -383,27 +380,6 @@ const Page = () => {
           </form>
         </Form>
       </div>
-
-      {/* <hr />
-
-      {session?.user?.role !== "CUSTOMER" && session?.user?.role !== "INTERNAL_TEAM_USER" && (
-        <div className='w-[70%]'>
-          <HeadingDescription
-            heading={'Account Type'}
-            description={`You can switch your account type to Customer from the button below. As a customer, you can avail our services and get your files transcribed. Our rates start at $0.1/min of audio. Please check our service details page for more.`}
-          />
-          {loadingSwitchAccount ? (
-            <Button className='float-right' disabled>
-              <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-              Switch to Customer
-            </Button>
-          ) : (
-            <Button className='float-right ' onClick={handleChangeRole}>
-              Switch to Customer
-            </Button>
-          )}
-        </div>
-      )} */}
     </div>
   )
 }

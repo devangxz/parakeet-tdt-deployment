@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import {
@@ -5,11 +6,12 @@ import {
   CheckIcon,
   PlusCircledIcon,
 } from '@radix-ui/react-icons'
-import axios from 'axios'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import * as React from 'react'
 
+import { fetchWorkspaces } from '@/app/actions/workspaces'
+import { switchWorkspace } from '@/app/actions/workspaces/switch'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -51,12 +53,6 @@ type PopoverTriggerProps = React.ComponentPropsWithoutRef<typeof PopoverTrigger>
 
 interface TeamSwitcherProps extends PopoverTriggerProps {}
 
-type Workspaces = {
-  teamName: string
-  userRole: string
-  internalAdminUserId: number
-}
-
 const backgroundColors = [
   '#FF5733',
   '#33FF57',
@@ -83,10 +79,13 @@ export default function TeamSwitcher({ className }: TeamSwitcherProps) {
     if (status !== 'authenticated' || !session?.user?.token) return
 
     try {
-      const response = await axios.get(`/api/workspaces`)
+      const response = await fetchWorkspaces()
+      if (!response.success) {
+        throw new Error(response.message)
+      }
 
-      const fetchedTeams = response.data.data.map(
-        (team: Workspaces, index: number) => ({
+      const fetchedTeams = response.data?.data?.map(
+        (team: any, index: number) => ({
           label: team.teamName,
           value: String(team.internalAdminUserId),
           backgroundColor: backgroundColors[index % backgroundColors.length],
@@ -97,11 +96,11 @@ export default function TeamSwitcher({ className }: TeamSwitcherProps) {
 
       setTeams((prevTeams) => {
         const newTeams = [...prevTeams]
-        newTeams[1].teams = fetchedTeams
+        newTeams[1].teams = fetchedTeams ?? []
         return newTeams
       })
 
-      const matchingTeam = fetchedTeams.find(
+      const matchingTeam = fetchedTeams?.find(
         (team: { value: string }) => team.value === String(selectedTeamId)
       )
       if (matchingTeam) {
@@ -118,22 +117,23 @@ export default function TeamSwitcher({ className }: TeamSwitcherProps) {
 
   const handleTeamSwitch = async (team: Team) => {
     try {
-      const response = await axios.post(`/api/workspaces/switch`, {
+      const response = await switchWorkspace({
         internalTeamUserId: team.value,
       })
-      if (response.status === 200) {
-        const data = response.data.details
+
+      if (response.success) {
+        const data = response.details
         await update({
           ...session,
           user: {
             ...session?.user,
-            token: data.token,
-            internalTeamUserId: data.internalTeamUserId,
-            teamName: data.teamName,
-            selectedUserTeamRole: data.selectedUserTeamRole,
-            customPlan: data.customPlan,
-            orderType: data.orderType,
-            organizationName: data.organizationName,
+            token: data?.token,
+            internalTeamUserId: data?.internalTeamUserId,
+            teamName: data?.teamName,
+            selectedUserTeamRole: data?.selectedUserTeamRole,
+            customPlan: data?.customPlan,
+            orderType: data?.orderType,
+            organizationName: data?.organizationName,
           },
         })
         window.location.reload()

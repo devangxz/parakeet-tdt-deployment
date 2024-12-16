@@ -1,10 +1,12 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import { Session } from 'next-auth'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { TeamMember } from './types'
+import { deleteTeamMember } from '@/app/actions/team/member/delete'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +18,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Team } from '@/types/teams'
+
 interface RemoveUserDialogProps {
   open: boolean
   onClose: () => void
@@ -38,14 +41,13 @@ const RemoveUserDialog = ({
   const handleTeamMemberRemove = async () => {
     setIsTeamMemberRemoveLoading(true)
     try {
-      const response = await axios.post(`/api/team/member/delete`, {
-        data: {
-          memberId: selectedTeamMember?.userId,
-          teamId: selectedTeam?.id,
-        },
-      })
-      if (response.status === 200) {
-        const tId = toast.success(response.data.message)
+      const response = await deleteTeamMember(
+        selectedTeamMember?.userId,
+        selectedTeam?.id
+      )
+
+      if (response.success) {
+        const tId = toast.success(response.message)
         toast.dismiss(tId)
         triggerRefetch()
         onClose()

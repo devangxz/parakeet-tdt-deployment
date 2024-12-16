@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
@@ -8,6 +7,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { formSchema } from './controllers'
+import { sendQuoteRequestEmail } from '@/app/actions/static-mails/quote-request'
 import { PhoneInput } from '@/components/phone-input/phone-input'
 import SideImage from '@/components/side-image'
 import { Button } from '@/components/ui/button'
@@ -59,20 +59,17 @@ const GetQuote = () => {
           ...(values.recurringOrders ? [{ 'Recurring Orders': true }] : []),
         ],
       }
-      const response = await fetch(`/api/static-mails/quote-request`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      })
-      setLoading(false)
-      await response.json()
-      setLoading(false)
-      toast.success('Quotation request submitted successfully')
+      const response = await sendQuoteRequestEmail(requestBody)
+      if (response.success) {
+        toast.success('Quotation request submitted successfully')
+        form.reset()
+      } else {
+        toast.error('Failed to submit quotation request')
+      }
     } catch (error) {
-      setLoading(false)
       toast.error(`Failed to submit quotation request: ${error}`)
+    } finally {
+      setLoading(false)
     }
   }
   return (

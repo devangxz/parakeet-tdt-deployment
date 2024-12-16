@@ -1,8 +1,11 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { acceptScreenFile } from '@/app/actions/om/accept-screen-file'
+import { rejectScreenFile } from '@/app/actions/om/reject-screen-file'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -34,62 +37,39 @@ const AcceptRejectScreenFileDialog = ({
 
   const handleSubmit = async () => {
     setLoading(true)
-    if (isAccept) {
-      try {
-        const response = await axios.post(`/api/om/accept-screen-file`, {
-          orderId,
-        })
-
-        if (response.data.success) {
+    try {
+      if (isAccept) {
+        const result = await acceptScreenFile(Number(orderId))
+        if (result.success) {
           const successToastId = toast.success(
             `Successfully accepted screen file`
           )
           toast.dismiss(successToastId)
-          setLoading(false)
           refetch()
           onClose()
         } else {
-          toast.error(response.data.message)
-          setLoading(false)
+          toast.error(result.message)
         }
-      } catch (error) {
-        if (error instanceof AxiosError && error.response) {
-          const errorToastId = toast.error(error.response?.data?.s)
-          toast.dismiss(errorToastId)
-        } else {
-          toast.error(`Error accepting screen file`)
-        }
-        setLoading(false)
-      }
-    } else {
-      try {
-        const response = await axios.post(`/api/om/reject-screen-file`, {
-          orderId,
-        })
-
-        if (response.data.success) {
+      } else {
+        const result = await rejectScreenFile({ orderId: Number(orderId) })
+        if (result.success) {
           const successToastId = toast.success(
             `Successfully rejected screen file`
           )
           toast.dismiss(successToastId)
-          setLoading(false)
           refetch()
           onClose()
         } else {
-          toast.error(response.data.message)
-          setLoading(false)
+          toast.error(result.message)
         }
-      } catch (error) {
-        if (error instanceof AxiosError && error.response) {
-          const errorToastId = toast.error(error.response?.data?.s)
-          toast.dismiss(errorToastId)
-        } else {
-          toast.error(`Error rejecting screen file`)
-        }
-        setLoading(false)
       }
+    } catch (error) {
+      toast.error(`Error ${isAccept ? 'accepting' : 'rejecting'} screen file`)
+    } finally {
+      setLoading(false)
     }
   }
+
   return (
     <AlertDialog open={open}>
       <AlertDialogContent>

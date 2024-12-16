@@ -1,9 +1,10 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { refundFileAction } from '@/app/actions/admin/refund-file'
+import { refundInvoiceAction } from '@/app/actions/admin/refund-invoice'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -24,24 +25,18 @@ export default function AdminDashboard() {
   const handleSubmit = async () => {
     try {
       setLoading(true)
-      const response = await axios.post(`/api/admin/refund-file`, {
-        fileId: refundFile.fileId,
-        amount: refundFile.amount,
-      })
-      if (response.data.success) {
+      const response = await refundFileAction(
+        refundFile.fileId,
+        refundFile.amount
+      )
+      if (response.success) {
         toast.success('Successfully refunded the file.')
-        setLoading(false)
       } else {
-        toast.error(response.data.message)
-        setLoading(false)
+        toast.error(response.s)
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.message)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to refund the file.`)
-      }
+      toast.error('Failed to refund the file.')
+    } finally {
       setLoading(false)
     }
   }
@@ -49,24 +44,18 @@ export default function AdminDashboard() {
   const handleRefundInvoice = async () => {
     try {
       setLoadingRefundInvoice(true)
-      const response = await axios.post(`/api/admin/refund-invoice`, {
-        invoiceId: refundInvoice.invoiceId,
-        amount: refundInvoice.amount,
-      })
-      if (response.data.success) {
+      const response = await refundInvoiceAction(
+        refundInvoice.invoiceId,
+        refundInvoice.amount
+      )
+      if (response.success) {
         toast.success('Successfully refunded the invoice.')
-        setLoadingRefundInvoice(false)
       } else {
-        toast.error(response.data.message)
-        setLoadingRefundInvoice(false)
+        toast.error(response.s)
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.message)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to refund the invoice.`)
-      }
+      toast.error('Failed to refund the invoice.')
+    } finally {
       setLoadingRefundInvoice(false)
     }
   }

@@ -1,0 +1,112 @@
+'use server'
+
+import { JobStatus, JobType, OrderStatus, InputFileType } from '@prisma/client'
+import { getServerSession } from 'next-auth'
+
+import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
+import logger from '@/lib/logger'
+import prisma from '@/lib/prisma'
+import assignFileToQC from '@/services/transcribe-service/assign-file-to-qc'
+import { checkExistingAssignment } from '@/utils/backend-helper'
+
+export async function assignQC(orderId: number) {
+  try {
+    const session = await getServerSession(authOptions)
+    const user = session?.user
+    const transcriberId = user?.userId
+
+    if (!transcriberId) {
+      logger.error('User not authenticated')
+      return {
+        success: false,
+        error: 'User not authenticated',
+      }
+    }
+
+    const order = await prisma.order.findUnique({
+      where: {
+        id: orderId,
+      },
+      select: {
+        orderType: true,
+        status: true,
+        fileId: true,
+      },
+    })
+
+    if (!order) {
+      logger.error(`Order not found for orderId ${orderId}`)
+      return {
+        success: false,
+        error: 'Order not found',
+      }
+    }
+
+    if (
+      order.status !== OrderStatus.TRANSCRIBED &&
+      order.status !== OrderStatus.FORMATTED
+    ) {
+      logger.error(`Order is not transcribed for orderId ${orderId}`)
+      return {
+        success: false,
+        error: 'Order is not transcribed',
+      }
+    }
+
+    const checkExistingAssignmentResult = await checkExistingAssignment(
+      transcriberId
+    )
+
+    if (checkExistingAssignmentResult) {
+      logger.error(`Found existing assignment for ${transcriberId}`)
+      return {
+        success: false,
+        error: 'Please submit the current file before accepting other.',
+      }
+    }
+
+    const rejectedAssignment = await prisma.jobAssignment.findFirst({
+      where: {
+        transcriberId,
+        status: JobStatus.REJECTED,
+        type: JobType.QC,
+        orderId,
+      },
+    })
+
+    if (rejectedAssignment) {
+      logger.error(
+        `${transcriberId} has already rejected the order ${orderId} and tried to assign it.`
+      )
+      return {
+        success: false,
+        error: "You can't assign a file if you've already rejected it.",
+      }
+    }
+
+    await assignFileToQC(
+      orderId,
+      order.status === 'TRANSCRIBED'
+        ? OrderStatus.QC_ASSIGNED
+        : OrderStatus.REVIEWER_ASSIGNED,
+      transcriberId,
+      order.status === 'TRANSCRIBED' ? JobType.QC : JobType.REVIEW,
+      order.status === 'TRANSCRIBED'
+        ? InputFileType.ASR_OUTPUT
+        : InputFileType.LLM_OUTPUT,
+      order.fileId
+    )
+
+    logger.info(`QC ${transcriberId} assigned for order ${orderId}`)
+    return {
+      success: true,
+      message: 'Assigned file to QC',
+    }
+  } catch (error) {
+    logger.error(error)
+    return {
+      success: false,
+      error: 'Failed to assign file to QC',
+    }
+  }
+}

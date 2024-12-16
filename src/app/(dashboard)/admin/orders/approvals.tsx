@@ -1,10 +1,11 @@
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
+import { fetchApprovalOrders } from '@/app/actions/om/fetch-approval-orders'
 import AcceptRejectApprovalFileDialog from '@/components/admin-components/accept-reject-approval'
 import OpenDiffDialog from '@/components/admin-components/diff-dialog'
 import ReassignApprovalFile from '@/components/admin-components/re-assign-approval-file'
@@ -36,7 +37,6 @@ interface File {
   pwer: number
   status: string
   priority: number
-  qc_cost: string
   duration: number
   qc: string
   deliveryTs: string
@@ -68,72 +68,49 @@ export default function ApprovalPage() {
     setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
   }, [playing])
 
-  const fetchApprovalOrders = async (showLoader = false) => {
+  const fetchOrders = async (showLoader = false) => {
     if (showLoader) {
       setIsLoading(true)
     } else {
       setIsLoading(false)
     }
     try {
-      const response = await axios.get(`/api/om/fetch-approval-orders`)
+      const response = await fetchApprovalOrders()
 
-      if (response.data.success) {
-        const orders = response.data.details.map(
-          (
-            order: {
-              id: number
-              fileId: string
-              File: { filename: string; duration: number }
-              orderTs: string
-              pwer: number
-              status: string
-              priority: number
-              qc_cost: number
-              qc: string
-              deliveryTs: string
-              highDifficulty: boolean
-              Assignment: {
-                status: string
-                user: { firstname: string; lastname: string }
-              }[]
-              rateBonus: number
-              orderType: string
-              fileCost: FileCost
-            },
-            index: number
-          ) => {
-            const qcNames = order.Assignment.filter(
-              (a) => a.status === 'ACCEPTED' || a.status === 'COMPLETED'
-            )
-              .map((a) => `${a.user.firstname} ${a.user.lastname}`)
-              .join(', ')
+      if (response.success && response.details) {
+        const orders = response.details.map((order, index: number) => {
+          const qcNames = order.Assignment.filter(
+            (a) => a.status === 'ACCEPTED' || a.status === 'COMPLETED'
+          )
+            .map((a) => `${a.user.firstname} ${a.user.lastname}`)
+            .join(', ')
 
-            return {
-              index: index + 1,
-              orderId: order.id,
-              fileId: order.fileId,
-              filename: order.File.filename,
-              orderTs: order.orderTs,
-              pwer: order.pwer,
-              status: order.status,
-              priority: order.priority,
-              qc_cost: order.qc_cost,
-              duration: order.File.duration,
-              qc: qcNames || '-',
-              deliveryTs: order.deliveryTs,
-              hd: order.highDifficulty,
-              fileCost: order.fileCost,
-              rateBonus: order.rateBonus,
-              type: order.orderType,
-            }
+          return {
+            index: index + 1,
+            orderId: order.id,
+            fileId: order.fileId,
+            filename: order?.File?.filename ?? '',
+            orderTs: order.orderTs.toISOString(),
+            pwer: order.pwer ?? 0,
+            status: order.status,
+            priority: order.priority,
+            duration: order?.File?.duration ?? 0,
+            qc: qcNames || '-',
+            deliveryTs: order.deliveryTs.toISOString(),
+            hd: order.highDifficulty ?? false,
+            fileCost: order.fileCost,
+            rateBonus: order.rateBonus,
+            type: order.orderType,
           }
-        )
+        })
         setApprovalFiles(orders ?? [])
         setError(null)
       } else {
-        setError(response.data.message)
+        toast.error(response.message || 'An error occurred')
+        setError(response.message || 'An error occurred')
       }
     } catch (err) {
+      toast.error('An error occurred')
       setError('an error occurred')
     } finally {
       setIsLoading(false)
@@ -141,7 +118,7 @@ export default function ApprovalPage() {
   }
 
   useEffect(() => {
-    fetchApprovalOrders(true)
+    fetchOrders(true)
   }, [])
 
   if (isLoading) {
@@ -211,8 +188,8 @@ export default function ApprovalPage() {
                   {row.original.pwer > HIGH_PWER
                     ? 'HIGH'
                     : row.original.pwer < LOW_PWER
-                      ? 'LOW'
-                      : 'MEDIUM'}
+                    ? 'LOW'
+                    : 'MEDIUM'}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
@@ -394,13 +371,13 @@ export default function ApprovalPage() {
         open={openReassignDialog}
         onClose={() => setOpenReassignDialog(false)}
         orderId={orderId || ''}
-        refetch={() => fetchApprovalOrders()}
+        refetch={() => fetchOrders()}
       />
       <AcceptRejectApprovalFileDialog
         open={openDialog}
         onClose={() => setOpenDialog(false)}
         orderId={orderId || ''}
-        refetch={() => fetchApprovalOrders()}
+        refetch={() => fetchOrders()}
         isAccept={isAccept}
       />
       <OpenDiffDialog

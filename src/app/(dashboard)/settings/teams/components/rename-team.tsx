@@ -1,9 +1,11 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import { Session } from 'next-auth'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { renameTeam } from '@/app/actions/team/rename'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -17,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Team } from '@/types/teams'
+
 interface RenameTeamDialogProps {
   open: boolean
   onClose: () => void
@@ -41,18 +44,16 @@ const RenameTeamDialog = ({
     }
     setIsRenameTeamLoading(true)
     try {
-      const responseCreateTeam = await axios.post(`/api/team/rename`, {
-        newTeamName: renameTeamName,
-        teamId: selectedTeam?.id,
-      })
-      if (responseCreateTeam.status === 200) {
-        const tId = toast.success(responseCreateTeam.data.message)
+      const response = await renameTeam(selectedTeam?.id, renameTeamName)
+
+      if (response.success) {
+        const tId = toast.success(response.message)
         toast.dismiss(tId)
         fetchAllTeams()
+        onClose()
       } else {
-        toast.error('Failed to create team')
+        toast.error('Failed to rename team')
       }
-      onClose()
       setIsRenameTeamLoading(false)
     } catch (error) {
       toast.error('Failed to rename team')

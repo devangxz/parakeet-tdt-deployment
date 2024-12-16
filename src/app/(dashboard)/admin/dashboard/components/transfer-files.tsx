@@ -1,9 +1,9 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { transferFilesAction } from '@/app/actions/admin/transfer-files'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -43,27 +43,23 @@ export default function TransferFiles() {
 
     try {
       setLoading(true)
-      const response = await axios.post(`/api/admin/transfer-files`, {
-        userEmail: userEmail.toLowerCase(),
-        fileIds,
-      })
-      if (response.data.success) {
+      const response = await transferFilesAction(
+        userEmail.toLowerCase(),
+        fileIds
+      )
+
+      if (response.success) {
         toast.success('Files transferred successfully')
-        setLoading(false)
       } else {
-        toast.error(response.data.s)
-        setLoading(false)
+        toast.error(response.s || 'Failed to transfer files')
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to transfer file.`)
-      }
+      toast.error('Failed to transfer files')
+    } finally {
       setLoading(false)
     }
   }
+
   return (
     <>
       <Card>

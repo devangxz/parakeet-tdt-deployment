@@ -1,0 +1,96 @@
+import { InvoiceStatus, JobStatus, InvoiceType } from '@prisma/client'
+
+import logger from '@/lib/logger'
+import prisma from '@/lib/prisma'
+import { processRefund } from '@/utils/backend-helper'
+
+interface RefundInvoiceParams {
+  invoiceId: string
+  amount: number
+}
+
+export async function refundInvoice({
+  invoiceId,
+  amount,
+}: RefundInvoiceParams) {
+  try {
+    const invoice = await prisma.invoice.findUnique({
+      where: {
+        invoiceId,
+      },
+    })
+
+    if (!invoice) {
+      logger.error(`Invoice not found for invoiceId ${invoiceId}`)
+      return { success: false, s: 'Invoice not found' }
+    }
+
+    if (invoice.status === InvoiceStatus.PENDING) {
+      logger.error(`Invoice is pending for invoiceId ${invoiceId}`)
+      return { success: false, s: 'Invoice is pending' }
+    }
+
+    const customer = await prisma.customer.findUnique({
+      where: {
+        userId: invoice.userId,
+      },
+    })
+
+    const processRefundResult = await processRefund(
+      invoice.transactionId as string,
+      Number(amount),
+      invoice.invoiceId,
+      customer?.refundToCredits ?? false
+    )
+
+    if (!processRefundResult) {
+      logger.error(`Error processing refund for invoice ${invoiceId}`)
+      return { success: false, s: 'Failed to process refund' }
+    }
+
+    if (invoice.type === InvoiceType.TRANSCRIPT) {
+      const files = await prisma.invoiceFile.findMany({
+        where: {
+          invoiceId,
+        },
+      })
+      await prisma.order.updateMany({
+        where: {
+          fileId: {
+            in: files.map((file) => file.fileId),
+          },
+        },
+        data: {
+          status: 'REFUNDED',
+          updatedAt: new Date(),
+        },
+      })
+
+      const orders = await prisma.order.findMany({
+        where: {
+          fileId: {
+            in: files.map((file) => file.fileId),
+          },
+        },
+      })
+
+      await prisma.jobAssignment.updateMany({
+        where: {
+          orderId: {
+            in: orders.map((order) => order.id),
+          },
+        },
+        data: {
+          status: JobStatus.CANCELLED,
+          cancelledTs: new Date(),
+        },
+      })
+    }
+
+    logger.info(`Successfully refunded invoice ${invoiceId}`)
+    return { success: true, s: 'Refund successful' }
+  } catch (error) {
+    logger.error('Error refunding invoice:', error)
+    return { success: false, s: 'Failed to process refund' }
+  }
+}

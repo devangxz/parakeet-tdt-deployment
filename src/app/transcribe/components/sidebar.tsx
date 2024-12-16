@@ -1,25 +1,126 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
+
 import { Settings, ChevronDown, DollarSign, Star } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import React from 'react'
+import { useSession } from 'next-auth/react'
+import React, { useEffect, useState } from 'react'
 
-import { Earnings } from '@/types/earnings'
+import { getTranscriberEarnings } from '@/app/actions/transcriber/earnings'
 
 export interface SidebarItemType {
   href: string
   name: string
   badgeCount?: number
   isActive: boolean
+  type: string
 }
 
-interface SidebarProps {
-  sidebarItems: SidebarItemType[]
-  earnings: Earnings | null
-}
-
-const Sidebar = ({ sidebarItems, earnings }: SidebarProps) => {
+export function SidebarNav() {
+  const { data: session } = useSession()
   const pathname = usePathname()
+  const [earnings, setEarnings] = useState<any>(null)
+
+  const fetchEarnings = async () => {
+    try {
+      const response = await getTranscriberEarnings()
+      if (response.success && response.earnings) {
+        setEarnings(response.earnings)
+      }
+    } catch (err) {
+      console.error('Failed to fetch transcriber earnings:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchEarnings()
+  }, [])
+
+  const allSidebarItems: SidebarItemType[] = [
+    {
+      href: '/transcribe/transcriber',
+      name: 'Transcribe',
+      isActive: false,
+      type: 'transcriber',
+    },
+    {
+      href: '/transcribe/reviewer',
+      name: 'Review',
+      isActive: false,
+      type: 'reviewer',
+    },
+    {
+      href: '/transcribe/proofreader',
+      name: 'Proofread',
+      isActive: false,
+      type: 'proofreader',
+    },
+    {
+      href: '/transcribe/qc',
+      name: 'GT-Editor',
+      isActive: true,
+      type: 'qc',
+    },
+  ]
+
+  const sidebarItems: SidebarItemType[] = []
+
+  allSidebarItems.forEach((item) => {
+    if (session?.user?.role === 'REVIEWER') {
+      sidebarItems.push(item)
+    }
+    if (session?.user?.role === 'QC' && item.type !== 'cf') {
+      sidebarItems.push(item)
+    }
+
+    if (
+      session?.user?.role === 'PROOFREADER' &&
+      item.type !== 'cf' &&
+      item.type !== 'qc'
+    ) {
+      sidebarItems.push(item)
+    }
+
+    if (
+      session?.user?.role === 'TRANSCRIBER_LEVEL_2' &&
+      (item.type === 'reviewer' || item.type === 'transcriber')
+    ) {
+      sidebarItems.push(item)
+    }
+
+    if (session?.user?.role === 'TRANSCRIBER' && item.type === 'transcriber') {
+      sidebarItems.push(item)
+    }
+  })
+
+  if (!session?.user?.legalEnabled && session?.user?.reviewEnabled) {
+    sidebarItems.push({
+      href: '/transcribe/general-cf-reviewer',
+      name: 'GT-Finalizer',
+      isActive: false,
+      type: 'cf',
+    })
+  }
+
+  if (session?.user?.legalEnabled) {
+    sidebarItems.push({
+      href: '/transcribe/legal-qc',
+      name: 'LT-Editor',
+      isActive: false,
+      type: 'qc',
+    })
+  }
+
+  if (session?.user?.legalEnabled && session?.user?.reviewEnabled) {
+    sidebarItems.push({
+      href: '/transcribe/legal-cf-reviewer',
+      name: 'LT-Finalizer',
+      isActive: false,
+      type: 'cf',
+    })
+  }
+
   return (
     <div className='flex-1'>
       <nav className='grid items-start px-2 text-md font-medium lg:px-4 mt-4'>
@@ -113,5 +214,3 @@ const Sidebar = ({ sidebarItems, earnings }: SidebarProps) => {
     </div>
   )
 }
-
-export default Sidebar

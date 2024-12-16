@@ -1,10 +1,12 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import { Session } from 'next-auth'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { TeamMember, TeamMemberRole } from './types'
+import { updateTeamMemberRole } from '@/app/actions/team/member/role'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -55,13 +57,14 @@ const ChangeRoleDialog = ({
   const handleRoleUpdate = async () => {
     setIsTeamMemberRoleChangeLoading(true)
     try {
-      const response = await axios.post(`/api/team/member/role`, {
-        memberEmail: selectedTeamMember?.email,
-        memberRole: updatedTeamMemberRole,
-        teamId: selectedTeam?.id,
-      })
-      if (response.status === 200) {
-        const tId = toast.success(response.data.message)
+      const response = await updateTeamMemberRole(
+        selectedTeamMember?.email,
+        selectedTeam?.id,
+        updatedTeamMemberRole
+      )
+
+      if (response.success) {
+        const tId = toast.success(response.message)
         toast.dismiss(tId)
         triggerRefetch()
         onClose()

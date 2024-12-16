@@ -1,8 +1,10 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { unassignQc } from '@/app/actions/om/unassign-qc'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -27,28 +29,23 @@ const UnassignQcDialog = ({ open, onClose, fileId }: DialogProps) => {
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      const response = await axios.post(`/api/om/unassign-qc`, {
+      const result = await unassignQc({
         fileId,
       })
-      if (response.data.success) {
+      if (result.success) {
         const successToastId = toast.success(`Successfully unassigned Editor`)
         toast.dismiss(successToastId)
-        setLoading(false)
         onClose()
       } else {
-        toast.error(response.data.message)
-        setLoading(false)
+        toast.error(result.message)
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Error unassigning Editor`)
-      }
+      toast.error(`Error unassigning Editor`)
+    } finally {
       setLoading(false)
     }
   }
+
   return (
     <AlertDialog open={open}>
       <AlertDialogContent>

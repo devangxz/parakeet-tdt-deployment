@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { formSchema } from './controller'
+import { sendContactEmail } from '@/app/actions/static-mails/contactus'
 import BrevoChatWidget from '@/components/chat-widget'
 import { PhoneInput } from '@/components/phone-input/phone-input'
 import { Button } from '@/components/ui/button'
@@ -74,32 +75,31 @@ export default function Page() {
       message: '',
     },
   })
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setLoading(true)
-      const response = await fetch(`/api/static-mails/contactus`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          Name: values.name,
-          Email: values.email,
-          Subject: values.subject,
-          QueryType: values.queryType,
-          Phone: values.phone,
-          Message: values.message,
-        }),
+      const result = await sendContactEmail({
+        Name: values.name,
+        Email: values.email,
+        Subject: values.subject,
+        QueryType: values.queryType,
+        Phone: values.phone,
+        Message: values.message ?? '',
       })
-      const { message } = await response.json()
-      toast.success(message)
-      setLoading(false)
-      toast.success('Successfully submitted Details')
+      if (result.success) {
+        toast.success('Successfully submitted details')
+        form.reset()
+      } else {
+        toast.error(result.message || 'Failed to submit details')
+      }
     } catch (error) {
-      setLoading(false)
       toast.error(`Failed to submit details: ${error}`)
+    } finally {
+      setLoading(false)
     }
   }
+
   if (loading) return <div>Loading...</div>
   return (
     <div>
@@ -248,14 +248,16 @@ export default function Page() {
                 </FormItem>
               )}
             />
-            {false ? (
-              <Button disabled className='w-full'>
-                <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                Submit
-              </Button>
-            ) : (
-              <Button type='submit'>Submit</Button>
-            )}
+            <Button type='submit' disabled={loading}>
+              {loading ? (
+                <>
+                  <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                  Submitting...
+                </>
+              ) : (
+                'Submit'
+              )}
+            </Button>
             <p className='text-sm text-slate-400 font-light'>
               We&apos;ll get back to you in 1-2 business days.
             </p>

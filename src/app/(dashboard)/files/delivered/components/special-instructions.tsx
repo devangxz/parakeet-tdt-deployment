@@ -1,12 +1,15 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import axios from 'axios'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
+import {
+  getOrderComments,
+  updateOrderComments,
+} from '@/app/actions/order/comments'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -32,14 +35,12 @@ export function SpecialInstructions({
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
   })
+
   async function onSubmit(data: z.infer<typeof FormSchema>) {
     const toastId = toast.loading(`Submitting.`)
     const { comments } = data
     try {
-      await axios.post(`/api/order/comments`, {
-        fileId: fileId,
-        comments: comments,
-      })
+      await updateOrderComments(fileId, comments)
       toast.dismiss(toastId)
       const successToastId = toast.success(`Submitted Successfully`)
       toast.dismiss(successToastId)
@@ -53,10 +54,12 @@ export function SpecialInstructions({
   }
 
   useEffect(() => {
-    axios
-      .get(`/api/order/comments?fileId=${fileId}`)
-      .then(({ data }) => form.setValue('comments', data?.comments))
-  }, [])
+    const loadComments = async () => {
+      const comments = await getOrderComments(fileId)
+      form.setValue('comments', comments?.comments ?? '')
+    }
+    loadComments()
+  }, [fileId, form])
 
   return (
     <Form {...form}>

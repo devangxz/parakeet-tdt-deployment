@@ -1,8 +1,10 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
+import { updateInstructions } from '@/app/actions/om/update-instructions'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -35,28 +37,22 @@ const SetInstructionsDialog = ({
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      const response = await axios.post(`/api/om/update-instructions`, {
+      const result = await updateInstructions({
         fileId,
         instructions,
       })
-      if (response.data.success) {
+      if (result.success) {
         const successToastId = toast.success(
           `Successfully updated instructions`
         )
         toast.dismiss(successToastId)
-        setLoading(false)
         onClose()
       } else {
-        toast.error(response.data.message)
-        setLoading(false)
+        toast.error(result.message)
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Error updating instructions`)
-      }
+      toast.error(`Error updating instructions`)
+    } finally {
       setLoading(false)
     }
   }

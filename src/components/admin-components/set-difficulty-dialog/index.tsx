@@ -1,8 +1,10 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { updateDifficulty } from '@/app/actions/om/update-difficulty'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -35,31 +37,26 @@ const SetFileDifficultyDialog = ({ open, onClose, fileId }: DialogProps) => {
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      const response = await axios.post(`/api/om/update-difficulty`, {
+      const result = await updateDifficulty({
         fileId,
-        difficulty: difficulty,
+        difficulty: difficulty as 'low' | 'medium' | 'high',
       })
-      if (response.data.success) {
+      if (result.success) {
         const successToastId = toast.success(
           `Successfully updated difficulty level`
         )
         toast.dismiss(successToastId)
-        setLoading(false)
         onClose()
       } else {
-        toast.error(response.data.message)
-        setLoading(false)
+        toast.error(result.message)
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Error updating difficulty level`)
-      }
+      toast.error(`Error updating difficulty level`)
+    } finally {
       setLoading(false)
     }
   }
+
   return (
     <AlertDialog open={open}>
       <AlertDialogContent>

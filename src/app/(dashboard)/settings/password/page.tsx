@@ -1,13 +1,13 @@
 'use client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { formSchema } from './controllers'
+import { updatePassword } from '@/app/actions/user/update-password'
 import HeadingDescription from '@/components/heading-description'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { mapKeyToMessage } from '@/utils/error-util'
+
 const Page = () => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -34,28 +35,28 @@ const Page = () => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true)
     try {
-      const response = await axios.post(`/api/user/update-password`, {
-        payload: {
-          password: values.password,
-          newPassword: values.newpassword,
-        },
+      const response = await updatePassword({
+        password: values.password,
+        newPassword: values.newpassword,
       })
-      const message = mapKeyToMessage(response.data.message)
-      const successToastId = toast.success(message)
-      toast.dismiss(successToastId)
-    } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const message = mapKeyToMessage(error.response.data.message)
+
+      if (response.success) {
+        const message = mapKeyToMessage(response.message)
+        const successToastId = toast.success(message)
+        toast.dismiss(successToastId)
+      } else {
+        const message = mapKeyToMessage(response.message)
         const errorToastId = toast.error(message)
         toast.dismiss(errorToastId)
-      } else {
-        const errorToastId = toast.error(`Error uploading:${error}`)
-        toast.dismiss(errorToastId)
       }
+    } catch (error) {
+      const errorToastId = toast.error(`Error updating password: ${error}`)
+      toast.dismiss(errorToastId)
     } finally {
       setLoading(false)
     }
   }
+
   return (
     <div className='w-[80%] space-y-[1.25rem]'>
       <div className='w-[70%]'>
