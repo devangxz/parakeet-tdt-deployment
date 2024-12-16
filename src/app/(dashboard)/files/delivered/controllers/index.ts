@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import axios from 'axios'
+import { getSession } from 'next-auth/react'
 
 import { archiveFileAction } from '@/app/actions/file/archive'
 import { renameFileAction } from '@/app/actions/file/rename'
 import { deleteFilesAction } from '@/app/actions/files/delete'
 import { updateOrderRating } from '@/app/actions/order/rating'
 import { FILE_CACHE_URL } from '@/constants'
-import { getSession } from 'next-auth/react'
 export const orderController = async (
   payload: { fileId: string; filename?: string; docType?: string },
   type: string

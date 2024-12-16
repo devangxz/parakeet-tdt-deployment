@@ -1,9 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { FileTag } from '@prisma/client'
-import axios from 'axios'
 import { NextRequest, NextResponse } from 'next/server'
 
-import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getFileVersionSignedURLFromS3 } from '@/utils/backend-helper'

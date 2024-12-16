@@ -1,4 +1,5 @@
 import { ReloadIcon } from "@radix-ui/react-icons";
+import { useSession } from "next-auth/react";
 
 import { Button } from "../ui/button";
 import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
@@ -7,7 +8,6 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { OrderDetails } from "@/app/editor/[fileId]/page";
 import { FILE_CACHE_URL } from "@/constants";
 import { ButtonLoading, downloadBlankDocx } from "@/utils/editorUtils";
-import { useSession } from "next-auth/react";
 
 type DownloadDocxDialogProps = {
     orderDetails: OrderDetails;

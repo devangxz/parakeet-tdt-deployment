@@ -1,9 +1,10 @@
 export const dynamic = 'force-dynamic'
 import { FileTag, OrderStatus, OrderType } from '@prisma/client'
 import { NextRequest, NextResponse } from 'next/server'
+
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
-import { getFileVersionFromS3, getFileVersionSignedURLFromS3 } from '@/utils/backend-helper'
+import { getFileVersionSignedURLFromS3 } from '@/utils/backend-helper'
 
 export async function GET(req: NextRequest) {
   let fileId = ''
@@ -13,9 +14,6 @@ export async function GET(req: NextRequest) {
     const type = searchParams.get('type')
     const orgName = searchParams.get('orgName')
     const templateName = searchParams.get('templateName')
-    const userToken = req.headers.get('x-user-token')
-    const user = JSON.parse(userToken ?? '{}')
-    const userId = user.userId
 
     if (!fileId || !type || !orgName || !templateName) {
       return NextResponse.json(
