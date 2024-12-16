@@ -18,7 +18,7 @@ export async function GET() {
     const authUrl = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
     authUrl.searchParams.append('response_type', 'code');
     authUrl.searchParams.append('client_id', ONEDRIVE_CLIENT_ID);
-    authUrl.searchParams.append('redirect_uri', `${SITE_URL}/api/s3-upload/one-drive/callback`);
+    authUrl.searchParams.append('redirect_uri', `${SITE_URL}/auth/one-drive/callback`);
     authUrl.searchParams.append('scope', 'files.read offline_access');
     authUrl.searchParams.append('state', state);
 

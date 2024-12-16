@@ -357,7 +357,6 @@
       "video/x-mxf"
     ]
   },
-  "single_part_upload_limit": 20971520,
   "multi_part_upload_chunk_size": 20971520,
   "org_remotelegal": "REMOTELEGAL",
   "org_remotelegal_folder": "Scribie",
