@@ -21,6 +21,7 @@ import {
   MagnifyingGlassIcon,
   TimerIcon,
 } from '@radix-ui/react-icons'
+import axios from 'axios'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
@@ -286,6 +287,8 @@ export default function Header({
   const [cfd, setCfd] = useState('')
   const [downloadableType, setDownloadableType] = useState('marking')
   const [reReviewComment, setReReviewComment] = useState('')
+  const [audioUrl, setAudioUrl] = useState('')
+  const [videoUrl, setVideoUrl] = useState('')
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -416,9 +419,21 @@ export default function Header({
     }
   }
 
+  const fetchAudioUrl = async () => {
+    try {
+      const res = await axios.get(`/api/editor/get-audio/${orderDetails.fileId}`)
+      const audioUrl = res.data.signedUrl;
+      console.log(res)
+      setAudioUrl(audioUrl)
+    } catch (error) {
+      toast.error('Failed to fetch audio file')
+    }
+  }
+
   useEffect(() => {
     if (!orderDetails.fileId) return
     fetchWaveform()
+    fetchAudioUrl()
   }, [orderDetails.fileId])
 
   useEffect(() => {
@@ -661,8 +676,16 @@ export default function Header({
     }
   }, [audioPlayer, videoRef, videoPlayerOpen])
 
-  const toggleVideo = () => {
-    setVideoPlayerOpen(!videoPlayerOpen)
+  const toggleVideo = async () => {
+    try {
+      if (!videoUrl) {
+        const res = await axios.get(`/api/editor/get-video/${orderDetails.fileId}`)
+        setVideoUrl(res.data.signedUrl)
+      }
+      setVideoPlayerOpen(!videoPlayerOpen)
+    } catch (error) {
+      toast.error('Failed to fetch video file')
+    }
   }
 
   const handleAutoCapitalize = useCallback(
@@ -1023,7 +1046,7 @@ export default function Header({
         <audio
           ref={audioPlayer}
           className='hidden'
-          src={`/api/editor/get-audio/${orderDetails.fileId}`}
+          src={`${audioUrl}`}
         ></audio>
 
         <div className='flex items-center h-full'>
@@ -1389,7 +1412,7 @@ export default function Header({
                   {editorMode === 'Manual' && (
                     <>
                       {orderDetails.status === 'FINALIZER_ASSIGNED' ||
-                      orderDetails.status === 'PRE_DELIVERED' ? (
+                        orderDetails.status === 'PRE_DELIVERED' ? (
                         <Button
                           onClick={() =>
                             downloadBlankDocx({
@@ -1507,10 +1530,10 @@ export default function Header({
                 {!['CUSTOMER', 'OM', 'ADMIN'].includes(
                   session?.user?.email ?? ''
                 ) && (
-                  <Button onClick={() => setSubmitting(true)} className='w-24'>
-                    Submit
-                  </Button>
-                )}
+                    <Button onClick={() => setSubmitting(true)} className='w-24'>
+                      Submit
+                    </Button>
+                  )}
               </div>
             </div>
           </div>
@@ -1754,9 +1777,8 @@ export default function Header({
       }
 
       <div
-        className={` ${
-          !videoPlayerOpen ? 'hidden' : ''
-        } fixed bg-white z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-transparent`}
+        className={` ${!videoPlayerOpen ? 'hidden' : ''
+          } fixed bg-white z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-transparent`}
         style={{
           top: `${position.y}px`,
           left: `${position.x}px`,
@@ -1767,7 +1789,7 @@ export default function Header({
         <div className='relative w-full h-full'>
           <video
             ref={videoRef}
-            src={`/api/editor/get-video/${orderDetails.fileId}`}
+            src={`${videoUrl}`}
             className='w-full h-full'
             controls={false}
             onMouseDown={handleDragChange}

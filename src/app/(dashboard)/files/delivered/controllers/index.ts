@@ -5,6 +5,8 @@ import { archiveFileAction } from '@/app/actions/file/archive'
 import { renameFileAction } from '@/app/actions/file/rename'
 import { deleteFilesAction } from '@/app/actions/files/delete'
 import { updateOrderRating } from '@/app/actions/order/rating'
+import { FILE_CACHE_URL } from '@/constants'
+import { getSession } from 'next-auth/react'
 export const orderController = async (
   payload: { fileId: string; filename?: string; docType?: string },
   type: string
@@ -24,22 +26,16 @@ const downloadPDFFile = async ({
   docType?: string
 }) => {
   try {
-    const response = await axios.get(
-      `/api/order/file-pdf-signed-url?fileId=${fileId}&docType=${docType}`,
-      {
-        responseType: 'blob',
-      }
-    )
-    const fileBlob = new Blob([response.data], { type: 'application/pdf' })
-    const downloadUrl = window.URL.createObjectURL(fileBlob)
-    const link = document.createElement('a')
-    link.href = downloadUrl
-    link.download = `${filename}.pdf`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(downloadUrl)
-    return 'PDF file downloaded successfully'
+
+    const session = await getSession()
+
+    if (docType === 'TRANSCRIPTION_DOC') {
+      window.open(`${FILE_CACHE_URL}/get-tr-pdf/${fileId}?authToken=${session?.user?.token}`, '_blank');
+      return 'PDF file download initiated';
+    } else if (docType === 'CUSTOM_FORMATTING_DOC') {
+      window.open(`${FILE_CACHE_URL}/get-cf-pdf/${fileId}?authToken=${session?.user?.token}`, '_blank');
+      return 'PDF file download initiated';
+    }
   } catch (err) {
     console.error('Error downloading PDF file:', err)
     throw new Error('Failed to download PDF file')
@@ -56,25 +52,10 @@ const downloadFile = async ({
   docType?: string
 }) => {
   try {
+    const session = await getSession()
     if (docType === 'TRANSCRIPTION_DOC') {
-      const response = await axios.get(
-        `/api/order/file-docx-signed-url?fileId=${fileId}&docType=${docType}`,
-        {
-          responseType: 'blob',
-        }
-      )
-      const fileBlob = new Blob([response.data], {
-        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      })
-      const downloadUrl = window.URL.createObjectURL(fileBlob)
-      const link = document.createElement('a')
-      link.href = downloadUrl
-      link.download = `${filename}.docx`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(downloadUrl)
-      return 'DOCX file downloaded successfully'
+      window.open(`${FILE_CACHE_URL}/get-tr-docx/${fileId}?authToken=${session?.user?.token}`, '_blank');
+      return 'DOCX file download initiated';
     } else {
       const response = await axios.get(
         `/api/order/file-docx-signed-url?fileId=${fileId}&docType=${docType}`
@@ -101,19 +82,21 @@ const downloadTxt = async ({
   docType?: string
 }) => {
   try {
-    const response = await axios.get(
-      `/api/order/download-txt?fileId=${fileId}`,
-      { responseType: 'blob' }
-    )
-    const fileBlob = new Blob([response.data], { type: 'text/plain' })
-    const downloadUrl = window.URL.createObjectURL(fileBlob)
+    const response = await axios.get(`/api/order/download-txt?fileId=${fileId}`)
+    const { content, type } = response.data
+
+    const blob = new Blob([content], { type })
+    const url = window.URL.createObjectURL(blob)
+
     const link = document.createElement('a')
-    link.href = downloadUrl
+    link.href = url
     link.download = `${fileId}.txt`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    window.URL.revokeObjectURL(downloadUrl)
+
+    window.URL.revokeObjectURL(url)
+
     return 'Txt file downloaded successfully'
   } catch (err) {
     console.error('Error downloading TXT file:', err)
@@ -179,23 +162,23 @@ const downloadSubtitle = async ({
   try {
     const ext = docType?.toLowerCase()
     const response = await axios.get(
-      `/api/order/download-subtitle?fileId=${fileId}&docType=${docType}`,
-      {
-        headers: {
-          Accept: 'text/plain',
-        },
-        responseType: 'blob',
-      }
+      `/api/order/download-subtitle?fileId=${fileId}&docType=${docType}`
     )
-    const url = window.URL.createObjectURL(
-      new Blob([response.data], { type: 'text/plain' })
-    )
+
+    const { content, type } = response.data
+
+    const blob = new Blob([content], { type })
+    const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
     link.setAttribute('download', `${filename}.${ext}`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+
+    // Clean up the URL object
+    window.URL.revokeObjectURL(url)
+
     return `${docType} file downloaded Successfully`
   } catch (err) {
     throw err

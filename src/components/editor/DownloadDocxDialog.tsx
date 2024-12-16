@@ -5,7 +5,9 @@ import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTr
 import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { OrderDetails } from "@/app/editor/[fileId]/page";
+import { FILE_CACHE_URL } from "@/constants";
 import { ButtonLoading, downloadBlankDocx } from "@/utils/editorUtils";
+import { useSession } from "next-auth/react";
 
 type DownloadDocxDialogProps = {
     orderDetails: OrderDetails;
@@ -15,8 +17,10 @@ type DownloadDocxDialogProps = {
     setDownloadableType: React.Dispatch<React.SetStateAction<string>>;
 };
 
-const DownloadDocxDialog = ({ orderDetails, downloadableType, setButtonLoading, buttonLoading, setDownloadableType }: DownloadDocxDialogProps) => (
-    <Dialog>
+const DownloadDocxDialog = ({ orderDetails, downloadableType, setButtonLoading, buttonLoading, setDownloadableType }: DownloadDocxDialogProps) => {
+    const { data: session } = useSession()
+
+    return <Dialog>
         <DialogTrigger>
             <Button variant="outline">Download File</Button>
         </DialogTrigger>
@@ -44,7 +48,7 @@ const DownloadDocxDialog = ({ orderDetails, downloadableType, setButtonLoading, 
                 </RadioGroup>
             </DialogHeader>
             <DialogClose asChild>
-                <Button
+                {downloadableType === 'no-marking' ? <Button
                     disabled={buttonLoading.download}
                     onClick={downloadBlankDocx.bind(null, { orderDetails, downloadableType, setButtonLoading })}
                 >
@@ -54,9 +58,15 @@ const DownloadDocxDialog = ({ orderDetails, downloadableType, setButtonLoading, 
                     )}{' '}
                     Download File
                 </Button>
+                    :
+                    <Button asChild>
+                        <a target="_blank" href={`${FILE_CACHE_URL}/get-cf-docx/${orderDetails.fileId}?orgName=${orderDetails.orgName}&templateName=${orderDetails.templateName}&type=marking&authToken=${session?.user?.token}`}>Download File</a>
+                    </Button>
+                }
+
             </DialogClose>
         </DialogContent>
     </Dialog>
-)
+}
 
 export default DownloadDocxDialog

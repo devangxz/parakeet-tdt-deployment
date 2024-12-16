@@ -1,12 +1,9 @@
 export const dynamic = 'force-dynamic'
 import { FileTag, OrderStatus, OrderType } from '@prisma/client'
-import axios from 'axios'
 import { NextRequest, NextResponse } from 'next/server'
-
-import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
-import { getFileVersionFromS3 } from '@/utils/backend-helper'
+import { getFileVersionFromS3, getFileVersionSignedURLFromS3 } from '@/utils/backend-helper'
 
 export async function GET(req: NextRequest) {
   let fileId = ''
@@ -64,39 +61,15 @@ export async function GET(req: NextRequest) {
         )
       }
 
-      const fileBuffer = await getFileVersionFromS3(
+      const signedUrl = await getFileVersionSignedURLFromS3(
         `${fileId}.docx`,
         fileVersion?.s3VersionId
       )
-      return new NextResponse(fileBuffer, {
-        status: 200,
-        headers: {
-          'Content-Disposition': `attachment; filename="${fileId}.docx"`,
-          'Content-Type':
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        },
-      })
+
+      return NextResponse.json({ url: signedUrl })
+
     } else if (order.status === OrderStatus.REVIEWER_ASSIGNED) {
-      if (type === 'marking') {
-        const response = await axios.get(
-          `${FILE_CACHE_URL}/get-cf-docx/${fileId}?type=${type}&orgName=${orgName.toLowerCase()}&templateName=${templateName}&userId=${userId}`,
-          {
-            responseType: 'arraybuffer',
-            headers: {
-              'x-api-key': process.env.SCRIBIE_API_KEY,
-            },
-          }
-        )
-        const fileBuffer = Buffer.from(response.data)
-        return new NextResponse(fileBuffer, {
-          status: 200,
-          headers: {
-            'Content-Disposition': `attachment; filename="${fileId}.docx"`,
-            'Content-Type':
-              'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          },
-        })
-      } else {
+      if (type === 'no-marking') {
         const fileVersion = await prisma.fileVersion.findFirst({
           where: {
             fileId,
@@ -112,15 +85,8 @@ export async function GET(req: NextRequest) {
           return NextResponse.json({ message: 'File version not found' }, { status: 404 })
         }
 
-        const transcript = (await getFileVersionFromS3(`${fileId}.txt`, fileVersion?.s3VersionId)).toString();
-        return new NextResponse(transcript, {
-          status: 200,
-          headers: {
-            'Content-Disposition': `attachment; filename="${fileId}.docx"`,
-            'Content-Type':
-              'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          },
-        })
+        const signedUrl = await getFileVersionSignedURLFromS3(`${fileId}.txt`, fileVersion?.s3VersionId)
+        return NextResponse.json({ url: signedUrl })
       }
 
     } else if (
@@ -145,18 +111,12 @@ export async function GET(req: NextRequest) {
         )
       }
 
-      const fileBuffer = await getFileVersionFromS3(
+      const signedUrl = await getFileVersionSignedURLFromS3(
         `${fileId}.docx`,
         fileVersion?.s3VersionId
       )
-      return new NextResponse(fileBuffer, {
-        status: 200,
-        headers: {
-          'Content-Disposition': `attachment; filename="${fileId}.docx"`,
-          'Content-Type':
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        },
-      })
+
+      return NextResponse.json({ url: signedUrl })
     }
   } catch (error) {
     logger.error(`error downloading file for file ${fileId}: ${error}`)

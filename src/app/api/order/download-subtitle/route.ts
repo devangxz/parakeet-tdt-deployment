@@ -44,28 +44,20 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'File not found.' }, { status: 404 });
         }
 
-        const fileName = fileRecord.filename;
-
         const alignments = JSON.parse((await downloadFromS3(`${fileId}_ctms.json`)).toString());
+        const subtitles = getSRTVTT(alignments);
 
-        const subtitiles = getSRTVTT(alignments);
-
-        if (!subtitiles) {
+        if (!subtitles) {
             return NextResponse.json({ error: 'Failed to generate subtitles' }, { status: 500 });
         }
 
-        const { srt, vtt } = subtitiles;
+        const { srt, vtt } = subtitles;
+        const content = ext === 'vtt' ? vtt : srt;
 
-        const subTitleContent =
-            ext === 'vtt' ? vtt : srt;
-
-        const blob = new Blob([subTitleContent], { type: ext === 'vtt' ? 'text/vtt' : 'application/x-subrip' });
-
-        return new NextResponse(blob, {
-            headers: {
-                'Content-Disposition': `attachment; filename="${fileName}.${ext}"`,
-                'Content-Type': ext === 'vtt' ? 'text/vtt' : 'application/x-subrip',
-            },
+        return NextResponse.json({
+            content,
+            filename: fileRecord.filename,
+            type: ext === 'vtt' ? 'text/vtt' : 'application/x-subrip'
         });
     } catch (err) {
         logger.error('Failed to process subtitle file', err);

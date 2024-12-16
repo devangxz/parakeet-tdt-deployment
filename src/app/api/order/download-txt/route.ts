@@ -20,14 +20,11 @@ export async function GET(req: NextRequest) {
         })
 
         const transcript = response.data.result.transcript;
-        const blob = new Blob([transcript], { type: 'text/plain' });
 
-        return new NextResponse(blob, {
-            status: 200,
-            headers: {
-                'Content-Type': 'text/plain',
-                'Content-Disposition': `attachment; filename="${fileId}.txt"`
-            }
+        return NextResponse.json({
+            content: transcript,
+            filename: fileId,
+            type: 'text/plain'
         });
 
     } catch (error) {

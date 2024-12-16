@@ -49,22 +49,6 @@ export async function GET(req: NextRequest) {
                 message: 'Downloaded Successfully',
                 signedUrl,
             })
-        } else if (docType === 'TRANSCRIPTION_DOC') {
-            const response = await axios.get(`${FILE_CACHE_URL}/get-tr-docx/${fileId}?type=${docType}&userId=${userId}`, {
-                headers: {
-                    'x-api-key': process.env.SCRIBIE_API_KEY
-                },
-                responseType: 'arraybuffer'
-            })
-            const docxbuffer = Buffer.from(response.data, 'binary')
-
-            return new NextResponse(docxbuffer, {
-                status: 200,
-                headers: {
-                    'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'Content-Disposition': `attachment; filename="${fileId}.docx"`
-                }
-            })
         }
     } catch (error) {
         logger.error(`Failed to send docx file ${error}`)

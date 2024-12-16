@@ -64,7 +64,9 @@ export function CheckAndDownload({
     const toastId = toast.loading(`Processing your request...`)
     try {
       const response = await orderController(payload, type)
-      toast.dismiss(toastId)
+      setTimeout(() => {
+        toast.dismiss(toastId)
+      }, 100)
       const successToastId = toast.success(`${response}`)
       toast.dismiss(successToastId)
     } catch (err) {
@@ -206,10 +208,10 @@ export function CheckAndDownload({
                       `/editor/${id}`,
                       '_blank',
                       'toolbar=no,location=no,menubar=no,width=' +
-                        window.screen.width +
-                        ',height=' +
-                        window.screen.height +
-                        ',left=0,top=0'
+                      window.screen.width +
+                      ',height=' +
+                      window.screen.height +
+                      ',left=0,top=0'
                     )
                   }
                 >
