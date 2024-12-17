@@ -3,12 +3,12 @@
 import Image from 'next/image'
 import { useState } from 'react'
 
-// import BoxImporter from './components/BoxImporter';
-// import DropboxImporter from './components/DropboxImporter';
+import BoxImporter from './components/BoxImporter';
+import DropboxImporter from './components/DropboxImporter';
 import FileAndFolderUploader from './components/FileAndFolderUploader'
-// import GoogleDriveImporter from './components/GoogleDriveImporter';
-// import LinkImporter from './components/LinkImporter';
-// import OneDriveImporter from './components/OneDriveImporter';
+import GoogleDriveImporter from './components/GoogleDriveImporter';
+import LinkImporter from './components/LinkImporter';
+import OneDriveImporter from './components/OneDriveImporter';
 // import YouTubeImporter from './components/YouTubeImporter';
 import AllUploads from './list'
 import { Badge } from '@/components/ui/badge'
@@ -51,36 +51,36 @@ const Dashboard = () => {
     //   icon: '/assets/images/upload/youtube.svg',
     //   title: 'Upload files via YouTube'
     // },
-    // {
-    //   id: 'link',
-    //   icon: '/assets/images/upload/link.svg',
-    //   title: 'Upload files via Link'
-    // },
-    // {
-    //   id: 'dropbox',
-    //   icon: '/assets/images/upload/dropbox.svg',
-    //   title: 'Upload files via Dropbox'
-    // },
+    {
+      id: 'link',
+      icon: '/assets/images/upload/link.svg',
+      title: 'Upload files via Link'
+    },
+    {
+      id: 'dropbox',
+      icon: '/assets/images/upload/dropbox.svg',
+      title: 'Upload files via Dropbox'
+    },
     // {
     //   id: 'vimeo',
     //   icon: '/assets/images/upload/vimeo.svg',
     //   title: 'Upload files via Vimeo'
     // },
-    // {
-    //   id: 'box',
-    //   icon: '/assets/images/upload/box.svg',
-    //   title: 'Upload files via Box'
-    // },
-    // {
-    //   id: 'one-drive',
-    //   icon: '/assets/images/upload/one-drive.svg',
-    //   title: 'Upload files via OneDrive'
-    // },
-    // {
-    //   id: 'google-drive',
-    //   icon: '/assets/images/upload/google-drive.svg',
-    //   title: 'Upload files via Google Drive'
-    // },
+    {
+      id: 'box',
+      icon: '/assets/images/upload/box.svg',
+      title: 'Upload files via Box'
+    },
+    {
+      id: 'one-drive',
+      icon: '/assets/images/upload/one-drive.svg',
+      title: 'Upload files via OneDrive'
+    },
+    {
+      id: 'google-drive',
+      icon: '/assets/images/upload/google-drive.svg',
+      title: 'Upload files via Google Drive'
+    },
     // {
     //   id: 'frame-io',
     //   icon: '/assets/images/upload/frame-io.svg',
@@ -99,16 +99,16 @@ const Dashboard = () => {
         return <FileAndFolderUploader onUploadSuccess={setUploadSuccess} />;
       // case 'youtube':
       //   return <YouTubeImporter onUploadSuccess={setUploadSuccess} />;
-      // case 'link':
-      //   return <LinkImporter onUploadSuccess={setUploadSuccess} />;
-      // case 'dropbox':
-      //   return <DropboxImporter onUploadSuccess={setUploadSuccess} />;
-      // case 'box':
-      //   return <BoxImporter onUploadSuccess={setUploadSuccess} />;
-      // case 'one-drive':
-      //   return <OneDriveImporter onUploadSuccess={setUploadSuccess} />;
-      // case 'google-drive':
-      //   return <GoogleDriveImporter onUploadSuccess={setUploadSuccess} />;
+      case 'link':
+        return <LinkImporter onUploadSuccess={setUploadSuccess} />;
+      case 'dropbox':
+        return <DropboxImporter onUploadSuccess={setUploadSuccess} />;
+      case 'box':
+        return <BoxImporter onUploadSuccess={setUploadSuccess} />;
+      case 'one-drive':
+        return <OneDriveImporter onUploadSuccess={setUploadSuccess} />;
+      case 'google-drive':
+        return <GoogleDriveImporter onUploadSuccess={setUploadSuccess} />;
       default:
         return null
     }
