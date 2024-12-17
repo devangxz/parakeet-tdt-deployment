@@ -21,7 +21,6 @@ import {
   MagnifyingGlassIcon,
   TimerIcon,
 } from '@radix-ui/react-icons'
-import axios from 'axios'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
@@ -70,6 +69,7 @@ import { requestReReviewAction } from '@/app/actions/editor/re-review'
 import { requestExtensionAction } from '@/app/actions/editor/request-extension'
 import { setFormattingOptionsAction } from '@/app/actions/editor/set-formatting-options'
 import { updateSpeakerNameAction } from '@/app/actions/editor/update-speaker-name'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import {
   TooltipProvider,
@@ -421,10 +421,12 @@ export default function Header({
 
   const fetchAudioUrl = async () => {
     try {
-      const res = await axios.get(`/api/editor/get-audio/${orderDetails.fileId}`)
-      const audioUrl = res.data.signedUrl;
-      console.log(res)
-      setAudioUrl(audioUrl)
+      const { success, signedUrl } = await getSignedUrlAction(`${orderDetails.fileId}.mp3`, 3600)
+      if (success && signedUrl) {
+        setAudioUrl(signedUrl)
+      } else {
+        throw new Error('Failed to fetch audio file')
+      }
     } catch (error) {
       toast.error('Failed to fetch audio file')
     }
@@ -679,8 +681,13 @@ export default function Header({
   const toggleVideo = async () => {
     try {
       if (!videoUrl) {
-        const res = await axios.get(`/api/editor/get-video/${orderDetails.fileId}`)
-        setVideoUrl(res.data.signedUrl)
+        const { success, signedUrl } = await getSignedUrlAction(`${orderDetails.fileId}.mp4`, 3600)
+        if (success && signedUrl) {
+          setVideoUrl(signedUrl)
+        } else {
+          throw new Error('Failed to fetch video file')
+        }
+
       }
       setVideoPlayerOpen(!videoPlayerOpen)
     } catch (error) {

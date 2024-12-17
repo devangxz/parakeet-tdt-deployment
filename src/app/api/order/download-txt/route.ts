@@ -1,30 +1,62 @@
 export const dynamic = 'force-dynamic'
-import axios from 'axios'
+import { FileTag } from '@prisma/client'
 import { NextRequest, NextResponse } from 'next/server'
 
-import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
+import prisma from '@/lib/prisma'
+import { getFileVersionSignedURLFromS3 } from '@/utils/backend-helper'
 
 export async function GET(req: NextRequest) {
     try {
         const url = new URL(req.url)
         const fileId = url.searchParams.get('fileId') as string
-        const userToken = req.headers.get('x-user-token')
-        const user = JSON.parse(userToken ?? '{}')
-        const userId = user?.userId
 
-        const response = await axios.get(`${FILE_CACHE_URL}/fetch-transcript?fileId=${fileId}&userId=${userId}`, {
-            headers: {
-                'x-api-key': process.env.SCRIBIE_API_KEY
+        const file = await prisma.file.findFirst({
+            where: {
+                fileId: fileId
             }
         })
 
-        const transcript = response.data.result.transcript;
+        if (!file) {
+            return NextResponse.json({ message: 'File not found' }, { status: 404 })
+        }
+
+        let fileVersion = ''
+
+        const customerEditFileVersion = await prisma.fileVersion.findFirst({
+            where: {
+                fileId: fileId,
+                tag: FileTag.CUSTOMER_EDIT,
+            },
+            select: {
+                s3VersionId: true
+            },
+        })
+
+        if (!customerEditFileVersion || !customerEditFileVersion.s3VersionId) {
+            const customerDeliveredFileVersion = await prisma.fileVersion.findFirst({
+                where: {
+                    fileId: fileId,
+                    tag: FileTag.CUSTOMER_DELIVERED,
+                },
+                select: {
+                    s3VersionId: true
+                },
+            })
+
+            if (!customerDeliveredFileVersion || !customerDeliveredFileVersion.s3VersionId) {
+                return NextResponse.json({ message: 'Transcript not found' }, { status: 404 })
+            }
+
+            fileVersion = customerDeliveredFileVersion.s3VersionId
+        } else {
+            fileVersion = customerEditFileVersion.s3VersionId
+        }
+
+        const signedUrl = await getFileVersionSignedURLFromS3(`${fileId}.txt`, fileVersion, 900, `${file.filename}.txt`)
 
         return NextResponse.json({
-            content: transcript,
-            filename: fileId,
-            type: 'text/plain'
+            url: signedUrl,
         });
 
     } catch (error) {

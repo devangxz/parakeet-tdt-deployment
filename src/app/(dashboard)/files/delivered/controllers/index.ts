@@ -83,19 +83,9 @@ const downloadTxt = async ({
 }) => {
   try {
     const response = await axios.get(`/api/order/download-txt?fileId=${fileId}`)
-    const { content, type } = response.data
+    const { url } = response.data
 
-    const blob = new Blob([content], { type })
-    const url = window.URL.createObjectURL(blob)
-
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${fileId}.txt`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-
-    window.URL.revokeObjectURL(url)
+    window.open(url, '_blank')
 
     return 'Txt file downloaded successfully'
   } catch (err) {

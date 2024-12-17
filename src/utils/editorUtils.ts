@@ -140,7 +140,7 @@ const downloadBlankDocx = async ({
         )
         const { url } = response.data
         if (url) {
-            window.location.href = url
+            window.open(url, '_blank')
         } else {
             throw new Error('No URL provided for download')
         }
