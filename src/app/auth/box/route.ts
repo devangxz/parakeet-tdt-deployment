@@ -18,7 +18,7 @@ export async function GET() {
     const authUrl = new URL('https://account.box.com/api/oauth2/authorize');
     authUrl.searchParams.append('response_type', 'code');
     authUrl.searchParams.append('client_id', BOX_CLIENT_ID);
-    authUrl.searchParams.append('redirect_uri', `${SITE_URL}/api/s3-upload/box/callback`);
+    authUrl.searchParams.append('redirect_uri', `${SITE_URL}/auth/box/callback`);
     authUrl.searchParams.append('state', state);
 
     return NextResponse.redirect(authUrl.toString());

@@ -1,12 +1,13 @@
 import { FileStatus } from '@prisma/client';
 
+import logger from '@/lib/logger';
 import prisma from '@/lib/prisma';
 
 interface Metadata {
     duration: number;
-    bitRate?: string;
+    bitRate?: number;
     sampleRate?: number;
-    codecName: string;
+    codecName?: string;
     fileSize?: number;
     converted?: boolean;
     fileName?: string;
@@ -38,7 +39,7 @@ const saveFileMetadata = async (metadata: Metadata): Promise<void> => {
         });
         isDuplicate = existingFile !== null;
     } catch (err) {
-        console.error('Error checking for duplicate file:', (err as Error).message);
+        logger.error(`Error checking for duplicate file: ${(err as Error).message}`);
         throw new Error('Error checking for duplicate file');
     }
 
