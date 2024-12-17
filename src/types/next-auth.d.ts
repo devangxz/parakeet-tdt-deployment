@@ -9,7 +9,7 @@ declare module 'next-auth' {
     role: string
     referralCode: string | null
     status: string
-    customPlan: number
+    customPlan: boolean
     internalTeamUserId: number | null
     teamName: string | null
     selectedUserTeamRole: string | null

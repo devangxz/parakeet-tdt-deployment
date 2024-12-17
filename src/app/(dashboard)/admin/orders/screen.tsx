@@ -1,10 +1,11 @@
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
+import { fetchScreeningOrders } from '@/app/actions/om/fetch-screening-orders'
 import AcceptRejectScreenFileDialog from '@/components/admin-components/accept-reject-screen-file'
 import FlagHighDifficulyDialog from '@/components/admin-components/flag-high-difficulty-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -52,7 +53,6 @@ interface File {
   pwer: number
   status: string
   priority: number
-  qc_cost: string
   duration: number
   qc: string
   deliveryTs: string
@@ -83,76 +83,51 @@ export default function ScreenPage() {
     setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
   }, [playing])
 
-  const fetchScreeningOrders = async (showLoader = false) => {
+  const getScreeningOrders = async (showLoader = false) => {
     if (showLoader) {
       setIsLoading(true)
     } else {
       setIsLoading(false)
     }
     try {
-      const response = await axios.get(`/api/om/fetch-screening-orders`)
+      const response = await fetchScreeningOrders()
 
-      if (response.data.success) {
-        const orders = response.data.details.map(
-          (
-            order: {
-              id: number
-              fileId: string
-              File: { filename: string; duration: number }
-              orderTs: string
-              pwer: number
-              status: string
-              priority: number
-              qc_cost: number
-              qc: string
-              deliveryTs: string
-              highDifficulty: boolean
-              reportOption: string
-              reportMode: string
-              Assignment: {
-                status: string
-                user: { firstname: string; lastname: string }
-              }[]
-              fileCost: FileCost
-              rateBonus: number
-              orderType: string
-            },
-            index: number
-          ) => {
-            const qcNames = order.Assignment.filter(
-              (a) => a.status === 'ACCEPTED' || a.status === 'COMPLETED'
-            )
-              .map((a) => `${a.user.firstname} ${a.user.lastname}`)
-              .join(', ')
+      if (response.success && response.details) {
+        const orders = response.details.map((order, index: number) => {
+          const qcNames = order.Assignment.filter(
+            (a) => a.status === 'ACCEPTED' || a.status === 'COMPLETED'
+          )
+            .map((a) => `${a.user.firstname} ${a.user.lastname}`)
+            .join(', ')
 
-            return {
-              index: index + 1,
-              orderId: order.id,
-              fileId: order.fileId,
-              filename: order.File.filename,
-              orderTs: order.orderTs,
-              pwer: order.pwer,
-              status: order.status,
-              priority: order.priority,
-              qc_cost: order.qc_cost,
-              duration: order.File.duration,
-              qc: qcNames || '-',
-              deliveryTs: order.deliveryTs,
-              hd: order.highDifficulty,
-              reportOption: order.reportOption,
-              reportMode: order.reportMode,
-              fileCost: order.fileCost,
-              rateBonus: order.rateBonus,
-              type: order.orderType,
-            }
+          return {
+            index: index + 1,
+            orderId: order.id,
+            fileId: order.fileId,
+            filename: order.File?.filename ?? '',
+            orderTs: order.orderTs.toISOString(),
+            pwer: order.pwer ?? 0,
+            status: order.status,
+            priority: order.priority,
+            duration: order.File?.duration ?? 0,
+            qc: qcNames || '-',
+            deliveryTs: order.deliveryTs.toISOString(),
+            hd: order.highDifficulty ?? false,
+            reportOption: order.reportOption ?? '-',
+            reportMode: order.reportMode ?? '-',
+            fileCost: order.fileCost,
+            rateBonus: order.rateBonus,
+            type: order.orderType,
           }
-        )
+        }) as unknown as File[]
         setScreeningFiles(orders ?? [])
         setError(null)
       } else {
-        setError(response.data.message)
+        toast.error(response.message || 'An error occurred')
+        setError(response.message || 'An error occurred')
       }
     } catch (err) {
+      toast.error('An error occurred')
       setError('an error occurred')
     } finally {
       setIsLoading(false)
@@ -160,7 +135,7 @@ export default function ScreenPage() {
   }
 
   useEffect(() => {
-    fetchScreeningOrders(true)
+    getScreeningOrders(true)
   }, [])
 
   if (isLoading) {
@@ -230,8 +205,8 @@ export default function ScreenPage() {
                   {row.original.pwer > HIGH_PWER
                     ? 'HIGH'
                     : row.original.pwer < LOW_PWER
-                      ? 'LOW'
-                      : 'MEDIUM'}
+                    ? 'LOW'
+                    : 'MEDIUM'}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
@@ -412,14 +387,14 @@ export default function ScreenPage() {
         open={openDialog}
         onClose={() => setOpenDialog(false)}
         orderId={orderId || ''}
-        refetch={() => fetchScreeningOrders()}
+        refetch={() => getScreeningOrders()}
         isAccept={isAccept}
       />
       <FlagHighDifficulyDialog
         open={highDifficultyDialog}
         onClose={() => setHighDifficultyDialog(false)}
         orderId={orderId || ''}
-        refetch={() => fetchScreeningOrders()}
+        refetch={() => getScreeningOrders()}
       />
     </>
   )

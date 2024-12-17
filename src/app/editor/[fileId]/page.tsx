@@ -1,7 +1,6 @@
 'use client'
 
 import { Cross1Icon, ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import { Change, diffWords } from 'diff'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -9,16 +8,17 @@ import React, { useCallback, useEffect, useState, useMemo } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
+import { spellcheckAction } from '@/app/actions/editor/spellcheck'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
 import Header from '@/components/editor/Header'
 import SectionSelector from '@/components/editor/SectionSelector'
-import { DiffTabComponent, EditorTabComponent, InfoTabComponent } from '@/components/editor/TabComponents'
 import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from '@/components/editor/Tabs'
+  DiffTabComponent,
+  EditorTabComponent,
+  InfoTabComponent,
+} from '@/components/editor/TabComponents'
+import { Tabs, TabsList, TabsTrigger } from '@/components/editor/Tabs'
 import renderTitleInputs from '@/components/editor/TitleInputs'
 import { LineData } from '@/components/editor/transcriptUtils'
 import { Button } from '@/components/ui/button'
@@ -33,7 +33,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { RenderPDFDocument } from '@/components/utils'
 import { AUTOSAVE_INTERVAL } from '@/constants'
 import usePreventMultipleTabs from '@/hooks/usePreventMultipleTabs'
-import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
+import {
+  ShortcutControls,
+  useShortcuts,
+} from '@/utils/editorAudioPlayerShortcuts'
 import {
   ConvertedASROutput,
   updatePlayedPercentage,
@@ -115,14 +118,16 @@ function EditorPage() {
     frequentTerms: false,
   })
   const [audioDuration, setAudioDuration] = useState(1)
-  const [quillRef, setQuillRef] = useState<React.RefObject<ReactQuill>>();
+  const [quillRef, setQuillRef] = useState<React.RefObject<ReactQuill>>()
 
-  const [disableGoToWord, setDisableGoToWord] = useState(false);
-  const [position, setPosition] = useState({ x: 100, y: 100 });
+  const [disableGoToWord, setDisableGoToWord] = useState(false)
+  const [position, setPosition] = useState({ x: 100, y: 100 })
   const [lastSearchIndex, setLastSearchIndex] = useState<number>(-1)
-  const [replaceMisspelledWord, setReplaceMisspelledWord] = useState<string>('');
-  const [spellcheckOpen, setSpellcheckOpen] = useState(false);
-  const [spellcheckValue, setSpellCheckValue] = useState<{ word: string, suggestions: string[] }[]>([]);
+  const [replaceMisspelledWord, setReplaceMisspelledWord] = useState<string>('')
+  const [spellcheckOpen, setSpellcheckOpen] = useState(false)
+  const [spellcheckValue, setSpellCheckValue] = useState<
+    { word: string; suggestions: string[] }[]
+  >([])
   const [content, setContent] = useState<{ insert: string }[]>([])
   const [lines, setLines] = useState<LineData[]>([])
   interface PlayerEvent {
@@ -130,39 +135,44 @@ function EditorPage() {
     s: number
   }
 
-  const [playerEvents, setPlayerEvents] = useState<PlayerEvent[]>([]);
+  const [playerEvents, setPlayerEvents] = useState<PlayerEvent[]>([])
 
-  const isActive = usePreventMultipleTabs(params?.fileId as string || '')
+  const isActive = usePreventMultipleTabs((params?.fileId as string) || '')
 
   if (!isActive) {
     router.back()
   }
 
-  const getEditorText = useCallback(() => quillRef?.current?.getEditor().getText() || '', [quillRef]);
+  const getEditorText = useCallback(
+    () => quillRef?.current?.getEditor().getText() || '',
+    [quillRef]
+  )
 
   const shortcutControls = useMemo(() => {
     const controls: Partial<ShortcutControls> = {
-      saveChanges: () => handleSave({ getEditorText, orderDetails, notes, cfd, setButtonLoading, lines, playerEvents }),
-    };
-    return controls as ShortcutControls;
-  }, [
-    getEditorText,
-    orderDetails,
-    notes,
-    step,
-    cfd,
-    setButtonLoading
-  ]);
+      saveChanges: () =>
+        handleSave({
+          getEditorText,
+          orderDetails,
+          notes,
+          cfd,
+          setButtonLoading,
+          lines,
+          playerEvents,
+        }),
+    }
+    return controls as ShortcutControls
+  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading])
 
-  useShortcuts(shortcutControls);
+  useShortcuts(shortcutControls)
 
   useEffect(() => {
     if (audioPlayer) {
       audioPlayer.addEventListener('loadedmetadata', () => {
-        setAudioDuration(audioPlayer.duration);
-      });
+        setAudioDuration(audioPlayer.duration)
+      })
     }
-  }, [audioPlayer]);
+  }, [audioPlayer])
 
   const sectionChangeHandler = (e: React.MouseEvent<HTMLButtonElement>) => {
     const value = e.currentTarget.dataset.value
@@ -192,7 +202,15 @@ function EditorPage() {
       router.push('/')
     }
 
-    fetchFileDetails({ params, setOrderDetails, setCfd, setStep, setTranscript, setCtms, setPlayerEvents })
+    fetchFileDetails({
+      params,
+      setOrderDetails,
+      setCfd,
+      setStep,
+      setTranscript,
+      setCtms,
+      setPlayerEvents,
+    })
 
     const file = localStorage.getItem(orderDetails?.fileId as string)
     if (file) {
@@ -215,7 +233,18 @@ function EditorPage() {
 
   useEffect(() => {
     const interval = setInterval(async () => {
-      await handleSave({ getEditorText, orderDetails, notes, cfd, setButtonLoading, lines, playerEvents }, false)
+      await handleSave(
+        {
+          getEditorText,
+          orderDetails,
+          notes,
+          cfd,
+          setButtonLoading,
+          lines,
+          playerEvents,
+        },
+        false
+      )
     }, 1000 * 60 * AUTOSAVE_INTERVAL)
 
     return () => clearInterval(interval)
@@ -270,7 +299,13 @@ function EditorPage() {
   useEffect(() => {
     if (!orderDetails.orderId || !orderDetails.fileId) return
     if (!initialPDFLoaded && step !== 'QC' && editorMode === 'Editor') {
-      regenDocx(orderDetails.fileId, orderDetails.orderId, setButtonLoading, setRegenCount, setPdfUrl)
+      regenDocx(
+        orderDetails.fileId,
+        orderDetails.orderId,
+        setButtonLoading,
+        setRegenCount,
+        setPdfUrl
+      )
       setInitialPDFLoaded(true)
     }
   }, [orderDetails, editorMode])
@@ -279,55 +314,82 @@ function EditorPage() {
     setQuillRef(quillRef)
   }
 
-  const handleDragChange = (e: React.MouseEvent<HTMLDivElement | HTMLVideoElement>) => {
-    e.preventDefault();
-    const target = e.target as HTMLDivElement; // Correctly typecast the event target
+  const handleDragChange = (
+    e: React.MouseEvent<HTMLDivElement | HTMLVideoElement>
+  ) => {
+    e.preventDefault()
+    const target = e.target as HTMLDivElement // Correctly typecast the event target
     const onMouseMove = (moveEvent: MouseEvent) => {
       setPosition({
         x: moveEvent.clientX - deltaX,
         y: moveEvent.clientY - deltaY,
-      });
-    };
+      })
+    }
 
-    const deltaX = e.clientX - target.getBoundingClientRect().left;
-    const deltaY = e.clientY - target.getBoundingClientRect().top;
+    const deltaX = e.clientX - target.getBoundingClientRect().left
+    const deltaY = e.clientY - target.getBoundingClientRect().top
 
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', () => {
-      document.removeEventListener('mousemove', onMouseMove);
-    }, { once: true });
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener(
+      'mouseup',
+      () => {
+        document.removeEventListener('mousemove', onMouseMove)
+      },
+      { once: true }
+    )
   }
 
-  const replaceTextInstance = (findText: string, replaceText: string, replaceAll = false) => {
-    if (!quillRef?.current) return;
-    const quill = quillRef.current.getEditor();
-    replaceTextHandler(quill, findText, replaceText, replaceAll, false, toast);
-  };
+  const replaceTextInstance = (
+    findText: string,
+    replaceText: string,
+    replaceAll = false
+  ) => {
+    if (!quillRef?.current) return
+    const quill = quillRef.current.getEditor()
+    replaceTextHandler(quill, findText, replaceText, replaceAll, false, toast)
+  }
 
   const searchAndSelectInstance = (searchText: string) => {
-    if (!quillRef?.current) return;
-    const quill = quillRef.current.getEditor();
-    searchAndSelect(quill, searchText, false, lastSearchIndex, setLastSearchIndex, toast);
-  };
+    if (!quillRef?.current) return
+    const quill = quillRef.current.getEditor()
+    searchAndSelect(
+      quill,
+      searchText,
+      false,
+      lastSearchIndex,
+      setLastSearchIndex,
+      toast
+    )
+  }
 
   const toggleSpellcheck = async () => {
-    if (!quillRef?.current) return;
-    let toastId;
+    if (!quillRef?.current) return
+    let toastId
     try {
       if (!spellcheckValue.length) {
         toastId = toast.loading('Running spellcheck...')
-        const transcript = quillRef?.current?.getEditor().getText();
-        const response = await axios.post(`/api/editor/spellcheck`, { transcript })
-        setSpellCheckValue(response.data.misspelledWords.filter((word: { word: string, suggestions: string[] }) => word.suggestions.length > 0))
-        searchAndSelectInstance(response.data.misspelledWords[0].word)
-        toast.dismiss(toastId)
-        toastId = toast.success('Spellcheck completed successfully')
-        toast.dismiss(toastId)
+        const transcript = quillRef?.current?.getEditor().getText()
+        const response = await spellcheckAction(transcript)
+        if (response.success && response.data) {
+          setSpellCheckValue(
+            response.data.filter(
+              (word: { word: string; suggestions: string[] }) =>
+                word.suggestions.length > 0
+            )
+          )
+          searchAndSelectInstance(response.data[0].word)
+          toast.dismiss(toastId)
+          toastId = toast.success('Spellcheck completed successfully')
+          toast.dismiss(toastId)
+        } else {
+          toast.dismiss(toastId)
+          toast.error('Failed to run spellcheck')
+        }
       }
-      setSpellcheckOpen(!spellcheckOpen);
+      setSpellcheckOpen(!spellcheckOpen)
       if (submitting && spellcheckOpen) {
-        setIsSubmitModalOpen(true);
-        setSubmitting(false);
+        setIsSubmitModalOpen(true)
+        setSubmitting(false)
       }
     } catch (error) {
       toast.dismiss(toastId)
@@ -337,113 +399,123 @@ function EditorPage() {
 
   const handleSpellcheckAction = (action: string) => {
     if (!spellcheckValue.length) {
-      setIsSubmitModalOpen(true);
-      setSpellcheckOpen(false);
-      return;
+      setIsSubmitModalOpen(true)
+      setSpellcheckOpen(false)
+      return
     }
 
-    const currentWord = spellcheckValue[0].word;
+    const currentWord = spellcheckValue[0].word
 
     if (action === 'ignoreOnce') {
       // Remove the current word instance
-      const newSpellcheckValue = [...spellcheckValue];
-      newSpellcheckValue.shift();
-      setSpellCheckValue(newSpellcheckValue);
-      setReplaceMisspelledWord('');
+      const newSpellcheckValue = [...spellcheckValue]
+      newSpellcheckValue.shift()
+      setSpellCheckValue(newSpellcheckValue)
+      setReplaceMisspelledWord('')
 
       if (newSpellcheckValue.length === 0) {
-        setSpellcheckOpen(false);
-        setIsSubmitModalOpen(true);
+        setSpellcheckOpen(false)
+        setIsSubmitModalOpen(true)
       } else {
-        searchAndSelectInstance(` ${newSpellcheckValue[0].word} `);
+        searchAndSelectInstance(` ${newSpellcheckValue[0].word} `)
       }
     }
 
     if (action === 'ignoreAll') {
       // Remove all instances of the current word
-      const newSpellcheckValue = spellcheckValue.filter(item => item.word !== currentWord);
-      setSpellCheckValue(newSpellcheckValue);
-      setReplaceMisspelledWord('');
+      const newSpellcheckValue = spellcheckValue.filter(
+        (item) => item.word !== currentWord
+      )
+      setSpellCheckValue(newSpellcheckValue)
+      setReplaceMisspelledWord('')
 
       if (newSpellcheckValue.length === 0) {
-        setSpellcheckOpen(false);
-        setIsSubmitModalOpen(true);
+        setSpellcheckOpen(false)
+        setIsSubmitModalOpen(true)
       } else {
-        searchAndSelectInstance(` ${newSpellcheckValue[0].word} `);
+        searchAndSelectInstance(` ${newSpellcheckValue[0].word} `)
       }
     }
 
     if (action === 'changeOnce') {
-      if (!replaceMisspelledWord) return toast.error('Please enter a word to replace');
+      if (!replaceMisspelledWord)
+        return toast.error('Please enter a word to replace')
 
       // Replace current instance and remove from array
-      searchAndSelectInstance(` ${currentWord} `);
-      replaceTextInstance(` ${currentWord} `, ` ${replaceMisspelledWord} `);
+      searchAndSelectInstance(` ${currentWord} `)
+      replaceTextInstance(` ${currentWord} `, ` ${replaceMisspelledWord} `)
 
-      const newSpellcheckValue = [...spellcheckValue];
-      newSpellcheckValue.shift();
-      setSpellCheckValue(newSpellcheckValue);
-      setReplaceMisspelledWord('');
+      const newSpellcheckValue = [...spellcheckValue]
+      newSpellcheckValue.shift()
+      setSpellCheckValue(newSpellcheckValue)
+      setReplaceMisspelledWord('')
 
       if (newSpellcheckValue.length === 0) {
-        setSpellcheckOpen(false);
-        setIsSubmitModalOpen(true);
+        setSpellcheckOpen(false)
+        setIsSubmitModalOpen(true)
       } else {
-        searchAndSelectInstance(` ${newSpellcheckValue[0].word} `);
+        searchAndSelectInstance(` ${newSpellcheckValue[0].word} `)
       }
     }
 
     if (action === 'changeAll') {
-      if (!replaceMisspelledWord) return toast.error('Please enter a word to replace');
+      if (!replaceMisspelledWord)
+        return toast.error('Please enter a word to replace')
 
       // Replace all instances and remove all occurrences from array
-      replaceTextInstance(` ${currentWord} `, ` ${replaceMisspelledWord} `, true);
-      const newSpellcheckValue = spellcheckValue.filter(item => item.word !== currentWord);
-      setSpellCheckValue(newSpellcheckValue);
-      setReplaceMisspelledWord('');
+      replaceTextInstance(
+        ` ${currentWord} `,
+        ` ${replaceMisspelledWord} `,
+        true
+      )
+      const newSpellcheckValue = spellcheckValue.filter(
+        (item) => item.word !== currentWord
+      )
+      setSpellCheckValue(newSpellcheckValue)
+      setReplaceMisspelledWord('')
 
       if (newSpellcheckValue.length === 0) {
-        setSpellcheckOpen(false);
-        setIsSubmitModalOpen(true);
+        setSpellcheckOpen(false)
+        setIsSubmitModalOpen(true)
       } else {
-        searchAndSelectInstance(` ${newSpellcheckValue[0].word} `);
+        searchAndSelectInstance(` ${newSpellcheckValue[0].word} `)
       }
     }
   }
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: NodeJS.Timeout
 
     const updateRemainingTime = () => {
-      const remainingSeconds = parseInt(orderDetails.remainingTime);
+      const remainingSeconds = parseInt(orderDetails.remainingTime)
       if (remainingSeconds > 0) {
-        const hours = Math.floor(remainingSeconds / 3600);
-        const minutes = Math.floor((remainingSeconds % 3600) / 60);
-        const seconds = remainingSeconds % 60;
+        const hours = Math.floor(remainingSeconds / 3600)
+        const minutes = Math.floor((remainingSeconds % 3600) / 60)
+        const seconds = remainingSeconds % 60
 
         const formattedTime = [
           hours.toString().padStart(2, '0'),
           minutes.toString().padStart(2, '0'),
-          seconds.toString().padStart(2, '0')
-        ].join(':');
+          seconds.toString().padStart(2, '0'),
+        ].join(':')
 
-        setTimeoutCount(formattedTime);
-        orderDetails.remainingTime = (remainingSeconds - 1).toString();
+        setTimeoutCount(formattedTime)
+        orderDetails.remainingTime = (remainingSeconds - 1).toString()
 
-        timer = setTimeout(updateRemainingTime, 1000);
+        timer = setTimeout(updateRemainingTime, 1000)
       } else {
-        setTimeoutCount('00:00:00');
+        setTimeoutCount('00:00:00')
       }
-    };
+    }
 
-    updateRemainingTime();
+    updateRemainingTime()
 
     return () => {
       if (timer) {
-        clearTimeout(timer);
+        clearTimeout(timer)
       }
-    };
-  }, [orderDetails]);
+    }
+  }, [orderDetails])
 
   const getLines = (lineData: LineData[]) => {
     setLines(lineData)
@@ -456,10 +528,18 @@ function EditorPage() {
 
   return (
     <div className='bg-[#F7F5FF] h-screen flex flex-col overflow-hidden'>
-      <div className="mx-2">
+      <div className='mx-2'>
         <div className='flex justify-between bg-white rounded-t-2xl'>
           <p className='font-semibold px-2'>{orderDetails.filename}</p>
-          {session?.user?.role !== 'CUSTOMER' && <span className={`text-red-600 ${orderDetails.remainingTime === '0' ? 'animate-pulse' : ''} mr-2`}>{timeoutCount}</span>}
+          {session?.user?.role !== 'CUSTOMER' && (
+            <span
+              className={`text-red-600 ${
+                orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
+              } mr-2`}
+            >
+              {timeoutCount}
+            </span>
+          )}
         </div>
       </div>
       <Header
@@ -483,15 +563,14 @@ function EditorPage() {
         fileToUpload={fileToUpload}
       />
       <div className='flex flex-col flex-1 overflow-hidden'>
-        <div className='flex justify-between px-16 mt-2 flex-shrink-0'>
-
-        </div>
+        <div className='flex justify-between px-16 mt-2 flex-shrink-0'></div>
         <div className='flex flex-col items-center flex-1 overflow-hidden'>
           <div
-            className={`flex ${step !== 'QC' && editorMode === 'Editor'
-              ? 'justify-between'
-              : 'justify-center'
-              } px-3 h-full`}
+            className={`flex ${
+              step !== 'QC' && editorMode === 'Editor'
+                ? 'justify-between'
+                : 'justify-center'
+            } px-3 h-full`}
           >
             {step !== 'QC' && editorMode === 'Editor' && (
               <SectionSelector
@@ -499,9 +578,7 @@ function EditorPage() {
                 sectionChangeHandler={sectionChangeHandler}
               />
             )}
-            <div
-              className="flex flex-col justify-between h-full"
-            >
+            <div className='flex flex-col justify-between h-full'>
               <div className='flex w-[100vw] px-2 h-full'>
                 <div className='w-4/5 h-full pb-12'>
                   {selectedSection === 'proceedings' && (
@@ -524,7 +601,18 @@ function EditorPage() {
                         </TabsList>
                       </div>
 
-                      <EditorTabComponent content={content} getLines={getLines} setContent={setContent} orderDetails={orderDetails} transcript={transcript} ctms={ctms} audioPlayer={audioPlayer} audioDuration={audioDuration} getQuillRef={getQuillRef} disableGoToWord={disableGoToWord} />
+                      <EditorTabComponent
+                        content={content}
+                        getLines={getLines}
+                        setContent={setContent}
+                        orderDetails={orderDetails}
+                        transcript={transcript}
+                        ctms={ctms}
+                        audioPlayer={audioPlayer}
+                        audioDuration={audioDuration}
+                        getQuillRef={getQuillRef}
+                        disableGoToWord={disableGoToWord}
+                      />
 
                       <DiffTabComponent diff={diff} />
 
@@ -551,7 +639,7 @@ function EditorPage() {
                   )}
                 </div>
                 <div className='w-1/5'>
-                  <div className="fixed w-[19%] h-[84%] bg-white ml-2 overflow-auto py-4 px-3 rounded-lg overflow-y-hidden border">
+                  <div className='fixed w-[19%] h-[84%] bg-white ml-2 overflow-auto py-4 px-3 rounded-lg overflow-y-hidden border'>
                     <div className='border-b flex justify-between items-center pb-1'>
                       <p className='text-lg font-semibold'>Notes</p>
                     </div>
@@ -563,7 +651,6 @@ function EditorPage() {
                     />
                   </div>
                 </div>
-
               </div>
             </div>
             {step !== 'QC' && editorMode === 'Editor' && (
@@ -585,9 +672,18 @@ function EditorPage() {
               </DialogDescription>
               <Button
                 onClick={() => {
-                  if (!quillRef?.current) return;
-                  const quill = quillRef.current.getEditor();
-                  handleSubmit({ orderDetails, step, editorMode, fileToUpload, setButtonLoading, getPlayedPercentage, router, quill })
+                  if (!quillRef?.current) return
+                  const quill = quillRef.current.getEditor()
+                  handleSubmit({
+                    orderDetails,
+                    step,
+                    editorMode,
+                    fileToUpload,
+                    setButtonLoading,
+                    getPlayedPercentage,
+                    router,
+                    quill,
+                  })
                   setSubmitting(false)
                   setIsSubmitModalOpen(false)
                 }}
@@ -603,49 +699,68 @@ function EditorPage() {
             </DialogHeader>
           </DialogContent>
         </Dialog>
-        {spellcheckOpen && <div
-          className="fixed bg-white z-[1000] overflow-auto py-4 px-4 rounded-lg shadow-lg overflow-y-hidden border"
-          style={{ top: `${position.y}px`, left: `${position.x}px`, width: '500px', }}
-        >
-          <div onMouseDown={handleDragChange} className='cursor-move border-b flex justify-between items-center pb-2'>
-            <p className='text-lg font-semibold'>Spellcheck</p>
-            <button onClick={toggleSpellcheck} className='cursor-pointer hover:bg-gray-100 p-2 rounded-lg'><Cross1Icon /></button>
-          </div>
-          <div className='mt-4 max-h-[400px] overflow-y-auto'>
-            {spellcheckValue && spellcheckValue.length > 0 && (
-              <div>
-                <p className="font-semibold mb-2">Misspelled: {spellcheckValue[0].word}</p>
-                <div className="flex flex-col">
-                  {spellcheckValue[0].suggestions.map((suggestion, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setReplaceMisspelledWord(suggestion)}
-                      className={`text-left py-1 px-2 hover:bg-gray-100 rounded ${replaceMisspelledWord === suggestion ? 'bg-blue-100' : ''}`}
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
+        {spellcheckOpen && (
+          <div
+            className='fixed bg-white z-[1000] overflow-auto py-4 px-4 rounded-lg shadow-lg overflow-y-hidden border'
+            style={{
+              top: `${position.y}px`,
+              left: `${position.x}px`,
+              width: '500px',
+            }}
+          >
+            <div
+              onMouseDown={handleDragChange}
+              className='cursor-move border-b flex justify-between items-center pb-2'
+            >
+              <p className='text-lg font-semibold'>Spellcheck</p>
+              <button
+                onClick={toggleSpellcheck}
+                className='cursor-pointer hover:bg-gray-100 p-2 rounded-lg'
+              >
+                <Cross1Icon />
+              </button>
+            </div>
+            <div className='mt-4 max-h-[400px] overflow-y-auto'>
+              {spellcheckValue && spellcheckValue.length > 0 && (
+                <div>
+                  <p className='font-semibold mb-2'>
+                    Misspelled: {spellcheckValue[0].word}
+                  </p>
+                  <div className='flex flex-col'>
+                    {spellcheckValue[0].suggestions.map((suggestion, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setReplaceMisspelledWord(suggestion)}
+                        className={`text-left py-1 px-2 hover:bg-gray-100 rounded ${
+                          replaceMisspelledWord === suggestion
+                            ? 'bg-blue-100'
+                            : ''
+                        }`}
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+            <div className='mt-4 flex justify-between'>
+              <Button onClick={() => handleSpellcheckAction('ignoreOnce')}>
+                Ignore Once
+              </Button>
+              <Button onClick={() => handleSpellcheckAction('ignoreAll')}>
+                Ignore All
+              </Button>
+              <Button onClick={() => handleSpellcheckAction('changeOnce')}>
+                Change Once
+              </Button>
+              <Button onClick={() => handleSpellcheckAction('changeAll')}>
+                Change All
+              </Button>
+            </div>
           </div>
-          <div className="mt-4 flex justify-between">
-            <Button onClick={() => handleSpellcheckAction('ignoreOnce')}>
-              Ignore Once
-            </Button>
-            <Button onClick={() => handleSpellcheckAction('ignoreAll')}>
-              Ignore All
-            </Button>
-            <Button onClick={() => handleSpellcheckAction('changeOnce')}>
-              Change Once
-            </Button>
-            <Button onClick={() => handleSpellcheckAction('changeAll')}>
-              Change All
-            </Button>
-          </div>
-        </div>}
+        )}
       </div>
-
     </div>
   )
 }

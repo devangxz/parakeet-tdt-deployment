@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
+'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import axios, { AxiosError } from 'axios'
 import { Dropin } from 'braintree-web-drop-in'
@@ -13,6 +15,14 @@ import { toast } from 'sonner'
 import Bill from './bill'
 import PaymentSuccessIcon from '../payment-success'
 import { CustomOrderOptions } from '@/app/(dashboard)/payments/invoice/[invoice_id]/components/custom-order-options'
+import { updateFilesInfo } from '@/app/actions/files/update-info'
+import { getInvoiceDetails } from '@/app/actions/invoice/[invoiceId]'
+import { updateOrderOptions } from '@/app/actions/order/update-order-options'
+import { applyDiscount } from '@/app/actions/payment/apply-discount'
+import { checkout } from '@/app/actions/payment/checkout'
+import { checkoutViaCredits } from '@/app/actions/payment/checkout-via-credits'
+import { getClientTokenAction } from '@/app/actions/payment/client-token'
+import { getRISDataAction } from '@/app/actions/ris-data'
 import BillBreakdownDialog from '@/components/bill-breakdown'
 import { Icons } from '@/components/icons'
 import { Button } from '@/components/ui/button'
@@ -21,8 +31,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { RUSH_ORDER_PRICE, BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
+import { RUSH_ORDER_PRICE } from '@/constants'
 import { handleBillingPaymentMethod } from '@/utils/billingPaymentHandler'
 
 interface File {
@@ -105,45 +114,39 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
       setIsLoading(true)
 
       try {
-        const tokenResponse = await axios.get(`/api/payment/client-token`)
-
-        const response = await axios.get(
-          `/api/invoice/${invoiceId}?orderType=TRANSCRIPTION_FORMATTING`
+        const tokenResponse = await getClientTokenAction()
+        const response = await getInvoiceDetails(
+          invoiceId,
+          'TRANSCRIPTION_FORMATTING'
         )
 
-        const fetchedFiles = response.data.files.map(
-          (file: {
-            File: {
-              customFormattingDetails: string
-              customInstructions: string
-              filename: string
-            }
-            fileId: string
-            price: number
-          }) => ({
-            fileId: file.fileId,
-            filename: file.File.filename,
-            risData: JSON.stringify(file.File.customFormattingDetails),
-            dueDate: file.File.customInstructions
-              ? JSON.parse(file.File.customInstructions).dueDate
-              : undefined,
-            folderName: '',
-            templateId: file.File.customInstructions
-              ? JSON.parse(file.File.customInstructions).templateId
-              : '',
-            instructions: file.File.customInstructions
-              ? JSON.parse(file.File.customInstructions).instructions
-              : '',
-            cost: file.price,
-          })
-        )
-        setCreditsUsed(response.data.creditsUsed)
-        setBillingEnabled(response.data.isBillingEnabledForCustomer)
+        if (!response.responseData) {
+          throw new Error('No response data received')
+        }
+
+        const fetchedFiles = response.responseData.files.map((file: any) => ({
+          fileId: file.fileId,
+          filename: file.File.filename,
+          risData: JSON.stringify(file.File.customFormattingDetails),
+          dueDate: file.File.customInstructions
+            ? JSON.parse(file.File.customInstructions).dueDate
+            : undefined,
+          folderName: '',
+          templateId: file.File.customInstructions
+            ? JSON.parse(file.File.customInstructions).templateId
+            : '',
+          instructions: file.File.customInstructions
+            ? JSON.parse(file.File.customInstructions).instructions
+            : '',
+          cost: file.price,
+        }))
+        setCreditsUsed(response.responseData.creditsUsed)
+        setBillingEnabled(response.responseData.isBillingEnabledForCustomer)
         setFiles(fetchedFiles)
-        setRushOrderPrice(response.data.rates.rush_order)
+        setRushOrderPrice(response.responseData.rates.rush_order)
         setPaymentInfo({
           fileSize:
-            response.data.files.reduce(
+            response.responseData.files.reduce(
               (
                 total: number,
                 file: {
@@ -155,20 +158,20 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
               0
             ) / 60,
           service: 'Transcribe and Custom Format',
-          baseRate: response.data.invoice.orderRate,
-          discount: response.data.invoice.discount,
-          totalAmount: response.data.invoice.amount,
+          baseRate: response.responseData.invoice.orderRate,
+          discount: response.responseData.invoice.discount,
+          totalAmount: response.responseData.invoice.amount,
           invoiceId,
-          creditsUsed: response.data.creditsUsed,
+          creditsUsed: response.responseData.creditsUsed,
         })
-        const templateData = response.data.templates.map(
+        const templateData = response.responseData.templates.map(
           (template: Template) => ({
             id: template.id,
             name: template.name,
           })
         )
         setTemplates(templateData)
-        const bills = response.data.files.map(
+        const bills = response.responseData.files.map(
           (file: {
             File: { filename: string; duration: number }
             price: number
@@ -179,8 +182,10 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
           })
         )
         setBills(bills)
-        setClientToken(tokenResponse.data.clientToken)
-        const orderOptions = JSON.parse(response.data.invoice.options)
+        setClientToken(tokenResponse.clientToken || null)
+        const orderOptions = JSON.parse(
+          response.responseData.invoice.options || '{}'
+        )
         if (orderOptions.exd === 1) {
           setRushOrderEnable(true)
         } else {
@@ -214,11 +219,9 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
       const toastId = toast.loading(`Updating RIS Data, please wait...`)
       try {
         setDisableNextButton(true)
-        const response = await axios.get(
-          `/api/ris-data/${fileId}?template=${templateName}`
-        )
+        const response = await getRISDataAction(fileId, templateName)
 
-        if (response.data) {
+        if (response.success) {
           const tId = toast.success(`Successfully updated RIS data`)
           toast.dismiss(tId)
           toast.dismiss(toastId)
@@ -273,70 +276,57 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
   }
 
   const handlePaymentMethod = async () => {
-    if (instance) {
-      instance
-        .requestPaymentMethod()
-        .then(({ nonce }: { nonce: string }) => {
-          setLoadingPay(true)
-          // Send the nonce to your server to process the payment
-          fetch(`/api/payment/checkout`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${session?.user?.token}`,
-            },
-            body: JSON.stringify({
-              paymentMethodNonce: nonce,
-              invoiceId,
-              orderType: 'TRANSCRIPTION_FORMATTING',
-            }),
-          })
-            .then((response) => response.json())
-            .then((data) => {
-              setLoadingPay(false)
-              if (data.success) {
-                setPaymentSuccessData((prevData) => ({
-                  ...prevData,
-                  transactionId: data.transactionId,
-                  paymentMethod: data.paymentMethod,
-                  pp_account: data.pp_account,
-                  cc_last4: data.cc_last4,
-                  amount: data.invoice.amount,
-                }))
-                setPaymentSuccess(true)
-              } else {
-                alert('Payment failed: ' + data.message)
-              }
-            })
-            .catch((err) => {
-              setLoadingPay(false)
-              console.error('Error processing payment:', err)
-            })
-        })
-        .catch((err) => {
-          setLoadingPay(false)
-          console.error('Error requesting payment method:', err)
-        })
+    if (!instance) return
+
+    try {
+      const { nonce } = await instance.requestPaymentMethod()
+      setLoadingPay(true)
+
+      const response = await checkout({
+        paymentMethodNonce: nonce,
+        invoiceId,
+        orderType: 'TRANSCRIPTION_FORMATTING',
+      })
+
+      setLoadingPay(false)
+      if (response.success) {
+        setPaymentSuccessData((prevData) => ({
+          ...prevData,
+          transactionId: response.transactionId ?? '',
+          paymentMethod: response.paymentMethod ?? 'CREDITCARD',
+          pp_account: response.pp_account ?? '',
+          cc_last4: response.cc_last4 ?? '',
+          amount: response.invoice?.amount ?? 0,
+        }))
+        setPaymentSuccess(true)
+      } else {
+        toast.error(`Payment failed: ${response.message}`)
+      }
+    } catch (err) {
+      setLoadingPay(false)
+      console.error('Error processing payment:', err)
+      toast.error('Error processing payment')
     }
   }
 
   const handlePaymentMethodViaCredits = async () => {
     try {
       setLoadingPay(true)
-      const response = await axios.post(`/api/payment/checkout-via-credits`, {
+
+      const response = await checkoutViaCredits({
         invoiceId,
         orderType: 'TRANSCRIPTION_FORMATTING',
       })
 
-      if (response.data.success) {
-        const data = response.data
+      if (response.success) {
+        const data = response
         setPaymentSuccessData((prevData) => ({
           ...prevData,
-          transactionId: data.transactionId,
-          paymentMethod: data.paymentMethod,
-          pp_account: data.pp_account,
-          cc_last4: data.cc_last4,
-          amount: data.invoice.amount,
+          transactionId: data.transactionId ?? '',
+          paymentMethod: data.paymentMethod ?? 'CREDITS',
+          pp_account: data.pp_account ?? '',
+          cc_last4: data.cc_last4 ?? '',
+          amount: data.invoice?.amount ?? 0,
         }))
         setPaymentSuccess(true)
         setLoadingPay(false)
@@ -367,11 +357,26 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
 
     if (activeStep === 2) {
       try {
-        const response = await axios.post(`/api/files/update-info`, {
-          files,
-        })
+        const response = await updateFilesInfo(
+          files.map((file) => {
+            let dueDate = ''
+            if (file.dueDate instanceof Date) {
+              dueDate = file.dueDate.toISOString()
+            } else if (
+              typeof file.dueDate === 'string' &&
+              file.dueDate !== ''
+            ) {
+              dueDate = file.dueDate
+            }
 
-        if (response.data.success) {
+            return {
+              ...file,
+              dueDate,
+            }
+          })
+        )
+
+        if (response.success) {
           const tId = toast.success(`Successfully updated files information`)
           toast.dismiss(tId)
         } else {
@@ -392,13 +397,13 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
   const handleRushOrder = async () => {
     setRushOrderEnable((prevRushOrderEnable) => !prevRushOrderEnable)
     try {
-      const response = await axios.post(`/api/order/update-order-options`, {
+      const response = await updateOrderOptions(
         invoiceId,
-        optionId: 'exd',
-        enabled: !rushOrderEnable ? 1 : 0,
-      })
+        'exd',
+        !rushOrderEnable ? '1' : '0'
+      )
 
-      if (response.data.success) {
+      if (response.success) {
         const tId = toast.success(
           `Successfully ${
             !rushOrderEnable ? 'Enabled' : 'Disabled'
@@ -407,9 +412,10 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
         toast.dismiss(tId)
         setPaymentInfo((prevPaymentInfo: Payment | null) => ({
           ...prevPaymentInfo!,
-          totalAmount: response.data.invoice.amount,
+          totalAmount: response.invoice?.amount ?? 0,
+          creditsUsed: response.creditsUsed ?? 0,
         }))
-        setCreditsUsed(response.data.creditsUsed)
+        setCreditsUsed(response.creditsUsed ?? 0)
       } else {
         toast.error(`Failed to update rush order option`)
       }
@@ -425,27 +431,21 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
     }
     try {
       setLoadingCoupon(true)
-      const response = await axios.post(`/api/payment/apply-discount`, {
-        invoiceId,
-        couponCode,
-      })
-
+      const response = await applyDiscount({ invoiceId, couponCode })
+      if (!response.success) {
+        throw new Error('Failed to apply coupon code')
+      }
       const tId = toast.success(
         `Successfully applied ${couponCode} coupon code`
       )
       toast.dismiss(tId)
       setPaymentInfo((prevPaymentInfo: Payment | null) => ({
         ...prevPaymentInfo!,
-        discount: response.data.totalDiscount,
+        discount: response.totalDiscount ?? 0,
       }))
       setLoadingCoupon(false)
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.message)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to add free credits`)
-      }
+      toast.error(`Failed to add free credits`)
       setLoadingCoupon(false)
     }
   }

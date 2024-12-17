@@ -1,9 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import {
+  getCustomPlanDetailsAction,
+  updateCustomPlanAction,
+} from '@/app/actions/admin/custom-plan-details'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -87,22 +91,19 @@ export default function CustomPlan() {
 
     try {
       setSearchLoading(true)
-      const encodedEmail = encodeURIComponent(userEmail.toLowerCase())
-      const response = await axios.get(
-        `/api/admin/custom-plan-details?email=${encodedEmail}`
-      )
-      if (response.data.success) {
+      const response = await getCustomPlanDetailsAction(userEmail.toLowerCase())
+
+      if (response.success) {
         toast.success('Successfully get custom plan details.')
-        setSearchLoading(false)
         setShowRates(true)
 
-        if (!response.data.rates) {
+        if (!response.rates) {
           setCustomerFound(false)
         } else {
           setCustomerFound(true)
-          const responseData = response.data.rates
+          const responseData = response?.rates as any
           const mappedRates = {
-            manualTranscriptRate: responseData.manualRate.toString(),
+            manualTranscriptRate: responseData.manualRate.toString() ?? '',
             strictVerbatiumRate: responseData.svRate.toString(),
             additionalChargeRate: responseData.addChargeRate.toString(),
             audioTimeCodingRate: responseData.audioTimeCoding.toString(),
@@ -124,24 +125,19 @@ export default function CustomPlan() {
           }
           setRates(mappedRates)
         }
-        setOrganizationName(response.data.organizationName)
-        setTemplateName(response.data.templateName)
+        setOrganizationName(response?.organizationName ?? '')
+        setTemplateName(response?.templateName ?? '')
       } else {
         setCustomerFound(false)
-        setSearchLoading(false)
         setShowRates(false)
         toast.error(`User not found. Please check user email.`)
       }
     } catch (error) {
       setCustomerFound(false)
-      setSearchLoading(false)
       setShowRates(false)
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`User not found. Please check user email.`)
-      }
+      toast.error(`Failed to get custom plan details.`)
+    } finally {
+      setSearchLoading(false)
     }
   }
 
@@ -173,25 +169,21 @@ export default function CustomPlan() {
     }
     try {
       setAddLoading(true)
-      const response = await axios.post(`/api/admin/custom-plan-details`, {
-        userEmail: userEmail.toLowerCase(),
-        rates,
-      })
-      if (response.data.success) {
+      const response = await updateCustomPlanAction(
+        userEmail.toLowerCase(),
+        rates
+      )
+
+      if (response.success) {
         toast.success(
           `Custom plan ${customerFound ? 'update' : 'added'} successfully!`
         )
       } else {
-        toast.error(response.data.s || 'Failed to add custom plan')
+        toast.error(response.s || 'Failed to add custom plan')
       }
-      setAddLoading(false)
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to add custom plan.`)
-      }
+      toast.error(`Failed to add custom plan.`)
+    } finally {
       setAddLoading(false)
     }
   }

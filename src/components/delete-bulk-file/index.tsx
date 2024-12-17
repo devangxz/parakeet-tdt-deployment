@@ -1,8 +1,9 @@
+'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { deleteFilesAction } from '@/app/actions/files/delete'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,13 +33,16 @@ const DeleteBulkFileModal = ({
   const handleDeleteFile = async () => {
     setDeleteLoading(true)
     try {
-      await axios.post(`/api/files/delete`, {
-        fileIds,
-      })
-      setDeleteLoading(false)
-      onClose()
-      refetch()
-      toast.success(`Deleted files successfully`)
+      const response = await deleteFilesAction(fileIds)
+      if (response.success) {
+        setDeleteLoading(false)
+        onClose()
+        refetch()
+        toast.success(`Deleted files successfully`)
+      } else {
+        setDeleteLoading(false)
+        toast.error(`Failed to delete files. Please try again.`)
+      }
     } catch (error) {
       setDeleteLoading(false)
       toast.error(`Failed to delete files. Please try again.`)

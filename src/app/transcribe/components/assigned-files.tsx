@@ -2,7 +2,6 @@
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
@@ -10,9 +9,15 @@ import { toast } from 'sonner'
 import { DataTable } from './data-table'
 import { unassignmentHandler } from './unassignmentHandler'
 import { determinePwerLevel } from './utils'
+import { getAssignedQCFiles } from '@/app/actions/qc/assigned-files'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Tooltip,
   TooltipContent,
@@ -59,67 +64,45 @@ export default function AssignedFilesPage({ changeTab }: Props) {
       setIsLoading(false)
     }
     try {
-      const url = isLegalQCPage
-        ? `/api/qc/assigned-files?type=legal`
-        : `/api/qc/assigned-files?type=general`
-      const response = await axios.get(url)
+      const type = isLegalQCPage ? 'legal' : 'general'
+      const response = await getAssignedQCFiles(type)
+
+      if (!response.success) {
+        throw new Error(response.error)
+      }
 
       if (response.data) {
-        const orders = response.data.map(
-          (
-            assignment: {
-              acceptedTs: string
-              type: string
-              order: {
-                pwer: number
-                orderTs: string
-                id: number
-                fileId: string
-                File: { filename: string; duration: number }
-                status: string
-                priority: number
-                qc_cost: number
-                deliveryTs: string
-                highDifficulty: boolean
-                orderType: string
-                rateBonus: number
-                instructions: string | null
-                rate: number
-              }
-            },
-            index: number
-          ) => {
-            const diff = determinePwerLevel(assignment.order.pwer)
+        const orders = response.data.map((assignment: any, index: number) => {
+          const diff = determinePwerLevel(assignment.order.pwer)
 
-            const { timeString, dateString } = getFormattedTimeStrings(
-              assignment.acceptedTs
-            )
+          const { timeString, dateString } = getFormattedTimeStrings(
+            assignment.acceptedTs.toISOString()
+          )
 
-            return {
-              index: index + 1,
-              orderId: assignment.order.id,
-              fileId: assignment.order.fileId,
-              filename: assignment.order.File.filename,
-              orderTs: assignment.order.orderTs,
-              pwer: assignment.order.pwer,
-              status: assignment.order.status,
-              priority: assignment.order.priority,
-              qc_cost: assignment.order.qc_cost,
-              duration: assignment.order.File.duration,
-              qc: '-',
-              deliveryTs: assignment.order.deliveryTs,
-              hd: assignment.order.highDifficulty,
-              orderType: assignment.order.orderType,
-              rateBonus: assignment.order.rateBonus,
-              timeString,
-              dateString,
-              diff,
-              rate: assignment.order.rate,
-              instructions: assignment.order.instructions,
-              jobType: assignment.type,
-            }
+          return {
+            index: index + 1,
+            orderId: assignment.order.id,
+            fileId: assignment.order.fileId,
+            filename: assignment.order.File.filename,
+            orderTs: assignment.order.orderTs,
+            pwer: assignment.order.pwer,
+            status: assignment.order.status,
+            priority: assignment.order.priority,
+            qc_cost: assignment.order.qc_cost,
+            duration: assignment.order.File.duration,
+            qc: '-',
+            deliveryTs: assignment.order.deliveryTs,
+            hd: assignment.order.highDifficulty,
+            orderType: assignment.order.orderType,
+            rateBonus: assignment.order.rateBonus,
+            timeString,
+            dateString,
+            diff,
+            rate: assignment.order.rate,
+            instructions: assignment.order.instructions,
+            jobType: assignment.type,
           }
-        )
+        })
         setAssginedFiles(orders ?? [])
         setError(null)
       }
@@ -304,10 +287,7 @@ export default function AssignedFilesPage({ changeTab }: Props) {
                   'LLM formatting is currently processing this file. Please wait for a while before starting the file.'
                 )
               } else {
-                window.open(
-                  `/editor/${row.original.fileId}`,
-                  '_blank'
-                )
+                window.open(`/editor/${row.original.fileId}`, '_blank')
               }
             }}
           >
@@ -316,7 +296,10 @@ export default function AssignedFilesPage({ changeTab }: Props) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant='order' className='h-9 w-8 p-0 format-icon-button'>
+              <Button
+                variant='order'
+                className='h-9 w-8 p-0 format-icon-button'
+              >
                 <span className='sr-only'>Open menu</span>
                 <ChevronDownIcon className='h-4 w-4' />
               </Button>
@@ -335,7 +318,11 @@ export default function AssignedFilesPage({ changeTab }: Props) {
                     window.open(
                       `/editor/${row.original.fileId}`,
                       '_blank',
-                      'toolbar=no,location=no,menubar=no,width=' + window.screen.width + ',height=' + window.screen.height + ',left=0,top=0'
+                      'toolbar=no,location=no,menubar=no,width=' +
+                        window.screen.width +
+                        ',height=' +
+                        window.screen.height +
+                        ',left=0,top=0'
                     )
                   }
                 }}

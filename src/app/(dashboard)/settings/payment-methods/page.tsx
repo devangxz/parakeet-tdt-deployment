@@ -1,15 +1,16 @@
-/* eslint-disable @next/next/no-img-element */
 'use client'
 
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { CreditCard } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
+import { getClientTokenAction } from '@/app/actions/payment/client-token'
+import { getPaymentMethods } from '@/app/actions/payment/get-payment-methods'
+import { removePaymentMethod } from '@/app/actions/payment/remove-payment-method'
 import AddPaymentMethodDialog from '@/components/add-payment-method'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -45,10 +46,10 @@ const Invoice = () => {
     }
 
     try {
-      const response = await axios.get(`/api/payment/get-payment-methods`)
+      const response = await getPaymentMethods()
 
-      if (response.data.success) {
-        const paymentMethods = response.data.pms.map(
+      if (response.success && response.pms) {
+        const paymentMethods = response.pms.map(
           (
             pm: {
               type: string
@@ -92,6 +93,7 @@ const Invoice = () => {
       header: 'Type',
       cell: ({ row }) => (
         <div className='font-medium flex items-center gap-3'>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={row.original.image_url} alt='pm' width={24} height={24} />
           {row.getValue('type') === 'CC' ? 'Card' : 'Paypal'}
         </div>
@@ -172,31 +174,30 @@ const Invoice = () => {
   const handleAddPaymentMethod = async () => {
     try {
       setIsAddPaymentMethodLoading(true)
-      const tokenResponse = await axios.get(`/api/payment/client-token`)
-      setClientToken(tokenResponse.data.clientToken)
-      setIsAddPaymentMethodLoading(false)
-      setOpenDetailsDialog(true)
+      const response = await getClientTokenAction()
+      if (response.success && response.clientToken) {
+        setClientToken(response.clientToken)
+        setOpenDetailsDialog(true)
+      }
     } catch (error) {
+      toast.error(`Failed to get client token: ${error}`)
+    } finally {
       setIsAddPaymentMethodLoading(false)
-      toast.error(`Failed to pay: ${error}`)
     }
   }
 
   const handleRemovePaymentMethod = async (id: string, token: string) => {
     try {
       setLoadingFileOrder((prev) => ({ ...prev, [id]: true }))
-      const tokenResponse = await axios.post(
-        `/api/payment/remove-payment-method`,
-        {
-          token,
-        }
-      )
-      setLoadingFileOrder((prev) => ({ ...prev, [id]: false }))
-      toast.success(tokenResponse.data.message)
-      fetchPaymentMethods()
+      const response = await removePaymentMethod({ token })
+      if (response.success) {
+        toast.success(response.message)
+        fetchPaymentMethods()
+      }
     } catch (error) {
-      setLoadingFileOrder((prev) => ({ ...prev, [id]: false }))
       toast.error(`Failed to remove payment method: ${error}`)
+    } finally {
+      setLoadingFileOrder((prev) => ({ ...prev, [id]: false }))
     }
   }
 

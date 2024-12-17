@@ -31,7 +31,7 @@ export const orderFiles = async (
   userId: number,
   internalTeamUserId: number | null,
   fileIds: string[],
-  orderType: OrderType,
+  orderType: string,
   customPlan: boolean
 ) => {
   const options = await getOrderOptions(userId)

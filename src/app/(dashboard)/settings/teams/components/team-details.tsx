@@ -1,6 +1,7 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { Session } from 'next-auth'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
@@ -9,6 +10,8 @@ import ChangeRoleDialog from './change-team-member-role'
 import { MemberDataTable } from './member-data-table'
 import RemoveUserDialog from './remove-team-member'
 import { TeamMember, TeamMemberRoleType, TeamMemberRole } from './types'
+import { addTeamMember } from '@/app/actions/team/member/add'
+import { getTeamMembers } from '@/app/actions/team/members'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -79,28 +82,21 @@ const TeamDetailsDialog = ({
     }
 
     try {
-      const response = await axios.get(
-        `/api/team/members?teamId=${selectedTeam?.id}`
-      )
-      const teamMembers = response.data.members.team_members.map(
-        (teamMember: {
-          fullname: string
-          email: string
-          status: string
-          userId: number
-          teamId: number
-          role: string
-        }) => ({
-          isGroupAdmin: response.data.members.is_group_admin,
-          fullname: teamMember.fullname,
+      const response = await getTeamMembers(selectedTeam?.id)
+      if (response.success && response.members) {
+        const teamMembers = response.members.team_members.map((teamMember) => ({
+          isGroupAdmin: response.members.is_group_admin,
+          fullname: teamMember.fullname ?? 'N/A',
           email: teamMember.email,
           status: teamMember.status,
           userId: teamMember.userId,
           teamId: teamMember.teamId,
-          role: teamMember.role,
-        })
-      )
-      setSelectedTeamMembers(teamMembers ?? [])
+          role: teamMember.role as TeamMemberRoleType,
+        }))
+        setSelectedTeamMembers(teamMembers ?? [])
+      } else {
+        toast.error('Failed to fetch team members')
+      }
     } catch (err) {
       toast.error('Failed to fetch team members')
     } finally {
@@ -130,13 +126,13 @@ const TeamDetailsDialog = ({
     }
     setIsTeamMemberAddLoading(true)
     try {
-      const response = await axios.post(`/api/team/member/add`, {
-        memberEmail: addTeamMemberData.memberEmail,
-        memberRole: addTeamMemberData.memberRole,
-        teamId: selectedTeam?.id,
-      })
-      if (response.status === 200) {
-        const tId = toast.success(response.data.message)
+      const response = await addTeamMember(
+        addTeamMemberData.memberEmail,
+        addTeamMemberData.memberRole,
+        selectedTeam?.id
+      )
+      if (response.success) {
+        const tId = toast.success(response.message)
         toast.dismiss(tId)
         fetchTeamMembers()
         setAddTeamMemberData({

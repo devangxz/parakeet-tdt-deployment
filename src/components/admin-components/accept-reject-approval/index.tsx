@@ -1,8 +1,11 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { acceptApprovalOrder } from '@/app/actions/om/accept-approval-order'
+import { rejectApprovalOrder } from '@/app/actions/om/reject-approval-order'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -34,60 +37,39 @@ const AcceptRejectApprovalFileDialog = ({
 
   const handleSubmit = async () => {
     setLoading(true)
-    if (isAccept) {
-      try {
-        const response = await axios.post(`/api/om/accept-approval-order`, {
-          orderId,
-        })
-        if (response.data.success) {
+    try {
+      if (isAccept) {
+        const result = await acceptApprovalOrder(Number(orderId))
+        if (result.success) {
           const successToastId = toast.success(
             `Successfully accepted approval file`
           )
           toast.dismiss(successToastId)
-          setLoading(false)
           refetch()
           onClose()
         } else {
-          toast.error(response.data.message)
-          setLoading(false)
+          toast.error(result.message)
         }
-      } catch (error) {
-        if (error instanceof AxiosError && error.response) {
-          const errorToastId = toast.error(error.response?.data?.s)
-          toast.dismiss(errorToastId)
-        } else {
-          toast.error(`Error accepting approval file`)
-        }
-        setLoading(false)
-      }
-    } else {
-      try {
-        const response = await axios.post(`/api/om/reject-approval-order`, {
-          orderId,
-        })
-        if (response.data.success) {
+      } else {
+        const result = await rejectApprovalOrder({ orderId: Number(orderId) })
+        if (result.success) {
           const successToastId = toast.success(
             `Successfully rejected approval file`
           )
           toast.dismiss(successToastId)
-          setLoading(false)
           refetch()
           onClose()
         } else {
-          toast.error(response.data.message)
-          setLoading(false)
+          toast.error(result.message)
         }
-      } catch (error) {
-        if (error instanceof AxiosError && error.response) {
-          const errorToastId = toast.error(error.response?.data?.s)
-          toast.dismiss(errorToastId)
-        } else {
-          toast.error(`Error rejecting approval file`)
-        }
-        setLoading(false)
       }
+    } catch (error) {
+      toast.error(`Error ${isAccept ? 'accepting' : 'rejecting'} approval file`)
+    } finally {
+      setLoading(false)
     }
   }
+
   return (
     <AlertDialog open={open}>
       <AlertDialogContent>

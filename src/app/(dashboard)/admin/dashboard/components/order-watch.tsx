@@ -1,9 +1,9 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { updateOrderWatchAction } from '@/app/actions/admin/add-order-watch'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -29,56 +29,43 @@ export default function OrderWatch() {
     }
     try {
       setLoading(true)
-      const response = await axios.post(`/api/admin/add-order-watch`, {
-        userEmail: email,
-        flag: true,
-      })
-      if (response.data.success) {
+      const response = await updateOrderWatchAction(email.toLowerCase(), true)
+
+      if (response.success) {
         toast.success('Successfully added customer to order watch.')
       } else {
-        toast.error(response.data.s || 'Failed to add customer to order watch')
+        toast.error(response.s || 'Failed to add customer to order watch')
       }
-      setLoading(false)
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to add customer to order watch`)
-      }
+      toast.error('Failed to add customer to order watch')
+    } finally {
       setLoading(false)
     }
   }
+
   const handleRemoveClick = async () => {
     if (!email) return toast.error('Please enter a valid email address')
     if (!isValidEmail(email)) {
       toast.error('Please enter a valid email address.')
       return
     }
+
     try {
       setLoadingDisable(true)
-      const response = await axios.post(`/api/admin/add-order-watch`, {
-        userEmail: email,
-        flag: false,
-      })
-      if (response.data.success) {
+      const response = await updateOrderWatchAction(email.toLowerCase(), false)
+
+      if (response.success) {
         toast.success('Successfully removed customer from order watch.')
       } else {
-        toast.error(
-          response.data.s || 'Failed to remove customer from order watch'
-        )
+        toast.error(response.s || 'Failed to remove customer from order watch')
       }
-      setLoadingDisable(false)
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to remove customer from order watch`)
-      }
+      toast.error('Failed to remove customer from order watch')
+    } finally {
       setLoadingDisable(false)
     }
   }
+
   return (
     <>
       <Card>

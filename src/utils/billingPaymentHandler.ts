@@ -1,6 +1,7 @@
-import axios from 'axios'
 import { Dispatch, SetStateAction } from 'react'
 import { toast } from 'sonner'
+
+import { checkoutViaBilling } from '@/app/actions/payment/checkout-via-billing'
 
 interface PaymentSuccessData {
   transactionId: string
@@ -19,20 +20,20 @@ export const handleBillingPaymentMethod = async (
 ) => {
   try {
     setLoadingPay(true)
-    const response = await axios.post(`/api/payment/checkout-via-billing`, {
+    const response = await checkoutViaBilling({
       invoiceId,
       orderType,
     })
 
-    if (response.data.success) {
-      const data = response.data
+    if (response.success) {
+      const data = response
       setPaymentSuccessData((prevData) => ({
         ...prevData,
-        transactionId: data.transactionId,
-        paymentMethod: data.paymentMethod,
+        transactionId: data.transactionId ?? '',
+        paymentMethod: data.paymentMethod ?? 'BILLING',
         pp_account: 'Billed',
-        cc_last4: data.cc_last4,
-        amount: data.invoice.amount,
+        cc_last4: data.cc_last4 ?? '',
+        amount: data.invoice?.amount ?? 0,
       }))
       setPaymentSuccess(true)
     } else {

@@ -2,7 +2,6 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -12,6 +11,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { formSchema } from './controllers'
+import { verifyAccount } from '@/app/actions/auth/verify-account'
 import SideImage from '@/components/side-image'
 import { Button } from '@/components/ui/button'
 import {
@@ -44,13 +44,11 @@ const ResetPassword = () => {
   })
 
   useEffect(() => {
-    const fetchTeamInformation = async () => {
+    const verifyUserAccount = async () => {
       setIsLoading(true)
       try {
-        const response = await axios.post(
-          `/api/auth/verify-account/${params?.verify_token}`
-        )
-        if (!response.data.success) {
+        const response = await verifyAccount(params?.verify_token as string)
+        if (!response.success) {
           setInvalidToken(true)
         } else {
           if (
@@ -73,8 +71,8 @@ const ResetPassword = () => {
       }
     }
 
-    fetchTeamInformation()
-  }, [params?.invite_key, session])
+    verifyUserAccount()
+  }, [params?.verify_token, session, status, update])
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {

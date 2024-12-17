@@ -1,9 +1,9 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { enableCustomFormattingBonus } from '@/app/actions/admin/enable-custom-formatting-bonus'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -29,31 +29,23 @@ export default function EnableCustomFormattingBonus() {
     }
     try {
       setLoading(true)
-      const response = await axios.post(
-        `/api/admin/enable-custom-formatting-bonus`,
-        {
-          userEmail: email.toLowerCase(),
-          flag: true,
-        }
+      const response = await enableCustomFormattingBonus(
+        email.toLowerCase(),
+        true
       )
-      if (response.data.success) {
+
+      if (response.success) {
         toast.success('Successfully enabled custom formatting bonus.')
       } else {
-        toast.error(
-          response.data.s || 'Failed to enable custom formatting bonus'
-        )
+        toast.error(response.s || 'Failed to enable custom formatting bonus')
       }
-      setLoading(false)
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to enable custom formatting bonus.`)
-      }
+      toast.error('Failed to enable custom formatting bonus')
+    } finally {
       setLoading(false)
     }
   }
+
   const handleDisableClick = async () => {
     if (!email) return toast.error('Please enter a valid email address')
     if (!isValidEmail(email)) {
@@ -63,31 +55,23 @@ export default function EnableCustomFormattingBonus() {
 
     try {
       setLoadingDisable(true)
-      const response = await axios.post(
-        `/api/admin/enable-custom-formatting-bonus`,
-        {
-          userEmail: email.toLowerCase(),
-          flag: false,
-        }
+      const response = await enableCustomFormattingBonus(
+        email.toLowerCase(),
+        false
       )
-      if (response.data.success) {
+
+      if (response.success) {
         toast.success('Successfully disabled custom formatting bonus.')
       } else {
-        toast.error(
-          response.data.s || 'Failed to disable custom formatting bonus'
-        )
+        toast.error(response.s || 'Failed to disable custom formatting bonus')
       }
-      setLoadingDisable(false)
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to disable custom formatting bonus.`)
-      }
+      toast.error('Failed to disable custom formatting bonus')
+    } finally {
       setLoadingDisable(false)
     }
   }
+
   return (
     <>
       <Card>

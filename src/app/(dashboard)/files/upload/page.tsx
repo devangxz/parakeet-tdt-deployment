@@ -9,6 +9,7 @@ import FileAndFolderUploader from './components/FileAndFolderUploader'
 // import GoogleDriveImporter from './components/GoogleDriveImporter';
 // import LinkImporter from './components/LinkImporter';
 // import OneDriveImporter from './components/OneDriveImporter';
+// import YouTubeImporter from './components/YouTubeImporter';
 import AllUploads from './list'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -96,6 +97,8 @@ const Dashboard = () => {
     switch (selectedTab) {
       case 'local':
         return <FileAndFolderUploader onUploadSuccess={setUploadSuccess} />;
+      // case 'youtube':
+      //   return <YouTubeImporter onUploadSuccess={setUploadSuccess} />;
       // case 'link':
       //   return <LinkImporter onUploadSuccess={setUploadSuccess} />;
       // case 'dropbox':

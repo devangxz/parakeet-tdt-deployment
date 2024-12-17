@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { formSchema } from './controllers'
+import { sendDemoRequestEmail } from '@/app/actions/static-mails/demo-request'
 import { PhoneInput } from '@/components/phone-input/phone-input'
 import Recaptcha from '@/components/recaptcha'
 import SideImage from '@/components/side-image'
@@ -45,26 +46,24 @@ const GetDemo = () => {
         return
       }
       setLoading(true)
-      const response = await fetch(`/api/static-mails/demo-request`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          UserEmail: values.userEmail,
-          Duration: values.duration,
-          Name: values.name,
-          Onetimeorder: values.onetimeorder ? '1' : '0',
-          Phone: values.phone,
-          DemoDate: values.demoDate.toLocaleString(),
-        }),
+      const response = await sendDemoRequestEmail({
+        Email: values.userEmail,
+        Name: values.name,
+        Duration: values.duration.toString(),
+        Onetimeorder: values.onetimeorder ? '1' : '0',
+        Phone: values.phone,
+        DemoDate: values.demoDate.toLocaleString(),
       })
-      await response.json()
-      setLoading(false)
-      toast.success('Demo Request Submitted Successfully!')
+
+      if (response.success) {
+        toast.success('Demo Request Submitted Successfully!')
+      } else {
+        toast.error(response.message)
+      }
     } catch (error) {
-      setLoading(false)
       toast.error(`Failed to Submit Demo Request: ${error}`)
+    } finally {
+      setLoading(false)
     }
   }
   return (

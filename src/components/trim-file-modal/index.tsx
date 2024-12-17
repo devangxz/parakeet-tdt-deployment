@@ -1,10 +1,10 @@
 'use client'
 
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
+import { trimAudioAction } from '@/app/actions/file/trim'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -82,26 +82,17 @@ const TrimFileModal = ({
 
     setLoading(true)
     try {
-      const response = await axios.post('/api/file/trim', {
-        fileId,
-        startTime: startSeconds,
-        endTime: endSeconds,
-      })
-      if (response.data.success) {
+      const response = await trimAudioAction(fileId, startSeconds, endSeconds)
+      if (response.success) {
         toast.success('Successfully trimmed audio file')
-        setLoading(false)
         refetch()
         onClose()
       } else {
-        toast.error(response.data.message)
-        setLoading(false)
+        toast.error(response.s || 'Error trimming audio file')
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        toast.error(error.response.data.message)
-      } else {
-        toast.error('Error trimming audio file')
-      }
+      toast.error('Error trimming audio file')
+    } finally {
       setLoading(false)
     }
   }

@@ -1,10 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { useState, useEffect } from 'react'
 
 import { DataTable } from '../components/data-table'
+import { getWithdrawals } from '@/app/actions/transcriber/withdrawal'
 import { Badge } from '@/components/ui/badge'
 import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
 
@@ -16,8 +17,8 @@ interface Withdrawals {
   invoiceId: string | null
   toPaypalId: string | null
   status: string
-  requestedAt: string
-  completedAt: string
+  requestedAt: Date
+  completedAt: Date
   ppAddFundsInv: string | null
 }
 
@@ -33,11 +34,15 @@ export default function WithdrawalsPage() {
       setIsLoading(false)
     }
     try {
-      const response = await axios.get(`/api/transcriber/withdrawal`)
-      const sortedWithdrawals = response.data.withdrawals.sort(
-        (a: { id: number }, b: { id: number }) => b.id - a.id
-      )
-      setWithdrawals(sortedWithdrawals)
+      const response = await getWithdrawals()
+      if (response.success && response.withdrawals) {
+        const sortedWithdrawals = response.withdrawals.sort(
+          (a: { id: number }, b: { id: number }) => b.id - a.id
+        )
+        setWithdrawals(sortedWithdrawals as any)
+      } else {
+        setError(response.message || 'Failed to fetch withdrawals')
+      }
     } catch (err) {
       setError('an error occurred')
     } finally {
@@ -91,7 +96,7 @@ export default function WithdrawalsPage() {
       header: 'Details',
       cell: ({ row }) => {
         const { timeString, dateString } = getFormattedTimeStrings(
-          row.original.requestedAt
+          row.original.requestedAt.toISOString()
         )
         return (
           <div>

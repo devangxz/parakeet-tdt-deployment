@@ -1,8 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
+import { shareFiles } from '@/app/actions/share-file'
+import { getExistingSharedUsers } from '@/app/actions/share-file/existing-shared-users'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -61,14 +65,9 @@ const ShareFileDialog = ({
 
   const fetchExistingSharedUsers = async () => {
     try {
-      const response = await axios.get(
-        '/api/share-file/existing-shared-users',
-        {
-          params: { file_ids: fileIds.join(',') },
-        }
-      )
-      if (response.data.success) {
-        const users = response.data.data.map((user: User) => ({
+      const response = await getExistingSharedUsers(fileIds)
+      if (response.success && response.data) {
+        const users = response.data.map((user: any) => ({
           ...user,
           initials: getInitials(user.fullname || 'NA'),
           fullname: user.fullname || 'N/A',
@@ -92,12 +91,8 @@ const ShareFileDialog = ({
     const allUsers = [...existingUsers, ...newUsers]
 
     try {
-      const response = await axios.post('/api/share-file', {
-        files: fileIds,
-        allUsers: allUsers,
-        message,
-      })
-      if (response.data.success) {
+      const response = await shareFiles(fileIds, allUsers, message)
+      if (response.success) {
         onClose()
         toast.success('File shared successfully')
       }

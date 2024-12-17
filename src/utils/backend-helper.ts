@@ -29,7 +29,7 @@ import gateway from '../lib/braintree'
 import logger from '../lib/logger'
 import paypalClient from '../lib/paypal'
 import prisma from '../lib/prisma'
-import s3Client from '../lib/s3-client';
+import s3Client from '../lib/s3-client'
 
 export const getOrderOptions = async (userId: number) => {
   let options = DEFAULT_ORDER_OPTIONS
@@ -100,7 +100,7 @@ export const getTeamSuperAdminUserId = async (
   userId: number
 ) => {
   const teamAdminDetails = internalTeamUserId
-    ? await getTeamAdminUserDetails(userId)
+    ? await getTeamAdminUserDetails(internalTeamUserId)
     : null
   if (teamAdminDetails) {
     return teamAdminDetails.userId
