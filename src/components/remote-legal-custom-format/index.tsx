@@ -31,6 +31,11 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@/components/ui/tooltip'
 import { RUSH_ORDER_PRICE } from '@/constants'
 import { handleBillingPaymentMethod } from '@/utils/billingPaymentHandler'
 
@@ -567,9 +572,16 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
                     >
                       <div className='flex items-center gap-2 mt-[-20px]'>
                         <div>
-                          <div className='text-md font-medium'>
-                            {file.filename}
-                          </div>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className='text-md font-medium truncate w-[200px]'>
+                                {file.filename}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent align='start'>
+                              <p>{file.filename}</p>
+                            </TooltipContent>
+                          </Tooltip>
                           <div className='text-sm text-muted-foreground w-[200px] mt-5'>
                             <div>
                               Due date{' '}
