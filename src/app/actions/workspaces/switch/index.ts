@@ -146,7 +146,7 @@ export async function switchWorkspace({
 
     const payload = {
       ...userWithoutIatExp,
-      internalTeamUserId: internalTeamUserId,
+      internalTeamUserId: parseInt(internalTeamUserId),
       teamName: teamName,
       selectedUserTeamRole: selectedUserTeamRole,
       customPlan: adminTeamMember?.user?.Customer?.customPlan || false,
@@ -158,7 +158,7 @@ export async function switchWorkspace({
 
     const details = {
       token,
-      internalTeamUserId,
+      internalTeamUserId: parseInt(internalTeamUserId),
       teamName,
       selectedUserTeamRole,
       customPlan: adminTeamMember?.user?.Customer?.customPlan || false,
