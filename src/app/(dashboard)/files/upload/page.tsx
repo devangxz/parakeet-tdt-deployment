@@ -76,11 +76,6 @@ const Dashboard = () => {
           icon: '/assets/images/upload/dropbox.svg',
           title: 'Upload files via Dropbox',
         },
-        // {
-        //   id: 'vimeo',
-        //   icon: '/assets/images/upload/vimeo.svg',
-        //   title: 'Upload files via Vimeo'
-        // },
         {
           id: 'box',
           icon: '/assets/images/upload/box.svg',
@@ -96,11 +91,6 @@ const Dashboard = () => {
           icon: '/assets/images/upload/google-drive.svg',
           title: 'Upload files via Google Drive',
         },
-        // {
-        //   id: 'frame-io',
-        //   icon: '/assets/images/upload/frame-io.svg',
-        //   title: 'Upload files via Frame.io'
-        // }
       ]
 
   const getPageTitle = () => {
