@@ -164,7 +164,6 @@ interface PlayerEvent {
 interface NewPlayerProps {
   getAudioPlayer?: (audioPlayer: HTMLAudioElement | null) => void
   quillRef: React.RefObject<ReactQuill> | undefined
-  setDisableGoToWord: React.Dispatch<React.SetStateAction<boolean>>
   editorModeOptions: string[]
   getEditorMode: (editorMode: string) => void
   editorMode: string
@@ -195,7 +194,6 @@ interface NewPlayerProps {
 export default function Header({
   getAudioPlayer,
   quillRef,
-  setDisableGoToWord,
   editorModeOptions,
   getEditorMode,
   editorMode,
@@ -331,7 +329,6 @@ export default function Header({
       null,
       quill,
       audioPlayer.current,
-      setDisableGoToWord,
       false
     )
   }
@@ -343,7 +340,6 @@ export default function Header({
       null,
       quill,
       audioPlayer.current,
-      setDisableGoToWord,
       true
     )
   }, [audioPlayer, quillRef])
@@ -355,7 +351,6 @@ export default function Header({
       null,
       quill,
       audioPlayer.current,
-      setDisableGoToWord
     )
   }, [audioPlayer, quillRef])
 
@@ -1389,7 +1384,7 @@ export default function Header({
                   {editorMode === 'Manual' && (
                     <>
                       {orderDetails.status === 'FINALIZER_ASSIGNED' ||
-                      orderDetails.status === 'PRE_DELIVERED' ? (
+                        orderDetails.status === 'PRE_DELIVERED' ? (
                         <Button
                           onClick={() =>
                             downloadBlankDocx({
@@ -1507,10 +1502,10 @@ export default function Header({
                 {!['CUSTOMER', 'OM', 'ADMIN'].includes(
                   session?.user?.email ?? ''
                 ) && (
-                  <Button onClick={() => setSubmitting(true)} className='w-24'>
-                    Submit
-                  </Button>
-                )}
+                    <Button onClick={() => setSubmitting(true)} className='w-24'>
+                      Submit
+                    </Button>
+                  )}
               </div>
             </div>
           </div>
@@ -1735,28 +1730,9 @@ export default function Header({
         </DialogContent>
       </Dialog>
 
-      {
-        // notesOpen && <div
-        //     className="fixed bg-white z-[1000] overflow-auto py-4 px-4 rounded-lg shadow-lg overflow-y-hidden border"
-        //     style={{ top: `${notesPosition.y}px`, left: `${notesPosition.x}px`, width: '292px', height: '85%', resize: 'both' }}
-        // >
-        //     <div onMouseDown={handleNotesDragChange} className='cursor-move border-b flex justify-between items-center pb-2'>
-        //         <p className='text-lg font-semibold'>Notes</p>
-        //         <button onClick={toggleNotes} className='cursor-pointer hover:bg-gray-100 p-2 rounded-lg'><Cross1Icon /> </button>
-        //     </div>
-        //     <Textarea
-        //         placeholder='Start typing...'
-        //         className='resize-none mt-5 h-[92%]'
-        //         value={notes}
-        //         onChange={handleNotesChange}
-        //     />
-        // </div>
-      }
-
       <div
-        className={` ${
-          !videoPlayerOpen ? 'hidden' : ''
-        } fixed bg-white z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-transparent`}
+        className={` ${!videoPlayerOpen ? 'hidden' : ''
+          } fixed bg-white z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-transparent`}
         style={{
           top: `${position.y}px`,
           left: `${position.x}px`,

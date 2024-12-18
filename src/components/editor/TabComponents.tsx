@@ -16,14 +16,13 @@ interface EditorTabComponentProps {
     audioPlayer: HTMLAudioElement | null
     audioDuration: number
     getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void
-    disableGoToWord: boolean
     orderDetails: OrderDetails
     content: { insert: string }[]
     setContent: (content: { insert: string }[]) => void
     getLines: (lineData: LineData[]) => void
 }
 
-export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, disableGoToWord, orderDetails, content, setContent, getLines }: EditorTabComponentProps) => (
+export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, orderDetails, content, setContent, getLines }: EditorTabComponentProps) => (
     <TabsContent className='h-full mt-0 overflow-hidden' value='transcribe'>
         <div className='bg-white border border-gray-200 border-t-0 rounded-b-2xl px-5 py-5 h-[99%] relative overflow-hidden'>
             {!transcript && (
@@ -36,7 +35,6 @@ export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuratio
                 <div className="h-full overflow-hidden">
                     <Editor
                         orderDetails={orderDetails}
-                        disableGoToWord={disableGoToWord}
                         getQuillRef={getQuillRef}
                         transcript={transcript}
                         ctms={ctms}
