@@ -142,7 +142,7 @@ const downloadBlankDocx = async ({
         const url = window.URL.createObjectURL(new Blob([response.data]))
         const a = document.createElement('a')
         a.href = url
-        a.download = `${orderDetails.fileId}${downloadableType === 'marking' || orderDetails.status === 'FINALIZER_ASSIGNED' ? '.docx' : '.txt'}`
+        a.download = `${orderDetails.fileId}${downloadableType === 'marking' || orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === 'PRE_DELIVERED' ? '.docx' : '.txt'}`
         document.body.appendChild(a)
         a.click()
         a.remove()
