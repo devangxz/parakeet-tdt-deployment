@@ -390,6 +390,8 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             continue
           }
 
+          file.size = contentLength
+
           linksToUpload.push({
             ...file,
             fileName: file.name,
@@ -420,13 +422,7 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
         return
       }
 
-      setUploadingFiles(
-        linksToUpload.map((link) => ({
-          name: link.fileName,
-          size: link.size,
-          fileId: link.fileId,
-        }))
-      )
+      setUploadingFiles(initialFiles)
 
       initializeSSEConnection(
         () => onUploadSuccess(true),

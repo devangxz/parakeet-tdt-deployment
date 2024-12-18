@@ -1,17 +1,19 @@
 'use client'
 
 import Image from 'next/image'
+import { useSession } from 'next-auth/react'
 import { useState } from 'react'
 
-import BoxImporter from './components/BoxImporter';
-import DropboxImporter from './components/DropboxImporter';
+import BoxImporter from './components/BoxImporter'
+import DropboxImporter from './components/DropboxImporter'
 import FileAndFolderUploader from './components/FileAndFolderUploader'
-import GoogleDriveImporter from './components/GoogleDriveImporter';
-import LinkImporter from './components/LinkImporter';
-import OneDriveImporter from './components/OneDriveImporter';
+import GoogleDriveImporter from './components/GoogleDriveImporter'
+import LinkImporter from './components/LinkImporter'
+import OneDriveImporter from './components/OneDriveImporter'
 // import YouTubeImporter from './components/YouTubeImporter';
 import AllUploads from './list'
 import { Badge } from '@/components/ui/badge'
+import { ORG_REMOTELEGAL } from '@/constants'
 import { cn } from '@/lib/utils'
 import { getAllowedFileExtensions } from '@/utils/validateFileType'
 
@@ -37,56 +39,69 @@ const FileFormatDisplay = ({ formats }: { formats: string[] }) => (
 )
 
 const Dashboard = () => {
-  const [selectedTab, setSelectedTab] = useState('local');
-  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const { data: session } = useSession()
+  const [selectedTab, setSelectedTab] = useState('local')
+  const [uploadSuccess, setUploadSuccess] = useState(false)
 
-  const uploadTypes: UploadType[] = [
-    {
-      id: 'local',
-      icon: '/assets/images/upload/computer.svg',
-      title: 'Upload files via Computer',
-    },
-    // {
-    //   id: 'youtube',
-    //   icon: '/assets/images/upload/youtube.svg',
-    //   title: 'Upload files via YouTube'
-    // },
-    {
-      id: 'link',
-      icon: '/assets/images/upload/link.svg',
-      title: 'Upload files via Link'
-    },
-    {
-      id: 'dropbox',
-      icon: '/assets/images/upload/dropbox.svg',
-      title: 'Upload files via Dropbox'
-    },
-    // {
-    //   id: 'vimeo',
-    //   icon: '/assets/images/upload/vimeo.svg',
-    //   title: 'Upload files via Vimeo'
-    // },
-    {
-      id: 'box',
-      icon: '/assets/images/upload/box.svg',
-      title: 'Upload files via Box'
-    },
-    {
-      id: 'one-drive',
-      icon: '/assets/images/upload/one-drive.svg',
-      title: 'Upload files via OneDrive'
-    },
-    {
-      id: 'google-drive',
-      icon: '/assets/images/upload/google-drive.svg',
-      title: 'Upload files via Google Drive'
-    },
-    // {
-    //   id: 'frame-io',
-    //   icon: '/assets/images/upload/frame-io.svg',
-    //   title: 'Upload files via Frame.io'
-    // }
-  ]
+  const isRemoteLegal =
+    session?.user?.organizationName.toLocaleLowerCase() ===
+    ORG_REMOTELEGAL.toLocaleLowerCase()
+
+  const uploadTypes: UploadType[] = isRemoteLegal
+    ? [
+        {
+          id: 'local',
+          icon: '/assets/images/upload/computer.svg',
+          title: 'Upload files via Computer',
+        },
+      ]
+    : [
+        {
+          id: 'local',
+          icon: '/assets/images/upload/computer.svg',
+          title: 'Upload files via Computer',
+        },
+        // {
+        //   id: 'youtube',
+        //   icon: '/assets/images/upload/youtube.svg',
+        //   title: 'Upload files via YouTube'
+        // },
+        {
+          id: 'link',
+          icon: '/assets/images/upload/link.svg',
+          title: 'Upload files via Link',
+        },
+        {
+          id: 'dropbox',
+          icon: '/assets/images/upload/dropbox.svg',
+          title: 'Upload files via Dropbox',
+        },
+        // {
+        //   id: 'vimeo',
+        //   icon: '/assets/images/upload/vimeo.svg',
+        //   title: 'Upload files via Vimeo'
+        // },
+        {
+          id: 'box',
+          icon: '/assets/images/upload/box.svg',
+          title: 'Upload files via Box',
+        },
+        {
+          id: 'one-drive',
+          icon: '/assets/images/upload/one-drive.svg',
+          title: 'Upload files via OneDrive',
+        },
+        {
+          id: 'google-drive',
+          icon: '/assets/images/upload/google-drive.svg',
+          title: 'Upload files via Google Drive',
+        },
+        // {
+        //   id: 'frame-io',
+        //   icon: '/assets/images/upload/frame-io.svg',
+        //   title: 'Upload files via Frame.io'
+        // }
+      ]
 
   const getPageTitle = () => {
     const selectedType = uploadTypes.find((type) => type.id === selectedTab)
@@ -94,21 +109,35 @@ const Dashboard = () => {
   }
 
   const renderContent = () => {
+    if (isRemoteLegal) {
+      return (
+        <FileAndFolderUploader
+          onUploadSuccess={setUploadSuccess}
+          isRemoteLegal={isRemoteLegal}
+        />
+      )
+    }
+
     switch (selectedTab) {
       case 'local':
-        return <FileAndFolderUploader onUploadSuccess={setUploadSuccess} />;
+        return (
+          <FileAndFolderUploader
+            onUploadSuccess={setUploadSuccess}
+            isRemoteLegal={isRemoteLegal}
+          />
+        )
       // case 'youtube':
       //   return <YouTubeImporter onUploadSuccess={setUploadSuccess} />;
       case 'link':
-        return <LinkImporter onUploadSuccess={setUploadSuccess} />;
+        return <LinkImporter onUploadSuccess={setUploadSuccess} />
       case 'dropbox':
-        return <DropboxImporter onUploadSuccess={setUploadSuccess} />;
+        return <DropboxImporter onUploadSuccess={setUploadSuccess} />
       case 'box':
-        return <BoxImporter onUploadSuccess={setUploadSuccess} />;
+        return <BoxImporter onUploadSuccess={setUploadSuccess} />
       case 'one-drive':
-        return <OneDriveImporter onUploadSuccess={setUploadSuccess} />;
+        return <OneDriveImporter onUploadSuccess={setUploadSuccess} />
       case 'google-drive':
-        return <GoogleDriveImporter onUploadSuccess={setUploadSuccess} />;
+        return <GoogleDriveImporter onUploadSuccess={setUploadSuccess} />
       default:
         return null
     }

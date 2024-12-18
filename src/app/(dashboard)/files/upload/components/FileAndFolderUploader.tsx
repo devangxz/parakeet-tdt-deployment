@@ -3,7 +3,6 @@
 import { UploadIcon } from '@radix-ui/react-icons'
 import axios from 'axios'
 import { FileUp } from 'lucide-react'
-import { useSession } from 'next-auth/react'
 import React, { ChangeEvent, useRef } from 'react'
 import Dropzone from 'react-dropzone'
 import { toast } from 'sonner'
@@ -16,7 +15,6 @@ import { useUpload } from '@/app/context/UploadProvider'
 import {
   MAX_FILE_SIZE,
   MULTI_PART_UPLOAD_CHUNK_SIZE,
-  ORG_REMOTELEGAL,
   ORG_REMOTELEGAL_FOLDER,
   UPLOAD_MAX_RETRIES,
 } from '@/constants'
@@ -35,8 +33,8 @@ import validateFileType, {
 
 const FileAndFolderUploader: React.FC<UploaderProps> = ({
   onUploadSuccess,
+  isRemoteLegal,
 }) => {
-  const { data: session } = useSession()
   const {
     setUploadingFiles,
     updateUploadStatus,
@@ -56,10 +54,6 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
   const abortControllersRef = useRef<{ [key: string]: AbortController }>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
   const folderInputRef = useRef<HTMLInputElement>(null)
-
-  const isRemoteLegal =
-    session?.user?.organizationName.toLocaleLowerCase() ===
-    ORG_REMOTELEGAL.toLocaleLowerCase()
 
   const multiPartUpload = async (file: FileWithId): Promise<void> => {
     let uploadState = initializeUploadState()
