@@ -1,6 +1,6 @@
 import prisma from '@/lib/prisma'
 
-function removeTimestamps(transcript: string): string {
+export function removeTimestamps(transcript: string): string {
     return transcript.replace(/^\d{1,2}:[0-5][0-9]:[0-5][0-9]\.\d\s/gm, '');
 }
 
@@ -10,6 +10,19 @@ function removeSpeakerNames(transcript: string): string {
 
 function removeSpeakerNamesAndTimestamps(transcript: string): string {
     return transcript.replace(/^\d+:[0-5][0-9]:[0-5][0-9]\.\d+\s+[^\:]+:\s/gm, '');
+}
+
+export function getTranscriptWithSpeakers(transcript: string, speakers: { fn: string; ln: string; }[]): string {
+    const speakerMap = new Map();
+    speakers.forEach((speaker, index) => {
+        speakerMap.set(`S${index + 1}`, `${speaker.fn} ${speaker.ln}`);
+    });
+
+    return transcript.replace(/(\d+:\d+:\d+\.\d+)\s+(S\d+):/g, (match, timestamp, speakerCode) => {
+        const fullName = speakerMap.get(speakerCode);
+        if (!fullName) return match; // If no mapping found, return original
+        return `${timestamp} ${fullName}:`;
+    });
 }
 
 const getCustomerTranscript = async (fileId: string, transcript: string) => {
@@ -68,16 +81,7 @@ const getCustomerTranscript = async (fileId: string, transcript: string) => {
                 }
             });
         } else {
-            const speakerMap = new Map();
-            speakers.forEach((speaker, index) => {
-                speakerMap.set(`S${index + 1}`, `${speaker.fn} ${speaker.ln}`);
-            });
-
-            customerTranscript = customerTranscript.replace(/(\d+:\d+:\d+\.\d+)\s+(S\d+):/g, (match, timestamp, speakerCode) => {
-                const fullName = speakerMap.get(speakerCode);
-                if (!fullName) return match; // If no mapping found, return original
-                return `${timestamp} ${fullName}:`;
-            });
+            customerTranscript = getTranscriptWithSpeakers(customerTranscript, speakers);
         }
     }
 
