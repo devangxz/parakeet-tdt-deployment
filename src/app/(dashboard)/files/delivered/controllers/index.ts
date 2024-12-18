@@ -5,6 +5,7 @@ import { getSession } from 'next-auth/react'
 import { archiveFileAction } from '@/app/actions/file/archive'
 import { renameFileAction } from '@/app/actions/file/rename'
 import { deleteFilesAction } from '@/app/actions/files/delete'
+import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
 import { updateOrderRating } from '@/app/actions/order/rating'
 import { FILE_CACHE_URL } from '@/constants'
 export const orderController = async (
@@ -45,29 +46,20 @@ const downloadPDFFile = async ({
 const downloadFile = async ({
   fileId,
   docType,
-  filename,
 }: {
   fileId: string
-  filename?: string
   docType?: string
 }) => {
   try {
-    const session = await getSession()
-    if (docType === 'TRANSCRIPTION_DOC') {
-      window.open(`${FILE_CACHE_URL}/get-tr-docx/${fileId}?authToken=${session?.user?.token}`, '_blank');
-      return 'DOCX file download initiated';
-    } else {
-      const response = await axios.get(
-        `/api/order/file-docx-signed-url?fileId=${fileId}&docType=${docType}`
-      )
-      const url = response?.data?.signedUrl
-      if (url) {
-        window.open(url, '_blank')
+    if (docType === 'CUSTOM_FORMATTING_DOC') {
+      const res = await getFileDocxSignedUrl(fileId, docType)
+      if (res && res.success && res.signedUrl) {
+        window.open(res.signedUrl, '_blank')
       } else {
         console.error('No URL provided for download.')
         throw 'No URL provided for download.'
       }
-      return response?.data?.message
+      return res.message
     }
   } catch (err) {
     throw new Error('Failed to download file')
@@ -159,15 +151,12 @@ const downloadSubtitle = async ({
 
     const blob = new Blob([content], { type })
     const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `${filename}.${ext}`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    window.open(url, '_blank')
 
-    // Clean up the URL object
-    window.URL.revokeObjectURL(url)
+    // Clean up the URL object after a delay to ensure download starts
+    setTimeout(() => {
+      window.URL.revokeObjectURL(url)
+    }, 100)
 
     return `${docType} file downloaded Successfully`
   } catch (err) {

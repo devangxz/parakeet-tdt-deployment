@@ -1,5 +1,6 @@
 import { ReloadIcon, StarFilledIcon, StarIcon } from '@radix-ui/react-icons'
 import { Session } from 'next-auth'
+import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -14,6 +15,7 @@ import {
   DialogFooter,
   DialogHeader,
 } from '@/components/ui/dialog'
+import { FILE_CACHE_URL } from '@/constants'
 interface FileItem {
   id: string
   filename: string
@@ -52,6 +54,7 @@ export function CheckAndDownload({
   const [showSubtitle, setShowSubtitle] = useState<boolean>(false)
   const [rating, setRating] = useState<null | number>(storedrating || null)
   const ratingMessages = ['Poor', 'Bad', 'Okay', 'Good', 'Excellent']
+  const { data: session } = useSession()
   const controller = async (
     payload: {
       fileId: string
@@ -269,14 +272,12 @@ export function CheckAndDownload({
                       Saving to Device
                     </div>
                   ) : (
-                    <div
-                      onClick={() => {
-                        pdf?.signedUrl('CUSTOM_FORMATTING_DOC')
-                      }}
+                    <a
+                      href={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${session?.user?.token}`}
                       className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'
                     >
                       Save to Device
-                    </div>
+                    </a>
                   )}
                   {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'>
                     Save to Dropbox
@@ -304,14 +305,13 @@ export function CheckAndDownload({
                       Saving to Device
                     </div>
                   ) : (
-                    <div
-                      onClick={() => {
-                        docx?.signedUrl('TRANSCRIPTION_DOC')
-                      }}
+                    <a
+                      href={`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${session?.user?.token}`}
                       className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'
+                      target='_blank'
                     >
                       Save to Device
-                    </div>
+                    </a>
                   )}
                   {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem] '>
                   Save to Dropbox
@@ -331,14 +331,12 @@ export function CheckAndDownload({
                       Saving to Device
                     </div>
                   ) : (
-                    <div
-                      onClick={() => {
-                        pdf?.signedUrl('TRANSCRIPTION_DOC')
-                      }}
+                    <a
+                      href={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${session?.user?.token}`}
                       className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'
                     >
                       Save to Device
-                    </div>
+                    </a>
                   )}
                   {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'>
                   Save to Dropbox

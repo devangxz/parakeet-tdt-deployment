@@ -1,19 +1,22 @@
-export const dynamic = 'force-dynamic'
-import { FileTag } from '@prisma/client'
-import { NextRequest, NextResponse } from 'next/server'
+'use server'
 
+import { FileTag } from '@prisma/client'
+import { getServerSession } from 'next-auth'
+
+import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getFileVersionSignedURLFromS3 } from '@/utils/backend-helper'
 
-export async function GET(req: NextRequest) {
+export async function getFileDocxSignedUrl(
+    fileId: string,
+    docType: string,
+) {
     try {
-        const url = new URL(req.url)
-        const fileId = url.searchParams.get('fileId') as string
-        const docType = url.searchParams.get('docType')
-        const userToken = req.headers.get('x-user-token')
-        const user = JSON.parse(userToken ?? '{}')
-        const userId = user.internalTeamUserId ?? user?.userId
+
+        const session = await getServerSession(authOptions)
+        const user = session?.user
+        const userId = user?.userId as number
 
         if (docType === "CUSTOM_FORMATTING_DOC") {
             const fileVersion = await prisma.fileVersion.findFirst({
@@ -28,8 +31,11 @@ export async function GET(req: NextRequest) {
             })
 
             if (!fileVersion?.s3VersionId) {
-                logger.error(`File versiona not found for ${fileId}`)
-                return NextResponse.json({ success: false, message: 'File version not found' }, { status: 404 })
+                logger.error(`File version not found for ${fileId}`)
+                return {
+                    success: false,
+                    message: 'File version not found'
+                }
             }
 
             const file = await prisma.file.findUnique({
@@ -41,18 +47,24 @@ export async function GET(req: NextRequest) {
                 }
             })
 
-            const signedUrl = await getFileVersionSignedURLFromS3(`${fileId}.docx`, fileVersion?.s3VersionId, 900, `${file?.filename}.docx`)
+            const signedUrl = await getFileVersionSignedURLFromS3(
+                `${fileId}.docx`,
+                fileVersion?.s3VersionId,
+                900,
+                `${file?.filename}.docx`
+            )
 
-            return NextResponse.json({
+            return {
+                success: true,
                 message: 'Downloaded Successfully',
                 signedUrl,
-            })
+            }
         }
     } catch (error) {
         logger.error(`Failed to send docx file ${error}`)
-        return NextResponse.json({
+        return {
             success: false,
-            message: 'An error occurred. Please try again after some time.',
-        }, { status: 500 })
+            message: 'An error occurred. Please try again after some time.'
+        }
     }
 }
