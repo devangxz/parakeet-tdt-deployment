@@ -17,10 +17,11 @@ import {
   EditorTabComponent,
   InfoTabComponent,
 } from '@/components/editor/TabComponents'
-import { Tabs, TabsList, TabsTrigger } from '@/components/editor/Tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/editor/Tabs'
 import renderTitleInputs from '@/components/editor/TitleInputs'
 import { LineData } from '@/components/editor/transcriptUtils'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { RenderPDFDocument } from '@/components/utils'
 import { AUTOSAVE_INTERVAL } from '@/constants'
@@ -43,6 +46,8 @@ import {
   fetchFileDetails,
   handleSave,
   handleSubmit,
+  searchAndSelect,
+  replaceTextHandler,
 } from '@/utils/editorUtils'
 
 export type OrderDetails = {
@@ -119,6 +124,12 @@ function EditorPage() {
 
   const [content, setContent] = useState<{ insert: string }[]>([])
   const [lines, setLines] = useState<LineData[]>([])
+  const [findText, setFindText] = useState('')
+  const [replaceText, setReplaceText] = useState('')
+  const [matchCase, setMatchCase] = useState(false)
+  const [lastSearchIndex, setLastSearchIndex] = useState<number>(-1)
+  const [selectedSidebarTab, setSelectedSidebarTab] = useState('notes')
+
   interface PlayerEvent {
     t: number
     s: number
@@ -137,8 +148,71 @@ function EditorPage() {
     [quillRef]
   )
 
+  const replaceTextInstance = (
+    findText: string,
+    replaceText: string,
+    replaceAll = false
+  ) => {
+    if (!quillRef?.current) return
+    const quill = quillRef.current.getEditor()
+    replaceTextHandler(
+      quill,
+      findText,
+      replaceText,
+      replaceAll,
+      matchCase,
+      toast
+    )
+  }
+
+  const searchAndSelectInstance = (searchText: string) => {
+    if (!quillRef?.current) return
+    const quill = quillRef.current.getEditor()
+    searchAndSelect(
+      quill,
+      searchText,
+      matchCase,
+      lastSearchIndex,
+      setLastSearchIndex,
+      toast
+    )
+  }
+
   const shortcutControls = useMemo(() => {
     const controls: Partial<ShortcutControls> = {
+      findNextOccurrenceOfString: () => {
+        if (selectedSidebarTab !== 'find') {
+          setSelectedSidebarTab('find')
+        } else if (findText) {
+          searchAndSelectInstance(findText)
+        }
+      },
+      findThePreviousOccurrenceOfString: () => {
+        if (selectedSidebarTab !== 'find') {
+          setSelectedSidebarTab('find')
+        } else if (findText) {
+          searchAndSelectInstance(findText)
+        }
+      },
+      replaceNextOccurrenceOfString: () => {
+        if (selectedSidebarTab !== 'find') {
+          setSelectedSidebarTab('find')
+        } else if (findText && replaceText) {
+          replaceTextInstance(findText, replaceText)
+        }
+      },
+      replaceAllOccurrencesOfString: () => {
+        if (selectedSidebarTab !== 'find') {
+          setSelectedSidebarTab('find')
+        } else if (findText && replaceText) {
+          replaceTextInstance(findText, replaceText, true)
+        }
+      },
+      repeatLastFind: () => {
+        if (findText) {
+          searchAndSelectInstance(findText)
+        }
+      },
       saveChanges: () =>
         handleSave({
           getEditorText,
@@ -151,7 +225,7 @@ function EditorPage() {
         }),
     }
     return controls as ShortcutControls
-  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading])
+  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, selectedSidebarTab, findText, replaceText, matchCase, lastSearchIndex])
 
   useShortcuts(shortcutControls)
 
@@ -346,6 +420,28 @@ function EditorPage() {
     setNotes(text)
   }
 
+  const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value
+    setFindText(text)
+  }
+
+  const handleReplaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value
+    setReplaceText(text)
+  }
+
+  const findHandler = () => {
+    searchAndSelectInstance(findText)
+  }
+
+  const replaceOneHandler = () => {
+    replaceTextInstance(findText, replaceText)
+  }
+
+  const replaceAllHandler = () => {
+    replaceTextInstance(findText, replaceText, true)
+  }
+
   return (
     <div className='bg-[#F7F5FF] h-screen flex flex-col overflow-hidden'>
       <div className='mx-2'>
@@ -454,16 +550,56 @@ function EditorPage() {
                   )}
                 </div>
                 <div className='w-1/5'>
-                  <div className='fixed w-[19%] h-[84%] bg-white ml-2 overflow-auto py-4 px-3 rounded-lg overflow-y-hidden border'>
-                    <div className='border-b flex justify-between items-center pb-1'>
-                      <p className='text-lg font-semibold'>Notes</p>
-                    </div>
-                    <Textarea
-                      placeholder='Start typing...'
-                      className='resize-none mt-3 h-[94%] border-none outline-none focus:outline-none focus-visible:ring-0 shadow-none'
-                      value={notes}
-                      onChange={handleNotesChange}
-                    />
+                  <div className='fixed w-[19%] h-[84%] bg-white ml-2 overflow-auto rounded-lg overflow-y-hidden border'>
+                    <Tabs defaultValue="notes" onValueChange={setSelectedSidebarTab}>
+                      <div className='flex bg-white border-b border-gray-200 text-md font-medium h-12'>
+                        <TabsList>
+                          <TabsTrigger className='text-base' value="notes">Notes</TabsTrigger>
+                          <TabsTrigger className='text-base' value="find">Find & Replace</TabsTrigger>
+                        </TabsList>
+                      </div>
+                      <TabsContent value="notes" className="mt-4 ">
+                        <Textarea
+                          placeholder='Start typing...'
+                          className='resize-none h-[calc(100vh-250px)] w-full border-none outline-none focus:outline-none focus-visible:ring-0 shadow-none'
+                          value={notes}
+                          onChange={handleNotesChange}
+                        />
+                      </TabsContent>
+
+                      <TabsContent value="find" className="mt-4">
+                        <div className='space-y-4 mx-3'>
+                          <Input
+                            placeholder='Find...'
+                            value={findText}
+                            onChange={handleFindChange}
+                          />
+                          <Input
+                            placeholder='Replace with...'
+                            value={replaceText}
+                            onChange={handleReplaceChange}
+                          />
+                          <div className='space-y-2'>
+                            <Button className='w-full' onClick={findHandler}>
+                              Find
+                            </Button>
+                            <Button className='w-full' onClick={replaceOneHandler}>
+                              Replace Once
+                            </Button>
+                            <Button className='w-full' onClick={replaceAllHandler}>
+                              Replace All
+                            </Button>
+                            <Label className='flex items-center space-x-2'>
+                              <Checkbox
+                                checked={matchCase}
+                                onCheckedChange={(checked) => setMatchCase(checked === true)}
+                              />
+                              <span>Match case</span>
+                            </Label>
+                          </div>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
                   </div>
                 </div>
               </div>
