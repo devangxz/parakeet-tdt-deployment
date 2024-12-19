@@ -1,6 +1,6 @@
 'use client'
 
-import { Cross1Icon, ReloadIcon } from '@radix-ui/react-icons'
+import { ReloadIcon } from '@radix-ui/react-icons'
 import { Change, diffWords } from 'diff'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -8,7 +8,6 @@ import React, { useCallback, useEffect, useState, useMemo } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
-import { spellcheckAction } from '@/app/actions/editor/spellcheck'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
 import Header from '@/components/editor/Header'
@@ -44,8 +43,6 @@ import {
   fetchFileDetails,
   handleSave,
   handleSubmit,
-  replaceTextHandler,
-  searchAndSelect,
 } from '@/utils/editorUtils'
 
 export type OrderDetails = {
@@ -120,13 +117,6 @@ function EditorPage() {
   const [audioDuration, setAudioDuration] = useState(1)
   const [quillRef, setQuillRef] = useState<React.RefObject<ReactQuill>>()
 
-  const [position, setPosition] = useState({ x: 100, y: 100 })
-  const [lastSearchIndex, setLastSearchIndex] = useState<number>(-1)
-  const [replaceMisspelledWord, setReplaceMisspelledWord] = useState<string>('')
-  const [spellcheckOpen, setSpellcheckOpen] = useState(false)
-  const [spellcheckValue, setSpellCheckValue] = useState<
-    { word: string; suggestions: string[] }[]
-  >([])
   const [content, setContent] = useState<{ insert: string }[]>([])
   const [lines, setLines] = useState<LineData[]>([])
   interface PlayerEvent {
@@ -313,175 +303,6 @@ function EditorPage() {
     setQuillRef(quillRef)
   }
 
-  const handleDragChange = (
-    e: React.MouseEvent<HTMLDivElement | HTMLVideoElement>
-  ) => {
-    e.preventDefault()
-    const target = e.target as HTMLDivElement // Correctly typecast the event target
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      setPosition({
-        x: moveEvent.clientX - deltaX,
-        y: moveEvent.clientY - deltaY,
-      })
-    }
-
-    const deltaX = e.clientX - target.getBoundingClientRect().left
-    const deltaY = e.clientY - target.getBoundingClientRect().top
-
-    document.addEventListener('mousemove', onMouseMove)
-    document.addEventListener(
-      'mouseup',
-      () => {
-        document.removeEventListener('mousemove', onMouseMove)
-      },
-      { once: true }
-    )
-  }
-
-  const replaceTextInstance = (
-    findText: string,
-    replaceText: string,
-    replaceAll = false
-  ) => {
-    if (!quillRef?.current) return
-    const quill = quillRef.current.getEditor()
-    replaceTextHandler(quill, findText, replaceText, replaceAll, false, toast)
-  }
-
-  const searchAndSelectInstance = (searchText: string) => {
-    if (!quillRef?.current) return
-    const quill = quillRef.current.getEditor()
-    searchAndSelect(
-      quill,
-      searchText,
-      false,
-      lastSearchIndex,
-      setLastSearchIndex,
-      toast
-    )
-  }
-
-  const toggleSpellcheck = async () => {
-    if (!quillRef?.current) return
-    let toastId
-    try {
-      if (!spellcheckValue.length) {
-        toastId = toast.loading('Running spellcheck...')
-        const transcript = quillRef?.current?.getEditor().getText()
-        const response = await spellcheckAction(transcript)
-        if (response.success && response.data) {
-          setSpellCheckValue(
-            response.data.filter(
-              (word: { word: string; suggestions: string[] }) =>
-                word.suggestions.length > 0
-            )
-          )
-          searchAndSelectInstance(response.data[0].word)
-          toast.dismiss(toastId)
-          toastId = toast.success('Spellcheck completed successfully')
-          toast.dismiss(toastId)
-        } else {
-          toast.dismiss(toastId)
-          toast.error('Failed to run spellcheck')
-        }
-      }
-      setSpellcheckOpen(!spellcheckOpen)
-      if (submitting && spellcheckOpen) {
-        setIsSubmitModalOpen(true)
-        setSubmitting(false)
-      }
-    } catch (error) {
-      toast.dismiss(toastId)
-      toast.error('Failed to run spellcheck')
-    }
-  }
-
-  const handleSpellcheckAction = (action: string) => {
-    if (!spellcheckValue.length) {
-      setIsSubmitModalOpen(true)
-      setSpellcheckOpen(false)
-      return
-    }
-
-    const currentWord = spellcheckValue[0].word
-
-    if (action === 'ignoreOnce') {
-      // Remove the current word instance
-      const newSpellcheckValue = [...spellcheckValue]
-      newSpellcheckValue.shift()
-      setSpellCheckValue(newSpellcheckValue)
-      setReplaceMisspelledWord('')
-
-      if (newSpellcheckValue.length === 0) {
-        setSpellcheckOpen(false)
-        setIsSubmitModalOpen(true)
-      } else {
-        searchAndSelectInstance(` ${newSpellcheckValue[0].word} `)
-      }
-    }
-
-    if (action === 'ignoreAll') {
-      // Remove all instances of the current word
-      const newSpellcheckValue = spellcheckValue.filter(
-        (item) => item.word !== currentWord
-      )
-      setSpellCheckValue(newSpellcheckValue)
-      setReplaceMisspelledWord('')
-
-      if (newSpellcheckValue.length === 0) {
-        setSpellcheckOpen(false)
-        setIsSubmitModalOpen(true)
-      } else {
-        searchAndSelectInstance(` ${newSpellcheckValue[0].word} `)
-      }
-    }
-
-    if (action === 'changeOnce') {
-      if (!replaceMisspelledWord)
-        return toast.error('Please enter a word to replace')
-
-      // Replace current instance and remove from array
-      searchAndSelectInstance(` ${currentWord} `)
-      replaceTextInstance(` ${currentWord} `, ` ${replaceMisspelledWord} `)
-
-      const newSpellcheckValue = [...spellcheckValue]
-      newSpellcheckValue.shift()
-      setSpellCheckValue(newSpellcheckValue)
-      setReplaceMisspelledWord('')
-
-      if (newSpellcheckValue.length === 0) {
-        setSpellcheckOpen(false)
-        setIsSubmitModalOpen(true)
-      } else {
-        searchAndSelectInstance(` ${newSpellcheckValue[0].word} `)
-      }
-    }
-
-    if (action === 'changeAll') {
-      if (!replaceMisspelledWord)
-        return toast.error('Please enter a word to replace')
-
-      // Replace all instances and remove all occurrences from array
-      replaceTextInstance(
-        ` ${currentWord} `,
-        ` ${replaceMisspelledWord} `,
-        true
-      )
-      const newSpellcheckValue = spellcheckValue.filter(
-        (item) => item.word !== currentWord
-      )
-      setSpellCheckValue(newSpellcheckValue)
-      setReplaceMisspelledWord('')
-
-      if (newSpellcheckValue.length === 0) {
-        setSpellcheckOpen(false)
-        setIsSubmitModalOpen(true)
-      } else {
-        searchAndSelectInstance(` ${newSpellcheckValue[0].word} `)
-      }
-    }
-  }
-
   useEffect(() => {
     let timer: NodeJS.Timeout
 
@@ -550,7 +371,6 @@ function EditorPage() {
         orderDetails={orderDetails}
         submitting={submitting}
         setIsSubmitModalOpen={setIsSubmitModalOpen}
-        toggleSpellCheck={toggleSpellcheck}
         setSubmitting={setSubmitting}
         lines={lines}
         playerEvents={playerEvents}
@@ -694,66 +514,6 @@ function EditorPage() {
             </DialogHeader>
           </DialogContent>
         </Dialog>
-        {spellcheckOpen && (
-          <div
-            className='fixed bg-white z-[1000] overflow-auto py-4 px-4 rounded-lg shadow-lg overflow-y-hidden border'
-            style={{
-              top: `${position.y}px`,
-              left: `${position.x}px`,
-              width: '500px',
-            }}
-          >
-            <div
-              onMouseDown={handleDragChange}
-              className='cursor-move border-b flex justify-between items-center pb-2'
-            >
-              <p className='text-lg font-semibold'>Spellcheck</p>
-              <button
-                onClick={toggleSpellcheck}
-                className='cursor-pointer hover:bg-gray-100 p-2 rounded-lg'
-              >
-                <Cross1Icon />
-              </button>
-            </div>
-            <div className='mt-4 max-h-[400px] overflow-y-auto'>
-              {spellcheckValue && spellcheckValue.length > 0 && (
-                <div>
-                  <p className='font-semibold mb-2'>
-                    Misspelled: {spellcheckValue[0].word}
-                  </p>
-                  <div className='flex flex-col'>
-                    {spellcheckValue[0].suggestions.map((suggestion, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setReplaceMisspelledWord(suggestion)}
-                        className={`text-left py-1 px-2 hover:bg-gray-100 rounded ${replaceMisspelledWord === suggestion
-                          ? 'bg-blue-100'
-                          : ''
-                          }`}
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className='mt-4 flex justify-between'>
-              <Button onClick={() => handleSpellcheckAction('ignoreOnce')}>
-                Ignore Once
-              </Button>
-              <Button onClick={() => handleSpellcheckAction('ignoreAll')}>
-                Ignore All
-              </Button>
-              <Button onClick={() => handleSpellcheckAction('changeOnce')}>
-                Change Once
-              </Button>
-              <Button onClick={() => handleSpellcheckAction('changeAll')}>
-                Change All
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
