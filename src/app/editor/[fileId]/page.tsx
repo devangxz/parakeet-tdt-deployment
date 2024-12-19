@@ -120,7 +120,6 @@ function EditorPage() {
   const [audioDuration, setAudioDuration] = useState(1)
   const [quillRef, setQuillRef] = useState<React.RefObject<ReactQuill>>()
 
-  const [disableGoToWord, setDisableGoToWord] = useState(false)
   const [position, setPosition] = useState({ x: 100, y: 100 })
   const [lastSearchIndex, setLastSearchIndex] = useState<number>(-1)
   const [replaceMisspelledWord, setReplaceMisspelledWord] = useState<string>('')
@@ -533,9 +532,8 @@ function EditorPage() {
           <p className='font-semibold px-2'>{orderDetails.filename}</p>
           {session?.user?.role !== 'CUSTOMER' && (
             <span
-              className={`text-red-600 ${
-                orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
-              } mr-2`}
+              className={`text-red-600 ${orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
+                } mr-2`}
             >
               {timeoutCount}
             </span>
@@ -545,7 +543,6 @@ function EditorPage() {
       <Header
         getAudioPlayer={getAudioPlayer}
         quillRef={quillRef}
-        setDisableGoToWord={setDisableGoToWord}
         editorMode={editorMode}
         editorModeOptions={editorModeOptions}
         getEditorMode={getEditorMode}
@@ -566,11 +563,10 @@ function EditorPage() {
         <div className='flex justify-between px-16 mt-2 flex-shrink-0'></div>
         <div className='flex flex-col items-center flex-1 overflow-hidden'>
           <div
-            className={`flex ${
-              step !== 'QC' && editorMode === 'Editor'
-                ? 'justify-between'
-                : 'justify-center'
-            } px-3 h-full`}
+            className={`flex ${step !== 'QC' && editorMode === 'Editor'
+              ? 'justify-between'
+              : 'justify-center'
+              } px-3 h-full`}
           >
             {step !== 'QC' && editorMode === 'Editor' && (
               <SectionSelector
@@ -611,7 +607,6 @@ function EditorPage() {
                         audioPlayer={audioPlayer}
                         audioDuration={audioDuration}
                         getQuillRef={getQuillRef}
-                        disableGoToWord={disableGoToWord}
                       />
 
                       <DiffTabComponent diff={diff} />
@@ -731,11 +726,10 @@ function EditorPage() {
                       <button
                         key={index}
                         onClick={() => setReplaceMisspelledWord(suggestion)}
-                        className={`text-left py-1 px-2 hover:bg-gray-100 rounded ${
-                          replaceMisspelledWord === suggestion
-                            ? 'bg-blue-100'
-                            : ''
-                        }`}
+                        className={`text-left py-1 px-2 hover:bg-gray-100 rounded ${replaceMisspelledWord === suggestion
+                          ? 'bg-blue-100'
+                          : ''
+                          }`}
                       >
                         {suggestion}
                       </button>

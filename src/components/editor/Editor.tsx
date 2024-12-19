@@ -20,14 +20,13 @@ interface EditorProps {
     audioPlayer: HTMLAudioElement | null
     duration: number
     getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void
-    disableGoToWord: boolean
     orderDetails: OrderDetails
     content: { insert: string }[]
     setContent: (content: { insert: string }[]) => void
     getLines: (lineData: LineData[]) => void
 }
 
-export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, disableGoToWord, orderDetails, content, setContent, getLines }: EditorProps) {
+export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, orderDetails, content, setContent, getLines }: EditorProps) {
     const quillRef = useRef<ReactQuill>(null)
     const [lines, setLines] = useState<LineData[]>([])
     const quillModules = {
@@ -255,38 +254,6 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
     }, [handlePlayAudioAtCursorPositionShortcut, insertTimestampBlankAtCursorPosition, insertTimestampAndSpeakerInitialAtStartOfCurrentLine]);
 
     useShortcuts(shortcutControls);
-
-    const handleTimeUpdate = () => {
-        if (!audioPlayer || disableGoToWord) return;
-        const currentTime = audioPlayer.currentTime;
-        let cumulativeLength = 0;
-        for (const line of lines) {
-            for (const wordData of line.words) {
-                const wordStart = wordData.ctms?.start || 0;
-                const wordEnd = wordData.ctms?.end || 0;
-                if (currentTime >= wordStart && currentTime <= wordEnd) {
-                    const quill = quillRef.current?.getEditor();
-                    if (quill) {
-                        const textLength = cumulativeLength + wordData.word.length;
-                        quill.setSelection(textLength, 0, 'silent');
-                        // Scroll the selected text into view if not visible
-                        quill.scrollIntoView();
-                    } return;
-                }
-                cumulativeLength += wordData.word.length + 1;
-            }
-        }
-    };
-
-    useEffect(() => {
-        const quill = quillRef.current?.getEditor();
-        if (!quill) return;
-        audioPlayer?.addEventListener('seeked', handleTimeUpdate);
-
-        return () => {
-            audioPlayer?.removeEventListener('seeked', handleTimeUpdate);
-        };
-    }, [audioPlayer, lines, handleTimeUpdate]);
 
     useEffect(() => {
         initEditor()
