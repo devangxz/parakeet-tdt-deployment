@@ -8,6 +8,7 @@ import React, {
   useCallback,
   useEffect,
 } from 'react'
+import { toast } from 'sonner'
 
 import { SSE_MAX_RETRIES, SSE_RETRY_DELAY } from '@/constants'
 
@@ -142,6 +143,7 @@ const UploadProvider: React.FC<{ children: React.ReactNode }> = ({
               })
               callbacksRef.current.onFileSuccess()
             } else {
+              toast.error(`Failed to process ${data?.file?.fileNameWithExtension}. Please try again.`)
               updateUploadStatus(data?.file?.fileNameWithExtension, {
                 progress: 0,
                 status: 'failed',
