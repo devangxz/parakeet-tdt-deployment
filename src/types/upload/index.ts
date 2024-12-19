@@ -169,6 +169,7 @@ export interface TokenResponse {
 // Common Props Type
 export interface UploaderProps {
     onUploadSuccess: (success: boolean) => void;
+    isRemoteLegal?: boolean;
 }
 
 // Global Type Augmentations
