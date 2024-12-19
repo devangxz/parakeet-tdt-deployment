@@ -87,10 +87,10 @@ export const handler = async (event) => {
         const headResponse = await s3Client.send(headCommand);
         s3Metadata = headResponse.Metadata || {};
 
-        if (s3Metadata.type === 'CONVERTED_FILE') {
+        if (!s3Metadata || !s3Metadata.type || s3Metadata.type !== 'ORIGINAL_FILE') {
             return {
                 statusCode: 200,
-                body: JSON.stringify({ message: `File ${objectKey} is a converted file.` }),
+                body: JSON.stringify({ message: `File ${objectKey} is not an original file.` }),
             };
         }
 
