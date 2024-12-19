@@ -18,7 +18,6 @@ import {
   SpeakerLoudIcon,
   TrackPreviousIcon,
   TrackNextIcon,
-  MagnifyingGlassIcon,
   TimerIcon,
 } from '@radix-ui/react-icons'
 import { PlusIcon } from 'lucide-react'
@@ -95,8 +94,6 @@ import {
   navigateAndPlayBlanks,
   playCurrentParagraphTimestamp,
   regenDocx,
-  replaceTextHandler,
-  searchAndSelect,
 } from '@/utils/editorUtils'
 
 type PlayerButtonProps = {
@@ -171,7 +168,6 @@ interface NewPlayerProps {
   orderDetails: OrderDetails
   submitting: boolean
   setIsSubmitModalOpen: React.Dispatch<React.SetStateAction<boolean>>
-  toggleSpellCheck: () => void
   setSubmitting: React.Dispatch<React.SetStateAction<boolean>>
   lines: LineData[]
   playerEvents: PlayerEvent[]
@@ -201,7 +197,6 @@ export default function Header({
   orderDetails,
   submitting,
   setIsSubmitModalOpen,
-  toggleSpellCheck,
   setSubmitting,
   lines,
   playerEvents,
@@ -227,11 +222,6 @@ export default function Header({
     { key: string; shortcut: string }[]
   >([])
   const [position, setPosition] = useState({ x: 100, y: 100 })
-  const [findAndReplaceOpen, setFindAndReplaceOpen] = useState(false)
-  const [findText, setFindText] = useState('')
-  const [lastSearchIndex, setLastSearchIndex] = useState<number>(-1)
-  const [replaceText, setReplaceText] = useState('')
-  const [matchCase, setMatchCase] = useState(false)
   const [videoPlayerOpen, setVideoPlayerOpen] = useState(false)
   const [revertTranscriptOpen, setRevertTranscriptOpen] = useState(false)
   const [isSpeakerNameModalOpen, setIsSpeakerNameModalOpen] = useState(false)
@@ -538,84 +528,18 @@ export default function Header({
     setShortcuts(getAllShortcuts())
   }
 
-  const replaceTextInstance = (
-    findText: string,
-    replaceText: string,
-    replaceAll = false
-  ) => {
-    if (!quillRef?.current) return
-    const quill = quillRef.current.getEditor()
-    replaceTextHandler(
-      quill,
-      findText,
-      replaceText,
-      replaceAll,
-      matchCase,
-      toast
-    )
-  }
-
-  const searchAndSelectInstance = (searchText: string) => {
-    if (!quillRef?.current) return
-    const quill = quillRef.current.getEditor()
-    searchAndSelect(
-      quill,
-      searchText,
-      matchCase,
-      lastSearchIndex,
-      setLastSearchIndex,
-      toast
-    )
-  }
-
   useEffect(() => {
     autoCapitalizeRef.current = autoCapitalize
   }, [autoCapitalize])
 
   const editorShortcutControls = useMemo(() => {
     const controls: Partial<ShortcutControls> = {
-      findNextOccurrenceOfString: () => {
-        if (!findAndReplaceOpen) {
-          setFindAndReplaceOpen(true)
-        } else if (findText) {
-          searchAndSelectInstance(findText)
-        }
-      },
-      findThePreviousOccurrenceOfString: () => {
-        if (!findAndReplaceOpen) {
-          setFindAndReplaceOpen(true)
-        } else if (findText) {
-          searchAndSelectInstance(findText)
-        }
-      },
-      replaceNextOccurrenceOfString: () => {
-        if (!findAndReplaceOpen) {
-          setFindAndReplaceOpen(true)
-        } else if (findText && replaceText) {
-          replaceTextInstance(findText, replaceText)
-        }
-      },
-      replaceAllOccurrencesOfString: () => {
-        if (!findAndReplaceOpen) {
-          setFindAndReplaceOpen(true)
-        } else if (findText && replaceText) {
-          replaceTextInstance(findText, replaceText, true)
-        }
-      },
-      repeatLastFind: () => {
-        if (findText) {
-          searchAndSelectInstance(findText)
-        }
-      },
       playNextBlank: playNextBlankInstance(),
       playPreviousBlank: playPreviousBlankInstance(),
       playAudioFromTheStartOfCurrentParagraph: playCurrentParagraphInstance(),
     }
     return controls as ShortcutControls
   }, [
-    findAndReplaceOpen,
-    findText,
-    replaceText,
     playNextBlankInstance,
     playPreviousBlankInstance,
     playCurrentParagraphInstance,
@@ -766,10 +690,6 @@ export default function Header({
     setNotesOpen(!notesOpen)
   }
 
-  const toggleFindAndReplace = () => {
-    setFindAndReplaceOpen(!findAndReplaceOpen)
-  }
-
   const toggleRevertTranscript = () => {
     setRevertTranscriptOpen(!revertTranscriptOpen)
   }
@@ -819,28 +739,6 @@ export default function Header({
     }
   }
 
-  const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const text = e.target.value
-    setFindText(text)
-  }
-
-  const handleReplaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const text = e.target.value
-    setReplaceText(text)
-  }
-
-  const findHandler = () => {
-    searchAndSelectInstance(findText)
-  }
-
-  const replaceOneHandler = () => {
-    replaceTextInstance(findText, replaceText)
-  }
-
-  const replaceAllHandler = () => {
-    replaceTextInstance(findText, replaceText, true)
-  }
-
   const handleSpeakerNameChange = (
     e: React.ChangeEvent<HTMLInputElement>,
     key: string
@@ -859,7 +757,7 @@ export default function Header({
       toast.success('Speaker names updated successfully')
       setIsSpeakerNameModalOpen(false)
       if (submitting) {
-        toggleSpellCheck()
+        setIsSubmitModalOpen(true)
       }
     } catch (error) {
       toast.dismiss(toastId)
@@ -1236,19 +1134,6 @@ export default function Header({
                 <Tooltip>
                   <TooltipTrigger>
                     <PlayerButton
-                      icon={<MagnifyingGlassIcon />}
-                      tooltip='Find and replace'
-                      onClick={toggleFindAndReplace}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Find and replace</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger>
-                    <PlayerButton
                       icon={<ClockIcon />}
                       tooltip='Insert Timestamps'
                       onClick={insertTimestampBlankAtCursorPositionInstance}
@@ -1292,9 +1177,6 @@ export default function Header({
                     <DropdownMenuItem onClick={toggleNotes}>
                       Notes
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={toggleFindAndReplace}>
-                      Find and Replace
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={toggleSpeakerName}>
                       Speaker Names
                     </DropdownMenuItem>
@@ -1302,9 +1184,6 @@ export default function Header({
                       onClick={downloadMP3.bind(null, orderDetails)}
                     >
                       Download MP3
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toggleSpellCheck()}>
-                      Spellcheck
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={requestExtension}>
                       Request Extension
@@ -1772,61 +1651,6 @@ export default function Header({
         setFrequentTermsModalOpen={setFrequentTermsModalOpen}
         frequentTermsData={frequentTermsData}
       />
-
-      {findAndReplaceOpen && (
-        <div
-          className='fixed bg-white z-[1000] overflow-auto py-4 px-4 rounded-lg shadow-lg overflow-y-hidden border'
-          style={{
-            top: `${position.y}px`,
-            left: `${position.x}px`,
-            width: '500px',
-          }}
-        >
-          <div
-            onMouseDown={handleDragChange}
-            className='cursor-move border-b flex justify-between items-center pb-2'
-          >
-            <p className='text-lg font-semibold'>Find and Replace</p>
-            <button
-              onClick={toggleFindAndReplace}
-              className='cursor-pointer hover:bg-gray-100 p-2 rounded-lg'
-            >
-              <Cross1Icon />
-            </button>
-          </div>
-          <div className='mt-5'>
-            <Input
-              placeholder='Find...'
-              className='mb-4'
-              value={findText}
-              onChange={handleFindChange}
-            />
-            <Input
-              placeholder='Replace with...'
-              value={replaceText}
-              onChange={handleReplaceChange}
-            />
-          </div>
-          <div className='flex items-center mt-4'>
-            <Button className='mr-2' onClick={findHandler}>
-              Find
-            </Button>
-            <Button className='mr-2' onClick={replaceOneHandler}>
-              Replace Once
-            </Button>
-            <Button className='mr-2' onClick={replaceAllHandler}>
-              Replace All
-            </Button>
-            <Label className='flex items-center space-x-2'>
-              <Checkbox
-                checked={matchCase}
-                onCheckedChange={(checked) => setMatchCase(checked === true)}
-              />
-              <span>Match case</span>
-            </Label>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
