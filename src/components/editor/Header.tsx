@@ -171,7 +171,6 @@ interface NewPlayerProps {
   orderDetails: OrderDetails
   submitting: boolean
   setIsSubmitModalOpen: React.Dispatch<React.SetStateAction<boolean>>
-  toggleSpellCheck: () => void
   setSubmitting: React.Dispatch<React.SetStateAction<boolean>>
   lines: LineData[]
   playerEvents: PlayerEvent[]
@@ -201,7 +200,6 @@ export default function Header({
   orderDetails,
   submitting,
   setIsSubmitModalOpen,
-  toggleSpellCheck,
   setSubmitting,
   lines,
   playerEvents,
@@ -859,7 +857,7 @@ export default function Header({
       toast.success('Speaker names updated successfully')
       setIsSpeakerNameModalOpen(false)
       if (submitting) {
-        toggleSpellCheck()
+        setIsSubmitModalOpen(true)
       }
     } catch (error) {
       toast.dismiss(toastId)
@@ -1302,9 +1300,6 @@ export default function Header({
                       onClick={downloadMP3.bind(null, orderDetails)}
                     >
                       Download MP3
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toggleSpellCheck()}>
-                      Spellcheck
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={requestExtension}>
                       Request Extension
