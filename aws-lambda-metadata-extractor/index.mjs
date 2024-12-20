@@ -60,7 +60,7 @@ async function validateFileType(bucket, key) {
             new HeadObjectCommand({ Bucket: bucket, Key: key })
         );
 
-        const fileExtension = parse(key).ext;
+        const fileExtension = parse(key).ext.toLowerCase();
 
         if (!config.allowedFileTypes.includes(fileExtension)) {
             throw new Error(`Invalid file extension: ${fileExtension}`);
@@ -68,7 +68,7 @@ async function validateFileType(bucket, key) {
 
         return { ContentType, ContentLength };
     } catch (error) {
-        console.error(`Error validating file ${bucket}/${key}:`, error);
+        console.error(`[${key}] Error validating file:`, error);
         throw error;
     }
 }
@@ -87,10 +87,10 @@ export const handler = async (event) => {
         const headResponse = await s3Client.send(headCommand);
         s3Metadata = headResponse.Metadata || {};
 
-        if (s3Metadata.type === 'CONVERTED_FILE') {
+        if (!s3Metadata || !s3Metadata.type || s3Metadata.type !== 'ORIGINAL_FILE') {
             return {
                 statusCode: 200,
-                body: JSON.stringify({ message: `File ${objectKey} is a converted file.` }),
+                body: JSON.stringify({ message: `File ${objectKey} is not an original file.` }),
             };
         }
 
@@ -103,20 +103,19 @@ export const handler = async (event) => {
         const fileExtension = parse(objectKey).ext.slice(1);
         const fileNameWithExtension = `${fileName}.${fileExtension}`;
 
-        console.log(`Processing file - ${bucketName}/${objectKey} of user - ${userId}`);
-
-        contentInfo = await validateFileType(bucketName, objectKey);
-
+        console.log(`[${objectKey}] Processing file - ${fileId} of user - ${userId}`);
+        
         try {
-            metadata = await getMetadata({ Bucket: bucketName, Key: objectKey });
+            contentInfo = await validateFileType(bucketName, objectKey);
 
+            metadata = await getMetadata({ Bucket: bucketName, Key: objectKey });
             if (!metadata.duration) {
                 throw new Error('Failed to extract duration from file');
             }
 
             const endTime = Date.now();
             const processingTimeInSeconds = (endTime - startTime) / 1000;
-            console.log(`Total processing time: ${processingTimeInSeconds} seconds`);
+            console.log(`[${objectKey}] Total processing time: ${processingTimeInSeconds} seconds`);
 
             const webhookData = {
                 status: config.webhook.status.SUCCESS,
@@ -166,7 +165,7 @@ export const handler = async (event) => {
         }
 
     } catch (error) {
-        console.error('Error processing file:', error);
+        console.error(`[${objectKey}] Error processing file:`, error);
         return {
             statusCode: 500,
             body: JSON.stringify({ error: error.message }),
@@ -190,13 +189,14 @@ const getMetadata = async (params) => {
             if (ffprobeMetadata.duration > 0) {
                 return ffprobeMetadata;
             }
-            console.log('FFprobe returned zero duration, falling back to MediaInfo');
+            console.log(`[${params.Key}] FFprobe returned zero duration, falling back to MediaInfo`);
         } catch (error) {
-            console.log('FFprobe failed, attempting with MediaInfo:', error.message);
+            console.log(`[${params.Key}] FFprobe failed, attempting with MediaInfo:`, error.message);
         }
         return await runMediaInfo(tempFilePath);
     } finally {
-        await fs.unlink(tempFilePath).catch(error => console.error('Error deleting temp file:', error));
+        await fs.unlink(tempFilePath).catch(error => 
+            console.error(`[${params.Key}] Error deleting temp file:`, error));
     }
 };
 
@@ -320,10 +320,10 @@ const sendWebhookRequest = (url, data, options) => new Promise((resolve) => {
 
         res.on('end', () => {
             if (res.statusCode >= 200 && res.statusCode < 300) {
-                console.log('Webhook sent successfully. Response:', responseBody);
+                console.log(`[${data.fileKey}] Webhook sent successfully. Response:`, responseBody);
                 resolve({ success: true, statusCode: res.statusCode, body: responseBody });
             } else {
-                console.error(`HTTP error! status: ${res.statusCode}, body: ${responseBody}`);
+                console.error(`[${data.fileKey}] HTTP error! status: ${res.statusCode}, body: ${responseBody}`);
                 resolve({
                     success: false,
                     statusCode: res.statusCode,
@@ -334,7 +334,7 @@ const sendWebhookRequest = (url, data, options) => new Promise((resolve) => {
     });
 
     req.on('error', (error) => {
-        console.error('Error sending webhook:', error);
+        console.error(`[${data.fileKey}] Error sending webhook:`, error);
         resolve({ success: false, error: error.message });
     });
 
@@ -353,7 +353,7 @@ const sendWebhook = async (data, environment) => {
     const webhookUrl = config.webhookUrls[environment];
 
     if (!webhookUrl) {
-        console.error('Webhook URL is not set in environment variables');
+        console.error(`[${data.fileKey}] Webhook URL is not set in environment variables`);
         return;
     }
 
@@ -381,7 +381,7 @@ const sendWebhook = async (data, environment) => {
 
     while (attempt < maxAttempts) {
         attempt++;
-        console.log(`Webhook attempt ${attempt}/${maxAttempts}`);
+        console.log(`[${data.fileKey}] Webhook attempt ${attempt}/${maxAttempts}`);
 
         try {
             const result = await sendWebhookRequest(url, data, options);
@@ -393,18 +393,18 @@ const sendWebhook = async (data, environment) => {
             lastError = result.error;
 
             if (attempt < maxAttempts) {
-                console.log(`Retrying webhook in ${config.webhook.retryDelay}ms...`);
+                console.log(`[${data.fileKey}] Retrying webhook in ${config.webhook.retryDelay}ms...`);
                 await sleep(config.webhook.retryDelay);
             }
         } catch (error) {
             lastError = error.message;
 
             if (attempt < maxAttempts) {
-                console.log(`Retrying webhook in ${config.webhook.retryDelay}ms...`);
+                console.log(`[${data.fileKey}] Retrying webhook in ${config.webhook.retryDelay}ms...`);
                 await sleep(config.webhook.retryDelay);
             }
         }
     }
 
-    throw new Error(`Failed to send webhook after ${maxAttempts} attempts. Last error: ${lastError}`);
+    throw new Error(`[${data.fileKey}] Failed to send webhook after ${maxAttempts} attempts. Last error: ${lastError}`);
 };
