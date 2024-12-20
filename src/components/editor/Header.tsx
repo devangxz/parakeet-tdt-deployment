@@ -19,6 +19,7 @@ import {
   TrackPreviousIcon,
   TrackNextIcon,
   TimerIcon,
+  MagnifyingGlassIcon,
 } from '@radix-ui/react-icons'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
@@ -184,7 +185,8 @@ interface NewPlayerProps {
     renamedFile: File | null
     originalFile: File | null
     isUploaded?: boolean
-  }
+  },
+  toggleFindAndReplace: () => void
 }
 
 export default function Header({
@@ -204,6 +206,7 @@ export default function Header({
   setRegenCount,
   setFileToUpload,
   fileToUpload,
+  toggleFindAndReplace,
 }: NewPlayerProps) {
   const [currentValue, setCurrentValue] = useState(0)
   const [currentTime, setCurrentTime] = useState('00:00')
@@ -1135,7 +1138,7 @@ export default function Header({
                   <TooltipTrigger>
                     <PlayerButton
                       icon={<ClockIcon />}
-                      tooltip='Insert Timestamps'
+                      tooltip='Insert timestamps'
                       onClick={insertTimestampBlankAtCursorPositionInstance}
                     />
                   </TooltipTrigger>
@@ -1143,7 +1146,21 @@ export default function Header({
                     <p>Insert Timestamps</p>
                   </TooltipContent>
                 </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger>
+                    <PlayerButton
+                      icon={<MagnifyingGlassIcon />}
+                      tooltip='Find and replace'
+                      onClick={toggleFindAndReplace}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Insert Timestamps</p>
+                  </TooltipContent>
+                </Tooltip>
               </TooltipProvider>
+              
             </div>
 
             <div className='flex gap-2'>
