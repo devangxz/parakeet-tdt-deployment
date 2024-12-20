@@ -133,6 +133,15 @@ export async function GET(req: NextRequest) {
 
         transcript = removeTimestamps(getTranscriptWithSpeakers(transcript, speakers))
 
+        if (orgName.toLowerCase() === 'acr'){
+          // Add double space after periods and question marks
+          transcript = transcript.replace(/\.(\s)?/g, '.  ')
+          transcript = transcript.replace(/\?(\s)?/g, '?  ')
+
+          // Remove extra blank lines between paragraphs
+          transcript = transcript.replace(/\n\n/g, '\n')
+        }
+
         return new NextResponse(transcript, {
           status: 200,
           headers: {
