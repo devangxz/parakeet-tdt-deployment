@@ -7,7 +7,7 @@ import logger from '../lib/logger';
 import { redis } from '../lib/redis';
 import { WORKER_QUEUE_NAMES, QueueName } from '../services/worker-service';
 
-const CONVERSION_CALLBACK_URL = `${process.env.NEXT_PUBLIC_SITE_URL}/api/webhook/conversion-worker`;
+const CONVERSION_CALLBACK_URL = `${process.env.NEXT_PUBLIC_SITE_URL}/webhook/conversion-worker`;
 
 const createWorker = (queueName: QueueName, processFunction: (job: Job) => Promise<unknown>) => new Worker(queueName, async (job) => {
     try {

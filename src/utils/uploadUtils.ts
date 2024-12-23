@@ -38,7 +38,7 @@ export const refreshToken = async (
     serviceName: string,
 ): Promise<boolean> => {
     try {
-        const response = await axios.get(`/api/s3-upload/${serviceName}/token/refresh`);
+        const response = await axios.get(`/auth/${serviceName}/token/refresh`);
         if (response.data.success) {
             return true;
         }

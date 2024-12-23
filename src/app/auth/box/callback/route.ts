@@ -4,8 +4,8 @@ import { NextResponse } from 'next/server';
 
 import { signJwtAccessToken } from '@/lib/jwt';
 
-const ONEDRIVE_CLIENT_ID = process.env.NEXT_PUBLIC_ONEDRIVE_CLIENT_ID!;
-const ONEDRIVE_CLIENT_SECRET = process.env.ONEDRIVE_CLIENT_SECRET!;
+const BOX_CLIENT_ID = process.env.NEXT_PUBLIC_BOX_CLIENT_ID!;
+const BOX_CLIENT_SECRET = process.env.BOX_CLIENT_SECRET!;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL!;
 
 const isProduction = SITE_URL?.startsWith('https://') ?? true;
@@ -16,49 +16,40 @@ export async function GET(req: Request) {
         const code = url.searchParams.get('code');
         const state = url.searchParams.get('state');
         const cookieStore = cookies();
-        const savedState = cookieStore.get('oneDriveAuthState')?.value;
+        const savedState = cookieStore.get('boxAuthState')?.value;
 
         if (!code || !state || state !== savedState) {
             return createHtmlResponse('Authentication Failed', 'Invalid state parameter', false);
         }
 
-        const tokenResponse = await axios.post('https://login.microsoftonline.com/common/oauth2/v2.0/token',
-            new URLSearchParams({
-                client_id: ONEDRIVE_CLIENT_ID,
-                client_secret: ONEDRIVE_CLIENT_SECRET,
-                code,
-                grant_type: 'authorization_code',
-                redirect_uri: `${SITE_URL}/api/s3-upload/one-drive/callback`
-            }),
-            {
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                }
-            }
-        );
+        const { data } = await axios.post('https://api.box.com/oauth2/token', {
+            grant_type: 'authorization_code',
+            code,
+            client_id: BOX_CLIENT_ID,
+            client_secret: BOX_CLIENT_SECRET,
+            redirect_uri: `${SITE_URL}/auth/box/callback`
+        });
 
-        const { access_token, refresh_token } = tokenResponse.data;
-
-        if (!access_token) {
+        if (!data.access_token) {
             return createHtmlResponse('Authentication Failed', 'Failed to get access token', false);
         }
 
         const accessTokenPayload = {
-            oneDriveAccessToken: access_token
+            boxAccessToken: data.access_token
         };
         const encryptedAccessToken = signJwtAccessToken(accessTokenPayload, { expiresIn: '1h' });
 
         let encryptedRefreshToken = null;
-        if (refresh_token) {
+        if (data.refresh_token) {
             const refreshTokenPayload = {
-                oneDriveRefreshToken: refresh_token
+                boxRefreshToken: data.refresh_token
             };
-            encryptedRefreshToken = signJwtAccessToken(refreshTokenPayload, { expiresIn: '90d' });
+            encryptedRefreshToken = signJwtAccessToken(refreshTokenPayload, { expiresIn: '60d' });
         }
 
         const response = createHtmlResponse('Authentication Successful', 'You can close this window.', true);
 
-        response.cookies.set('oneDriveAccessToken', encryptedAccessToken, {
+        response.cookies.set('boxAccessToken', encryptedAccessToken, {
             httpOnly: true,
             secure: isProduction,
             sameSite: 'lax',
@@ -66,11 +57,11 @@ export async function GET(req: Request) {
         });
 
         if (encryptedRefreshToken) {
-            response.cookies.set('oneDriveRefreshToken', encryptedRefreshToken, {
+            response.cookies.set('boxRefreshToken', encryptedRefreshToken, {
                 httpOnly: true,
                 secure: isProduction,
                 sameSite: 'lax',
-                maxAge: 90 * 24 * 60 * 60
+                maxAge: 60 * 24 * 60 * 60
             });
         }
 
@@ -121,7 +112,7 @@ function createHtmlResponse(title: string, message: string, success: boolean) {
             <script>
                 if (window.opener) {
                     window.opener.postMessage({ 
-                        type: '${success ? 'ONEDRIVE_AUTH_SUCCESS' : 'ONEDRIVE_AUTH_ERROR'}' 
+                        type: '${success ? 'BOX_AUTH_SUCCESS' : 'BOX_AUTH_ERROR'}' 
                     }, '*');
                     setTimeout(() => window.close(), 1500);
                 }
