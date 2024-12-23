@@ -1,11 +1,11 @@
 'use client'
 import { CalendarIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { format } from 'date-fns'
 import { useState, useEffect } from 'react'
 
 import { DataTable } from './data-table'
+import { fetchDeliveredOrders } from '@/app/actions/om/fetch-delivered-orders'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
@@ -33,7 +33,6 @@ interface File {
   pwer: number
   status: string
   priority: number
-  qc_cost: string
   duration: number
   qc: string
   deliveryTs: string
@@ -53,69 +52,45 @@ export default function DeliveredSection() {
     return `${year}-${month}-${day}`
   }
 
-  const fetchDeliveredOrders = async () => {
+  const getDeliveredOrders = async () => {
     try {
-      const response = await axios.get(
-        `/api/om/fetch-delivered-orders?date=${formatDate(date)}`
-      )
+      const response = await fetchDeliveredOrders(formatDate(date))
 
-      if (response.data.success) {
-        const orders = response.data.details.map(
-          (
-            order: {
-              id: number
-              fileId: string
-              File: { filename: string; duration: number }
-              orderTs: string
-              pwer: number
-              status: string
-              priority: number
-              qc_cost: number
-              qc: string
-              deliveryTs: string
-              highDifficulty: boolean
-              Assignment: {
-                status: string
-                user: { firstname: string; lastname: string }
-              }[]
-            },
-            index: number
-          ) => {
-            const qcNames = order.Assignment.filter(
-              (a) => a.status === 'ACCEPTED' || a.status === 'COMPLETED'
-            )
-              .map((a) => `${a.user.firstname} ${a.user.lastname}`)
-              .join(', ')
+      if (response.success && response.details) {
+        const orders = response.details.map((order, index: number) => {
+          const qcNames = order.Assignment.filter(
+            (a) => a.status === 'ACCEPTED' || a.status === 'COMPLETED'
+          )
+            .map((a) => `${a.user.firstname} ${a.user.lastname}`)
+            .join(', ')
 
-            return {
-              index: index + 1,
-              orderId: order.id,
-              fileId: order.fileId,
-              filename: order.File.filename,
-              orderTs: order.orderTs,
-              pwer: order.pwer,
-              status: order.status,
-              priority: order.priority,
-              qc_cost: order.qc_cost,
-              duration: order.File.duration,
-              qc: qcNames || '-',
-              deliveryTs: order.deliveryTs,
-              hd: order.highDifficulty,
-            }
+          return {
+            index: index + 1,
+            orderId: order.id,
+            fileId: order.fileId,
+            filename: order.File?.filename || '-',
+            orderTs: order.orderTs.toISOString(),
+            pwer: order.pwer || 0,
+            status: order.status,
+            priority: order.priority,
+            duration: order.File?.duration || 0,
+            qc: qcNames || '-',
+            deliveryTs: order.deliveryTs.toISOString(),
+            hd: order.highDifficulty ?? false,
           }
-        )
+        })
         setDeliveredOrders(orders ?? [])
         setError(null)
       } else {
-        setError(response.data.message)
+        setError(response.message || 'An error occurred')
       }
     } catch (err) {
-      setError('an error occurred')
+      setError('An error occurred')
     }
   }
 
   useEffect(() => {
-    fetchDeliveredOrders()
+    getDeliveredOrders()
   }, [date])
 
   if (error) {

@@ -2,7 +2,6 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { diffWords } from 'diff'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
@@ -10,6 +9,8 @@ import { toast } from 'sonner'
 
 import { DataTable } from './data-table'
 import { determinePwerLevel, determineRate } from './utils'
+import { getCompareFiles } from '@/app/actions/om/get-compare-files'
+import { getHistoryQCFiles } from '@/app/actions/qc/history'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -24,9 +25,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { BACKEND_URL, LEGAL_QC_TRANSCRIBER_RATE } from '@/constants'
+import { LEGAL_QC_TRANSCRIBER_RATE } from '@/constants'
 import { BaseTranscriberFile } from '@/types/files'
-import axiosInstance from '@/utils/axios'
 import formatDuration from '@/utils/formatDuration'
 import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
 
@@ -55,84 +55,55 @@ export default function HistoryFilesPage() {
       setIsLoading(false)
     }
     try {
-      const url = isLegalQCPage
-        ? `/api/qc/history?type=legal`
-        : `/api/qc/history?type=general`
-      const response = await axios.get(url)
+      const response = await getHistoryQCFiles(
+        isLegalQCPage ? 'legal' : 'general'
+      )
 
-      if (response.data) {
+      if (response.success && response.data) {
         const orders = response.data
-          .map(
-            (
-              assignment: {
-                id: number
-                completedTs: string
-                cancelledTs: string
-                earnings: number
-                status: string
-                type: string
-                acceptedTs: string
-                order: {
-                  pwer: number
-                  orderTs: string
-                  id: number
-                  fileId: string
-                  File: { filename: string; duration: number }
-                  status: string
-                  priority: number
-                  qc_cost: number
-                  deliveryTs: string
-                  highDifficulty: boolean
-                  orderType: string
-                  rateBonus: number
-                  instructions: string | null
-                }
-              },
-              index: number
-            ) => {
-              const diff = determinePwerLevel(assignment.order.pwer)
-              const rate = determineRate(
-                assignment.order.pwer,
-                LEGAL_QC_TRANSCRIBER_RATE
-              )
+          .map((assignment: any, index: number) => {
+            const diff = determinePwerLevel(assignment.order.pwer)
+            const rate = determineRate(
+              assignment.order.pwer,
+              LEGAL_QC_TRANSCRIBER_RATE
+            )
 
-              const { timeString, dateString } = getFormattedTimeStrings(
-                assignment.status === 'COMPLETED'
-                  ? assignment.completedTs
-                  : assignment.status === 'ACCEPTED'
-                  ? assignment.acceptedTs
-                  : assignment.cancelledTs
-              )
+            const { timeString, dateString } = getFormattedTimeStrings(
+              assignment.status === 'COMPLETED'
+                ? assignment.completedTs?.toISOString()
+                : assignment.status === 'ACCEPTED'
+                ? assignment.acceptedTs?.toISOString()
+                : assignment.cancelledTs?.toISOString()
+            )
 
-              return {
-                jobId: assignment.id,
-                index: index + 1,
-                orderId: assignment.order.id,
-                fileId: assignment.order.fileId,
-                filename: assignment.order.File.filename,
-                orderTs: assignment.order.orderTs,
-                pwer: assignment.order.pwer,
-                status: assignment.status,
-                priority: assignment.order.priority,
-                qc_cost: assignment.earnings,
-                duration: assignment.order.File.duration,
-                deliveryTs: assignment.order.deliveryTs,
-                hd: assignment.order.highDifficulty,
-                orderType: assignment.order.orderType,
-                rateBonus: assignment.order.rateBonus,
-                timeString,
-                dateString,
-                diff,
-                rate,
-                instructions: null,
-                jobType: assignment.type,
-              }
+            return {
+              jobId: assignment.id,
+              index: index + 1,
+              orderId: assignment.order.id,
+              fileId: assignment.order.fileId,
+              filename: assignment.order.File.filename,
+              orderTs: assignment.order.orderTs,
+              pwer: assignment.order.pwer,
+              status: assignment.status,
+              priority: assignment.order.priority,
+              qc_cost: assignment.earnings,
+              duration: assignment.order.File.duration,
+              deliveryTs: assignment.order.deliveryTs,
+              hd: assignment.order.highDifficulty,
+              orderType: assignment.order.orderType,
+              rateBonus: assignment.order.rateBonus,
+              timeString,
+              dateString,
+              diff,
+              rate,
+              instructions: null,
+              jobType: assignment.type,
             }
-          )
+          })
           .sort(
             (a: { jobId: number }, b: { jobId: number }) => b.jobId - a.jobId
           )
-        setAssginedFiles(orders ?? [])
+        setAssginedFiles((orders as any) ?? [])
         setError(null)
       }
     } catch (err) {
@@ -313,27 +284,19 @@ export default function HistoryFilesPage() {
     // Split the texts into paragraphs
     const asrParagraphs = asrText.split('\n\n')
     const qcParagraphs = qcText.split('\n\n')
-
     // Find the maximum number of paragraphs
     const maxLength = Math.max(asrParagraphs.length, qcParagraphs.length)
-
     let diffResult = ''
 
     for (let i = 0; i < maxLength; i++) {
       const asrParagraph = asrParagraphs[i] || ''
       const qcParagraph = qcParagraphs[i] || ''
-
       const diffArray = diffWords(asrParagraph, qcParagraph)
 
-      // Reconstruct the paragraph with diff markers
       diffArray.forEach((part) => {
-        // Green for added, red for removed, grey for unchanged
         const color = part.added ? 'added' : part.removed ? 'removed' : ''
-
         diffResult += `<span class="${color}">${part.value}</span>`
       })
-
-      // Add paragraph break
       diffResult += '<br><br>'
     }
 
@@ -343,11 +306,13 @@ export default function HistoryFilesPage() {
   const diffHandler = async (fileId: string, index: number) => {
     setLoadingFileOrder((prev) => ({ ...prev, [index]: true }))
     try {
-      const res = await axiosInstance.get(
-        `${BACKEND_URL}/get-files?fileId=${fileId}&fileType=asr,qc`
-      )
-      const { file1, file2 } = res.data
-      const diff = diffParagraphs(file1, file2)
+      const res = await getCompareFiles('asr', 'qc', fileId)
+      if (!res.success) {
+        toast.error(res.message)
+        return
+      }
+      const { reviewFile, verificationFile } = res
+      const diff = diffParagraphs(reviewFile ?? '', verificationFile ?? '')
       setDiff(diff)
       setIsDiffModalOpen(true)
       toast.success('Diff loaded successfully')

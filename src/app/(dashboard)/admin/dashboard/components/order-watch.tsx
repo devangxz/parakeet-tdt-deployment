@@ -1,0 +1,121 @@
+'use client'
+import { ReloadIcon } from '@radix-ui/react-icons'
+import { useState } from 'react'
+import { toast } from 'sonner'
+
+import { updateOrderWatchAction } from '@/app/actions/admin/add-order-watch'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import isValidEmail from '@/utils/isValidEmail'
+
+export default function OrderWatch() {
+  const [loading, setLoading] = useState(false)
+  const [loadingDisable, setLoadingDisable] = useState(false)
+  const [email, setEmail] = useState('')
+
+  const handleAddClick = async () => {
+    if (!email) return toast.error('Please enter a valid email address')
+    if (!isValidEmail(email)) {
+      toast.error('Please enter a valid email address.')
+      return
+    }
+    try {
+      setLoading(true)
+      const response = await updateOrderWatchAction(email.toLowerCase(), true)
+
+      if (response.success) {
+        toast.success('Successfully added customer to order watch.')
+      } else {
+        toast.error(response.s || 'Failed to add customer to order watch')
+      }
+    } catch (error) {
+      toast.error('Failed to add customer to order watch')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleRemoveClick = async () => {
+    if (!email) return toast.error('Please enter a valid email address')
+    if (!isValidEmail(email)) {
+      toast.error('Please enter a valid email address.')
+      return
+    }
+
+    try {
+      setLoadingDisable(true)
+      const response = await updateOrderWatchAction(email.toLowerCase(), false)
+
+      if (response.success) {
+        toast.success('Successfully removed customer from order watch.')
+      } else {
+        toast.error(response.s || 'Failed to remove customer from order watch')
+      }
+    } catch (error) {
+      toast.error('Failed to remove customer from order watch')
+    } finally {
+      setLoadingDisable(false)
+    }
+  }
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Add Customer to Order Watch</CardTitle>
+          <CardDescription>
+            Please enter the customer email address to add it to order watch.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className='grid gap-6'>
+            <div className='grid gap-3'>
+              <Label htmlFor='qc-email'>Customer Email</Label>
+              <Input
+                id='customer-email'
+                type='email'
+                className='w-full'
+                placeholder='test@email.com'
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {loading ? (
+            <Button disabled className='mt-5'>
+              Please wait
+              <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+            </Button>
+          ) : (
+            <Button className='mt-5 mr-3' onClick={handleAddClick}>
+              Add
+            </Button>
+          )}
+          {loadingDisable ? (
+            <Button disabled className='mt-5'>
+              Please wait
+              <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+            </Button>
+          ) : (
+            <Button
+              className='mt-5'
+              variant='destructive'
+              onClick={handleRemoveClick}
+            >
+              Remove
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    </>
+  )
+}

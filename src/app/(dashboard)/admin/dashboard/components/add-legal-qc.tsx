@@ -1,9 +1,9 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { addLegalQC } from '@/app/actions/admin/add-legal-qc'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -29,26 +29,19 @@ export default function AddLegalQC() {
     }
     try {
       setLoading(true)
-      const response = await axios.post(`/api/admin/add-legal-qc`, {
-        email: email,
-        flag: true,
-      })
-      if (response.data.success) {
+      const result = await addLegalQC(email.toLowerCase(), true)
+      if (result.success) {
         toast.success('Successfully added to legal Editor.')
       } else {
-        toast.error(response.data.s || 'Failed to add to legal Editor')
+        toast.error(result.s || 'Failed to add to legal Editor')
       }
-      setLoading(false)
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to add to legal Editor`)
-      }
+      toast.error('Failed to add to legal Editor')
+    } finally {
       setLoading(false)
     }
   }
+
   const handleRemoveClick = async () => {
     if (!email) return toast.error('Please enter a valid email address')
     if (!isValidEmail(email)) {
@@ -57,26 +50,19 @@ export default function AddLegalQC() {
     }
     try {
       setLoadingDisable(true)
-      const response = await axios.post(`/api/admin/add-legal-qc`, {
-        email: email,
-        flag: false,
-      })
-      if (response.data.success) {
+      const result = await addLegalQC(email.toLowerCase(), false)
+      if (result.success) {
         toast.success('Successfully removed from legal Editor.')
       } else {
-        toast.error(response.data.s || 'Failed to remove from legal Editor')
+        toast.error(result.s || 'Failed to remove from legal Editor')
       }
-      setLoadingDisable(false)
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to remove from legal Editor`)
-      }
+      toast.error('Failed to remove from legal Editor')
+    } finally {
       setLoadingDisable(false)
     }
   }
+
   return (
     <>
       <Card>

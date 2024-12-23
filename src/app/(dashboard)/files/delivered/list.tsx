@@ -2,8 +2,6 @@
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios, { AxiosError } from 'axios'
-import Link from 'next/link'
 import { Session } from 'next-auth'
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
@@ -13,7 +11,10 @@ import ArchiveFileDialog from './components/archive-file-dialog'
 import BulkArchiveFileDialog from './components/bulk-archive-dialog'
 import { CheckAndDownload } from './components/check-download'
 import { DataTable } from './components/data-table'
+import ShareFileDialog from './components/share-file'
 import { orderController } from './controllers'
+import { downloadMp3 } from '@/app/actions/file/download-mp3'
+import { refetchFiles } from '@/app/actions/files'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
 import RenameFileDialog from '@/components/file-rename-dialog'
@@ -70,12 +71,14 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
+  const [openShareFileDialog, setOpenShareFileDialog] = useState(false)
+  const [fileIds, setFileIds] = useState<string[]>([])
+  const [filenames, setFilenames] = useState<string[]>([])
 
   useEffect(() => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
     setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
-
   }, [playing])
 
   const fetchDeliveredFiles = async (showLoader = false) => {
@@ -86,27 +89,18 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
     }
 
     try {
-      const response = await axios.get(`/api/files?status=delivered`)
-
-      const files = response.data.map(
-        (file: {
-          fileId: string
-          filename: string
-          createdAt: string
-          duration: number
-          Orders: { orderType: string; id: string; deliveredTs: string }[]
-          uploadedByUser: User
-        }) => ({
+      const updatedFiles = await refetchFiles('delivered')
+      const files =
+        updatedFiles?.map((file: any) => ({
           id: file.fileId,
           filename: file.filename,
           date: file.Orders[0]?.deliveredTs,
-          duration: file.duration,
+          duration: Number(file.duration),
           orderType: file.Orders[0]?.orderType,
           orderId: file.Orders[0]?.id,
           uploadedByUser: file.uploadedByUser,
-        })
-      )
-      setDeliveredFiles(files ?? [])
+        })) || []
+      setDeliveredFiles(files)
       setError(null)
     } catch (err) {
       setError('an error occurred')
@@ -120,6 +114,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
 
   const handleSelectedRowsChange = (selectedRowsData: File[]) => {
     setSelectedFiles(selectedRowsData.map((file) => file.id))
+    setFilenames(selectedRowsData.map((file) => file.filename))
   }
   if (isLoading) {
     return (
@@ -237,7 +232,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   filename: '',
                   docType:
                     session?.user?.organizationName.toLowerCase() ===
-                      'remotelegal'
+                    'remotelegal'
                       ? 'CUSTOM_FORMATTING_DOC'
                       : 'TRANSCRIPTION_DOC',
                 },
@@ -328,8 +323,20 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align='end'>
-            <DropdownMenuItem asChild>
-              <Link href={`/editor/${row.original.id}`}>Open Editor</Link>
+            <DropdownMenuItem
+              onClick={() =>
+                window.open(
+                  `/editor/${row.original.id}`,
+                  '_blank',
+                  'toolbar=no,location=no,menubar=no,width=' +
+                    window.screen.width +
+                    ',height=' +
+                    window.screen.height +
+                    ',left=0,top=0'
+                )
+              }
+            >
+              Open Editor
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => handleMP3Download(row.original.id)}
@@ -359,6 +366,16 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
               }}
             >
               Archive
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
+              onClick={() => {
+                setFileIds([row.original.id])
+                setFilenames([row.original.filename])
+                setOpenShareFileDialog(true)
+              }}
+            >
+              Share
             </DropdownMenuItem>
 
             {/* <DropdownMenuItem
@@ -406,19 +423,14 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
   const handleMP3Download = async (fileId: string) => {
     try {
       setLoadingOrder((prev) => ({ ...prev, [fileId]: true }))
-      const response = await axios.get(
-        `/api/file/download-mp3?fileId=${fileId}`
-      )
-      if (response.status === 200) {
-        const data = response.data
+      const result = await downloadMp3(fileId)
+      if (result.success) {
+        const data = result
         window.open(data.url, '_blank')
         setLoadingOrder((prev) => ({ ...prev, [fileId]: false }))
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.message)
-        toast.dismiss(errorToastId)
-      }
+      toast.error('Error downloading MP3')
       setLoadingOrder((prev) => ({ ...prev, [fileId]: false }))
     }
   }
@@ -435,25 +447,25 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
           <div className='flex items-center'>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-                <Button
-                  variant='order'
-                  className='not-rounded text-black w-[140px] mr-3'
-                  onClick={async () => {
-                    try {
-                      if (selectedFiles.length === 0) {
-                        toast.error('Please select at least one file')
-                        return
-                      }
-                      await navigator.clipboard.writeText(selectedFiles.join(','))
-                      toast.success('File Ids copied to clipboard')
-                    } catch (error) {
-                      toast.error('Failed to copy file Ids')
+              <Button
+                variant='order'
+                className='not-rounded text-black w-[140px] mr-3'
+                onClick={async () => {
+                  try {
+                    if (selectedFiles.length === 0) {
+                      toast.error('Please select at least one file')
+                      return
                     }
-                  }}
-                >
-                  Copy file Ids
-                </Button>
-              )}
+                    await navigator.clipboard.writeText(selectedFiles.join(','))
+                    toast.success('File Ids copied to clipboard')
+                  } catch (error) {
+                    toast.error('Failed to copy file Ids')
+                  }
+                }}
+              >
+                Copy file Ids
+              </Button>
+            )}
             <Button
               variant='order'
               className='format-button text-black w-[140px]'
@@ -473,6 +485,18 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align='end'>
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (selectedFiles.length === 0) {
+                      toast.error('Please select at least one file')
+                      return
+                    }
+                    setFileIds(selectedFiles)
+                    setOpenShareFileDialog(true)
+                  }}
+                >
+                  Share Files
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   className='text-red-500'
                   onClick={handleBulkDelete}
@@ -536,6 +560,12 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
         controller={(fileId: string, handlertype: string) =>
           controller({ fileId: fileId }, handlertype)
         }
+      />
+      <ShareFileDialog
+        open={openShareFileDialog}
+        onClose={() => setOpenShareFileDialog(false)}
+        fileIds={fileIds}
+        filenames={filenames}
       />
     </>
   )

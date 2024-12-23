@@ -1,9 +1,9 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { changePaypalEmailAction } from '@/app/actions/admin/change-paypal-email'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -51,26 +51,23 @@ export default function ChangePaypalEmail() {
 
     try {
       setLoading(true)
-      const response = await axios.post(`/api/admin/change-paypal-email`, {
-        email: formData.transcriber_email,
-        newEmail: formData.paypal_email,
-      })
-      if (response.data.success) {
+      const result = await changePaypalEmailAction(
+        formData.transcriber_email.toLowerCase(),
+        formData.paypal_email
+      )
+
+      if (result.success) {
         toast.success('Successfully changed paypal email.')
       } else {
-        toast.error(response.data.s || 'Failed to change paypal email')
+        toast.error(result.s || 'Failed to change paypal email')
       }
-      setLoading(false)
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to change paypal email`)
-      }
+      toast.error('Failed to change paypal email')
+    } finally {
       setLoading(false)
     }
   }
+
   return (
     <>
       <Card>

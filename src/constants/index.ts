@@ -73,8 +73,8 @@ export const EMAIL_PLACEHOLDERS = emailPlaceholders
 export const EMAIL_TEMPLATES = emailTemplates
 
 // Upload
+export const MAX_FILE_SIZE = config.max_file_size
 export const ALLOWED_FILE_TYPES = config.allowed_file_types
-export const SINGLE_PART_UPLOAD_LIMIT = config.single_part_upload_limit
 export const MULTI_PART_UPLOAD_CHUNK_SIZE = config.multi_part_upload_chunk_size
 export const ORG_REMOTELEGAL = config.org_remotelegal
 export const ORG_REMOTELEGAL_FOLDER = config.org_remotelegal_folder
@@ -82,5 +82,6 @@ export const UPLOAD_MAX_RETRIES = config.upload_max_retries
 export const UPLOAD_RETRY_DELAY = config.upload_retry_delay
 export const SSE_MAX_RETRIES = config.sse_max_retries
 export const SSE_RETRY_DELAY = config.sse_retry_delay
-export const DURATION_DIFF = config.durationDifference;
-export const ERROR_CODES = config.errorCodes;
+export const DURATION_DIFF = config.durationDifference
+export const ERROR_CODES = config.errorCodes
+export const AFFILIATE_RATE = config.affiliate_rate

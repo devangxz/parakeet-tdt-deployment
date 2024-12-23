@@ -123,6 +123,10 @@ export interface ShortcutControls {
     decreasePlaybackSpeed: () => void;
     // focusOnPlaybackSpeedTextBox: () => void;
     playAudioFromTheStartOfCurrentParagraph: () => void;
+    playNextBlankInstance: () => void;
+    playPreviousBlankInstance: () => void;
+    playCurrentParagraphInstance: () => void;
+    adjustTimestampsInstance: () => void;
     // playFromStartOfNextParagraph: () => void;
     // playFromStartOfPreviousParagraph: () => void;
     // moveLeftByACharacter: () => void;

@@ -1,8 +1,10 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { deliverPreDeliveryOrder } from '@/app/actions/om/deliver-pre-delivery-order'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -37,31 +39,22 @@ const DeliveryPreDeliveryFile = ({
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      const response = await axios.post(`/api/om/deliver-pre-delivery-order`, {
-        orderId,
-        retainEarnings: retainEarnings === 'yes',
-        isReReview,
-      })
-      if (response.data.success) {
+      const result = await deliverPreDeliveryOrder(Number(orderId), isReReview)
+      if (result.success) {
         const successToastId = toast.success(`Successfully delivered the file`)
         toast.dismiss(successToastId)
-        setLoading(false)
         refetch()
         onClose()
       } else {
-        toast.error(response.data.message)
-        setLoading(false)
+        toast.error(result.message)
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Error delivering the file`)
-      }
+      toast.error(`Error delivering the file`)
+    } finally {
       setLoading(false)
     }
   }
+
   return (
     <AlertDialog open={open}>
       <AlertDialogContent>

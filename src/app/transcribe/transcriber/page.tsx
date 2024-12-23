@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
-import axios from 'axios'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 
+import { getHistoryTRFiles } from '@/app/actions/qc/history/tr'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -21,7 +21,7 @@ function HistoryFile({ history }: { history: any }) {
   const { pwer } = history.order
   const { duration, filename } = history.order.File
   const { timeString, dateString } = getFormattedTimeStrings(
-    history.order.orderTs
+    history.order.orderTs.toISOString()
   )
 
   const diff = pwer > HIGH_PWER ? 'HIGH' : pwer < LOW_PWER ? 'LOW' : 'MEDIUM'
@@ -73,8 +73,10 @@ export default function QCPage() {
   }
 
   const fetchHistoryFiles = async () => {
-    const response = await axios.get(`/api/qc/history/tr`)
-    setHistoryFiles(response.data)
+    const response: any = await getHistoryTRFiles()
+    if (response.success) {
+      setHistoryFiles(response.data)
+    }
   }
 
   useEffect(() => {

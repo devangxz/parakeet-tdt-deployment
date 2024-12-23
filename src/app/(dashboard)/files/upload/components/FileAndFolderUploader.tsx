@@ -1,331 +1,321 @@
-'use client';
+'use client'
 
-import { UploadIcon } from '@radix-ui/react-icons';
-import axios from 'axios';
-import { FileUp } from 'lucide-react';
-import { useSession } from 'next-auth/react';
-import React, { ChangeEvent, useEffect, useRef, useState } from 'react';
-import Dropzone from 'react-dropzone';
-import { toast } from 'sonner';
-import { v4 as uuidv4 } from 'uuid';
+import { UploadIcon } from '@radix-ui/react-icons'
+import axios from 'axios'
+import { FileUp } from 'lucide-react'
+import React, { ChangeEvent, useRef } from 'react'
+import Dropzone from 'react-dropzone'
+import { toast } from 'sonner'
 
-import { useUpload } from '@/app/context/UploadProvider';
-import { SINGLE_PART_UPLOAD_LIMIT, MULTI_PART_UPLOAD_CHUNK_SIZE, ORG_REMOTELEGAL, ORG_REMOTELEGAL_FOLDER, UPLOAD_MAX_RETRIES, UPLOAD_RETRY_DELAY } from '@/constants';
-import { cn } from '@/lib/utils';
-import sleep from '@/utils/sleep';
-import validateFileType, { getAllowedFileExtensions, getAllowedMimeTypes } from '@/utils/validateFileType';
+import { checkUploadSession } from '@/app/actions/s3-upload/check-session'
+import { completeMultipartUpload } from '@/app/actions/s3-upload/complete'
+import { createMultipartUpload } from '@/app/actions/s3-upload/create'
+import { getUploadPartSignedUrl } from '@/app/actions/s3-upload/part'
+import { useUpload } from '@/app/context/UploadProvider'
+import {
+  MAX_FILE_SIZE,
+  MULTI_PART_UPLOAD_CHUNK_SIZE,
+  ORG_REMOTELEGAL_FOLDER,
+  UPLOAD_MAX_RETRIES,
+} from '@/constants'
+import { cn } from '@/lib/utils'
+import {
+  BaseUploadState,
+  FileWithId,
+  CustomInputAttributes,
+  UploaderProps,
+} from '@/types/upload'
+import { generateUniqueId } from '@/utils/generateUniqueId'
+import { handleRetryableError } from '@/utils/uploadUtils'
+import validateFileType, {
+  getAllowedFileExtensions,
+} from '@/utils/validateFileType'
 
-interface UploadState {
-  uploadId: string | null;
-  key: string | null;
-  completedParts: { ETag?: string; PartNumber: number }[];
-  totalUploaded: number;
-  lastFailedPart: number | null;
-}
+const FileAndFolderUploader: React.FC<UploaderProps> = ({
+  onUploadSuccess,
+  isRemoteLegal,
+}) => {
+  const {
+    setUploadingFiles,
+    updateUploadStatus,
+    initializeSSEConnection,
+    isUploading,
+    setIsUploading,
+  } = useUpload()
 
-interface FileWithId {
-  name: string;
-  size: number;
-  type: string;
-  fileId: string;
-  file: File;
-  isRLDocx: boolean;
-}
-
-interface CustomInputAttributes extends React.InputHTMLAttributes<HTMLInputElement> {
-  directory?: string;
-  webkitdirectory?: string;
-}
-
-interface FileAndFolderUploaderProps {
-  onUploadSuccess: (success: boolean) => void;
-}
-
-const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadSuccess }) => {
-  const { data: session } = useSession();
-  const { uploadingFiles, setUploadingFiles, updateUploadStatus, initializeSSEConnection, isUploading, setIsUploading } = useUpload();
-  const [uploadStates, setUploadStates] = useState<{ [key: string]: UploadState }>({});
-
-  const initializeUploadState = (): UploadState => ({
+  const initializeUploadState = (): BaseUploadState => ({
     uploadId: null,
     key: null,
     completedParts: [],
     totalUploaded: 0,
-    lastFailedPart: null
-  });
-  const updateUploadState = (fileName: string, updates: Partial<UploadState>) => {
-    setUploadStates(prev => ({
-      ...prev,
-      [fileName]: {
-        ...prev[fileName] || initializeUploadState(),
-        ...updates
-      }
-    }));
-  };
+    lastFailedPart: null,
+  })
 
-  const abortControllersRef = useRef<{ [key: string]: AbortController }>({});
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const folderInputRef = useRef<HTMLInputElement>(null);
-
-  const isRemoteLegal = session?.user?.organizationName.toLocaleLowerCase() === ORG_REMOTELEGAL.toLocaleLowerCase();
-
-  const isRetryableError = (error: unknown): boolean => {
-    if (!axios.isAxiosError(error)) return false;
-
-    const retryableStatusCodes = [408, 429, 500, 502, 503, 504];
-    return !error.response?.status || retryableStatusCodes.includes(error.response.status);
-  };
-
-  const handleRetryableError = async (error: unknown, retryCount: number): Promise<void> => {
-    if (axios.isCancel(error)) {
-      throw new Error('Upload cancelled');
-    }
-
-    if (!isRetryableError(error)) {
-      throw error;
-    }
-
-    if (retryCount >= UPLOAD_MAX_RETRIES) {
-      throw new Error(`File upload failed after ${UPLOAD_MAX_RETRIES} attempts`);
-    }
-
-    const delay = UPLOAD_RETRY_DELAY * Math.pow(2, retryCount);
-    await sleep(delay);
-  };
-
-  const cleanupUpload = async (file: FileWithId, uploadState?: UploadState) => {
-    if (abortControllersRef.current[file.name]) {
-      delete abortControllersRef.current[file.name];
-    }
-
-    if (uploadState?.uploadId && uploadState?.key) {
-      try {
-        await axios.post('/api/s3-upload/multi-part/abort', {
-          uploadId: uploadState.uploadId,
-          key: uploadState.key
-        });
-      } catch (error) {
-        toast.error(`Failed to abort multipart upload for file ${file.name}`);
-      }
-    }
-
-    setUploadStates(prev => {
-      const newState = { ...prev };
-      delete newState[file.name];
-      return newState;
-    });
-  };
-
-  const singlePartUpload = async (file: FileWithId): Promise<void> => {
-    const formData = new FormData();
-    formData.append('file', file.file);
-    formData.append('fileId', file.fileId);
-
-    const abortController = new AbortController();
-    abortControllersRef.current[file.name] = abortController;
-
-    let retryCount = -1;
-
-    while (retryCount <= UPLOAD_MAX_RETRIES) {
-      try {
-        await axios.post('/api/s3-upload/single-part', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          signal: abortController.signal,
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
-              const progress = (progressEvent.loaded / progressEvent.total) * 100;
-              updateUploadStatus(file.name, {
-                progress: Math.min(progress, 99),
-                status: 'uploading'
-              });
-            }
-          },
-        });
-        return;
-      } catch (error) {
-        retryCount++;
-        await handleRetryableError(error, retryCount);
-      }
-    }
-  };
+  const abortControllersRef = useRef<{ [key: string]: AbortController }>({})
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const folderInputRef = useRef<HTMLInputElement>(null)
 
   const multiPartUpload = async (file: FileWithId): Promise<void> => {
-    let uploadState = uploadStates[file.name] || initializeUploadState();
+    let uploadState = initializeUploadState()
 
-    const abortController = new AbortController();
-    abortControllersRef.current[file.name] = abortController;
+    const abortController = new AbortController()
+    abortControllersRef.current[file.name] = abortController
 
     try {
-      let retryCount = -1;
-      while (retryCount <= UPLOAD_MAX_RETRIES && !uploadState.uploadId) {
-        try {
-          const createRes = await axios.post('/api/s3-upload/multi-part/create', {
-            fileInfo: { type: file.type, originalName: file.name, fileId: file.fileId }
-          });
-          uploadState = {
-            ...uploadState,
-            uploadId: createRes.data.uploadId,
-            key: createRes.data.key
-          };
-          updateUploadState(file.name, uploadState);
-        } catch (error) {
-          retryCount++;
-          await handleRetryableError(error, retryCount);
+      let retryCount = -1
+
+      const checkRes = await checkUploadSession(
+        file.name,
+        file.size,
+        'local',
+        null
+      )
+
+      if (
+        checkRes.exists &&
+        checkRes.uploadId &&
+        checkRes.key &&
+        checkRes.parts
+      ) {
+        const parts = checkRes.parts.map((part) => ({
+          ETag: part.ETag as string,
+          PartNumber: part.PartNumber as number,
+        }))
+
+        uploadState = {
+          uploadId: checkRes.uploadId,
+          key: checkRes.key,
+          completedParts: parts,
+          totalUploaded: 0,
+          lastFailedPart: null,
         }
-      }
 
-      const numChunks = Math.ceil(file.size / MULTI_PART_UPLOAD_CHUNK_SIZE);
-      const startPartNumber = uploadState.lastFailedPart || 1;
-
-      for (let i = startPartNumber - 1; i < numChunks; i++) {
-        const partNumber = i + 1;
-
-        if (uploadState.completedParts.some(p => p.PartNumber === partNumber)) {
-          continue;
-        }
-
-        retryCount = -1;
-
-        while (retryCount <= UPLOAD_MAX_RETRIES) {
+        const completedSize =
+          uploadState.completedParts.length * MULTI_PART_UPLOAD_CHUNK_SIZE
+        const totalProgress = (completedSize / file.size) * 100
+        updateUploadStatus(file.name, {
+          progress: Math.min(totalProgress, 99),
+          status: 'uploading',
+        })
+      } else {
+        while (retryCount <= UPLOAD_MAX_RETRIES && !uploadState.uploadId) {
           try {
-            const start = i * MULTI_PART_UPLOAD_CHUNK_SIZE;
-            const end = Math.min(start + MULTI_PART_UPLOAD_CHUNK_SIZE, file.size);
-            const chunk = file.file.slice(start, end);
+            const createRes = await createMultipartUpload(
+              file.type,
+              file.name,
+              file.fileId,
+              file.size,
+              'local',
+              null
+            )
+            if (!createRes.uploadId || !createRes.key) {
+              throw new Error('Missing uploadId or key in response')
+            }
 
-            const partRes = await axios.post('/api/s3-upload/multi-part/part', {
-              sendBackData: { key: uploadState.key, uploadId: uploadState.uploadId },
-              partNumber,
-              contentLength: chunk.size,
-            });
-
-            const uploadResult = await axios.put(partRes.data.url, chunk, {
-              headers: { 'Content-Type': file.type },
-              signal: abortController.signal,
-              onUploadProgress: (progressEvent) => {
-                if (!progressEvent.total) return;
-
-                const completedSize = uploadState.completedParts.length * MULTI_PART_UPLOAD_CHUNK_SIZE;
-                const currentProgress = (progressEvent.loaded / progressEvent.total) * MULTI_PART_UPLOAD_CHUNK_SIZE;
-                const totalProgress = ((completedSize + currentProgress) / file.size) * 100;
-
-                updateUploadStatus(file.name, {
-                  progress: Math.min(totalProgress, 99),
-                  status: 'uploading'
-                });
-              }
-            });
-
-            uploadState.completedParts.push({
-              ETag: uploadResult.headers['etag'],
-              PartNumber: partNumber
-            });
-            uploadState.totalUploaded = uploadState.completedParts.length * MULTI_PART_UPLOAD_CHUNK_SIZE;
-            updateUploadState(file.name, uploadState);
-            break;
-
+            uploadState = {
+              ...uploadState,
+              uploadId: createRes.uploadId,
+              key: createRes.key,
+            }
+            break
           } catch (error) {
-            retryCount++;
-            await handleRetryableError(error, retryCount);
+            retryCount++
+            await handleRetryableError(error, retryCount)
 
-            uploadState.lastFailedPart = partNumber;
-            continue;
+            continue
           }
         }
       }
 
-      retryCount = -1;
-      const sortedParts = uploadState.completedParts.sort((a, b) => a.PartNumber - b.PartNumber);
+      const numChunks = Math.ceil(file.size / MULTI_PART_UPLOAD_CHUNK_SIZE)
+      const completedPartNumbers = new Set(
+        uploadState.completedParts.map((p) => p.PartNumber)
+      )
 
-      while (retryCount <= UPLOAD_MAX_RETRIES) {
-        try {
-          await axios.post('/api/s3-upload/multi-part/complete', {
-            sendBackData: {
-              key: uploadState.key,
-              uploadId: uploadState.uploadId,
-              fileName: file.name
-            },
-            parts: sortedParts
-          });
-          break;
-        } catch (error) {
-          retryCount++;
-          await handleRetryableError(error, retryCount);
+      for (let partNumber = 1; partNumber <= numChunks; partNumber++) {
+        if (completedPartNumbers.has(partNumber)) {
+          continue
+        }
+
+        retryCount = -1
+        while (retryCount <= UPLOAD_MAX_RETRIES) {
+          try {
+            const start = (partNumber - 1) * MULTI_PART_UPLOAD_CHUNK_SIZE
+            const end = Math.min(
+              start + MULTI_PART_UPLOAD_CHUNK_SIZE,
+              file.size
+            )
+            const chunk = file.file.slice(start, end)
+
+            const partRes = await getUploadPartSignedUrl(
+              {
+                key: uploadState.key as string,
+                uploadId: uploadState.uploadId as string,
+              },
+              partNumber,
+              chunk.size
+            )
+
+            const uploadResult = await axios.put(partRes.url as string, chunk, {
+              headers: { 'Content-Type': file.type },
+              signal: abortController.signal,
+              onUploadProgress: (progressEvent) => {
+                if (!progressEvent.total) return
+
+                const completedSize =
+                  uploadState.completedParts.length *
+                  MULTI_PART_UPLOAD_CHUNK_SIZE
+                const currentProgress =
+                  (progressEvent.loaded / progressEvent.total) *
+                  MULTI_PART_UPLOAD_CHUNK_SIZE
+                const totalProgress =
+                  ((completedSize + currentProgress) / file.size) * 100
+
+                updateUploadStatus(file.name, {
+                  progress: Math.min(totalProgress, 99),
+                  status: 'uploading',
+                })
+              },
+            })
+
+            uploadState.completedParts.push({
+              ETag: uploadResult.headers['etag'],
+              PartNumber: partNumber,
+            })
+
+            uploadState.totalUploaded =
+              uploadState.completedParts.length * MULTI_PART_UPLOAD_CHUNK_SIZE
+            break
+          } catch (error) {
+            retryCount++
+            await handleRetryableError(error, retryCount)
+
+            uploadState.lastFailedPart = partNumber
+            continue
+          }
         }
       }
 
+      retryCount = -1
+      const sortedParts = uploadState.completedParts.sort(
+        (a, b) => a.PartNumber - b.PartNumber
+      )
+      while (retryCount <= UPLOAD_MAX_RETRIES) {
+        try {
+          await completeMultipartUpload(
+            {
+              key: uploadState.key as string,
+              uploadId: uploadState.uploadId as string,
+            },
+            sortedParts
+          )
+          break
+        } catch (error) {
+          retryCount++
+          await handleRetryableError(error, retryCount)
+
+          continue
+        }
+      }
     } catch (error) {
-      await cleanupUpload(file, uploadState);
-      throw error;
+      throw error
     }
-  };
+  }
 
   const uploadFile = async (file: FileWithId): Promise<void> => {
     try {
       updateUploadStatus(file.name, {
         progress: 0,
-        status: 'uploading'
-      });
+        status: 'uploading',
+      })
 
-      if (file.size <= SINGLE_PART_UPLOAD_LIMIT) {
-        await singlePartUpload(file);
-      } else {
-        await multiPartUpload(file);
-      }
+      await multiPartUpload(file)
 
       updateUploadStatus(file.name, {
         progress: 99,
-        status: 'processing'
-      });
-
-      await cleanupUpload(file, uploadStates[file.name]);
+        status: 'processing',
+      })
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Upload failed'
       updateUploadStatus(file.name, {
         progress: 0,
         status: 'failed',
-        error: errorMessage
-      });
-      toast.error(`Error uploading ${file.name}: ${errorMessage}`);
-      await cleanupUpload(file, uploadStates[file.name]);
+        error: errorMessage,
+      })
+      toast.error(
+        `Upload failed for ${file.name}. Please note that if you try uploading the same file again after a few minutes, it will automatically resume from where it stopped.`
+      )
     }
-  };
+  }
 
   const handleFileOrFolderUpload = async (files: File[]) => {
     if (isUploading) {
-      toast.error("Please wait for current uploads to complete before starting new uploads");
-      return;
+      toast.error(
+        'Please wait for current uploads to complete before starting new uploads'
+      )
+      return
     }
 
-    let filesToUpload: FileWithId[] = [];
+    const filesUnderSizeLimit = files.filter((file) => {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(
+          `File "${file.name}" was rejected due to exceeding 10GB size limit.`
+        )
+        return false
+      }
+      return true
+    })
+    if (filesUnderSizeLimit.length === 0) {
+      if (files.length > 1) {
+        toast.error(
+          'No valid files selected. Please select supported audio or video files under 10GB in size'
+        )
+      }
+      return
+    }
 
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    if (folderInputRef.current) folderInputRef.current.value = '';
+    let filesToUpload: FileWithId[] = []
 
-    setUploadStates({});
-    setUploadingFiles([]);
-    setIsUploading(true);
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    if (folderInputRef.current) folderInputRef.current.value = ''
+
+    setUploadingFiles([])
+    setIsUploading(true)
 
     try {
       if (isRemoteLegal) {
-        const remoteLegalFiles = files.filter(file => {
-          const pathSegments = file.webkitRelativePath.split('/');
-          return pathSegments.length > 1 && pathSegments[1].toLowerCase() === ORG_REMOTELEGAL_FOLDER.toLowerCase();
-        });
+        const remoteLegalFiles = filesUnderSizeLimit.filter((file) => {
+          const pathSegments = file.webkitRelativePath.split('/')
+          return (
+            pathSegments.length > 1 &&
+            pathSegments[1].toLowerCase() ===
+              ORG_REMOTELEGAL_FOLDER.toLowerCase()
+          )
+        })
 
         if (remoteLegalFiles.length === 0) {
-          toast.error("No 'Scribie' folder found or the folder is empty.");
-          return;
+          setIsUploading(false)
+          toast.error("No 'Scribie' folder found or the folder is empty.")
+          return
         }
 
-        const mp3File = remoteLegalFiles.find(file => file.name.toLowerCase().endsWith('.mp3'));
-        const docxFile = remoteLegalFiles.find(file => file.name.toLowerCase().endsWith('.docx'));
+        const mp3File = remoteLegalFiles.find((file) =>
+          file.name.toLowerCase().endsWith('.mp3')
+        )
+        const docxFile = remoteLegalFiles.find((file) =>
+          file.name.toLowerCase().endsWith('.docx')
+        )
 
         if (!mp3File || !docxFile) {
-          toast.error("Both MP3 and DOCX files are required in the 'Scribie' folder.");
-          return;
+          setIsUploading(false)
+          toast.error(
+            "Both MP3 and DOCX files are required in the 'Scribie' folder."
+          )
+          return
         }
 
-        const commonFileId = uuidv4();
+        const commonFileId = generateUniqueId()
         filesToUpload = [
           {
             name: mp3File.name,
@@ -333,7 +323,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
             type: mp3File.type,
             fileId: commonFileId,
             file: mp3File,
-            isRLDocx: false
+            isRLDocx: false,
           },
           {
             name: docxFile.name,
@@ -341,94 +331,81 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
             type: docxFile.type,
             fileId: `${commonFileId}_ris`,
             file: docxFile,
-            isRLDocx: true
-          }
-        ];
-
+            isRLDocx: true,
+          },
+        ]
       } else {
-        const allowedFiles = files.filter(validateFileType);
-        const rejectedFiles = files.filter(file => !validateFileType(file));
+        const allowedFiles = filesUnderSizeLimit.filter(validateFileType)
+        const rejectedFiles = filesUnderSizeLimit.filter(
+          (file) => !validateFileType(file)
+        )
 
         if (rejectedFiles.length > 0) {
-          toast.error(`${rejectedFiles.length} ${rejectedFiles.length === 1 ? 'file was' : 'files were'} rejected due to unsupported file type.`);
+          rejectedFiles.forEach((file) => {
+            toast.error(
+              `File "${file.name}" was rejected due to unsupported file type.`
+            )
+          })
         }
-
         if (allowedFiles.length === 0) {
-          setIsUploading(false);
-          return;
+          setIsUploading(false)
+          return
         }
 
-        filesToUpload = allowedFiles.map(file => ({
+        filesToUpload = allowedFiles.map((file) => ({
           name: file.name,
           size: file.size,
           type: file.type,
-          fileId: uuidv4(),
+          fileId: generateUniqueId(),
           file: file,
-          isRLDocx: false
-        }));
+          isRLDocx: false,
+        }))
       }
 
-      setUploadingFiles(filesToUpload.map(file => ({ name: file.name, size: file.size, fileId: file.fileId })));
+      setUploadingFiles(
+        filesToUpload.map((file) => ({
+          name: file.name,
+          size: file.size,
+          fileId: file.fileId,
+        }))
+      )
 
       initializeSSEConnection(
         () => onUploadSuccess(true),
         () => setIsUploading(false)
-      );
+      )
 
       for (const file of filesToUpload) {
-        await uploadFile(file);
+        await uploadFile(file)
 
         if (file.isRLDocx) {
           updateUploadStatus(file.name, {
             progress: 100,
-            status: 'completed'
-          });
-
-          onUploadSuccess(true);
+            status: 'completed',
+          })
         }
       }
     } catch (error) {
-      toast.error('Upload failed');
-      setIsUploading(false);
+      toast.error('Upload failed')
+      setIsUploading(false)
+    } finally {
+      setIsUploading(false)
     }
-  };
+  }
 
   const onDrop = (acceptedFiles: File[]) => {
     if (isUploading) {
-      toast.error("Please wait for current uploads to complete before starting new uploads");
-      return;
+      toast.error(
+        'Please wait for current uploads to complete before starting new uploads'
+      )
+      return
     }
-    handleFileOrFolderUpload(acceptedFiles);
-  };
-
-  useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (uploadingFiles.length > 0) {
-        event.preventDefault()
-        event.returnValue = ''
-      }
-    }
-
-    window.addEventListener('beforeunload', handleBeforeUnload)
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-    }
-  }, [uploadingFiles]);
+    handleFileOrFolderUpload(acceptedFiles)
+  }
 
   return (
     <div className='bg-primary flex flex-col p-[12px] items-center justify-center rounded-[12px] border shadow-sm text-white'>
-      <Dropzone
-        onDrop={onDrop}
-        multiple
-        disabled={isUploading}
-        accept={Object.fromEntries(
-          getAllowedMimeTypes().map(type => [
-            type,
-            getAllowedFileExtensions()
-          ])
-        )}
-      >
+      <Dropzone onDrop={onDrop} multiple>
         {({ getRootProps, getInputProps, isDragActive }) => (
           <div
             {...getRootProps({
@@ -437,13 +414,12 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
             className={cn(
               'group relative grid h-52 w-full place-items-center rounded-lg border-2 border-dashed border-white px-5 py-2.5 text-center transition',
               'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-              isDragActive && 'border-white/50',
-              isUploading && 'opacity-50 cursor-not-allowed'
+              isDragActive && 'border-white/50'
             )}
           >
-            <input {...getInputProps()} disabled={isUploading} />
+            <input {...getInputProps()} />
             {isDragActive ? (
-              <div className='flex flex-col items-center justify-center gap-4 sm:px-5'>
+              <div className='self-center flex flex-col items-center justify-center gap-4 sm:px-5'>
                 <div className='rounded-full border border-dashed border-white p-3'>
                   <UploadIcon
                     className='size-7 text-white'
@@ -451,20 +427,19 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
                   />
                 </div>
                 <p className='font-medium text-white'>
-                  {isUploading ? 'Please wait for current uploads to complete' : 'Drop files or folders here'}
+                  Drop files or folders here
                 </p>
               </div>
             ) : (
-              <div className='flex flex-col items-center justify-center gap-4 sm:px-5'>
+              <div className='self-center flex flex-col items-center justify-center gap-4 sm:px-5'>
                 <div className='flex gap-3 text-base font-medium leading-6'>
                   <FileUp />
-                  <div>Upload {!isRemoteLegal && 'files or'} folders</div>
+                  <h4>Upload {!isRemoteLegal && 'Files or'} Folders</h4>
                 </div>
                 <div className='text-xs self-stretch mt-4 leading-5 text-center max-md:mr-1 max-md:max-w-full'>
-                  {isUploading ?
-                    'Please wait for current uploads to complete' :
-                    `Drag & drop ${!isRemoteLegal ? 'files or' : ''} folders here or use the options below.`
-                  }
+                  {`Drag & drop ${
+                    !isRemoteLegal ? 'files or' : ''
+                  } folders here or use the options below.`}
                 </div>
                 <div className='flex gap-4 mt-4 font-semibold text-indigo-600'>
                   {!isRemoteLegal && (
@@ -475,20 +450,18 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
                         type='file'
                         multiple
                         hidden
-                        disabled={isUploading}
                         onChange={(event: ChangeEvent<HTMLInputElement>) =>
                           event.target.files &&
-                          handleFileOrFolderUpload(Array.from(event.target.files))
+                          handleFileOrFolderUpload(
+                            Array.from(event.target.files)
+                          )
                         }
                         accept={getAllowedFileExtensions().join(',')}
                       />
                       <label
                         data-testid='file-uploader'
                         htmlFor='fileInput'
-                        className={cn(
-                          'justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200',
-                          isUploading && 'opacity-50 cursor-not-allowed hover:bg-white'
-                        )}
+                        className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
                       >
                         Choose Files
                       </label>
@@ -500,7 +473,6 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
                     type='file'
                     multiple
                     hidden
-                    disabled={isUploading}
                     onChange={(event: ChangeEvent<HTMLInputElement>) =>
                       event.target.files &&
                       handleFileOrFolderUpload(Array.from(event.target.files))
@@ -513,10 +485,7 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
                   <label
                     data-testid='folder-uploader'
                     htmlFor='folderInput'
-                    className={cn(
-                      'justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200',
-                      isUploading && 'opacity-50 cursor-not-allowed hover:bg-white'
-                    )}
+                    className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
                   >
                     Choose Folder
                   </label>
@@ -530,4 +499,4 @@ const FileAndFolderUploader: React.FC<FileAndFolderUploaderProps> = ({ onUploadS
   )
 }
 
-export default FileAndFolderUploader;
+export default FileAndFolderUploader

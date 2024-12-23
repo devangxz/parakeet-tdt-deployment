@@ -1,16 +1,18 @@
 import { FileStatus } from '@prisma/client';
 
+import logger from '@/lib/logger';
 import prisma from '@/lib/prisma';
 
 interface Metadata {
     duration: number;
-    bitRate?: string;
+    bitRate?: number;
     sampleRate?: number;
-    codecName: string;
+    codecName?: string;
     fileSize?: number;
     converted?: boolean;
     fileName?: string;
     fileId?: string;
+    fileKey?: string;
     parentId?: string;
     fullPath?: string;
     risData?: string;
@@ -37,7 +39,7 @@ const saveFileMetadata = async (metadata: Metadata): Promise<void> => {
         });
         isDuplicate = existingFile !== null;
     } catch (err) {
-        console.error('Error checking for duplicate file:', (err as Error).message);
+        logger.error(`Error checking for duplicate file: ${(err as Error).message}`);
         throw new Error('Error checking for duplicate file');
     }
 
@@ -45,32 +47,19 @@ const saveFileMetadata = async (metadata: Metadata): Promise<void> => {
         userId: teamUserId,
         filename: metadata?.fileName ?? '',
         fileId: metadata?.fileId ?? '',
+        fileKey: metadata?.fileKey,
         duration: duration,
         bitRate: metadata?.bitRate ? Number(metadata.bitRate) : null,
         sampleRate: metadata?.sampleRate ? Number(metadata.sampleRate) : null,
         filesize: fileSize,
         uploadedBy: userId,
         fileStatus: isDuplicate ? FileStatus.DUPLICATE : FileStatus.NONE,
+        converted: null,
     };
 
     await prisma.file.create({
         data: fileData,
     });
-
-    if (isDuplicate) {
-        await prisma.file.findMany({
-            where: {
-                filename: metadata?.fileName,
-                userId: teamUserId,
-                NOT: {
-                    fileId: metadata?.fileId,
-                },
-            },
-            select: {
-                fileId: true,
-            },
-        });
-    }
 };
 
 export default saveFileMetadata;

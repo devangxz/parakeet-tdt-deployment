@@ -9,12 +9,7 @@ export async function middleware(req: NextRequest) {
   const requestedUrl = req.nextUrl.pathname
 
   // Skip middleware for /api/auth* and /api/webhook*
-  if (
-    requestedUrl.startsWith('/api/auth') ||
-    requestedUrl.startsWith('/api/webhook') ||
-    requestedUrl.startsWith('/api/static-mails') ||
-    requestedUrl.startsWith('/api/public')
-  ) {
+  if (requestedUrl.startsWith('/api/auth')) {
     return NextResponse.next()
   }
 
@@ -98,5 +93,6 @@ export const config = {
     '/dev/:path*',
     '/transcribe/:path*',
     '/api/:path*',
+    '/editor/:path*',
   ],
 }

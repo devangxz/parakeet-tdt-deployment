@@ -100,7 +100,7 @@ export const getTeamSuperAdminUserId = async (
   userId: number
 ) => {
   const teamAdminDetails = internalTeamUserId
-    ? await getTeamAdminUserDetails(userId)
+    ? await getTeamAdminUserDetails(internalTeamUserId)
     : null
   if (teamAdminDetails) {
     return teamAdminDetails.userId

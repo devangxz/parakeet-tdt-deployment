@@ -1,12 +1,24 @@
-import axios from 'axios';
-import { Session } from "next-auth";
-import Quill from 'quill';
-import { toast } from "sonner"
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import axios from 'axios'
+import { Session } from 'next-auth'
+import Quill from 'quill'
+import { toast } from 'sonner'
 
-import axiosInstance from "./axios"
-import { OrderDetails, UploadFilesType } from "@/app/editor/[fileId]/page"
-import { CTMSWord } from "@/components/editor/transcriptUtils";
-import { ALLOWED_META, BACKEND_URL, FILE_CACHE_URL, MINIMUM_AUDIO_PLAYBACK_PERCENTAGE } from "@/constants"
+import axiosInstance from './axios'
+import { getFrequentTermsAction } from '@/app/actions/editor/frequent-terms'
+import { getOrderDetailsAction } from '@/app/actions/editor/order-details'
+import { reportFileAction } from '@/app/actions/editor/report-file'
+import { submitQCAction } from '@/app/actions/editor/submit-qc'
+import { submitReviewAction } from '@/app/actions/editor/submit-review'
+import { OrderDetails, UploadFilesType } from '@/app/editor/[fileId]/page'
+import { LineData, updateContent } from '@/components/editor/transcriptUtils'
+import {
+    ALLOWED_META,
+    BACKEND_URL,
+    FILE_CACHE_URL,
+    MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
+} from '@/constants'
+
 export type ButtonLoading = {
     upload: boolean
     submit: boolean
@@ -19,27 +31,27 @@ export type ButtonLoading = {
 }
 
 const usableColors = [
-    "#FF4136", // Red
-    "#2ECC40", // Green
-    "#0074D9", // Blue
-    "#FFDC00", // Yellow
-    "#B10DC9", // Magenta
-    "#39CCCC", // Cyan
-    "#FF851B", // Orange
-    "#F012BE", // Purple
-    "#3D9970", // Teal
-    "#FF69B4", // Pink
-    "#01FF70", // Lime Green
-    "#85144b", // Dark Red
-    "#3F729B", // Dark Blue
-    "#FFD700", // Gold
-    "#9400D3", // Dark Violet
-    "#3CB371", // Medium Sea Green
-    "#FF1493", // Deep Pink
-    "#FF6347", // Tomato
-    "#20B2AA", // Light Sea Green
-    "#7B68EE", // Medium Slate Blue
-];
+    '#FF4136', // Red
+    '#2ECC40', // Green
+    '#0074D9', // Blue
+    '#FFDC00', // Yellow
+    '#B10DC9', // Magenta
+    '#39CCCC', // Cyan
+    '#FF851B', // Orange
+    '#F012BE', // Purple
+    '#3D9970', // Teal
+    '#FF69B4', // Pink
+    '#01FF70', // Lime Green
+    '#85144b', // Dark Red
+    '#3F729B', // Dark Blue
+    '#FFD700', // Gold
+    '#9400D3', // Dark Violet
+    '#3CB371', // Medium Sea Green
+    '#FF1493', // Deep Pink
+    '#FF6347', // Tomato
+    '#20B2AA', // Light Sea Green
+    '#7B68EE', // Medium Slate Blue
+]
 
 function generateRandomColor() {
     const color = usableColors[0]
@@ -48,66 +60,75 @@ function generateRandomColor() {
 }
 
 function convertBlankToSeconds(timeString: string) {
-    const pattern = /\[(\d{1,2}):(\d{2}):(\d{2})\.(\d)\]/;
-    const matches = timeString.match(pattern);
+    const pattern = /\[(\d{1,2}):(\d{2}):(\d{2})\.(\d)\]/
+    const matches = timeString.match(pattern)
 
     if (!matches) {
-        return null; // Invalid time format
+        return null // Invalid time format
     }
 
-    const hours = parseInt(matches[1]);
-    const minutes = parseInt(matches[2]);
-    const seconds = parseInt(matches[3]);
-    const tenths = parseInt(matches[4]);
+    const hours = parseInt(matches[1])
+    const minutes = parseInt(matches[2])
+    const seconds = parseInt(matches[3])
+    const tenths = parseInt(matches[4])
 
-    const totalSeconds = hours * 3600 + minutes * 60 + seconds + tenths * 0.1;
-    return totalSeconds;
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds + tenths * 0.1
+    return totalSeconds
 }
 
 function convertTimestampToSeconds(timestamp: string) {
-    const [hours, minutes, seconds] = timestamp.split(':').map(parseFloat);
-    const totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
-    return totalSeconds;
+    const [hours, minutes, seconds] = timestamp.split(':').map(parseFloat)
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds
+    return totalSeconds
 }
 
 type ConvertedASROutput = {
-    start: number;
-    duration: number;
-    end: number;
-    word: string;
-    conf: number;
-    chars: string;
-    punct: string;
-    source: string;
-    turn_prob: number;
-    index: number;
-    speaker: string;
-    turn?: number;
-};
+    start: number
+    duration: number
+    end: number
+    word: string
+    conf: number
+    chars: string
+    punct: string
+    source: string
+    turn_prob: number
+    index: number
+    speaker: string
+    turn?: number
+}
 
-const updatePlayedPercentage = (audioPlayer: HTMLAudioElement | null, audioPlayed: Set<number>, setPlayedPercentage: React.Dispatch<React.SetStateAction<number>>) => {
+const updatePlayedPercentage = (
+    audioPlayer: HTMLAudioElement | null,
+    audioPlayed: Set<number>,
+    setPlayedPercentage: React.Dispatch<React.SetStateAction<number>>
+) => {
     if (!audioPlayer) return
     const duration = audioPlayer.duration
     const playedArray = Array.from(audioPlayed).sort((a, b) => a - b)
     let uniquePlayedSeconds = 0
     if (playedArray.length > 0) {
-        uniquePlayedSeconds = playedArray.reduce(
-            (acc, cur, index, srcArray) => {
-                if (index === 0) {
-                    return 1 // Count the first second as played
-                } else {
-                    // Only count as unique if it's not the same as the previous second
-                    return cur !== srcArray[index - 1] ? acc + 1 : acc
-                }
-            },
-            0
-        )
+        uniquePlayedSeconds = playedArray.reduce((acc, cur, index, srcArray) => {
+            if (index === 0) {
+                return 1 // Count the first second as played
+            } else {
+                // Only count as unique if it's not the same as the previous second
+                return cur !== srcArray[index - 1] ? acc + 1 : acc
+            }
+        }, 0)
     }
     const percentagePlayed = (uniquePlayedSeconds / duration) * 100
     setPlayedPercentage(Math.min(100, percentagePlayed)) // Ensure percentage does not exceed 100
 }
 
-const downloadBlankDocx = async ({ orderDetails, downloadableType, setButtonLoading }: { orderDetails: OrderDetails, downloadableType: string, setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>> }) => {
+const downloadBlankDocx = async ({
+    orderDetails,
+    downloadableType,
+    setButtonLoading,
+}: {
+    orderDetails: OrderDetails
+    downloadableType: string
+    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
+}) => {
     const toastId = toast.loading('Downloading file...')
     setButtonLoading((prevButtonLoading) => ({
         ...prevButtonLoading,
@@ -121,7 +142,7 @@ const downloadBlankDocx = async ({ orderDetails, downloadableType, setButtonLoad
         const url = window.URL.createObjectURL(new Blob([response.data]))
         const a = document.createElement('a')
         a.href = url
-        a.download = `${orderDetails.fileId}.docx`
+        a.download = `${orderDetails.fileId}${downloadableType === 'marking' || orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === 'PRE_DELIVERED' ? '.docx' : '.txt'}`
         document.body.appendChild(a)
         a.click()
         a.remove()
@@ -149,7 +170,10 @@ const convertSecondsToTimestamp = (seconds: number) => {
         .padStart(4, '0')}`
 }
 
-const downloadEditorDocxFile = async (orderDetails: OrderDetails, setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>) => {
+const downloadEditorDocxFile = async (
+    orderDetails: OrderDetails,
+    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
+) => {
     const toastId = toast.loading('Downloading file...')
     setButtonLoading((prevButtonLoading) => ({
         ...prevButtonLoading,
@@ -180,7 +204,10 @@ const downloadEditorDocxFile = async (orderDetails: OrderDetails, setButtonLoadi
     }
 }
 
-const downloadEditorTextFile = async (orderDetails: OrderDetails, setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>) => {
+const downloadEditorTextFile = async (
+    orderDetails: OrderDetails,
+    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
+) => {
     const toastId = toast.loading('Downloading file...')
     setButtonLoading((prevButtonLoading) => ({
         ...prevButtonLoading,
@@ -221,15 +248,15 @@ const downloadMP3 = async (orderDetails: OrderDetails) => {
             { responseType: 'blob' }
         )
         if (response.status === 200) {
-            const blob = new Blob([response.data], { type: 'audio/mpeg' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${orderDetails.fileId}.mp3`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
+            const blob = new Blob([response.data], { type: 'audio/mpeg' })
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `${orderDetails.fileId}.mp3`
+            document.body.appendChild(a)
+            a.click()
+            a.remove()
+            window.URL.revokeObjectURL(url)
         }
 
         toast.dismiss(toastId)
@@ -240,7 +267,17 @@ const downloadMP3 = async (orderDetails: OrderDetails) => {
     }
 }
 
-const handleTextFilesUpload = async (payload: UploadFilesType, orderDetails: OrderDetails, setFileToUpload: React.Dispatch<React.SetStateAction<{ renamedFile: File | null, originalFile: File | null, isUploaded?: boolean }>>) => {
+const handleTextFilesUpload = async (
+    payload: UploadFilesType,
+    orderDetails: OrderDetails,
+    setFileToUpload: React.Dispatch<
+        React.SetStateAction<{
+            renamedFile: File | null
+            originalFile: File | null
+            isUploaded?: boolean
+        }>
+    >
+) => {
     try {
         if (payload.files.length > 1) {
             toast.error('Only one file can be uploaded at a time.')
@@ -261,7 +298,19 @@ const handleTextFilesUpload = async (payload: UploadFilesType, orderDetails: Ord
     }
 }
 
-const uploadTextFile = async (fileToUpload: { renamedFile: File | null }, orderDetails: OrderDetails, setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>, session: Session | null, setFileToUpload: React.Dispatch<React.SetStateAction<{ renamedFile: File | null, originalFile: File | null, isUploaded?: boolean }>>) => {
+const uploadTextFile = async (
+    fileToUpload: { renamedFile: File | null },
+    orderDetails: OrderDetails,
+    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
+    session: Session | null,
+    setFileToUpload: React.Dispatch<
+        React.SetStateAction<{
+            renamedFile: File | null
+            originalFile: File | null
+            isUploaded?: boolean
+        }>
+    >
+) => {
     const file = fileToUpload.renamedFile
 
     if (!file) return toast.error('Please select a file to upload.')
@@ -297,7 +346,19 @@ const uploadTextFile = async (fileToUpload: { renamedFile: File | null }, orderD
     }
 }
 
-const uploadFile = async (fileToUpload: { renamedFile: File | null }, setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>, session: Session | null, setFileToUpload: React.Dispatch<React.SetStateAction<{ renamedFile: File | null, originalFile: File | null, isUploaded?: boolean }>>, fileId: string) => {
+const uploadFile = async (
+    fileToUpload: { renamedFile: File | null },
+    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
+    session: Session | null,
+    setFileToUpload: React.Dispatch<
+        React.SetStateAction<{
+            renamedFile: File | null
+            originalFile: File | null
+            isUploaded?: boolean
+        }>
+    >,
+    fileId: string
+) => {
     const file = fileToUpload.renamedFile
     if (!file) return toast.error('Please select a file to upload.')
 
@@ -315,7 +376,7 @@ const uploadFile = async (fileToUpload: { renamedFile: File | null }, setButtonL
     try {
         await axios.post(`/api/editor/upload-docx?fileId=${fileId}`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        })
 
         toast.dismiss(toastId)
         toast.success('File uploaded successfully')
@@ -323,7 +384,11 @@ const uploadFile = async (fileToUpload: { renamedFile: File | null }, setButtonL
     } catch (uploadError) {
         toast.dismiss(toastId)
         toast.error('Failed to upload file')
-        setFileToUpload({ renamedFile: null, originalFile: null, isUploaded: false })
+        setFileToUpload({
+            renamedFile: null,
+            originalFile: null,
+            isUploaded: false,
+        })
     } finally {
         setButtonLoading((prevButtonLoading) => ({
             ...prevButtonLoading,
@@ -332,7 +397,17 @@ const uploadFile = async (fileToUpload: { renamedFile: File | null }, setButtonL
     }
 }
 
-const handleFilesUpload = async (payload: UploadFilesType, orderDetailsId: string, setFileToUpload: React.Dispatch<React.SetStateAction<{ renamedFile: File | null, originalFile: File | null, isUploaded?: boolean }>>) => {
+const handleFilesUpload = async (
+    payload: UploadFilesType,
+    orderDetailsId: string,
+    setFileToUpload: React.Dispatch<
+        React.SetStateAction<{
+            renamedFile: File | null
+            originalFile: File | null
+            isUploaded?: boolean
+        }>
+    >
+) => {
     try {
         if (payload.files.length > 1) {
             toast.error('Only one file can be uploaded at a time.')
@@ -356,7 +431,15 @@ const handleFilesUpload = async (payload: UploadFilesType, orderDetailsId: strin
     }
 }
 
-const reportHandler = async (reportDetails: { reportComment: string; reportOption: string }, orderId: string, setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>, setReportModalOpen: React.Dispatch<React.SetStateAction<boolean>>, setReportDetails: React.Dispatch<React.SetStateAction<{ reportComment: string; reportOption: string }>>) => {
+const reportHandler = async (
+    reportDetails: { reportComment: string; reportOption: string },
+    orderId: string,
+    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
+    setReportModalOpen: React.Dispatch<React.SetStateAction<boolean>>,
+    setReportDetails: React.Dispatch<
+        React.SetStateAction<{ reportComment: string; reportOption: string }>
+    >
+) => {
     const { reportComment, reportOption } = reportDetails
     if (!reportComment || !reportOption)
         return toast.error('Please enter a valid comment and report option.')
@@ -365,10 +448,11 @@ const reportHandler = async (reportDetails: { reportComment: string; reportOptio
         report: true,
     }))
     try {
-        await axios.post(`/api/editor/report-file`, {
-            ...reportDetails,
-            orderId: orderId,
-        })
+        await reportFileAction(
+            Number(orderId),
+            reportDetails.reportOption,
+            reportDetails.reportComment
+        )
         setReportModalOpen(false)
         setReportDetails({ reportComment: '', reportOption: '' })
     } catch (error) {
@@ -381,11 +465,12 @@ const reportHandler = async (reportDetails: { reportComment: string; reportOptio
     }
 }
 
-const fetchPdfFile = async (fileId: string, setPdfUrl: React.Dispatch<React.SetStateAction<string>>) => {
+const fetchPdfFile = async (
+    fileId: string,
+    setPdfUrl: React.Dispatch<React.SetStateAction<string>>
+) => {
     try {
-        const response = await fetch(
-            `${BACKEND_URL}/get-pdf-document/${fileId}`
-        )
+        const response = await fetch(`${BACKEND_URL}/get-pdf-document/${fileId}`)
         if (response.ok) {
             const blob = await response.blob()
             const url = URL.createObjectURL(blob)
@@ -398,7 +483,13 @@ const fetchPdfFile = async (fileId: string, setPdfUrl: React.Dispatch<React.SetS
     }
 }
 
-const regenDocx = async (fileId: string, orderId: string, setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>, setRegenCount: React.Dispatch<React.SetStateAction<number>>, setPdfUrl: React.Dispatch<React.SetStateAction<string>>) => {
+const regenDocx = async (
+    fileId: string,
+    orderId: string,
+    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
+    setRegenCount: React.Dispatch<React.SetStateAction<number>>,
+    setPdfUrl: React.Dispatch<React.SetStateAction<string>>
+) => {
     setButtonLoading((prevButtonLoading) => ({
         ...prevButtonLoading,
         regenDocx: true,
@@ -427,160 +518,236 @@ const regenDocx = async (fileId: string, orderId: string, setButtonLoading: Reac
 }
 
 type FetchFileDetailsParams = {
-    params: Record<string, string | string[]> | null;
-    setOrderDetails: React.Dispatch<React.SetStateAction<OrderDetails>>;
-    setCfd: React.Dispatch<React.SetStateAction<string>>;
-    setStep: React.Dispatch<React.SetStateAction<string>>;
-    setDownloadableType: React.Dispatch<React.SetStateAction<string>>;
-    setTranscript: React.Dispatch<React.SetStateAction<string>>;
-    setCtms: React.Dispatch<React.SetStateAction<ConvertedASROutput[]>>;
-};
+    params: Record<string, string | string[]> | null
+    setOrderDetails: React.Dispatch<React.SetStateAction<OrderDetails>>
+    setCfd: React.Dispatch<React.SetStateAction<string>>
+    setStep: React.Dispatch<React.SetStateAction<string>>
+    setTranscript: React.Dispatch<React.SetStateAction<string>>
+    setCtms: React.Dispatch<React.SetStateAction<ConvertedASROutput[]>>
+    setPlayerEvents: React.Dispatch<React.SetStateAction<PlayerEvent[]>>
+}
 
 const fetchFileDetails = async ({
     params,
     setOrderDetails,
     setCfd,
     setStep,
-    setDownloadableType,
     setTranscript,
     setCtms,
+    setPlayerEvents,
 }: FetchFileDetailsParams) => {
     try {
-        const orderRes = await axios.get(`/api/editor/order-details?fileId=${params?.fileId}`)
-        setOrderDetails(orderRes.data)
-        setCfd(orderRes.data.cfd)
-        const cfStatus = ['FORMATTED', 'REVIEWER_ASSIGNED', 'REVIEW_COMPLETED', 'FINALIZER_ASSIGNED', 'FINALIZER_COMPLETED']
+        const orderRes = await getOrderDetailsAction(params?.fileId as string)
+        if (!orderRes?.orderDetails) {
+            throw new Error('Order details not found')
+        }
+
+        const orderDetailsFormatted = {
+            ...orderRes.orderDetails,
+            orderId: orderRes.orderDetails.orderId.toString(),
+            userId: orderRes.orderDetails.userId.toString(),
+            duration: orderRes.orderDetails.duration || '',
+        }
+        setOrderDetails(orderDetailsFormatted)
+        setCfd(orderRes.orderDetails.cfd)
+        const cfStatus = [
+            'FORMATTED',
+            'REVIEWER_ASSIGNED',
+            'REVIEW_COMPLETED',
+            'FINALIZER_ASSIGNED',
+            'FINALIZER_COMPLETED',
+        ]
         let step = 'QC'
-        if (cfStatus.includes(orderRes.data.status)) {
+        if (cfStatus.includes(orderRes.orderDetails.status)) {
             step = 'CF'
         }
 
-        if (orderRes.data.status === 'PRE_DELIVERED') {
-            if (orderRes.data.orderType === 'TRANSCRIPTION_FORMATTING') {
+        if (orderRes.orderDetails.status === 'PRE_DELIVERED') {
+            if (orderRes.orderDetails.orderType === 'TRANSCRIPTION_FORMATTING') {
                 step = 'CF'
             } else {
                 step = 'QC'
             }
         }
         setStep(step)
-        setDownloadableType(step === 'QC' ? 'text' : 'marking')
         const transcriptRes = await axiosInstance.get(
-            `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.data.fileId}&step=${step}&orderId=${orderRes.data.orderId}` //step will be used later when cf editor is implemented
+            `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.orderDetails.fileId}&step=${step}&orderId=${orderRes.orderDetails.orderId}` //step will be used later when cf editor is implemented
         )
 
-        const transcript = JSON.parse(localStorage.getItem('transcript') || '{}')[orderRes.data.fileId]
+        const transcript = JSON.parse(localStorage.getItem('transcript') || '{}')[
+            orderRes.orderDetails.fileId
+        ]
         if (transcript) {
             setTranscript(transcript)
         } else {
             setTranscript(transcriptRes.data.result.transcript)
         }
         setCtms(transcriptRes.data.result.ctms)
-        return orderRes.data
+
+        // const playerEventRes = await axios.get(`/api/editor/player-events?orderId=${orderRes.data.orderId}`);
+
+        setPlayerEvents([]) // TODO: Implement player events
+        return orderRes.orderDetails
     } catch (error) {
-        console.log(error)
+        if (
+            error instanceof Error &&
+            'response' in error &&
+            typeof error.response === 'object' &&
+            error.response &&
+            'data' in error.response &&
+            error.response.data === 'Unauthorized'
+        ) {
+            toast.error('You are not authorized to access this file')
+            window.location.href = '/'
+            return
+        }
         toast.error('Failed to fetch file details')
     }
 }
 
-type HandleSaveParams = {
-    getEditorText: () => string;
-    orderDetails: OrderDetails;
-    notes: string;
-    cfd: string;
-    updatedCtms: CTMSWord[];
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>;
-};
+interface PlayerEvent {
+    t: number
+    s: number
+}
 
-const handleSave = async ({
-    getEditorText,
-    orderDetails,
-    notes,
-    cfd,
-    updatedCtms,
-    setButtonLoading,
-}: HandleSaveParams) => {
+type HandleSaveParams = {
+    getEditorText: () => string
+    orderDetails: OrderDetails
+    notes: string
+    cfd: string
+    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
+    lines: LineData[]
+    playerEvents: PlayerEvent[]
+}
+
+const handleSave = async (
+    {
+        getEditorText,
+        orderDetails,
+        notes,
+        cfd,
+        setButtonLoading,
+        lines,
+        playerEvents,
+    }: HandleSaveParams,
+    showToast = true
+) => {
     setButtonLoading((prevButtonLoading) => ({
         ...prevButtonLoading,
         save: true,
-    }));
-    const transcript = getEditorText();
-    const paragraphs = transcript.split('\n').filter(paragraph => paragraph.trim() !== '');
-    const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/;
-    for (const paragraph of paragraphs) {
-        if (!paragraphRegex.test(paragraph)) {
-            return toast.error('Invalid paragraph format detected. Each paragraph must start with a timestamp and speaker identification.');
-        }
-    }
-    localStorage.setItem(orderDetails.fileId, JSON.stringify({ notes: notes }));
-    const toastId = toast.loading(`Saving Transcription...`);
+    }))
+
+    const toastId = showToast ? toast.loading(`Saving Transcription...`) : null
+
     try {
+        const transcript = getEditorText()
+        if (!transcript) return toast.error('Transcript is empty')
+        const paragraphs = transcript
+            .split('\n')
+            .filter((paragraph) => paragraph.trim() !== '')
+        const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/
+        const updatedCtms = updateContent(transcript, lines)
+        for (const paragraph of paragraphs) {
+            if (
+                !paragraphRegex.test(paragraph) &&
+                orderDetails.orderType !== 'TRANSCRIPTION_FORMATTING'
+            ) {
+                if (showToast) {
+                    if (toastId) toast.dismiss(toastId)
+                    toast.error(
+                        'Invalid paragraph format detected. Each paragraph must start with a timestamp and speaker identification.'
+                    )
+                }
+                return
+            }
+        }
+
+        //TODO: Implement this
+        console.log(playerEvents)
+        // Get last saved index from localStorage
+        // const lastSavedIndex = parseInt(localStorage.getItem(`${orderDetails.fileId}_lastEventIndex`) || '-1');
+
+        // Get only new events since last save
+        // const newEvents = playerEvents.slice(lastSavedIndex + 1);
+
+        // Save current last index
+        // localStorage.setItem(`${orderDetails.fileId}_lastEventIndex`, (playerEvents.length - 1).toString());
+
+        // Save notes and other data
+        localStorage.setItem(orderDetails.fileId, JSON.stringify({ notes: notes }))
+
         await axiosInstance.post(`${FILE_CACHE_URL}/save-transcript`, {
             fileId: orderDetails.fileId,
             transcript,
             cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
             ctms: updatedCtms,
             orderId: orderDetails.orderId,
-        });
-        toast.dismiss(toastId);
-        const successToastId = toast.success(`Transcription saved successfully`);
-        toast.dismiss(successToastId);
+            // playerEvents: newEvents // Send only new events
+        })
+
+        if (showToast) {
+            if (toastId) toast.dismiss(toastId)
+            const successToastId = toast.success(`Transcription saved successfully`)
+            toast.dismiss(successToastId)
+        }
     } catch (error) {
-        toast.dismiss(toastId);
-        const errorToastId = toast.error(`Error while saving transcript`);
-        toast.dismiss(errorToastId);
+        if (showToast) {
+            if (toastId) toast.dismiss(toastId)
+            const errorToastId = toast.error(`Error while saving transcript`)
+            toast.dismiss(errorToastId)
+        }
     } finally {
         setButtonLoading((prevButtonLoading) => ({
             ...prevButtonLoading,
             save: false,
-        }));
+        }))
     }
-};
+}
 
 type HandleSubmitParams = {
-    orderDetails: OrderDetails;
-    step: string;
-    editorMode: string;
+    orderDetails: OrderDetails
+    step: string
+    editorMode: string
     fileToUpload: {
-        renamedFile: File | null;
-        originalFile: File | null;
-        isUploaded?: boolean;
-    };
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>;
-    getPlayedPercentage: () => number;
+        renamedFile: File | null
+        originalFile: File | null
+        isUploaded?: boolean
+    }
+    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
+    getPlayedPercentage: () => number
     router: {
-        push: (path: string) => void;
-    };
-    quill: Quill;
-};
+        push: (path: string) => void
+    }
+    quill: Quill
+}
 
 const checkTranscriptForAllowedMeta = (quill: Quill) => {
-    if (!quill) return null;
+    if (!quill) return null
 
-    const text = quill.getText();
-    const regex = /\[([^\]]+)\](?!\s+____)/g;
-    let match;
-    let error = null;
+    const text = quill.getText()
+    const regex = /\[([^\]]+)\](?!\s+____)/g
+    let match
+    let error = null
 
     while ((match = regex.exec(text)) !== null) {
-        const content = match[1];
+        const content = match[1]
         if (!ALLOWED_META.includes(content.toLowerCase())) {
-            const index = match.index;
-            const length = match[0].length;
+            const index = match.index
+            const length = match[0].length
 
-            quill.setSelection(index, length);
-            quill.scrollIntoView();
+            quill.setSelection(index, length)
+            quill.scrollIntoView()
 
-            error = { message: 'IMT' };
+            error = { message: 'IMT' }
 
-            break;
+            break
         }
     }
 
     if (error?.message) {
-        throw new Error(error.message);
+        throw new Error(error.message)
     }
-
-};
+}
 
 const handleSubmit = async ({
     orderDetails,
@@ -592,327 +759,380 @@ const handleSubmit = async ({
     router,
     quill,
 }: HandleSubmitParams) => {
-    if (!orderDetails || !orderDetails.orderId || !step) return;
-    const toastId = toast.loading(`Submitting Transcription...`);
-    const transcript = quill.getText() || '';
+    if (!orderDetails || !orderDetails.orderId || !step) return
+    const toastId = toast.loading(`Submitting Transcription...`)
+    const transcript = quill.getText() || ''
 
     try {
         if (orderDetails.status === 'QC_ASSIGNED') {
-            checkTranscriptForAllowedMeta(quill);
+            checkTranscriptForAllowedMeta(quill)
         }
         setButtonLoading((prevButtonLoading) => ({
             ...prevButtonLoading,
             submit: true,
-        }));
-        const playedPercentage = getPlayedPercentage();
+        }))
+        const playedPercentage = getPlayedPercentage()
         if (playedPercentage < MINIMUM_AUDIO_PLAYBACK_PERCENTAGE) {
-            throw new Error(`MAPPNM`); //Stands for "Minimum Audio Playback Percentage Not Met"
+            throw new Error(`MAPPNM`) //Stands for "Minimum Audio Playback Percentage Not Met"
         }
 
         if (step === 'CF') {
-
-            if (!fileToUpload.isUploaded)
-                throw new Error('UF');
-
-            await axios.post(`/api/editor/submit-review`, {
-                fileId: orderDetails.fileId,
-                orderId: orderDetails.orderId,
-                mode: editorMode.toLowerCase(),
-            });
+            if (!fileToUpload.isUploaded) throw new Error('UF')
+            await submitReviewAction(
+                Number(orderDetails.orderId),
+                orderDetails.fileId
+            )
         } else {
-            await axios.post(`/api/editor/submit-qc`, {
+            await submitQCAction({
                 fileId: orderDetails.fileId,
-                orderId: orderDetails.orderId,
-                mode: editorMode.toLowerCase(),
+                orderId: Number(orderDetails.orderId),
                 transcript,
-            });
+            })
         }
 
         localStorage.removeItem('transcript')
-        toast.dismiss(toastId);
-        const successToastId = toast.success(
-            `Transcription submitted successfully`
-        );
-        toast.dismiss(successToastId);
-        router.push(`/transcribe/${step === 'QC' ? 'qc' : 'legal-cf-reviewer'}`);
+        toast.dismiss(toastId)
+        const successToastId = toast.success(`Transcription submitted successfully`)
+        toast.dismiss(successToastId)
+        router.push(`/transcribe/${step === 'QC' ? 'qc' : 'legal-cf-reviewer'}`)
     } catch (error) {
         setTimeout(() => {
-            toast.dismiss(toastId);
-        }, 100); //Had to use this setTimeout because the minimum percentage check gives an error Immediately
+            toast.dismiss(toastId)
+        }, 100) //Had to use this setTimeout because the minimum percentage check gives an error Immediately
 
-        let errorText = 'Error while submitting transcript'; // Default error message
+        let errorText = 'Error while submitting transcript' // Default error message
         switch ((error as Error).message) {
             case 'MAPPNM':
-                errorText = `Please make sure you have at least ${MINIMUM_AUDIO_PLAYBACK_PERCENTAGE}% of the audio played.`;
-                break;
+                errorText = `Please make sure you have at least ${MINIMUM_AUDIO_PLAYBACK_PERCENTAGE}% of the audio played.`
+                break
             case 'UF':
-                errorText = `Please upload a file before submitting`;
-                break;
+                errorText = `Please upload a file before submitting`
+                break
             case 'IMT':
-                errorText = `Invalid meta found in transcript. Please remove the meta from the transcript.`;
+                errorText = `Invalid meta found in transcript. Please remove the meta from the transcript.`
             // Add more cases as needed
         }
-        const errorToastId = toast.error(errorText);
-        toast.dismiss(errorToastId);
+        const errorToastId = toast.error(errorText)
+        toast.dismiss(errorToastId)
     } finally {
         setButtonLoading((prevButtonLoading) => ({
             ...prevButtonLoading,
             submit: false,
-        }));
+        }))
     }
-};
+}
 
 const getFrequentTermsHandler = async (
     userId: string,
     setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
-    setFrequentTermsData: React.Dispatch<React.SetStateAction<{ autoGenerated: string; edited: string }>>,
+    setFrequentTermsData: React.Dispatch<
+        React.SetStateAction<{ autoGenerated: string; edited: string }>
+    >,
     setFrequentTermsModalOpen: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
-    setButtonLoading(prev => ({ ...prev, frequentTerms: true }));
+    setButtonLoading((prev) => ({ ...prev, frequentTerms: true }))
 
     try {
-        const { data } = await axios.get(`/api/editor/frequent-terms`);
-        if (data) {
-            setFrequentTermsData(data);
-            setFrequentTermsModalOpen(true);
+        const response = await getFrequentTermsAction()
+        if (response.success) {
+            const data = {
+                edited: response.edited ?? '',
+                autoGenerated: response.autoGenerated ?? '',
+            }
+            setFrequentTermsData(data)
+            setFrequentTermsModalOpen(true)
         } else {
-            throw new Error('No frequent terms data found');
+            throw new Error('No frequent terms data found')
         }
     } catch (error) {
         const errorMessage = axios.isAxiosError(error)
             ? error.response?.data.error
                 ? error.response.data.error
                 : 'Failed to get frequent terms'
-            : 'An unexpected error occurred';
+            : 'An unexpected error occurred'
 
-        toast.error(errorMessage);
+        toast.error(errorMessage)
     } finally {
-        setButtonLoading(prev => ({ ...prev, frequentTerms: false }));
+        setButtonLoading((prev) => ({ ...prev, frequentTerms: false }))
     }
-};
+}
 
 const extractTimestamp = (text: string): number | null => {
-    const match = text.match(/(\d{1,2}):(\d{2}):(\d{2}\.\d)/);
+    const match = text.match(/(\d{1,2}):(\d{2}):(\d{2}\.\d)/)
     if (match) {
-        const [, hours, minutes, seconds] = match;
-        return parseInt(hours) * 3600 + parseInt(minutes) * 60 + parseFloat(seconds);
+        const [, hours, minutes, seconds] = match
+        return parseInt(hours) * 3600 + parseInt(minutes) * 60 + parseFloat(seconds)
     }
-    return null;
-};
+    return null
+}
 
-const playAudioAtTimestamp = (audioPlayer: HTMLAudioElement, timestamp: number) => {
-    audioPlayer.currentTime = timestamp;
-    audioPlayer.play();
-};
+const playAudioAtTimestamp = (
+    audioPlayer: HTMLAudioElement,
+    timestamp: number
+) => {
+    audioPlayer.currentTime = timestamp
+    audioPlayer.play()
+}
 
 const findParagraphStart = (quill: Quill, index: number): number => {
-    let start = index;
+    let start = index
     while (start > 0 && quill.getText(start - 1, 1) !== '\n') {
-        start--;
+        start--
     }
-    return start;
-};
+    return start
+}
 
 const navigateAndPlayBlanks = (
     quill: Quill,
     audioPlayer: HTMLAudioElement | null,
-    setDisableGoToWord: (disable: boolean) => void,
     goToPrevious = false
 ) => {
-    setDisableGoToWord(true);
-    if (!quill || !audioPlayer) return;
+    if (!quill || !audioPlayer) return
 
-    const text: string = quill.getText();
-    const regex = /\[\d{1,2}:\d{2}:\d{2}\.\d\] ____/g;
-    const matches = Array.from(text.matchAll(regex));
+    const text: string = quill.getText()
+    const regex = /\[\d{1,2}:\d{2}:\d{2}\.\d\] ____/g
+    const matches = Array.from(text.matchAll(regex))
 
-    if (matches.length === 0) return;
+    if (matches.length === 0) return
 
-    let currentIndex = 0;
-    const selection = quill.getSelection();
+    let currentIndex = 0
+    const selection = quill.getSelection()
     if (selection) {
         currentIndex = matches.findIndex((match, index) => {
-            const nextMatch = matches[index + 1] || null;
-            return nextMatch ? selection.index >= match.index && selection.index < nextMatch.index : selection.index >= match.index;
-        });
+            const nextMatch = matches[index + 1] || null
+            return nextMatch
+                ? selection.index >= match.index && selection.index < nextMatch.index
+                : selection.index >= match.index
+        })
     }
 
     currentIndex = goToPrevious
-        ? (currentIndex > 0 ? currentIndex - 1 : matches.length - 1)
-        : (currentIndex >= 0 && currentIndex < matches.length - 1 ? currentIndex + 1 : 0);
+        ? currentIndex > 0
+            ? currentIndex - 1
+            : matches.length - 1
+        : currentIndex >= 0 && currentIndex < matches.length - 1
+            ? currentIndex + 1
+            : 0
 
-    const match = matches[currentIndex];
-    if (!match) return;
+    const match = matches[currentIndex]
+    if (!match) return
 
-    quill.setSelection(match.index, match[0].length, 'silent');
-    quill.scrollIntoView();
+    quill.setSelection(match.index, match[0].length, 'silent')
+    quill.scrollIntoView()
 
-    const timestamp = extractTimestamp(match[0]);
+    const timestamp = extractTimestamp(match[0])
     if (timestamp !== null) {
-        playAudioAtTimestamp(audioPlayer, timestamp);
+        playAudioAtTimestamp(audioPlayer, timestamp)
     }
 
-    setTimeout(() => setDisableGoToWord(false), 100);
-};
+}
 
 const adjustTimestamps = (
     quill: Quill,
-    newCtms: CTMSWord[],
-    setNewCtms: (ctms: CTMSWord[]) => void,
     adjustment: number,
     selection: { index: number; length: number } | null
 ) => {
-    if (!quill) return;
+    if (!quill) return
 
     if (!selection) {
-        toast.error("Please select text to adjust timestamps.");
-        return;
+        toast.error('Please select text to adjust timestamps.')
+        return
     }
 
-    const selectedText = quill.getText(selection.index, selection.length);
+    const selectedText = quill.getText(selection.index, selection.length)
     if (!selectedText.trim()) {
-        toast.error("Please select text to adjust timestamps.");
-        return;
+        toast.error('Please select text to adjust timestamps.')
+        return
     }
 
-    const paragraphs = selectedText.split('\n\n');
+    const paragraphs = selectedText.split('\n\n')
 
-    const adjustedText = paragraphs.map(paragraph => {
-        const timestamp = extractTimestamp(paragraph);
-        if (timestamp !== null) {
-            const adjustedTimestamp = timestamp + adjustment;
-            const newHours = Math.floor(adjustedTimestamp / 3600);
-            const newMinutes = Math.floor((adjustedTimestamp % 3600) / 60);
-            const newSeconds = (adjustedTimestamp % 60).toFixed(1);
-            const newTimestamp = `${newHours}:${newMinutes.toString().padStart(2, '0')}:${newSeconds.padStart(4, '0')}`;
-            return paragraph.replace(/^\d{1,2}:\d{2}:\d{2}\.\d/, newTimestamp);
-        }
-        return paragraph;
-    }).join('\n\n');
+    const adjustedText = paragraphs
+        .map((paragraph) => {
+            const timestamp = extractTimestamp(paragraph)
+            if (timestamp !== null) {
+                const adjustedTimestamp = timestamp + adjustment
+                const newHours = Math.floor(adjustedTimestamp / 3600)
+                const newMinutes = Math.floor((adjustedTimestamp % 3600) / 60)
+                const newSeconds = (adjustedTimestamp % 60).toFixed(1)
+                const newTimestamp = `${newHours}:${newMinutes
+                    .toString()
+                    .padStart(2, '0')}:${newSeconds.padStart(4, '0')}`
+                return paragraph.replace(/^\d{1,2}:\d{2}:\d{2}\.\d/, newTimestamp)
+            }
+            return paragraph
+        })
+        .join('\n\n')
 
-    quill.deleteText(selection.index, selection.length);
-    quill.insertText(selection.index, adjustedText);
+    quill.deleteText(selection.index, selection.length)
+    quill.insertText(selection.index, adjustedText)
 
-    const updatedCtms = newCtms.map(ctm => {
-        if (ctm.start >= selection.index && ctm.start < selection.index + selection.length) {
-            return { ...ctm, start: ctm.start + adjustment, end: ctm.end + adjustment };
-        }
-        return ctm;
-    });
-    setNewCtms(updatedCtms);
-
-    toast.success("Timestamps adjusted successfully.");
-};
+    toast.success('Timestamps adjusted successfully.')
+}
 
 const playCurrentParagraphTimestamp = (
     quill: Quill,
     audioPlayer: HTMLAudioElement | null,
-    setDisableGoToWord: (disable: boolean) => void
 ) => {
-    setDisableGoToWord(true);
-    if (!quill || !audioPlayer) return;
+    if (!quill || !audioPlayer) return
 
-    const selection = quill.getSelection();
+    const selection = quill.getSelection()
     if (!selection) {
-        toast.error("Please place the cursor in a paragraph.");
-        return;
+        toast.error('Please place the cursor in a paragraph.')
+        return
     }
 
-    const paragraphStart = findParagraphStart(quill, selection.index);
-    const paragraphText = quill.getText(paragraphStart, 50);
-    const timestamp = extractTimestamp(paragraphText);
+    const paragraphStart = findParagraphStart(quill, selection.index)
+    const paragraphText = quill.getText(paragraphStart, 50)
+    const timestamp = extractTimestamp(paragraphText)
 
     if (timestamp !== null) {
-        playAudioAtTimestamp(audioPlayer, timestamp);
+        playAudioAtTimestamp(audioPlayer, timestamp)
     } else {
-        toast.error("No timestamp found at the start of this paragraph.");
+        toast.error('No timestamp found at the start of this paragraph.')
     }
+}
 
-    setTimeout(() => setDisableGoToWord(false), 100);
-};
+const searchAndSelect = (
+    quill: Quill,
+    searchText: string,
+    matchCase: boolean,
+    lastSearchIndex: number,
+    setLastSearchIndex: (index: number) => void,
+    toastInstance: { error: (msg: string) => void }
+) => {
+    if (!quill) return
 
-const searchAndSelect = (quill: Quill, searchText: string, matchCase: boolean, lastSearchIndex: number, setLastSearchIndex: (index: number) => void, toastInstance: { error: (msg: string) => void }) => {
-    if (!quill) return;
+    const text = quill.getText()
+    const currentSelection = quill.getSelection()
+    let startIndex = 0
 
-    const text = quill.getText();
-    const currentSelection = quill.getSelection();
-    let startIndex = 0;
-
-    const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase();
+    const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase()
 
     // Check if the current selection matches the search text and adjust the start index accordingly
     if (currentSelection) {
-        const selectionText = text.substr(currentSelection.index, currentSelection.length);
-        if ((matchCase && selectionText === searchText) || (!matchCase && selectionText.toLowerCase() === effectiveSearchText)) {
-            startIndex = currentSelection.index + searchText.length;
+        const selectionText = text.substr(
+            currentSelection.index,
+            currentSelection.length
+        )
+        if (
+            (matchCase && selectionText === searchText) ||
+            (!matchCase && selectionText.toLowerCase() === effectiveSearchText)
+        ) {
+            startIndex = currentSelection.index + searchText.length
         } else {
-            startIndex = lastSearchIndex + 1;
+            startIndex = lastSearchIndex + 1
         }
     }
 
-    let index = matchCase ? text.indexOf(searchText, startIndex) : text.toLowerCase().indexOf(effectiveSearchText, startIndex);
+    let index = matchCase
+        ? text.indexOf(searchText, startIndex)
+        : text.toLowerCase().indexOf(effectiveSearchText, startIndex)
 
     // If not found from the current position, start from the beginning
     if (index === -1 && startIndex !== 0) {
-        startIndex = 0;
-        index = matchCase ? text.indexOf(searchText, startIndex) : text.toLowerCase().indexOf(effectiveSearchText, startIndex);
+        startIndex = 0
+        index = matchCase
+            ? text.indexOf(searchText, startIndex)
+            : text.toLowerCase().indexOf(effectiveSearchText, startIndex)
     }
 
     if (index !== -1) {
         // Select the found text
-        quill.setSelection(index, searchText.length);
-        setLastSearchIndex(index);
+        quill.setSelection(index, searchText.length)
+        setLastSearchIndex(index)
     } else {
         // If text is not found, reset the search
-        setLastSearchIndex(-1);
-        toastInstance.error('Text not found');
+        setLastSearchIndex(-1)
+        toastInstance.error('Text not found')
     }
-};
+}
 
-const replaceTextHandler = (quill: Quill, searchText: string, replaceWith: string, replaceAll: boolean, matchCase: boolean, toastInstance: { error: (msg: string) => void }) => {
-    if (!quill) return;
+const replaceTextHandler = (
+    quill: Quill,
+    searchText: string,
+    replaceWith: string,
+    replaceAll: boolean,
+    matchCase: boolean,
+    toastInstance: { error: (msg: string) => void }
+) => {
+    if (!quill) return
 
-    let replaced = false;
-    const text = quill.getText();
-    const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase();
-    const textToSearch = matchCase ? text : text.toLowerCase();
+    let replaced = false
+    const text = quill.getText()
+    const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase()
+    const textToSearch = matchCase ? text : text.toLowerCase()
 
     const replace = (index: number) => {
-        quill.deleteText(index, searchText.length);
-        quill.insertText(index, replaceWith);
-        replaced = true;
-    };
+        quill.deleteText(index, searchText.length)
+        quill.insertText(index, replaceWith)
+        replaced = true
+    }
 
     if (replaceAll) {
-        let startIndex = 0;
-        let index = textToSearch.indexOf(effectiveSearchText, startIndex);
+        let startIndex = 0
+        let index = textToSearch.indexOf(effectiveSearchText, startIndex)
         while (index !== -1) {
-            replace(index);
-            startIndex = index + replaceWith.length;
+            replace(index)
+            startIndex = index + replaceWith.length
             // Update textToSearch to reflect changes made by replacement
-            const updatedText = quill.getText();
-            const updatedTextToSearch = matchCase ? updatedText : updatedText.toLowerCase();
-            index = updatedTextToSearch.indexOf(effectiveSearchText, startIndex);
+            const updatedText = quill.getText()
+            const updatedTextToSearch = matchCase
+                ? updatedText
+                : updatedText.toLowerCase()
+            index = updatedTextToSearch.indexOf(effectiveSearchText, startIndex)
         }
     } else {
-        const currentSelection = quill.getSelection();
+        const currentSelection = quill.getSelection()
         if (currentSelection && currentSelection.length > 0) {
-            const selectedText = quill.getText(currentSelection.index, currentSelection.length);
-            if ((matchCase && selectedText === searchText) || (!matchCase && selectedText.toLowerCase() === effectiveSearchText)) {
-                replace(currentSelection.index);
+            const selectedText = quill.getText(
+                currentSelection.index,
+                currentSelection.length
+            )
+            if (
+                (matchCase && selectedText === searchText) ||
+                (!matchCase && selectedText.toLowerCase() === effectiveSearchText)
+            ) {
+                replace(currentSelection.index)
             }
         } else {
-            const index = textToSearch.indexOf(effectiveSearchText);
+            const index = textToSearch.indexOf(effectiveSearchText)
             if (index !== -1) {
-                replace(index);
+                replace(index)
             }
         }
     }
 
     if (!replaced) {
-        toastInstance.error('Text not found');
+        toastInstance.error('Text not found')
     }
-};
+}
+
+const insertTimestampBlankAtCursorPosition = (
+    audioPlayer: HTMLAudioElement | null,
+    quill: Quill | undefined
+) => {
+    if (!audioPlayer || !quill) return
+
+    const currentTime = audioPlayer.currentTime
+
+    const hours = Math.floor(currentTime / 3600)
+    const minutes = Math.floor((currentTime % 3600) / 60)
+    const seconds = Math.floor(currentTime % 60)
+    const milliseconds = Math.floor((currentTime % 1) * 10)
+
+    const formattedTime = ` [${hours}:${minutes
+        .toString()
+        .padStart(2, '0')}:${seconds
+            .toString()
+            .padStart(2, '0')}.${milliseconds}] ____`
+
+    const cursorPosition = quill.getSelection()?.index || 0
+    quill.insertText(cursorPosition, formattedTime)
+    // quill.formatText(cursorPosition, formattedTime.length, { color: 'red' });
+
+    quill.setSelection(cursorPosition + formattedTime.length, 0)
+}
 
 export {
     generateRandomColor,
@@ -938,6 +1158,7 @@ export {
     playCurrentParagraphTimestamp,
     navigateAndPlayBlanks,
     searchAndSelect,
-    replaceTextHandler
-};
-export type { ConvertedASROutput };
+    replaceTextHandler,
+    insertTimestampBlankAtCursorPosition,
+}
+export type { ConvertedASROutput }

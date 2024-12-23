@@ -1,17 +1,19 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
+import { completeWithdrawalAction } from '@/app/actions/admin/complete-withdrawal'
+import { getInitiatedWithdrawalsAction } from '@/app/actions/admin/get-initiated-withdrawals'
+import { getPendingWithdrawalsAction } from '@/app/actions/admin/get-pending-withdrawals'
+import { initiateWithdrawalAction } from '@/app/actions/admin/initiate-withdrawal'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
 import { ADMIN_EMAILS } from '@/constants'
-import formatDateTime from '@/utils/formatDateTime'
 
 interface Withdrawal {
   id: number
@@ -22,6 +24,26 @@ interface Withdrawal {
   toPaypalId: string
   status: string
   requestedAt: string
+}
+
+const formatDateTimePST = (dateString: string) => {
+  const date = new Date(dateString)
+
+  const time = new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'America/Los_Angeles', // PST timezone
+  }).format(date)
+
+  const formattedDate = new Intl.DateTimeFormat('en-US', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'America/Los_Angeles', // PST timezone
+  }).format(date)
+
+  return `${time}, ${formattedDate}`
 }
 
 export default function WithdrawalPage() {
@@ -49,36 +71,23 @@ export default function WithdrawalPage() {
     }
 
     try {
-      const response = await axios.get(`/api/admin/get-pending-withdrawals`)
+      const response = await getPendingWithdrawalsAction()
 
-      if (response.data.success) {
-        const withdrawals = response.data.withdrawals.map(
-          (withdrawal: {
-            id: number
-            userId: number
-            amount: number
-            fee: number
-            invoiceId: string
-            toPaypalId: string
-            status: string
-            requestedAt: string
-          }) => ({
-            id: withdrawal.id,
-            userId: withdrawal.userId,
-            amount: Number(
-              withdrawal.amount ? withdrawal.amount.toFixed(2) : 0
-            ),
-            fee: Number(withdrawal.fee ? withdrawal.fee.toFixed(2) : 0),
-            invoiceId: withdrawal.invoiceId,
-            toPaypalId: withdrawal.toPaypalId,
-            status: withdrawal.status,
-            requestedAt: withdrawal.requestedAt,
-          })
-        )
+      if (response.success && response.withdrawals) {
+        const withdrawals = response.withdrawals.map((withdrawal) => ({
+          id: withdrawal.id,
+          userId: withdrawal.userId,
+          amount: Number(withdrawal.amount ? withdrawal.amount.toFixed(2) : 0),
+          fee: Number(withdrawal.fee ? withdrawal.fee.toFixed(2) : 0),
+          invoiceId: withdrawal.invoiceId ?? '',
+          toPaypalId: withdrawal.toPaypalId ?? '',
+          status: withdrawal.status,
+          requestedAt: withdrawal.requestedAt.toISOString(),
+        }))
         setPendingWithdrawals(withdrawals ?? [])
         setError(null)
       } else {
-        toast.error(response.data.s)
+        toast.error(response.s)
         setError('an error occurred')
       }
     } catch (err) {
@@ -96,36 +105,23 @@ export default function WithdrawalPage() {
     }
 
     try {
-      const response = await axios.get(`/api/admin/get-initiated-withdrawals`)
+      const response = await getInitiatedWithdrawalsAction()
 
-      if (response.data.success) {
-        const withdrawals = response.data.withdrawals.map(
-          (withdrawal: {
-            id: number
-            userId: number
-            amount: number
-            fee: number
-            invoiceId: string
-            toPaypalId: string
-            status: string
-            requestedAt: string
-          }) => ({
-            id: withdrawal.id,
-            userId: withdrawal.userId,
-            amount: Number(
-              withdrawal.amount ? withdrawal.amount.toFixed(2) : 0
-            ),
-            fee: Number(withdrawal.fee ? withdrawal.fee.toFixed(2) : 0),
-            invoiceId: withdrawal.invoiceId,
-            toPaypalId: withdrawal.toPaypalId,
-            status: withdrawal.status,
-            requestedAt: withdrawal.requestedAt,
-          })
-        )
+      if (response.success && response.withdrawals) {
+        const withdrawals = response.withdrawals.map((withdrawal) => ({
+          id: withdrawal.id,
+          userId: withdrawal.userId,
+          amount: Number(withdrawal.amount ? withdrawal.amount.toFixed(2) : 0),
+          fee: Number(withdrawal.fee ? withdrawal.fee.toFixed(2) : 0),
+          invoiceId: withdrawal.invoiceId ?? '',
+          toPaypalId: withdrawal.toPaypalId ?? '',
+          status: withdrawal.status,
+          requestedAt: withdrawal.requestedAt.toISOString(),
+        }))
         setInitiatedWithdrawals(withdrawals ?? [])
         setError(null)
       } else {
-        toast.error(response.data.s)
+        toast.error(response.s)
         setError('an error occurred')
       }
     } catch (err) {
@@ -237,7 +233,7 @@ export default function WithdrawalPage() {
       header: 'Date',
       cell: ({ row }) => (
         <div className='font-medium'>
-          {formatDateTime(row.getValue('requestedAt'))}
+          {formatDateTimePST(row.getValue('requestedAt'))}
         </div>
       ),
     },
@@ -299,7 +295,7 @@ export default function WithdrawalPage() {
       header: 'Date',
       cell: ({ row }) => (
         <div className='font-medium'>
-          {formatDateTime(row.getValue('requestedAt'))}
+          {formatDateTimePST(row.getValue('requestedAt'))}
         </div>
       ),
     },
@@ -319,17 +315,17 @@ export default function WithdrawalPage() {
     }
     try {
       setLoadingInitiateWithdrawal(true)
-      const response = await axios.post(`/api/admin/initiate-withdrawal`, {
-        invoiceIds: selectedPendingWithdrawals.map((w) => w.invoiceId),
-      })
-      if (response.data.success) {
+      const response = await initiateWithdrawalAction(
+        selectedPendingWithdrawals.map((w) => w.invoiceId)
+      )
+      if (response.success) {
         toast.success('Successfully initiated withdrawal.')
         setLoadingInitiateWithdrawal(false)
         fetchPendingWithdrawals()
         fetchInitiatedWithdrawals()
         setSelectedPendingWithdrawals([])
       } else {
-        toast.error(response.data.message || 'Failed to initiate withdrawal.')
+        toast.error(response.s || 'Failed to initiate withdrawal.')
         setLoadingInitiateWithdrawal(false)
       }
     } catch (error) {
@@ -345,16 +341,16 @@ export default function WithdrawalPage() {
     }
     try {
       setLoadingCompleteWithdrawal(true)
-      const response = await axios.post(`/api/admin/complete-withdrawal`, {
-        invoiceIds: selectedInitiatedWithdrawals.map((w) => w.invoiceId),
-      })
-      if (response.data.success) {
+      const response = await completeWithdrawalAction(
+        selectedInitiatedWithdrawals.map((w) => w.invoiceId)
+      )
+      if (response.success) {
         toast.success('Successfully completed withdrawal.')
         setLoadingCompleteWithdrawal(false)
         fetchInitiatedWithdrawals()
         setSelectedInitiatedWithdrawals([])
       } else {
-        toast.error(response.data.message || 'Failed to complete withdrawal.')
+        toast.error(response.s || 'Failed to complete withdrawal.')
         setLoadingCompleteWithdrawal(false)
       }
     } catch (error) {

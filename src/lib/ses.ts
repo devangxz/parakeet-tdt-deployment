@@ -16,6 +16,7 @@ import { getEmailDetails } from '../utils/backend-helper'
 
 interface EmailDataInterface {
   userEmailId: string
+  subject?: string
 }
 
 type ConfigEmailsType = {
@@ -27,6 +28,8 @@ type ConfigEmailsType = {
   HTML: string
   TEXT: string
 }
+
+const dynamicSubjectTemplates = ['UNASSIGN_FILE', 'TRANSCRIBER_SUBMIT']
 
 // Create SES client
 const createSESClient = () =>
@@ -42,7 +45,7 @@ const createSESClient = () =>
 export async function sendMail(
   ses: SESClient,
   templateId: string,
-  emailData: EmailDataInterface = { userEmailId: '' },
+  emailData: EmailDataInterface = { userEmailId: '', subject: '' },
   templateData: { [key: string]: string } = {}
 ) {
   logger.info(`--> sendMail ${templateId}`)
@@ -54,6 +57,10 @@ export async function sendMail(
 
     if (!emailDetailsUpdated) {
       throw new Error(`Mail configuration not found for mailId: ${templateId}`)
+    }
+
+    if (templateData.subject) {
+      emailDetailsUpdated.SUBJECT = templateData.subject
     }
 
     if (emailDetailsUpdated.TEXT === '') {
@@ -139,7 +146,12 @@ async function sendMailHtml(
       BccAddresses: emailDetails.BCC || [],
     },
     Template: templateId,
-    TemplateData: JSON.stringify(templateData),
+    TemplateData: JSON.stringify({
+      ...templateData,
+      ...(emailDetails.SUBJECT && {
+        subject: emailDetails.SUBJECT,
+      }),
+    }),
   }
 
   try {
@@ -267,7 +279,9 @@ export async function updateTemplate(
   const params = {
     Template: {
       TemplateName: templateId,
-      SubjectPart: emailDetails.SUBJECT,
+      SubjectPart: dynamicSubjectTemplates.includes(templateId)
+        ? '{{subject}}'
+        : emailDetails.SUBJECT,
       HtmlPart: htmlContent,
       TextPart: strippedHtmlContent,
     },

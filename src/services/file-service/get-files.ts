@@ -8,13 +8,14 @@ export async function getFilesByStatus(
   userId: number,
   internalTeamUserId: number | null
 ) {
+  const teamId = internalTeamUserId ? internalTeamUserId : userId
   try {
     let files
     const commonWhereClause = {
-      userId: Number(userId),
+      userId: Number(teamId),
       deletedAt: null,
     }
-    logger.info(`--> getFiles ${userId}`)
+    logger.info(`--> getFiles ${teamId}`)
     switch (status) {
       case 'delivered':
         files = await prisma.file.findMany({
@@ -232,6 +233,61 @@ export async function getAllFiles(
     return {
       success: false,
       message: 'Failed to fetch all files',
+    }
+  }
+}
+
+export async function getSharedFiles(userId: number) {
+  try {
+    const selectedId = userId
+
+    const sharedFiles = await prisma.sharedFile.findMany({
+      where: {
+        toUserId: selectedId,
+      },
+      include: {
+        file: {
+          include: {
+            Orders: true,
+          },
+        },
+        fromUser: {
+          select: {
+            id: true,
+            email: true,
+            firstname: true,
+            lastname: true,
+          },
+        },
+      },
+    })
+
+    const result = sharedFiles.map((sf) => ({
+      id: sf.file.id,
+      fileId: sf.fileId,
+      permission: sf.permission,
+      filename: sf.file.filename,
+      duration: sf.file.duration,
+      fromUserId: sf.fromUserId,
+      email: sf.fromUser.email,
+      fullname: `${sf.fromUser.firstname || ''} ${
+        sf.fromUser.lastname || ''
+      }`.trim(),
+      status: sf.file.Orders[0]?.status ?? '',
+      deliveredTs: sf.file.Orders[0]?.deliveredTs.toString() ?? '',
+      rating: sf.file.Orders[0]?.rating ?? '',
+      orderType: sf.file.Orders[0]?.orderType ?? '',
+      orderId: sf.file.Orders[0]?.id ?? '',
+    }))
+
+    logger.info(`Sent ${result.length} shared files `)
+
+    return { success: true, data: result }
+  } catch (error) {
+    logger.error(`Error sending shared files for: ${error}`)
+    return {
+      success: false,
+      message: 'An error occurred. Please try again later.',
     }
   }
 }

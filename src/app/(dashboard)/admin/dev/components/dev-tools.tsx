@@ -1,9 +1,23 @@
+'use client'
+
 import { Template } from '@prisma/client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import React, { useState } from 'react'
 import { toast } from 'sonner'
 
+import { getMonitorDetailsAction } from '@/app/actions/admin/monitor-for-dev-dashboard'
+import { addOrganization } from '@/app/actions/dev-tools/add-organization'
+import { addTemplate } from '@/app/actions/dev-tools/add-templates'
+import { downloadFromS3 } from '@/app/actions/dev-tools/download-from-s3'
+import { getTemplates } from '@/app/actions/dev-tools/get-templates'
+import { createMailTemplate } from '@/app/actions/dev-tools/mail-templates/create'
+import { deleteMailTemplate } from '@/app/actions/dev-tools/mail-templates/delete'
+import { updateMailTemplate } from '@/app/actions/dev-tools/mail-templates/update'
+import { triggerASR } from '@/app/actions/dev-tools/order-tasks/asr-trigger'
+import { triggerLLMMarking } from '@/app/actions/dev-tools/order-tasks/llm-trigger'
+import { getCFDData } from '@/app/actions/dev-tools/ris/get-cfd-data'
+import { getRISData } from '@/app/actions/dev-tools/ris/get-ris-data'
+import { updateCfdData } from '@/app/actions/dev-tools/ris/update-cfd-data'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -44,13 +58,17 @@ function TemplateManagement() {
     try {
       setLoading(true)
       const templateId = formData[`fd_${operation}_templateid`]
-      const response = await axios.post(
-        `/api/dev-tools/mail-templates/${operation}`,
-        {
-          mailId: templateId,
-        }
-      )
-      if (response.data.success) {
+
+      let response = null
+      if (operation === 'create') {
+        response = await createMailTemplate(templateId)
+      } else if (operation === 'update') {
+        response = await updateMailTemplate(templateId)
+      } else {
+        response = await deleteMailTemplate(templateId)
+      }
+
+      if (response.success) {
         toast.success(`Successfully ${operation}d template.`)
       } else {
         toast.error(`Failed to ${operation} template.`)
@@ -159,14 +177,16 @@ function RISandCFDManagement() {
       const organization = 'remotelegal'
 
       setLoading(true)
-      const response = await axios.get(
-        `/api/dev-tools/ris/get-ris-data?fileId=${formData.fd_ris_fileid}&template=${template}&organization=${organization}`
+      const result = await getRISData(
+        formData.fd_ris_fileid,
+        template,
+        organization
       )
 
-      if (response.data.success) {
+      if (result.success) {
         setFormData((prevData) => ({
           ...prevData,
-          fd_ris_Details: response.data.risData,
+          fd_ris_Details: result.risData,
         }))
         toast.success('Successfully retrieved RIS data.')
       } else {
@@ -182,12 +202,10 @@ function RISandCFDManagement() {
   const handleGetCfdClick = async () => {
     try {
       setLoading(true)
-      const response = await axios.get(
-        `/api/dev-tools/ris/get-cfd-data?fileId=${formData.fd_cfd_fileid}`
-      )
+      const result = await getCFDData(formData.fd_cfd_fileid)
 
-      if (response.data.success) {
-        const formattedResult = JSON.stringify(response.data.cfdData, null, 2)
+      if (result.success) {
+        const formattedResult = JSON.stringify(result.cfdData, null, 2)
         setFormData((prevData) => ({
           ...prevData,
           fd_cfd_Details: formattedResult,
@@ -219,13 +237,10 @@ function RISandCFDManagement() {
         return
       }
 
-      const response = await axios.post(`/api/dev-tools/ris/update-cfd-data`, {
-        fileId: formData.fd_cfd_fileid_1,
-        cfd: jsonData,
-      })
+      const result = await updateCfdData(formData.fd_cfd_fileid_1, jsonData)
 
-      if (response.data.success) {
-        setFdCfdDetails1(JSON.stringify(response.data.updatedCfdData, null, 2))
+      if (result.success) {
+        setFdCfdDetails1(JSON.stringify(result.updatedCfdData, null, 2))
         toast.success('Successfully updated CFD data.')
       } else {
         toast.error('Failed to update CFD data.')
@@ -380,11 +395,8 @@ function OrderTasksManagement() {
   const handleTranscribeWithFileIdClick = async () => {
     try {
       setLoading(true)
-      const response = await axios.post(
-        `/api/dev-tools/order-tasks/asr-trigger`,
-        { fileId: formData.fd_transcribe_fileid }
-      )
-      if (response.status === 200) {
+      const success = await triggerASR(formData.fd_transcribe_fileid)
+      if (success) {
         toast.success('Successfully triggered transcribe with file ID.')
       }
     } catch (error) {
@@ -397,11 +409,8 @@ function OrderTasksManagement() {
   const handleFormatClick = async () => {
     try {
       setLoading(true)
-      const response = await axios.post(
-        `/api/dev-tools/order-tasks/llm-trigger`,
-        { fileId: formData.fd_format_orderid }
-      )
-      if (response.status === 200) {
+      const success = await triggerLLMMarking(formData.fd_transcribe_fileid)
+      if (success) {
         toast.success('Successfully triggered format operation.')
       }
     } catch (error) {
@@ -504,18 +513,15 @@ export default function DevTools() {
   const handleGetRedisDetailsClick = async () => {
     try {
       setLoading(true)
-      const response = await axios.get(`/api/admin/monitor-for-dev-dashboard`)
-      const result = response.data
+      const result = await getMonitorDetailsAction()
       setFormData((prevData) => ({
         ...prevData,
         fd_qDetails: JSON.stringify(result, null, 2),
       }))
-      if (response.status === 200) {
-        toast.success('Successfully retireved disk usage.')
-        setLoading(false)
-      }
+      toast.success('Successfully retrieved disk usage.')
     } catch (error) {
       toast.error('Failed to retrieve disk usage.')
+    } finally {
       setLoading(false)
     }
   }
@@ -526,19 +532,19 @@ export default function DevTools() {
       console.log(
         `handleDownloadFromS3Click ${formData.fd_s3_fileId} ${fd_s3_file_type}`
       )
-      const response = await axios.get(
-        `/api/dev-tools/download-from-s3?fileId=${formData.fd_s3_fileId}&suffix=${fd_s3_file_type}`
+      const signedUrl = await downloadFromS3(
+        formData.fd_s3_fileId,
+        fd_s3_file_type
       )
-      const signedUrl = response.data.signedUrl
-      window.open(signedUrl, '_blank')
-      if (response.status === 200) {
-        toast.success('Successfully downloaded from s3.')
-        setLoading(false)
+      if (signedUrl.success) {
+        window.open(signedUrl.signedUrl, '_blank')
+        toast.success('Successfully downloaded from S3.')
+      } else {
+        toast.error('Failed to download from S3.')
       }
-
-      toast.success('Successfully downloaded from S3.')
     } catch (error) {
-      toast.error('Failed to dowbload from S3.')
+      toast.error('Failed to download from S3.')
+    } finally {
       setLoading(false)
     }
   }
@@ -675,13 +681,15 @@ function B2BUserOnboarding() {
     }
     setLoading(true)
     try {
-      const response = await axios.get(
-        `/api/dev-tools/get-templates?email=${email}`
-      )
-      setTemplates(
-        response.data.templates.map((template: Template) => template.name)
-      )
-      toast.success('Templates fetched successfully')
+      const result = await getTemplates(email)
+      if (result.success && result.templates) {
+        setTemplates(
+          result.templates.map((template: Template) => template.name)
+        )
+        toast.success('Templates fetched successfully')
+      } else {
+        toast.error(result.message)
+      }
     } catch (error) {
       toast.error('Failed to fetch templates')
     } finally {
@@ -696,10 +704,7 @@ function B2BUserOnboarding() {
     }
     setLoading(true)
     try {
-      await axios.post('/api/dev-tools/add-organization', {
-        name: orgName,
-        email: orgEmail,
-      })
+      await addOrganization(orgName, orgEmail)
       toast.success('Organization added successfully')
       setOrgName('')
       setOrgEmail('')
@@ -717,10 +722,7 @@ function B2BUserOnboarding() {
     }
     setLoading(true)
     try {
-      await axios.post('/api/dev-tools/add-templates', {
-        name: templateName,
-        email: templateEmail,
-      })
+      await addTemplate(templateName, templateEmail)
       toast.success('Template added successfully')
       setTemplateName('')
       setTemplateEmail('')

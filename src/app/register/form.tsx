@@ -1,8 +1,8 @@
 'use client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { formSchema } from './controllers'
+import { signUp } from '@/app/actions/auth/sign-up'
 import { PhoneInput } from '@/components/phone-input/phone-input'
 import Recaptcha from '@/components/recaptcha'
 import SideImage from '@/components/side-image'
@@ -36,7 +37,8 @@ import { INDUSTRIES } from '@/constants'
 import { getRedirectPathByRole } from '@/utils/roleRedirect'
 
 const SingupForm = () => {
-  const [captcha, setCaptcha] = useState<boolean>(true)
+  const searchParams = useSearchParams()
+  const [captcha, setCaptcha] = useState<boolean>(false)
   const [loading, setLoading] = useState(false)
   const [showOtherIndustryInput, setShowOtherIndustryInput] = useState(false)
   const form = useForm<z.infer<typeof formSchema>>({
@@ -55,12 +57,14 @@ const SingupForm = () => {
       receive_updates: false,
     },
   })
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       if (!captcha) {
         toast.error(`Please validate recaptcha.`)
         return
       }
+      const referralCode = searchParams?.get('rc') || ''
       setLoading(true)
       const userData = {
         email: values.userEmail,
@@ -69,15 +73,17 @@ const SingupForm = () => {
         lastname: values.lastName,
         role: values.userType,
         phone: values.phone,
+        rc: referralCode,
         industry:
           values.otherIndustry !== ''
             ? values.otherIndustry
             : values.industry || '',
+        newsletter: values.receive_updates ?? false,
       }
 
-      const response = await axios.post('/api/auth/sign-up', userData)
+      const response = await signUp(userData)
 
-      if (response.status === 201) {
+      if (response.success) {
         toast.success('Account created successfully')
         const result = await signIn('credentials', {
           redirect: false,
@@ -94,28 +100,27 @@ const SingupForm = () => {
           }
         } else {
           const tId = toast.success(
-            `User Created Sucessfully, please login to your account`
+            `User Created Successfully, please login to your account`
           )
           toast.dismiss(tId)
         }
         form.reset()
       } else {
-        toast.error(`Failed to create account: ${response.data.message}`)
+        toast.error(`Failed to create account: ${response.message}`)
       }
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        toast.error(
-          `Failed to create user: ${
-            error.response?.data.message || error.message
-          }`
-        )
-      } else {
-        toast.error(`Failed to create user: An unexpected error occurred`)
-      }
+      toast.error(
+        `Failed to create user: ${
+          error instanceof Error
+            ? error.message
+            : 'An unexpected error occurred'
+        }`
+      )
     } finally {
       setLoading(false)
     }
   }
+
   return (
     <div className='w-full lg:grid lg:min-h-[600px] lg:grid-cols-2 xl:min-h-[800px]'>
       <SideImage />

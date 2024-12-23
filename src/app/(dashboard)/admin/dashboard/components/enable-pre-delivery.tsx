@@ -1,9 +1,9 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { enablePreDelivery } from '@/app/actions/admin/enable-pre-delivery'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -29,22 +29,20 @@ export default function EnablePreDelivery() {
     }
     try {
       setLoading(true)
-      const response = await axios.post(`/api/admin/enable-pre-delivery`, {
-        email: email,
-        flag: true,
-      })
-      if (response.data.success) {
+      const response = await enablePreDelivery(email.toLowerCase(), true)
+
+      if (response.success) {
         toast.success('Successfully enabled pre delivery.')
-        setLoading(false)
       } else {
-        toast.error(response.data.s)
-        setLoading(false)
+        toast.error(response.s || 'Failed to enable pre delivery')
       }
     } catch (error) {
-      toast.error('Failed to enable pre delivery..')
+      toast.error('Failed to enable pre delivery')
+    } finally {
       setLoading(false)
     }
   }
+
   const handleDisableClick = async () => {
     if (!email) return toast.error('Please enter a valid email address')
     if (!isValidEmail(email)) {
@@ -54,22 +52,20 @@ export default function EnablePreDelivery() {
 
     try {
       setLoadingDisable(true)
-      const response = await axios.post(`/api/admin/enable-pre-delivery`, {
-        email: email,
-        flag: false,
-      })
-      if (response.data.success) {
+      const response = await enablePreDelivery(email.toLowerCase(), false)
+
+      if (response.success) {
         toast.success('Successfully disabled pre delivery.')
-        setLoadingDisable(false)
       } else {
-        toast.error(response.data.s)
-        setLoadingDisable(false)
+        toast.error(response.s || 'Failed to disable pre delivery')
       }
     } catch (error) {
-      toast.error('Failed to disable pre delivery.')
+      toast.error('Failed to disable pre delivery')
+    } finally {
       setLoadingDisable(false)
     }
   }
+
   return (
     <>
       <Card>

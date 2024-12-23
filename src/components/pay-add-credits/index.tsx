@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { Dropin } from 'braintree-web-drop-in'
 import DropIn from 'braintree-web-drop-in-react'
@@ -5,6 +7,7 @@ import { Session } from 'next-auth'
 import { useState } from 'react'
 
 import PaymentSuccessIcon from '../payment-success'
+import { checkout } from '@/app/actions/payment/checkout'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -47,46 +50,32 @@ const AddCreditsDialog = ({
     useState<PaymentSuccessData | null>(null)
 
   const handlePaymentMethod = async () => {
-    if (instance) {
-      instance
-        .requestPaymentMethod()
-        .then(({ nonce }: { nonce: string }) => {
-          setIsLoading(true)
-          fetch(`/api/payment/checkout`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${session?.user?.token}`,
-            },
-            body: JSON.stringify({
-              paymentMethodNonce: nonce,
-              invoiceId,
-            }),
-          })
-            .then((response) => response.json())
-            .then((data) => {
-              setIsLoading(false)
-              if (data.success) {
-                setPaymentSuccessData((prevData) => ({
-                  ...prevData,
-                  transactionId: data.transactionId,
-                  paymentMethod: data.paymentMethod,
-                  pp_account: data.pp_account,
-                  cc_last4: data.cc_last4,
-                  amount: data.invoice.amount,
-                }))
-                setPaymentSuccess(true)
-              }
-            })
-            .catch((err) => {
-              setIsLoading(false)
-              console.error('Error processing payment:', err)
-            })
+    if (!instance) return
+
+    try {
+      setIsLoading(true)
+      const { nonce } = await instance.requestPaymentMethod()
+
+      const result = await checkout({
+        paymentMethodNonce: nonce,
+        invoiceId,
+        orderType: 'TRANSCRIPTION',
+      })
+
+      if (result.success) {
+        setPaymentSuccessData({
+          transactionId: result.transactionId ?? '',
+          paymentMethod: result.paymentMethod ?? '',
+          pp_account: result.pp_account,
+          cc_last4: result.cc_last4,
+          amount: result.invoice?.amount ?? 0,
         })
-        .catch((err) => {
-          setIsLoading(false)
-          console.error('Error requesting payment method:', err)
-        })
+        setPaymentSuccess(true)
+      }
+    } catch (err) {
+      console.error('Error processing payment:', err)
+    } finally {
+      setIsLoading(false)
     }
   }
 

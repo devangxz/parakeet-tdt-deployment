@@ -15,7 +15,7 @@ export type ConvertedASROutput = {
     turn?: number;
 };
 
-const secondsToTs = (sec: number, show_hours: boolean = false, decimal_points: number = 1): string => {
+export const secondsToTs = (sec: number, show_hours: boolean = false, decimal_points: number = 1): string => {
     const h = Math.floor(sec / 3600);
     let m = Math.floor((sec % 3600) / 60);
     let s = parseFloat((sec % 60).toFixed(decimal_points));

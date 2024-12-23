@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable jsx-a11y/alt-text */
 import { ReloadIcon } from '@radix-ui/react-icons'
 import {
@@ -10,7 +11,6 @@ import {
   Image,
   Font,
 } from '@react-pdf/renderer'
-import axios from 'axios'
 import { Session } from 'next-auth'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
@@ -20,6 +20,7 @@ import { BillOptions } from './bill-summary'
 import { Receipt } from './receipt'
 import { Services } from './services'
 import { ReceiptInterface, BillSummary, ServicesInterface } from './types'
+import { getInvoiceDetails } from '@/app/actions/invoice/[invoiceId]'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -32,6 +33,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { INVOICE_ADDRESS, INVOICE_DISCLAIMER } from '@/constants'
 import formatDateTime from '@/utils/formatDateTime'
+
 interface InvoicesDetailDialogProps {
   open: boolean
   onClose: () => void
@@ -248,10 +250,14 @@ const InvoicePDF = ({
                 fontSize: 10,
               }}
             >
-              File Name
+              {invoice?.type === 'TRANSCRIPT' ? 'File Name' : 'Description'}
             </Text>
-            <Text style={styles.tableCellHeader}>Minutes</Text>
-            <Text style={styles.tableCellHeader}>Rate</Text>
+            {invoice?.type === 'TRANSCRIPT' && (
+              <>
+                <Text style={styles.tableCellHeader}>Minutes</Text>
+                <Text style={styles.tableCellHeader}>Rate</Text>
+              </>
+            )}
             <Text style={styles.tableCellHeader}>Amount</Text>
           </View>
           {billSummary?.files.map((file, index) => (
@@ -289,23 +295,56 @@ const InvoicePDF = ({
               </Text>
             </View>
           ))}
-          <View style={styles.tableRow}>
-            <Text
-              style={{
-                textAlign: 'right',
-                width: '483px',
-                borderWidth: 1,
-                borderColor: '#000',
-                fontSize: 10,
-                padding: 2,
-              }}
-            >
-              Applied Discount
-            </Text>
-            <Text style={[styles.tableCell, { textAlign: 'right' }]}>
-              ${receipt?.discount}
-            </Text>
-          </View>
+          {invoice?.type === 'ADD_CREDITS' && (
+            <>
+              <View style={styles.tableRow}>
+                <Text
+                  style={{
+                    width: '20px',
+                    borderWidth: 1,
+                    borderColor: '#000',
+                    fontSize: 10,
+                    padding: 2,
+                  }}
+                >
+                  1
+                </Text>
+                <Text
+                  style={{
+                    width: '350px',
+                    borderWidth: 1,
+                    borderColor: '#000',
+                    fontSize: 10,
+                    padding: 2,
+                  }}
+                >
+                  Invoice for adding account credits
+                </Text>
+                <Text style={[styles.tableCell, { textAlign: 'right' }]}>
+                  ${receipt?.netAmount}
+                </Text>
+              </View>
+            </>
+          )}
+          {invoice?.type === 'TRANSCRIPT' && (
+            <View style={styles.tableRow}>
+              <Text
+                style={{
+                  textAlign: 'right',
+                  width: '483px',
+                  borderWidth: 1,
+                  borderColor: '#000',
+                  fontSize: 10,
+                  padding: 2,
+                }}
+              >
+                Applied Discount
+              </Text>
+              <Text style={[styles.tableCell, { textAlign: 'right' }]}>
+                ${receipt?.discount}
+              </Text>
+            </View>
+          )}
           <View style={styles.tableRow}>
             <Text
               style={{
@@ -320,7 +359,10 @@ const InvoicePDF = ({
               Total
             </Text>
             <Text style={[styles.tableCell, { textAlign: 'right' }]}>
-              ${billSummary?.total.toFixed(2)}
+              $
+              {invoice?.type === 'ADD_CREDITS'
+                ? receipt?.netAmount
+                : billSummary?.total.toFixed(2)}
             </Text>
           </View>
         </View>
@@ -400,73 +442,72 @@ const InvoicesDetailDialog = ({
   const fetchInvoiceDetails = async () => {
     setIsInvoiceLoading(true)
     try {
-      const response = await axios.get(`/api/invoice/${selectedInvoiceId}`)
-      setInvoiceType(response.data.invoice.type)
+      const response = await getInvoiceDetails(selectedInvoiceId, null)
+
+      if (!response.success || !response.responseData) {
+        throw new Error('Failed to fetch invoice details')
+      }
+
+      const { invoice } = response.responseData
+
+      setInvoiceType(invoice.type)
       setInvoice({
-        type: response.data.invoice.type,
-        id: response.data.invoice.invoiceId,
-        email: response.data.invoice.user.email,
-        date: response.data.invoice.createdAt,
-        fileIds: response.data.invoice.itemNumber,
-        userId: response.data.invoice.userId,
+        type: invoice.type,
+        id: invoice.invoiceId,
+        email: invoice.user.email,
+        date: invoice.createdAt.toISOString(),
+        fileIds: invoice.itemNumber ?? '',
+        userId: invoice.userId.toString(),
       })
       setInvoiceUser({
-        name: `${response.data.invoice.user.firstname} ${response.data.invoice.user.lastname}`,
-        email: response.data.invoice.user.email,
-        address_1: response.data.invoice.user.address_1,
-        address_2: response.data.invoice.user.address_2,
-        phone: response.data.invoice.user.phone,
+        name: `${invoice.user.firstname} ${invoice.user.lastname}`,
+        email: invoice.user.email,
+        address_1: invoice.user.address_1,
+        address_2: invoice.user.address_2,
+        phone: invoice.user.phone,
       })
       const total =
         Number(
           (
-            response.data.invoice.amount - response.data.invoice.discount
+            response.responseData.invoice.amount -
+            response.responseData.invoice.discount
           ).toFixed(2)
         ) -
         Number(
           (
-            response.data.invoice.refundAmount +
-            response.data.invoice.creditsRefunded
+            response.responseData.invoice.refundAmount +
+            response.responseData.invoice.creditsRefunded
           ).toFixed(2)
         )
 
       setReceipt({
         services: ``,
-        paidByName: `${response.data.invoice.user.firstname} ${response.data.invoice.user.lastname}`,
-        paidByEmail: response.data.paidByUser
-          ? response.data.paidByUser.email
-          : '',
-        chargeAmount: response.data.invoice.amount,
-        refundedAmount: response.data.invoice.refundAmount,
+        paidByName: `${response.responseData.invoice.user.firstname} ${response.responseData.invoice.user.lastname}`,
+        paidByEmail: response.responseData.invoice.user.email,
+        chargeAmount: response.responseData.invoice.amount,
+        refundedAmount: response.responseData.invoice.refundAmount,
         netAmount: total,
-        transactionId: response.data.invoice.transactionId,
-        date: response.data.invoice.createdAt,
-        invoiceType: response.data.invoice.type,
-        discount: response.data.invoice.discount,
-        creditsUsed: response.data.invoice.creditsUsed,
-        paymentMethod: response.data.invoice.paymentMethod,
+        transactionId: response.responseData.invoice.transactionId ?? '',
+        date: response.responseData.invoice.createdAt.toISOString(),
+        invoiceType: response.responseData.invoice.type,
+        discount: response.responseData.invoice.discount,
+        creditsUsed: response.responseData.invoice.creditsUsed,
+        paymentMethod: response.responseData.invoice.paymentMethod,
       })
 
-      if (response.data.invoice.type !== 'ADD_CREDITS') {
-        const files = response.data?.files.map(
-          (file: {
-            File: {
-              filename: string
-              duration: number
-            }
-            createdAt: string
-            price: number
-          }) => ({
-            filename: file.File.filename,
-            delivery_date: file.createdAt,
-            duration: file.File.duration,
-            rate: file.price / (file.File.duration / 60),
-            amount: file.price,
-          })
-        )
-        setBillSummary({ total, files })
+      if (response.responseData.invoice.type !== 'ADD_CREDITS') {
+        const files = response.responseData.files?.map((file: any) => ({
+          filename: file.File.filename,
+          delivery_date: file.createdAt.toISOString(),
+          duration: file.File.duration,
+          rate: file.price / (file.File.duration / 60),
+          amount: file.price,
+        }))
+        setBillSummary({ total, files: files as any })
 
-        const options = JSON.parse(response.data.invoice.options)
+        const options = JSON.parse(
+          response.responseData.invoice.options ?? '{}'
+        )
         const enabledOptions = Object.keys(options)
           .filter((key) => options[key] === 1 && optionNames[key] !== undefined)
           .map((key) => optionNames[key])
@@ -480,29 +521,27 @@ const InvoicesDetailDialog = ({
           orderOptions: enabledOptions,
           speakerNameFormat: options.si === 1 ? 'Initials' : 'Full Name',
           transcriptTemplate:
-            response.data.templates.find(
-              (template: { id: string }) => template.id === options.tmp
+            response.responseData.templates?.find(
+              (template: { id: number }) => template.id === Number(options.tmp)
             )?.name || 'Unknown',
           spellingStyle: options.sp,
-          specialInstructions: response.data.invoice.instructions,
+          specialInstructions: response.responseData.invoice.instructions ?? '',
         })
         setReceipt({
           services: `${enabledCount} (${enabledOptions})`,
-          paidByName: `${response.data.invoice.user.firstname} ${response.data.invoice.user.lastname}`,
-          paidByEmail: response.data.paidByUser
-            ? response.data.paidByUser.email
-            : '',
-          chargeAmount: response.data.invoice.amount,
+          paidByName: `${response.responseData.invoice.user.firstname} ${response.responseData.invoice.user.lastname}`,
+          paidByEmail: response.responseData.invoice.user.email,
+          chargeAmount: response.responseData.invoice.amount,
           refundedAmount:
-            response.data.invoice.refundAmount +
-            response.data.invoice.creditsRefunded,
+            response.responseData.invoice.refundAmount +
+            response.responseData.invoice.creditsRefunded,
           netAmount: total,
-          transactionId: response.data.invoice.transactionId,
-          date: response.data.invoice.createdAt,
-          invoiceType: response.data.invoice.type,
-          discount: response.data.invoice.discount,
-          creditsUsed: response.data.invoice.creditsUsed,
-          paymentMethod: response.data.invoice.paymentMethod,
+          transactionId: response.responseData.invoice.transactionId ?? '',
+          date: response.responseData.invoice.createdAt.toISOString(),
+          invoiceType: response.responseData.invoice.type,
+          discount: response.responseData.invoice.discount,
+          creditsUsed: response.responseData.invoice.creditsUsed,
+          paymentMethod: response.responseData.invoice.paymentMethod,
         })
       }
     } catch (err) {
@@ -581,7 +620,8 @@ const InvoicesDetailDialog = ({
           <DialogFooter>
             {/* Hide it for now*/}
             {/* <Button variant='order'>Print</Button> */}
-            {invoiceType === 'TRANSCRIPT' && (
+            {(invoiceType === 'TRANSCRIPT' ||
+              invoiceType === 'ADD_CREDITS') && (
               <>
                 <Button variant='order' onClick={handleCheckStatus}>
                   Check Status
@@ -600,7 +640,7 @@ const InvoicesDetailDialog = ({
                       fileName={`${selectedInvoiceId}.pdf`}
                     >
                       {({ loading }) =>
-                        loading ? 'Loading document...' : 'Download PDF'
+                        loading ? 'Loading...' : 'Download PDF'
                       }
                     </PDFDownloadLink>
                   </Button>

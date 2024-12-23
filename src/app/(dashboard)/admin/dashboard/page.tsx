@@ -13,6 +13,7 @@ import DisableQC from './components/disable-qc'
 import EnableCustomFormattingBonus from './components/enable-custom-format-bonus'
 import EnableCustomFormattingReview from './components/enable-custom-format-review'
 import EnablePreDelivery from './components/enable-pre-delivery'
+import OrderWatch from './components/order-watch'
 import TransferCredits from './components/transfer-credits'
 import TransferFiles from './components/transfer-files'
 
@@ -38,6 +39,7 @@ export default function AdminDashboard() {
             <EnableCustomFormattingBonus />
             <AddMiscEarnings />
             <TransferCredits />
+            <OrderWatch />
           </>
         )}
       </div>

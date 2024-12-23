@@ -2,7 +2,6 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import { Dropin } from 'braintree-web-drop-in'
 import DropIn from 'braintree-web-drop-in-react'
 import { useSearchParams } from 'next/navigation'
@@ -10,6 +9,7 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 
+import { getClientToken, payBill } from '@/app/actions/pay-bill'
 import PaymentSuccessIcon from '@/components/payment-success'
 import SideImage from '@/components/side-image'
 import { Button } from '@/components/ui/button'
@@ -41,7 +41,7 @@ const formSchema = z.object({
     .email(),
 })
 
-const Signin = () => {
+const PayBill = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [clientToken, setClientToken] = useState<string | null>(null)
   const [instance, setInstance] = useState<Dropin | null>(null)
@@ -67,11 +67,13 @@ const Signin = () => {
     const fetchBraintreeToken = async () => {
       setIsLoading(true)
       try {
-        const tokenResponse = await axios.get(`/api/public/client-token`)
-        setClientToken(tokenResponse.data.clientToken)
+        const response = await getClientToken()
+        if (response.success && response.clientToken) {
+          setClientToken(response.clientToken)
+        }
         setIsLoading(false)
       } catch (err) {
-        console.error('Failed to fetch pending files:', err)
+        console.error('Failed to fetch client token:', err)
       }
     }
 
@@ -84,48 +86,35 @@ const Signin = () => {
 
   const handlePaymentMethod = async (values: z.infer<typeof formSchema>) => {
     if (instance) {
-      instance
-        .requestPaymentMethod()
-        .then(({ nonce }: { nonce: string }) => {
-          setLoadingPay(true)
-          fetch(`/api/public/pay-bill-checkout`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              paymentMethodNonce: nonce,
-              email: values.email,
-              amount: amount,
-              fullName: values.fullName,
-            }),
+      try {
+        const { nonce } = await instance.requestPaymentMethod()
+        setLoadingPay(true)
+
+        const response = await payBill({
+          paymentMethodNonce: nonce,
+          email: values.email,
+          amount: amount!,
+          fullName: values.fullName,
+        })
+
+        setLoadingPay(false)
+
+        if (response.success) {
+          setPaymentSuccessData({
+            transactionId: response.transactionId ?? '',
+            paymentMethod: response.paymentMethod ?? '',
+            pp_account: response.pp_account ?? '',
+            cc_last4: response.cc_last4 ?? '',
+            amount: Number(amount ?? 0),
           })
-            .then((response) => response.json())
-            .then((data) => {
-              setLoadingPay(false)
-              if (data.success) {
-                setPaymentSuccessData((prevData) => ({
-                  ...prevData,
-                  transactionId: data.transactionId,
-                  paymentMethod: data.paymentMethod,
-                  pp_account: data.pp_account,
-                  cc_last4: data.cc_last4,
-                  amount: Number(amount),
-                }))
-                setPaymentSuccess(true)
-              } else {
-                alert('Payment failed: ' + data.message)
-              }
-            })
-            .catch((err) => {
-              setLoadingPay(false)
-              console.error('Error processing payment:', err)
-            })
-        })
-        .catch((err) => {
-          setLoadingPay(false)
-          console.error('Error requesting payment method:', err)
-        })
+          setPaymentSuccess(true)
+        } else {
+          alert('Payment failed: ' + response.message)
+        }
+      } catch (err) {
+        setLoadingPay(false)
+        console.error('Error processing payment:', err)
+      }
     }
   }
 
@@ -296,4 +285,4 @@ const Signin = () => {
   )
 }
 
-export default Signin
+export default PayBill

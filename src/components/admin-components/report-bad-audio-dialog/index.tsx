@@ -1,8 +1,10 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { reportBadAudio } from '@/app/actions/om/report-bad-audio'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -51,30 +53,25 @@ const ReportBadAudioDialog = ({ open, onClose, fileId }: DialogProps) => {
   const handleSubmit = async () => {
     setLoading(true)
     try {
-      const response = await axios.post(`/api/om/report-bad-audio`, {
+      const result = await reportBadAudio({
         fileId,
-        comments: comments,
+        comments,
         reportOption,
       })
-      if (response.data.success) {
+      if (result.success) {
         const successToastId = toast.success(`Successfully reported bad audio`)
         toast.dismiss(successToastId)
-        setLoading(false)
         onClose()
       } else {
-        toast.error(response.data.message)
-        setLoading(false)
+        toast.error(result.message)
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Error reporting bad audio`)
-      }
+      toast.error(`Error reporting bad audio`)
+    } finally {
       setLoading(false)
     }
   }
+
   return (
     <AlertDialog open={open}>
       <AlertDialogContent>

@@ -1,9 +1,9 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { disableQC } from '@/app/actions/admin/disable-qc'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -50,24 +50,16 @@ export default function DisableQC() {
 
     try {
       setLoadingDisable(true)
-      const response = await axios.post(`/api/admin/disable-qc`, {
-        email: formData.email,
-        flag: true,
-        comment: formData.comment,
-      })
-      if (response.data.success) {
+      const response = await disableQC(formData.email.toLowerCase(), true)
+
+      if (response.success) {
         toast.success('Editor disabled successfully')
       } else {
-        toast.error(response.data.s || 'Failed to disable Editor')
+        toast.error(response.s || 'Failed to disable Editor')
       }
-      setLoadingDisable(false)
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to disabled Editor.`)
-      }
+      toast.error('Failed to disable Editor')
+    } finally {
       setLoadingDisable(false)
     }
   }
@@ -85,24 +77,16 @@ export default function DisableQC() {
 
     try {
       setLoading(true)
-      const response = await axios.post(`/api/admin/disable-qc`, {
-        email: formData.email,
-        flag: false,
-        comment: formData.comment,
-      })
-      if (response.data.success) {
+      const response = await disableQC(formData.email.toLowerCase(), false)
+
+      if (response.success) {
         toast.success('Editor enabled successfully')
       } else {
-        toast.error(response.data.s || 'Failed to enable Editor')
+        toast.error(response.s || 'Failed to enable Editor')
       }
-      setLoading(false)
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to enabled Editor.`)
-      }
+      toast.error('Failed to enable Editor')
+    } finally {
       setLoading(false)
     }
   }

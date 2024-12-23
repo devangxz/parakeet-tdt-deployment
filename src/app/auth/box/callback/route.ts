@@ -1,0 +1,129 @@
+import axios from 'axios';
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
+
+import { signJwtAccessToken } from '@/lib/jwt';
+
+const BOX_CLIENT_ID = process.env.NEXT_PUBLIC_BOX_CLIENT_ID!;
+const BOX_CLIENT_SECRET = process.env.BOX_CLIENT_SECRET!;
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL!;
+
+const isProduction = SITE_URL?.startsWith('https://') ?? true;
+
+export async function GET(req: Request) {
+    try {
+        const url = new URL(req.url);
+        const code = url.searchParams.get('code');
+        const state = url.searchParams.get('state');
+        const cookieStore = cookies();
+        const savedState = cookieStore.get('boxAuthState')?.value;
+
+        if (!code || !state || state !== savedState) {
+            return createHtmlResponse('Authentication Failed', 'Invalid state parameter', false);
+        }
+
+        const { data } = await axios.post('https://api.box.com/oauth2/token', {
+            grant_type: 'authorization_code',
+            code,
+            client_id: BOX_CLIENT_ID,
+            client_secret: BOX_CLIENT_SECRET,
+            redirect_uri: `${SITE_URL}/auth/box/callback`
+        });
+
+        if (!data.access_token) {
+            return createHtmlResponse('Authentication Failed', 'Failed to get access token', false);
+        }
+
+        const accessTokenPayload = {
+            boxAccessToken: data.access_token
+        };
+        const encryptedAccessToken = signJwtAccessToken(accessTokenPayload, { expiresIn: '1h' });
+
+        let encryptedRefreshToken = null;
+        if (data.refresh_token) {
+            const refreshTokenPayload = {
+                boxRefreshToken: data.refresh_token
+            };
+            encryptedRefreshToken = signJwtAccessToken(refreshTokenPayload, { expiresIn: '60d' });
+        }
+
+        const response = createHtmlResponse('Authentication Successful', 'You can close this window.', true);
+
+        response.cookies.set('boxAccessToken', encryptedAccessToken, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: 'lax',
+            maxAge: 60 * 60
+        });
+
+        if (encryptedRefreshToken) {
+            response.cookies.set('boxRefreshToken', encryptedRefreshToken, {
+                httpOnly: true,
+                secure: isProduction,
+                sameSite: 'lax',
+                maxAge: 60 * 24 * 60 * 60
+            });
+        }
+
+        return response;
+    } catch (error) {
+        return createHtmlResponse('Authentication Failed', 'An error occurred during authentication.', false);
+    }
+}
+
+function createHtmlResponse(title: string, message: string, success: boolean) {
+    const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>${title}</title>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    margin: 0;
+                    background-color: #f5f5f5;
+                }
+                .container {
+                    text-align: center;
+                    padding: 2rem;
+                    background-color: white;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                }
+                h1 {
+                    color: ${success ? '#0061d5' : '#dc2626'};
+                    margin-bottom: 1rem;
+                }
+                p {
+                    color: #4b5563;
+                    margin-bottom: 2rem;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>${title}</h1>
+                <p>${message}</p>
+            </div>
+            <script>
+                if (window.opener) {
+                    window.opener.postMessage({ 
+                        type: '${success ? 'BOX_AUTH_SUCCESS' : 'BOX_AUTH_ERROR'}' 
+                    }, '*');
+                    setTimeout(() => window.close(), 1500);
+                }
+            </script>
+        </body>
+        </html>
+    `;
+
+    return new NextResponse(html, {
+        headers: {
+            'Content-Type': 'text/html',
+        },
+    });
+}

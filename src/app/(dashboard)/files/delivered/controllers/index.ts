@@ -1,5 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import axios from 'axios'
 
+import { archiveFileAction } from '@/app/actions/file/archive'
+import { renameFileAction } from '@/app/actions/file/rename'
+import { deleteFilesAction } from '@/app/actions/files/delete'
+import { updateOrderRating } from '@/app/actions/order/rating'
 export const orderController = async (
   payload: { fileId: string; filename?: string; docType?: string },
   type: string
@@ -12,34 +17,39 @@ export const orderController = async (
 const downloadPDFFile = async ({
   fileId,
   docType,
+  filename,
 }: {
   fileId: string
   filename?: string
   docType?: string
 }) => {
   try {
-    const response = await axios.get(`/api/order/file-pdf-signed-url?fileId=${fileId}&docType=${docType}`, {
-      responseType: 'blob'
-    });
-    const fileBlob = new Blob([response.data], { type: 'application/pdf' });
-    const downloadUrl = window.URL.createObjectURL(fileBlob);
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = `${fileId}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(downloadUrl);
-    return 'PDF file downloaded successfully';
+    const response = await axios.get(
+      `/api/order/file-pdf-signed-url?fileId=${fileId}&docType=${docType}`,
+      {
+        responseType: 'blob',
+      }
+    )
+    const fileBlob = new Blob([response.data], { type: 'application/pdf' })
+    const downloadUrl = window.URL.createObjectURL(fileBlob)
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = `${filename}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(downloadUrl)
+    return 'PDF file downloaded successfully'
   } catch (err) {
-    console.error('Error downloading PDF file:', err);
-    throw new Error('Failed to download PDF file');
+    console.error('Error downloading PDF file:', err)
+    throw new Error('Failed to download PDF file')
   }
 }
 
 const downloadFile = async ({
   fileId,
   docType,
+  filename,
 }: {
   fileId: string
   filename?: string
@@ -47,32 +57,39 @@ const downloadFile = async ({
 }) => {
   try {
     if (docType === 'TRANSCRIPTION_DOC') {
-      const response = await axios.get(`/api/order/file-docx-signed-url?fileId=${fileId}&docType=${docType}`, {
-        responseType: 'blob'
-      });
-      const fileBlob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-      const downloadUrl = window.URL.createObjectURL(fileBlob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = `${fileId}.docx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
-      return 'DOCX file downloaded successfully';
+      const response = await axios.get(
+        `/api/order/file-docx-signed-url?fileId=${fileId}&docType=${docType}`,
+        {
+          responseType: 'blob',
+        }
+      )
+      const fileBlob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      })
+      const downloadUrl = window.URL.createObjectURL(fileBlob)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.download = `${filename}.docx`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(downloadUrl)
+      return 'DOCX file downloaded successfully'
     } else {
-      const response = await axios.get(`/api/order/file-docx-signed-url?fileId=${fileId}&docType=${docType}`);
-      const url = response?.data?.signedUrl;
+      const response = await axios.get(
+        `/api/order/file-docx-signed-url?fileId=${fileId}&docType=${docType}`
+      )
+      const url = response?.data?.signedUrl
       if (url) {
-        window.open(url, '_blank');
+        window.open(url, '_blank')
       } else {
-        console.error('No URL provided for download.');
-        throw 'No URL provided for download.';
+        console.error('No URL provided for download.')
+        throw 'No URL provided for download.'
       }
-      return response?.data?.message;
+      return response?.data?.message
     }
   } catch (err) {
-    throw new Error('Failed to download file');
+    throw new Error('Failed to download file')
   }
 }
 
@@ -84,20 +101,23 @@ const downloadTxt = async ({
   docType?: string
 }) => {
   try {
-    const response = await axios.get(`/api/order/download-txt?fileId=${fileId}`, { responseType: 'blob' })
-    const fileBlob = new Blob([response.data], { type: 'text/plain' });
-    const downloadUrl = window.URL.createObjectURL(fileBlob);
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = `${fileId}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(downloadUrl);
+    const response = await axios.get(
+      `/api/order/download-txt?fileId=${fileId}`,
+      { responseType: 'blob' }
+    )
+    const fileBlob = new Blob([response.data], { type: 'text/plain' })
+    const downloadUrl = window.URL.createObjectURL(fileBlob)
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = `${fileId}.txt`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(downloadUrl)
     return 'Txt file downloaded successfully'
   } catch (err) {
-    console.error('Error downloading TXT file:', err);
-    throw new Error('Failed to download TXT file');
+    console.error('Error downloading TXT file:', err)
+    throw new Error('Failed to download TXT file')
   }
 }
 
@@ -109,10 +129,8 @@ const deleteFile = async ({
   docType?: string
 }) => {
   try {
-    const response = await axios.post(`/api/files/delete`, {
-      fileIds: [fileId],
-    })
-    return response?.data?.message
+    const response = await deleteFilesAction([fileId])
+    return response?.s
   } catch (err) {
     throw err
   }
@@ -126,10 +144,8 @@ const archiveFile = async ({
   docType?: string
 }) => {
   try {
-    const response = await axios.post(`/api/file/archive`, {
-      fileIds: fileId,
-    })
-    return response?.data?.message
+    const response = await archiveFileAction(fileId)
+    return response?.s
   } catch (err) {
     throw err
   }
@@ -144,11 +160,8 @@ const renameFile = async ({
   docType?: string
 }) => {
   try {
-    const response = await axios.post(`/api/file/rename`, {
-      fileId,
-      filename,
-    })
-    return response?.data?.message
+    const response = await renameFileAction(fileId, filename)
+    return response?.s
   } catch (err) {
     throw err
   }
@@ -200,13 +213,11 @@ const rateFile = async ({
   rating?: number
 }) => {
   try {
-    const response = await axios.post(`/api/order/rating`, {
-      fileId,
-      filename,
-      rating,
-      docType,
-    })
-    return response?.data?.message
+    if (!rating) {
+      throw new Error('Rating is required')
+    }
+    const response = await updateOrderRating(fileId, rating)
+    return response?.message
   } catch (err) {
     throw err
   }

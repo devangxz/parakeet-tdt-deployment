@@ -1,9 +1,11 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import React, { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
+import { getAuthUrl } from '@/app/actions/paypal/auth-url'
+import { getPaypalId, updatePaypalId } from '@/app/actions/paypal/id'
+import { getUserInfo } from '@/app/actions/paypal/user-info'
 import HeadingDescription from '@/components/heading-description'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,11 +34,9 @@ const Page = () => {
 
   const fetchUserInfo = async (sessionId: string) => {
     try {
-      const response = await axios.get(
-        `/api/paypal/user-info?session_id=${sessionId}`
-      )
-      if (response.data.success) {
-        setUserInfo(response.data.user)
+      const response = await getUserInfo(sessionId)
+      if (response.success) {
+        setUserInfo(response.user)
       } else {
         toast.error('Failed to login to PayPal')
       }
@@ -50,9 +50,9 @@ const Page = () => {
       if (showLoader) {
         setLoading(true)
       }
-      const response = await axios.get(`/api/paypal/id`)
-      if (response.data.success) {
-        setId(response.data.id)
+      const response = await getPaypalId()
+      if (response.success) {
+        setId(response.id ?? 'N/A')
       } else {
         toast.error('Failed to login to PayPal')
       }
@@ -68,10 +68,13 @@ const Page = () => {
       setUpdateLoading(true)
       const urlParams = new URLSearchParams(window.location.search)
       const sessionId = urlParams.get('session_id')
-      const response = await axios.post(`/api/paypal/id`, {
-        session_id: sessionId,
-      })
-      if (response.data.success) {
+      if (!sessionId) {
+        toast.error('Failed to update PayPal ID')
+        setUpdateLoading(false)
+        return
+      }
+      const response = await updatePaypalId(sessionId)
+      if (response.success) {
         toast.success('PayPal ID account updated successfully')
         fetchPaypalID(false)
         setIsModalOpen(false)
@@ -104,8 +107,12 @@ const Page = () => {
   const handleLogin = async () => {
     try {
       setLoginLoading(true)
-      const response = await axios.get(`/api/public/paypal/login`)
-      window.open(response.data.url, '_blank')
+      const response = await getAuthUrl()
+      if (response.success) {
+        window.open(response.url, '_blank')
+      } else {
+        toast.error('Failed to log in with PayPal')
+      }
       setLoginLoading(false)
     } catch (error) {
       toast.error('Failed to log in with PayPal')

@@ -1,12 +1,15 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios, { AxiosError } from 'axios'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
+import { getRefundAmountAction } from '@/app/actions/file/cancel-order'
+import { downloadMp3 } from '@/app/actions/file/download-mp3'
+import { refetchFiles } from '@/app/actions/files'
 import DraftTranscriptFileDialog from '@/components/draft-transcript'
 import CanceOrderDialog from '@/components/draft-transcript/cancel-order'
 import RenameFileDialog from '@/components/file-rename-dialog'
@@ -74,27 +77,16 @@ export default function InprogressFilesPage({ files }: ListProps) {
       setIsLoading(false)
     }
     try {
-      const response = await axios.get(`/api/files?status=in-progress`)
+      const updatedFiles = await refetchFiles('in-progress')
 
-      const files = response.data
-        .map(
-          (file: {
-            fileId: string
-            filename: string
-            createdAt: string
-            duration: number
-            Orders: {
-              orderTs: string
-            }[]
-            uploadedByUser: User
-          }) => ({
-            id: file.fileId,
-            filename: file.filename,
-            date: file.Orders[0]?.orderTs,
-            duration: file.duration,
-            uploadedByUser: file.uploadedByUser,
-          })
-        )
+      const files = updatedFiles
+        ?.map((file: any) => ({
+          id: file.fileId,
+          filename: file.filename,
+          date: file.Orders[0]?.orderTs,
+          duration: file.duration,
+          uploadedByUser: file.uploadedByUser,
+        }))
         .sort((a: ExtendedFile, b: ExtendedFile) => {
           if (a.date && b.date) {
             return new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -314,17 +306,14 @@ export default function InprogressFilesPage({ files }: ListProps) {
     setSeletedFile({ fileId, name: filename })
     setLoadingCancelOrder((prev) => ({ ...prev, [fileId]: true }))
     try {
-      const data = await axios.get(`/api/file/cancel-order?fileId=${fileId}`)
-      if (data.status === 200) {
-        const responseData = data.data
-        if (!responseData.success) {
-          const errorToastId = toast.error(responseData.message)
-          toast.dismiss(errorToastId)
-          return
-        }
-        setRefundedAmount(responseData.amount)
-        setCancelOrderDialog(true)
+      const response = await getRefundAmountAction(fileId)
+      if (!response.success) {
+        const errorToastId = toast.error(response.s)
+        toast.dismiss(errorToastId)
+        return
       }
+      setRefundedAmount(Number(response.amount))
+      setCancelOrderDialog(true)
       setLoadingCancelOrder((prev) => ({ ...prev, [fileId]: false }))
     } catch (err) {
       const errorToastId = toast.error(`Error cancelling order`)
@@ -336,19 +325,15 @@ export default function InprogressFilesPage({ files }: ListProps) {
   const handleMP3Download = async (fileId: string) => {
     try {
       setLoadingCancelOrder((prev) => ({ ...prev, [fileId]: true }))
-      const response = await axios.get(
-        `/api/file/download-mp3?fileId=${fileId}`
-      )
-      if (response.status === 200) {
-        const data = response.data
-        window.open(data.url, '_blank')
-        setLoadingCancelOrder((prev) => ({ ...prev, [fileId]: false }))
+      const response = await downloadMp3(fileId)
+      if (response.success) {
+        window.open(response.url, '_blank')
+      } else {
+        toast.error(response.s)
       }
+      setLoadingCancelOrder((prev) => ({ ...prev, [fileId]: false }))
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.message)
-        toast.dismiss(errorToastId)
-      }
+      toast.error('Failed to download MP3')
       setLoadingCancelOrder((prev) => ({ ...prev, [fileId]: false }))
     }
   }
@@ -363,25 +348,25 @@ export default function InprogressFilesPage({ files }: ListProps) {
           <div>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-                <Button
-                  variant='order'
-                  className='not-rounded text-black w-[140px] mr-3'
-                  onClick={async () => {
-                    try {
-                      if (selectedFiles.length === 0) {
-                        toast.error('Please select at least one file')
-                        return
-                      }
-                      await navigator.clipboard.writeText(selectedFiles.join(','))
-                      toast.success('File Ids copied to clipboard')
-                    } catch (error) {
-                      toast.error('Failed to copy file Ids')
+              <Button
+                variant='order'
+                className='not-rounded text-black w-[140px] mr-3'
+                onClick={async () => {
+                  try {
+                    if (selectedFiles.length === 0) {
+                      toast.error('Please select at least one file')
+                      return
                     }
-                  }}
-                >
-                  Copy file Ids
-                </Button>
-              )}
+                    await navigator.clipboard.writeText(selectedFiles.join(','))
+                    toast.success('File Ids copied to clipboard')
+                  } catch (error) {
+                    toast.error('Failed to copy file Ids')
+                  }
+                }}
+              >
+                Copy file Ids
+              </Button>
+            )}
           </div>
         </div>
         <DataTable

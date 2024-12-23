@@ -1,9 +1,9 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { addMiscEarningsAction } from '@/app/actions/admin/add-misc-earnings'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -54,24 +54,20 @@ export default function AddMiscEarnings() {
 
     try {
       setLoading(true)
-      const response = await axios.post(`/api/admin/add-misc-earnings`, {
-        email: formData.email,
-        amount: formData.amount,
-        reason: formData.reason,
-      })
-      if (response.data.success) {
+      const result = await addMiscEarningsAction(
+        formData.email.toLowerCase(),
+        Number(formData.amount),
+        formData.reason
+      )
+
+      if (result.success) {
         toast.success('Successfully added misc earnings')
       } else {
-        toast.error(response.data.s || 'Failed to add misc earnings')
+        toast.error(result.s || 'Failed to add misc earnings')
       }
-      setLoading(false)
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to disabled Editor.`)
-      }
+      toast.error('Failed to add misc earnings')
+    } finally {
       setLoading(false)
     }
   }

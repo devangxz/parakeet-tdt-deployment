@@ -1,9 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
-import Image from 'next/image'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
@@ -13,6 +10,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { formSchema } from './controllers'
+import { getInviteDetails, joinTeam } from '@/app/actions/team/member/join'
 import SideImage from '@/components/side-image'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -53,21 +51,29 @@ const JoinTeamForm = () => {
     const fetchTeamInformation = async () => {
       setIsLoading(true)
       try {
-        const response = await axios.get(
-          `/api/team/member/join?inviteKey=${params?.invite_key}`
-        )
+        const response = await getInviteDetails(params?.invite_key as string)
+
+        if (!response.success) {
+          if (response.redirect) {
+            window.location.href = response.redirect
+          } else {
+            toast.error(response.error || 'Failed to fetch team details')
+          }
+          return
+        }
 
         setOwnerDetails({
-          name: response.data.details.ownerFirstname,
-          email: response.data.details.ownerEmail,
-          userEmail: response.data.details.email,
+          name: response.details?.ownerFirstname || '',
+          email: response.details?.ownerEmail || '',
+          userEmail: response.details?.email || '',
         })
         form.reset({
           ...form.getValues(),
-          email: response.data.details.email,
+          email: response.details?.email || '',
         })
       } catch (err) {
         console.error('Failed to fetch team details:', err)
+        toast.error('Failed to fetch team details')
       } finally {
         setIsLoading(false)
       }
@@ -79,20 +85,14 @@ const JoinTeamForm = () => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setLoading(true)
-      const response = await fetch(`/api/team/member/join`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: values.email,
-          pass: values.password,
-          fn: values.firstName,
-          ln: values.lastName,
-        }),
+      const response = await joinTeam({
+        email: values.email,
+        password: values.password,
+        firstname: values.firstName,
+        lastname: values.lastName,
       })
-      const responseData = await response.json()
-      if (responseData.success) {
+
+      if (response.success) {
         const result = await signIn('credentials', {
           redirect: false,
           email: values.email,
@@ -114,25 +114,18 @@ const JoinTeamForm = () => {
           toast.dismiss(tId)
         }
       } else {
-        setLoading(false)
-        toast.error(`Failed to join team: ${responseData.message}`)
+        toast.error(`Failed to join team: ${response.message}`)
       }
     } catch (error) {
-      setLoading(false)
       toast.error(`Failed to join team: ${error}`)
+    } finally {
+      setLoading(false)
     }
   }
 
   if (isLoading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '80vh',
-        }}
-      >
+      <div className='flex h-[80vh] items-center justify-center'>
         <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
         <p>Loading...</p>
       </div>

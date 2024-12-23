@@ -134,7 +134,10 @@ export const updateContent = (
         nextWordStart,
         index,
         prevSpeaker
-      )
+      ).map(word => ({
+        ...word,
+        case: 'mismatch'
+      }))
       updatedCtms = updatedCtms.concat(newWords)
       index += words.length
     } else {

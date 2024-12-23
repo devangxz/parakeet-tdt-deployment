@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { Dropin } from 'braintree-web-drop-in'
 import DropIn from 'braintree-web-drop-in-react'
 import { Check, ChevronDown, ChevronUp, MoveRight } from 'lucide-react'
@@ -19,6 +20,13 @@ import {
   CollapsibleTrigger,
 } from '../ui/collapsible'
 import { OrderOptions } from '@/app/(dashboard)/payments/invoice/[invoice_id]/components/order-options'
+import { getInvoiceDetails } from '@/app/actions/invoice/[invoiceId]'
+import { updateFreeOrderOptionsAction } from '@/app/actions/order/update-free-order-options'
+import { updateOrderOptions } from '@/app/actions/order/update-order-options'
+import { applyDiscount } from '@/app/actions/payment/apply-discount'
+import { checkout } from '@/app/actions/payment/checkout'
+import { checkoutViaCredits } from '@/app/actions/payment/checkout-via-credits'
+import { getClientTokenAction } from '@/app/actions/payment/client-token'
 import BillBreakdownDialog from '@/components/bill-breakdown'
 import { Icons } from '@/components/icons'
 import { Button } from '@/components/ui/button'
@@ -36,7 +44,6 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  BACKEND_URL,
   RUSH_ORDER_PRICE,
   STRICT_VERBATIUM_PRICE,
   FREE_PRICE,
@@ -174,28 +181,30 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
     const fetchOrderInformation = async () => {
       setIsLoading(true)
       try {
-        const tokenResponse = await axios.get(`/api/payment/client-token`)
+        const tokenResponse = await getClientTokenAction()
+        const response = await getInvoiceDetails(invoiceId, 'TRANSCRIPTION')
+        if (!response.responseData) {
+          throw new Error('No response data received')
+        }
 
-        const response = await axios.get(
-          `/api/invoice/${invoiceId}?orderType=TRANSCRIPTION`
+        const orderOptions = JSON.parse(
+          response.responseData.invoice.options || '{}'
         )
-
-        const orderOptions = JSON.parse(response.data.invoice.options)
-        setCreditsUsed(response.data.creditsUsed)
-        setBillingEnabled(response.data.isBillingEnabledForCustomer)
+        setCreditsUsed(response.responseData.creditsUsed)
+        setBillingEnabled(response.responseData.isBillingEnabledForCustomer)
         const updatedOptions = options.map((option) => {
           const isEnabled = orderOptions[option.id] === 1
           if (option.id === 'exd') {
             return {
               ...option,
               enabled: isEnabled,
-              rate: response.data.rates.rush_order,
+              rate: response.responseData.rates.rush_order,
             }
           } else if (option.id === 'vb') {
             return {
               ...option,
               enabled: isEnabled,
-              rate: response.data.rates.verbatim,
+              rate: response.responseData.rates.verbatim,
             }
           } else {
             return { ...option, enabled: isEnabled }
@@ -208,7 +217,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
           spellingStyle: orderOptions.sp,
         })
         setInstructions({
-          instructions: response.data.invoice.instructions || '',
+          instructions: response.responseData.invoice.instructions || '',
           accents: 'NA',
           speakers: '1',
         })
@@ -217,25 +226,25 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
           .map((option) => ({ name: option.name, rate: option.rate }))
         setPaymentInfo({
           fileSize:
-            response.data.files.reduce(
+            response.responseData.files.reduce(
               (total: number, file: { File: { duration: number } }) =>
                 total + file.File.duration,
               0
             ) / 60,
           options: enabledOptions,
-          baseRate: response.data.invoice.orderRate,
-          discount: response.data.invoice.discount,
-          totalAmount: response.data.invoice.amount,
+          baseRate: response.responseData.invoice.orderRate,
+          discount: response.responseData.invoice.discount,
+          totalAmount: response.responseData.invoice.amount,
           invoiceId,
-          creditsUsed: response.data.creditsUsed,
+          creditsUsed: response.responseData.creditsUsed,
         })
-        const templateData = response.data.templates.map(
+        const templateData = response.responseData.templates.map(
           (template: Template) => ({
             id: template.id,
             name: template.name,
           })
         )
-        const bills = response.data.files.map(
+        const bills = response.responseData.files.map(
           (file: {
             File: { filename: string; duration: number }
             price: number
@@ -247,10 +256,11 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
         )
         setBills(bills)
         setTemplates(templateData)
-        setClientToken(tokenResponse.data.clientToken)
+        setClientToken(tokenResponse?.clientToken ?? null)
         setIsLoading(false)
       } catch (err) {
         console.error('Failed to fetch pending files:', err)
+        setIsLoading(false)
       }
     }
 
@@ -287,16 +297,13 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
     name: string
   ) => {
     try {
-      const response = await axios.post(
-        `/api/order/update-free-order-options`,
-        {
-          invoiceId,
-          optionId,
-          value,
-        }
+      const response = await updateFreeOrderOptionsAction(
+        invoiceId,
+        optionId,
+        value
       )
 
-      if (response.data.success) {
+      if (response.success) {
         const tId = toast.success(`Successfully updated ${name} format`)
         toast.dismiss(tId)
       } else {
@@ -346,13 +353,14 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
     setOptions(updatedOptions)
     try {
       setLoadingOrderUpdate(true)
-      const response = await axios.post(`/api/order/update-order-options`, {
-        invoiceId,
-        optionId: updatedOptions[index].id,
-        enabled: isEnabled ? 1 : 0,
-      })
 
-      if (response.data.success) {
+      const response = await updateOrderOptions(
+        invoiceId,
+        updatedOptions[index].id,
+        isEnabled ? '1' : '0'
+      )
+
+      if (response.success) {
         const tId = toast.success(
           `Successfully ${isEnabled ? 'Enabled' : 'Disabled'} ${
             updatedOptions[index].name
@@ -361,10 +369,10 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
         toast.dismiss(tId)
         setPaymentInfo((prevPaymentInfo: Payment | null) => ({
           ...prevPaymentInfo!,
-          totalAmount: response.data.invoice.amount,
-          creditsUsed: response.data.creditsUsed,
+          totalAmount: response.invoice?.amount ?? 0,
+          creditsUsed: response.creditsUsed ?? 0,
         }))
-        setCreditsUsed(response.data.creditsUsed)
+        setCreditsUsed(response.creditsUsed ?? 0)
         setLoadingOrderUpdate(false)
       } else {
         toast.error(`Failed to update order option`)
@@ -397,49 +405,36 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
   const totalSteps = steps.length
 
   const handlePaymentMethod = async () => {
-    if (instance) {
-      instance
-        .requestPaymentMethod()
-        .then(({ nonce }: { nonce: string }) => {
-          setLoadingPay(true)
-          fetch(`/api/payment/checkout`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${session?.user?.token}`,
-            },
-            body: JSON.stringify({
-              paymentMethodNonce: nonce,
-              invoiceId,
-              orderType: 'TRANSCRIPTION',
-            }),
-          })
-            .then((response) => response.json())
-            .then((data) => {
-              setLoadingPay(false)
-              if (data.success) {
-                setPaymentSuccessData((prevData) => ({
-                  ...prevData,
-                  transactionId: data.transactionId,
-                  paymentMethod: data.paymentMethod,
-                  pp_account: data.pp_account,
-                  cc_last4: data.cc_last4,
-                  amount: data.invoice.amount,
-                }))
-                setPaymentSuccess(true)
-              } else {
-                alert('Payment failed: ' + data.message)
-              }
-            })
-            .catch((err) => {
-              setLoadingPay(false)
-              console.error('Error processing payment:', err)
-            })
-        })
-        .catch((err) => {
-          setLoadingPay(false)
-          console.error('Error requesting payment method:', err)
-        })
+    if (!instance) return
+
+    try {
+      const { nonce } = await instance.requestPaymentMethod()
+      setLoadingPay(true)
+
+      const response = await checkout({
+        paymentMethodNonce: nonce,
+        invoiceId,
+        orderType: 'TRANSCRIPTION',
+      })
+
+      setLoadingPay(false)
+      if (response.success) {
+        setPaymentSuccessData((prevData) => ({
+          ...prevData,
+          transactionId: response.transactionId ?? '',
+          paymentMethod: response.paymentMethod ?? 'CREDITCARD',
+          pp_account: response.pp_account ?? '',
+          cc_last4: response.cc_last4 ?? '',
+          amount: response.invoice?.amount ?? 0,
+        }))
+        setPaymentSuccess(true)
+      } else {
+        toast.error(`Payment failed: ${response.message}`)
+      }
+    } catch (err) {
+      setLoadingPay(false)
+      console.error('Error processing payment:', err)
+      toast.error('Error processing payment')
     }
   }
 
@@ -450,27 +445,24 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
     }
     try {
       setLoadingCoupon(true)
-      const response = await axios.post(`/api/payment/apply-discount`, {
-        invoiceId,
-        couponCode,
-      })
-
+      const response = await applyDiscount({ invoiceId, couponCode })
+      if (!response.success) {
+        throw new Error('Failed to apply coupon code')
+      }
       const tId = toast.success(
         `Successfully applied ${couponCode} coupon code`
       )
       toast.dismiss(tId)
-      setPaymentInfo((prevPaymentInfo: Payment | null) => ({
-        ...prevPaymentInfo!,
-        discount: response.data.totalDiscount,
-      }))
+      setPaymentInfo((prevPaymentInfo: Payment | null) => {
+        if (!prevPaymentInfo) return null
+        return {
+          ...prevPaymentInfo,
+          discount: response.totalDiscount ?? 0,
+        }
+      })
       setLoadingCoupon(false)
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.message)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to add free credits`)
-      }
+      toast.error(`Failed to add free credits`)
       setLoadingCoupon(false)
     }
   }
@@ -478,20 +470,21 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
   const handlePaymentMethodViaCredits = async () => {
     try {
       setLoadingPay(true)
-      const response = await axios.post(`/api/payment/checkout-via-credits`, {
+
+      const response = await checkoutViaCredits({
         invoiceId,
         orderType: 'TRANSCRIPTION',
       })
 
-      if (response.data.success) {
-        const data = response.data
+      if (response.success) {
+        const data = response
         setPaymentSuccessData((prevData) => ({
           ...prevData,
-          transactionId: data.transactionId,
-          paymentMethod: data.paymentMethod,
-          pp_account: data.pp_account,
-          cc_last4: data.cc_last4,
-          amount: data.invoice.amount,
+          transactionId: data.transactionId ?? '',
+          paymentMethod: data.paymentMethod ?? 'CREDITS',
+          pp_account: data.pp_account ?? '',
+          cc_last4: data.cc_last4 ?? '',
+          amount: data.invoice?.amount ?? 0,
         }))
         setPaymentSuccess(true)
         setLoadingPay(false)
@@ -926,12 +919,12 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                     <Image
                       loading='lazy'
                       src='/assets/images/home/call-support.svg'
-                      alt='24/7 customer'
+                      alt='20/5 customer'
                       width={32}
                       height={32}
                     />
                     <div className='text-center my-auto font-normal w-[122px]'>
-                      24/7 customer support
+                      20/5 customer support
                     </div>
                   </div>
                 </div>
@@ -1011,14 +1004,16 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                     </div>
                   )}
 
-                  <div className='flex justify-between mr-5 mb-6'>
-                    <div className='flex items-center gap-2'>
-                      <div className='text-md font-medium'>Discount</div>
+                  {paymentInfo && paymentInfo.discount > 0 && (
+                    <div className='flex justify-between mr-5 mb-6'>
+                      <div className='flex items-center gap-2'>
+                        <div className='text-md font-medium'>Discount</div>
+                      </div>
+                      <div className='text-md font-normal text-[#00B98C]'>
+                        ${paymentInfo?.discount}
+                      </div>
                     </div>
-                    <div className='text-md font-normal text-[#00B98C]'>
-                      ${paymentInfo?.discount}
-                    </div>
-                  </div>
+                  )}
                   <Separator className='bg-[#322078]' />
                   <div className='flex justify-between mr-5 mb-4 mt-4'>
                     <div className='flex items-center gap-2'>
@@ -1035,7 +1030,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                       <li>1. All amounts are in USD.</li>
                       <li>
                         <div>
-                          2.
+                          2.{' '}
                           <a
                             href='/customer-guide#manual-deliveries'
                             className='text-primary'
@@ -1051,7 +1046,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                         </div>
                       </li>
                       <li>
-                        3.
+                        3.{' '}
                         <a
                           href='/customer-guide#additional-charges'
                           className='text-primary'

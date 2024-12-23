@@ -1,10 +1,11 @@
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import { useState, useEffect } from 'react'
+import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
+import { fetchPreDeliveryOrders } from '@/app/actions/om/fetch-pre-delivery-orders'
 import DeliveryPreDeliveryFile from '@/components/admin-components/deliver-pre-delivery-file'
 import ReassignFinalizer from '@/components/admin-components/re-assign-finalizer-dialog'
 import ReassignPreDeliveryFile from '@/components/admin-components/re-assign-pre-delivery-file'
@@ -37,7 +38,6 @@ interface File {
   pwer: number
   status: string
   priority: number
-  qc_cost: string
   duration: number
   qc: string
   deliveryTs: string
@@ -67,72 +67,49 @@ export default function PreDeliveryPage() {
     setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
   }, [playing])
 
-  const fetchPreDeliveryOrders = async (showLoader = false) => {
+  const getPreDeliveryOrders = async (showLoader = false) => {
     if (showLoader) {
       setIsLoading(true)
     } else {
       setIsLoading(false)
     }
     try {
-      const response = await axios.get(`/api/om/fetch-pre-delivery-orders`)
+      const response = await fetchPreDeliveryOrders()
 
-      if (response.data.success) {
-        const orders = response.data.details.map(
-          (
-            order: {
-              id: number
-              fileId: string
-              File: { filename: string; duration: number }
-              orderTs: string
-              pwer: number
-              status: string
-              priority: number
-              qc_cost: number
-              qc: string
-              deliveryTs: string
-              highDifficulty: boolean
-              orderType: string
-              Assignment: {
-                status: string
-                user: { firstname: string; lastname: string }
-              }[]
-              rateBonus: number
-              fileCost: FileCost
-            },
-            index: number
-          ) => {
-            const qcNames = order.Assignment.filter(
-              (a) => a.status === 'ACCEPTED' || a.status === 'COMPLETED'
-            )
-              .map((a) => `${a.user.firstname} ${a.user.lastname}`)
-              .join(', ')
+      if (response.success && response.details) {
+        const orders = response.details.map((order, index) => {
+          const qcNames = order.Assignment.filter(
+            (a) => a.status === 'ACCEPTED' || a.status === 'COMPLETED'
+          )
+            .map((a) => `${a.user.firstname} ${a.user.lastname}`)
+            .join(', ')
 
-            return {
-              index: index + 1,
-              orderId: order.id,
-              fileId: order.fileId,
-              filename: order.File.filename,
-              orderTs: order.orderTs,
-              pwer: order.pwer,
-              status: order.status,
-              priority: order.priority,
-              qc_cost: order.qc_cost,
-              duration: order.File.duration,
-              qc: qcNames || '-',
-              deliveryTs: order.deliveryTs,
-              hd: order.highDifficulty,
-              orderType: order.orderType,
-              fileCost: order.fileCost,
-              rateBonus: order.rateBonus,
-            }
+          return {
+            index: index + 1,
+            orderId: order.id,
+            fileId: order.fileId,
+            filename: order.File?.filename ?? '',
+            orderTs: order.orderTs.toISOString(),
+            pwer: order.pwer ?? 0,
+            status: order.status,
+            priority: order.priority,
+            duration: order.File?.duration ?? 0,
+            qc: qcNames || '-',
+            deliveryTs: order.deliveryTs.toISOString(),
+            hd: order.highDifficulty ?? false,
+            orderType: order.orderType,
+            fileCost: order.fileCost,
+            rateBonus: order.rateBonus,
           }
-        )
+        })
         setPreDelieryFiles(orders ?? [])
         setError(null)
       } else {
-        setError(response.data.message)
+        toast.error(response.message || 'An error occurred')
+        setError(response.message || 'An error occurred')
       }
     } catch (err) {
+      toast.error('An error occurred')
       setError('an error occurred')
     } finally {
       setIsLoading(false)
@@ -140,7 +117,7 @@ export default function PreDeliveryPage() {
   }
 
   useEffect(() => {
-    fetchPreDeliveryOrders(true)
+    getPreDeliveryOrders(true)
   }, [])
 
   if (isLoading) {
@@ -210,8 +187,8 @@ export default function PreDeliveryPage() {
                   {row.original.pwer > HIGH_PWER
                     ? 'HIGH'
                     : row.original.pwer < LOW_PWER
-                      ? 'LOW'
-                      : 'MEDIUM'}
+                    ? 'LOW'
+                    : 'MEDIUM'}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
@@ -326,7 +303,11 @@ export default function PreDeliveryPage() {
               window.open(
                 `/editor/${row.original.fileId}`,
                 '_blank',
-                'noopener,noreferrer'
+                'toolbar=no,location=no,menubar=no,width=' +
+                  window.screen.width +
+                  ',height=' +
+                  window.screen.height +
+                  ',left=0,top=0'
               )
             }
           >
@@ -405,26 +386,26 @@ export default function PreDeliveryPage() {
         open={openDialog}
         onClose={() => setOpenDialog(false)}
         orderId={orderId || ''}
-        refetch={() => fetchPreDeliveryOrders()}
+        refetch={() => getPreDeliveryOrders()}
       />
       <ReassignPreDeliveryFile
         open={openReassignDialog}
         onClose={() => setOpenReassignDialog(false)}
         orderId={orderId || ''}
-        refetch={() => fetchPreDeliveryOrders()}
+        refetch={() => getPreDeliveryOrders()}
       />
       <ReassignFinalizer
         open={reassignDialogOpen}
         onClose={() => setReassignDialogOpen(false)}
         orderId={orderId || ''}
-        refetch={() => fetchPreDeliveryOrders()}
+        refetch={() => getPreDeliveryOrders()}
         isCompleted={true}
       />
       <RejectFileDialog
         open={rejectDialogOpen}
         onClose={() => setRejectDialogOpen(false)}
         orderId={orderId || ''}
-        refetch={() => fetchPreDeliveryOrders()}
+        refetch={() => getPreDeliveryOrders()}
       />
     </>
   )

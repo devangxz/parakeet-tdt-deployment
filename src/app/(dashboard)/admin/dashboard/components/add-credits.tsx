@@ -1,9 +1,9 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { addUserFreeCredits } from '@/app/actions/admin/add-free-credits'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -47,26 +47,23 @@ export default function AddCredits() {
 
     try {
       setLoading(true)
-      const response = await axios.post(`/api/admin/add-free-credits`, {
-        email,
-        amount: credits,
-      })
-      if (response.data.success) {
+      const result = await addUserFreeCredits(
+        creditsNumber,
+        email.toLowerCase()
+      )
+
+      if (result.success) {
         toast.success('Successfully added free credits')
       } else {
-        toast.error(response.data.s || 'Failed to add free credits')
+        toast.error(result.s || 'Failed to add free credits')
       }
-      setLoading(false)
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Failed to add free credits`)
-      }
+      toast.error('Failed to add free credits')
+    } finally {
       setLoading(false)
     }
   }
+
   return (
     <>
       <Card>

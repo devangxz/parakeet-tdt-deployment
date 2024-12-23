@@ -1,9 +1,10 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import React, { useState } from 'react'
 import { toast } from 'sonner'
 
+import { saveDefaultInstructions } from '@/app/actions/user/default-instructions'
+import { saveDefaultOptions } from '@/app/actions/user/default-options'
 import HeadingDescription from '@/components/heading-description'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -110,53 +111,49 @@ const Page = ({ options }: { options: OptionProps }) => {
   const [defaultInstruction, setDefaultInstruction] = useState<string>(
     options.instructions?.instructions || ''
   )
+
   async function orderOptionsSubmit() {
     setLoadingOptions(true)
     try {
-      const formData: Record<string, string | number | boolean> = {}
-      formData['sif'] = orderOptions.sif // default
-      formData['si'] = orderOptions.si // speaker tracking
-      formData['tmp'] = orderOptions.tmp //template
-      formData['sp'] = orderOptions.sp // Spelling style
-      formData['ts'] = orderOptions.ts // audio time encoding
-      formData['exd'] = orderOptions.exd // rush order
-      formData['vb'] = orderOptions.vb // strict verbatim
-      formData['sub'] = orderOptions.sub // subtitle file
-      const response = await axios.post(`/api/user/default-options`, {
-        options: formData,
-      })
-      const message = mapKeyToMessage(response.data.message)
-      const successToastId = toast.success(message)
-      toast.dismiss(successToastId)
-    } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const message = mapKeyToMessage(error.response.data.message)
-        const errorToastId = toast.error(message)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Error fetching default settings ${error}`)
+      const formData: Record<string, string | number | boolean> = {
+        sif: orderOptions.sif,
+        si: orderOptions.si,
+        tmp: orderOptions.tmp,
+        sp: orderOptions.sp,
+        ts: orderOptions.ts,
+        exd: orderOptions.exd,
+        vb: orderOptions.vb,
+        sub: orderOptions.sub,
       }
+
+      const response = await saveDefaultOptions(formData)
+      if (response.success) {
+        const message = mapKeyToMessage(response.message)
+        const successToastId = toast.success(message)
+        toast.dismiss(successToastId)
+      } else {
+        toast.error(`Error updating default settings: ${response.message}`)
+      }
+    } catch (error) {
+      toast.error(`Error updating default settings: ${error}`)
     } finally {
       setLoadingOptions(false)
     }
   }
+
   async function handleDefaultInstruction() {
     setLoadingInstructions(true)
     try {
-      const response = await axios.post(`/api/user/default-instructions`, {
-        instructions: defaultInstruction,
-      })
-      const message = mapKeyToMessage(response.data.message)
-      const successToastId = toast.success(message)
-      toast.dismiss(successToastId)
-    } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const message = mapKeyToMessage(error.response.data.message)
-        const errorToastId = toast.error(message)
-        toast.dismiss(errorToastId)
+      const response = await saveDefaultInstructions(defaultInstruction)
+      if (response.success) {
+        const message = mapKeyToMessage(response.message)
+        const successToastId = toast.success(message)
+        toast.dismiss(successToastId)
       } else {
-        toast.error(`Error fetching default settings ${error}`)
+        toast.error(`Error updating default instructions: ${response.message}`)
       }
+    } catch (error) {
+      toast.error(`Error updating default instructions: ${error}`)
     } finally {
       setLoadingInstructions(false)
     }
@@ -169,7 +166,7 @@ const Page = ({ options }: { options: OptionProps }) => {
           heading='Human transcript order options'
           description='The following options for human transcript orders can be set. 
 These values are used when an invoice is generated and can be changed further on the invoice page. 
-Please read the blog post here to learn more about these options.'
+Please read the blog post here to learn more about these options.'
         />
         {optionsArray.map((option, index) => (
           <div key={index} className='w-[100%] flex items-center gap-[1.25rem]'>

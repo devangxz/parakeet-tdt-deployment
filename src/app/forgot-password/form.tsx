@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { formSchema } from './controllers'
+import { forgotPassword } from '@/app/actions/auth/forgot-password'
 import SideImage from '@/components/side-image'
 import { Button } from '@/components/ui/button'
 import {
@@ -33,29 +34,25 @@ const ForgotPassword = () => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setLoading(true)
-      const response = await fetch(`/api/auth/forgot-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: values.email,
-        }),
-      })
-      const responseData = await response.json()
-      if (responseData.success) {
+      const response = await forgotPassword(values.email)
+
+      if (response.success) {
         const tId = toast.success(
           `The email to reset the password is successfully sent to your registered email-Id`
         )
         toast.dismiss(tId)
       } else {
-        toast.error(`Failed to send forgot password instructions`)
+        toast.error(
+          response.message || 'Failed to send forgot password instructions'
+        )
       }
-      setLoading(false)
     } catch (error) {
-      toast.error(`Failed to send forgot password instructions`)
+      toast.error('Failed to send forgot password instructions')
+    } finally {
+      setLoading(false)
     }
   }
+
   return (
     <>
       <div className='w-full lg:grid lg:min-h-[600px] lg:grid-cols-2 xl:min-h-[800px]'>

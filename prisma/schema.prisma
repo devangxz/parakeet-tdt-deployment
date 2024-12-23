@@ -75,6 +75,10 @@ model User {
   MiscEarnings              MiscEarnings[]
   FrequentTerms             FrequentTerms?
   FileVersion               FileVersion[]
+  SharedFile                SharedFile[]            @relation("SharedFilesFrom")
+  SharedFileTo              SharedFile[]            @relation("SharedFilesTo")
+  UploadSessions            UploadSession[]
+  ApiKey                    ApiKey?
 
   @@index([role])
   @@index([email])
@@ -112,6 +116,7 @@ model File {
   user                      User          @relation(fields: [userId], references: [id])
   filename                  String        @db.VarChar(255)
   fileId                    String        @unique @map("file_id")
+  fileKey                   String?       @map("file_key")
   duration                  Int
   bitRate                   Float?        @map("bit_rate")
   sampleRate                Float?        @map("sample_rate")
@@ -131,6 +136,8 @@ model File {
   InvoiceFile               InvoiceFile[]
   fileStatus                FileStatus    @default(NONE) @map("file_status")
   FileVersion               FileVersion[]
+  SharedFile                SharedFile[]
+  converted                 Boolean?      @map("converted")
 
   @@index([userId])
   @@index([fileId])
@@ -217,15 +224,15 @@ model Order {
   pwer         Float?
   wer          Float?
 
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @default(now()) @map("updated_at")
-  orderType     OrderType     @default(TRANSCRIPTION) @map("order_type")
-  reportMode    ReportMode    @default(NONE) @map("report_mode")
-  reportOption  ReportOption? @map("report_option")
-  reportComment String?       @map("report_comment")
-  comments      String?
-  reReview      Boolean?      @default(false) @map("re_review")
-  reReviewComment String?      @map("re_review_comment")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @default(now()) @map("updated_at")
+  orderType       OrderType     @default(TRANSCRIPTION) @map("order_type")
+  reportMode      ReportMode    @default(NONE) @map("report_mode")
+  reportOption    ReportOption? @map("report_option")
+  reportComment   String?       @map("report_comment")
+  comments        String?
+  reReview        Boolean?      @default(false) @map("re_review")
+  reReviewComment String?       @map("re_review_comment")
 
   // Relations
   File       File?           @relation(fields: [fileId], references: [fileId])
@@ -405,16 +412,17 @@ model Verifier {
 }
 
 model JobAssignment {
-  id            Int           @id @default(autoincrement())
-  transcriberId Int           @map("transcriber_id")
-  orderId       Int           @map("order_id")
-  status        JobStatus     @default(ACCEPTED)
-  acceptedTs    DateTime      @default(now()) @map("accepted_ts")
-  completedTs   DateTime?     @map("completed_ts")
-  cancelledTs   DateTime?     @map("cancelled_ts")
-  earnings      Float         @default(0) @map("earnings")
-  type          JobType       @default(QC)
-  inputFile     InputFileType @default(ASR_OUTPUT) @map("input_file")
+  id                 Int           @id @default(autoincrement())
+  transcriberId      Int           @map("transcriber_id")
+  orderId            Int           @map("order_id")
+  status             JobStatus     @default(ACCEPTED)
+  acceptedTs         DateTime      @default(now()) @map("accepted_ts")
+  completedTs        DateTime?     @map("completed_ts")
+  cancelledTs        DateTime?     @map("cancelled_ts")
+  earnings           Float         @default(0) @map("earnings")
+  type               JobType       @default(QC)
+  inputFile          InputFileType @default(ASR_OUTPUT) @map("input_file")
+  extensionRequested Boolean       @default(false) @map("extension_requested")
 
   user  User  @relation(fields: [transcriberId], references: [id])
   order Order @relation(fields: [orderId], references: [id])
@@ -594,6 +602,51 @@ model FileVersion {
   user        User?    @relation(fields: [userId], references: [id])
 
   @@map("scb_file_versions")
+}
+
+model SharedFile {
+  id         Int                  @id @default(autoincrement())
+  fileId     String               @map("file_id")
+  fromUserId Int                  @map("from_user_id")
+  toUserId   Int                  @map("to_user_id")
+  permission SharedFilePermission @default(VIEWER) @map("permission")
+  createdAt  DateTime             @default(now()) @map("created_at")
+
+  fromUser User @relation("SharedFilesFrom", fields: [fromUserId], references: [id])
+  toUser   User @relation("SharedFilesTo", fields: [toUserId], references: [id])
+  file     File @relation(fields: [fileId], references: [fileId])
+
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([fileId])
+  @@map("scb_shared_files")
+}
+
+model UploadSession {
+  id          Int       @id @default(autoincrement())
+  uploadId    String    @unique @map("upload_id")
+  key         String
+  userId      Int       @map("user_id") 
+  sourceInfo  Json      @map("source_info")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("scb_upload_sessions")
+}
+
+model ApiKey {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique @map("user_id")
+  apiKey    String   @unique @map("api_key")
+  webhook   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([apiKey])
+  @@map("scb_api_keys")
 }
 
 //  ███████ ███    ██ ██    ██ ███    ███ ███████
@@ -831,4 +884,9 @@ enum FileTag {
   CF_CUSTOMER_DELIVERED
   LLM
   CF_OM_DELIVERED
+}
+
+enum SharedFilePermission {
+  EDITOR
+  VIEWER
 }

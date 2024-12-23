@@ -1,8 +1,10 @@
+'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
-import axios, { AxiosError } from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { assignFinalizer } from '@/app/actions/om/assign-finalizer'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -35,29 +37,21 @@ const AssignFinalizerDialog = ({ open, onClose, fileId }: DialogProps) => {
     }
     setLoading(true)
     try {
-      const response = await axios.post(`/api/om/assign-finalizer`, {
-        fileId,
-        userEmail,
-      })
-      if (response.data.success) {
+      const result = await assignFinalizer(fileId, userEmail)
+      if (result.success) {
         const successToastId = toast.success(`Successfully assigned Finalizer`)
         toast.dismiss(successToastId)
-        setLoading(false)
         onClose()
       } else {
-        toast.error(response.data.message)
-        setLoading(false)
+        toast.error(result.message)
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.s)
-        toast.dismiss(errorToastId)
-      } else {
-        toast.error(`Error assigning Finalizer`)
-      }
+      toast.error(`Error assigning Finalizer`)
+    } finally {
       setLoading(false)
     }
   }
+
   return (
     <AlertDialog open={open}>
       <AlertDialogContent>

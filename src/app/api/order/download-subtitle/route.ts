@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import logger from '@/lib/logger';
 import prisma from '@/lib/prisma';
-import { getFileVersionFromS3 } from '@/utils/backend-helper';
-import convertToSubtitles from '@/utils/convertToSubtitles';
+import { downloadFromS3 } from '@/utils/backend-helper';
+import getSRTVTT from '@/utils/getSRTVTT';
 
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
@@ -35,8 +35,6 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'File version not found' }, { status: 404 });
         }
 
-        const data = (await getFileVersionFromS3(`${fileId}.txt`, fileVersion?.s3VersionId)).toString();
-
         const fileRecord = await prisma.file.findUnique({
             where: { fileId: fileId as string },
         });
@@ -48,8 +46,18 @@ export async function GET(request: NextRequest) {
 
         const fileName = fileRecord.filename;
 
+        const alignments = JSON.parse((await downloadFromS3(`${fileId}_ctms.json`)).toString());
+
+        const subtitiles = getSRTVTT(alignments);
+
+        if (!subtitiles) {
+            return NextResponse.json({ error: 'Failed to generate subtitles' }, { status: 500 });
+        }
+
+        const { srt, vtt } = subtitiles;
+
         const subTitleContent =
-            ext === 'vtt' ? convertToSubtitles(data, 'VTT') : convertToSubtitles(data, 'SRT');
+            ext === 'vtt' ? vtt : srt;
 
         const blob = new Blob([subTitleContent], { type: ext === 'vtt' ? 'text/vtt' : 'application/x-subrip' });
 

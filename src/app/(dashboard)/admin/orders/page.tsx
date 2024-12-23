@@ -5,12 +5,12 @@ import {
   ChevronRightIcon,
 } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios from 'axios'
 import dynamic from 'next/dynamic'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
 import ApprovalPage from './approvals'
+import ComparePage from './compare'
 import { DataTableColumnHeader } from './components/column-header'
 import { DataTable } from './components/data-table'
 import DeliveredSection from './components/delivered-files'
@@ -21,6 +21,8 @@ const StatusPage = dynamic(() => import('./status'), {
   ssr: false,
   loading: () => <div>Loading...</div>,
 })
+import { changeDeliveryDate } from '@/app/actions/om/change-delivery-date'
+import { fetchPendingOrders } from '@/app/actions/om/fetch-pending-orders'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -45,7 +47,6 @@ interface File {
   pwer: number
   status: string
   priority: number
-  qc_cost: string
   duration: number
   qc: string
   deliveryTs: string
@@ -72,7 +73,7 @@ export default function OrdersPage() {
     setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
   }, [playing])
 
-  const fetchPendingOrders = async (showLoader = false) => {
+  const getPendingOrders = async (showLoader = false) => {
     if (showLoader) {
       setIsLoading(true)
     } else {
@@ -80,63 +81,38 @@ export default function OrdersPage() {
     }
 
     try {
-      const response = await axios.get(`/api/om/fetch-pending-orders`)
+      const response = await fetchPendingOrders()
 
-      if (response.data.success) {
-        const orders = response.data.details.map(
-          (
-            order: {
-              id: number
-              fileId: string
-              File: { filename: string; duration: number }
-              orderTs: string
-              rateBonus: number
-              pwer: number
-              status: string
-              priority: number
-              qc_cost: number
-              qc: string
-              deliveryTs: string
-              highDifficulty: boolean
-              orderType: string
-              Assignment: {
-                status: string
-                user: { firstname: string; lastname: string }
-              }[]
-              fileCost: FileCost
-            },
-            index: number
-          ) => {
-            const qcNames = order.Assignment.filter(
-              (a) => a.status === 'ACCEPTED' || a.status === 'COMPLETED'
-            )
-              .map((a) => `${a.user.firstname} ${a.user.lastname}`)
-              .join(', ')
+      if (response.success && response.details) {
+        const orders = response.details.map((order, index) => {
+          const qcNames = order.Assignment.filter(
+            (a) => a.status === 'ACCEPTED' || a.status === 'COMPLETED'
+          )
+            .map((a) => `${a.user.firstname} ${a.user.lastname}`)
+            .join(', ')
 
-            return {
-              index: index + 1,
-              orderId: order.id,
-              fileId: order.fileId,
-              filename: order.File.filename,
-              orderTs: order.orderTs,
-              pwer: order.pwer,
-              status: order.status,
-              priority: order.priority,
-              qc_cost: order.qc_cost,
-              duration: order.File.duration,
-              qc: qcNames || '-',
-              deliveryTs: order.deliveryTs,
-              hd: order.highDifficulty,
-              fileCost: order.fileCost,
-              rateBonus: order.rateBonus,
-              type: order.orderType,
-            }
+          return {
+            index: index + 1,
+            orderId: order.id,
+            fileId: order.fileId,
+            filename: order.File?.filename ?? '',
+            orderTs: order.orderTs.toISOString(),
+            pwer: order.pwer ?? 0,
+            status: order.status,
+            priority: order.priority,
+            duration: order.File?.duration ?? 0,
+            qc: qcNames || '-',
+            deliveryTs: order.deliveryTs.toISOString(),
+            hd: order.highDifficulty ?? false,
+            fileCost: order.fileCost,
+            rateBonus: order.rateBonus,
+            type: order.orderType,
           }
-        )
+        })
         setPendingOrders(orders ?? [])
         setError(null)
       } else {
-        setError(response.data.message)
+        setError(response.message ?? 'Unknown error')
       }
     } catch (err) {
       setError('an error occurred')
@@ -146,8 +122,22 @@ export default function OrdersPage() {
   }
 
   useEffect(() => {
-    fetchPendingOrders(true)
+    getPendingOrders(true)
   }, [])
+
+  const handleDeliveryDateChanged = async (orderId: number, day: number) => {
+    try {
+      const response = await changeDeliveryDate(orderId, day)
+      if (response.success) {
+        toast.success('Delivery date changed successfully')
+        getPendingOrders()
+      } else {
+        toast.error(response.message)
+      }
+    } catch (err) {
+      toast.error('An error occurred')
+    }
+  }
 
   if (isLoading) {
     return (
@@ -378,37 +368,20 @@ export default function OrdersPage() {
     },
   ]
 
-  const handleDeliveryDateChanged = async (orderId: number, day: number) => {
-    try {
-      const response = await axios.post(`/api/om/change-delivery-date`, {
-        orderId,
-        day,
-      })
-
-      if (response.data.success) {
-        toast.success('Delivery date changed successfully')
-        fetchPendingOrders()
-      } else {
-        toast.error(response.data.message)
-      }
-    } catch (err) {
-      toast.error('An error occurred')
-    }
-  }
-
   return (
     <Tabs
       defaultValue='orders'
       value={activeTab}
       onValueChange={(value) => setActiveTab(value)}
     >
-      <TabsList className='grid w-full grid-cols-6 mt-5 ml-8 w-[900px]'>
+      <TabsList className='grid grid-cols-7 mt-5 ml-8 w-[900px]'>
         <TabsTrigger value='orders'>Orders</TabsTrigger>
         <TabsTrigger value='status'>Status</TabsTrigger>
         <TabsTrigger value='screen'>Screen</TabsTrigger>
         <TabsTrigger value='pre-delivery'>Pre Delivery</TabsTrigger>
         <TabsTrigger value='approval'>Approval</TabsTrigger>
         <TabsTrigger value='re-review'>Re-Review</TabsTrigger>
+        <TabsTrigger value='compare'>Compare</TabsTrigger>
       </TabsList>
       <TabsContent value='orders'>
         <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
@@ -440,6 +413,9 @@ export default function OrdersPage() {
       </TabsContent>
       <TabsContent value='re-review'>
         <ReReviewPage />
+      </TabsContent>
+      <TabsContent value='compare'>
+        <ComparePage />
       </TabsContent>
     </Tabs>
   )

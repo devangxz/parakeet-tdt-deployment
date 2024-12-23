@@ -1,17 +1,20 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import axios, { AxiosError } from 'axios'
 import { FileWarning } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import React, { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { ZodNumberCheck } from 'zod'
 
 import { DataTable } from './components/data-table'
+import { downloadMp3 } from '@/app/actions/file/download-mp3'
+import { refetchFiles } from '@/app/actions/files'
+import { createOrder } from '@/app/actions/order'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
 import RenameFileDialog from '@/components/file-rename-dialog'
+import TrimFileModal from '@/components/trim-file-modal'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -41,7 +44,7 @@ interface File {
   id: string
   name: string
   date: string
-  duration: ZodNumberCheck
+  duration: number
   fileStatus: string
   status: string
   uploadedByUser: User
@@ -65,11 +68,13 @@ const FileList = ({
   const [selectedFile, setSeletedFile] = useState<{
     fileId: string
     name: string
+    duration: number
   } | null>(null)
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
   const [openRenameDialog, setOpenRenameDialog] = useState(false)
   const [bulkLoading, setBulkLoading] = useState(false)
   const [openBulkDeleteDialog, setOpenBulkDeleteDialog] = useState(false)
+  const [openTrimFileDialog, setOpenTrimFileDialog] = useState(false)
   const [playing, setPlaying] = useState<Record<string, boolean>>({})
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
@@ -89,27 +94,17 @@ const FileList = ({
     }
 
     try {
-      const response = await axios.get('/api/files?status=pending')
+      const updatedFiles = await refetchFiles('pending')
 
-      const files = response.data.data.map(
-        (file: {
-          fileId: string
-          filename: string
-          createdAt: string
-          duration: ZodNumberCheck
-          fileStatus: string
-          status: string
-          uploadedByUser: User
-        }) => ({
-          id: file.fileId,
-          name: file.filename,
-          date: file.createdAt,
-          duration: file.duration,
-          fileStatus: file?.fileStatus,
-          status: file?.status,
-          uploadedByUser: file.uploadedByUser,
-        })
-      )
+      const files = updatedFiles?.map((file: any) => ({
+        id: file.fileId,
+        name: file.filename,
+        date: file.createdAt,
+        duration: file.duration,
+        fileStatus: file?.fileStatus,
+        status: file?.status,
+        uploadedByUser: file.uploadedByUser,
+      }))
       setPendingFiles(files ?? [])
       setError(null)
     } catch (err) {
@@ -174,19 +169,18 @@ const FileList = ({
     }
     setLoadingFileOrder((prev) => ({ ...prev, [fileId]: true }))
     try {
-      const response = await axios.post(`/api/order`, {
-        fids: fileId,
-        orderType,
-      })
+      const response = await createOrder([fileId], orderType)
 
-      if (response.status === 200) {
-        window.location.assign(
-          `/payments/invoice/${response.data.inv}?orderType=${orderType}`
-        )
+      if (response.success) {
+        if (response.success && 'inv' in response) {
+          window.location.assign(
+            `/payments/invoice/${response.inv}?orderType=${orderType}`
+          )
+        }
         setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
       } else {
         setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
-        console.error('Failed to process the order', response.data)
+        console.error('Failed to process the order')
       }
     } catch (error) {
       setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
@@ -206,19 +200,16 @@ const FileList = ({
 
     setBulkLoading(true)
     try {
-      const response = await axios.post(`/api/order`, {
-        fids: fileIds,
-        orderType,
-      })
+      const response = await createOrder(fileIds.split(','), orderType)
 
-      if (response.status === 200) {
+      if (response.success && 'inv' in response) {
         window.location.assign(
-          `/payments/invoice/${response.data.inv}?orderType=${orderType}`
+          `/payments/invoice/${response.inv}?orderType=${orderType}`
         )
         setBulkLoading(false)
       } else {
         setBulkLoading(false)
-        console.error('Failed to process the order', response.data)
+        console.error('Failed to process the order')
       }
     } catch (error) {
       setBulkLoading(false)
@@ -388,6 +379,7 @@ const FileList = ({
                 setSeletedFile({
                   fileId: row.original.id,
                   name: row.original.name,
+                  duration: row.original.duration,
                 })
                 setOpenRenameDialog(true)
               }}
@@ -395,11 +387,24 @@ const FileList = ({
               Rename
             </DropdownMenuItem>
             <DropdownMenuItem
+              onClick={() => {
+                setSeletedFile({
+                  fileId: row.original.id,
+                  name: row.original.name,
+                  duration: row.original.duration,
+                })
+                setOpenTrimFileDialog(true)
+              }}
+            >
+              Trim Audio
+            </DropdownMenuItem>
+            <DropdownMenuItem
               className='text-red-500'
               onClick={() => {
                 setSeletedFile({
                   fileId: row.original.id,
                   name: row.original.name,
+                  duration: row.original.duration,
                 })
                 setOpenDeleteDialog(true)
               }}
@@ -423,19 +428,14 @@ const FileList = ({
   const handleMP3Download = async (fileId: string) => {
     try {
       setLoadingFileOrder((prev) => ({ ...prev, [fileId]: true }))
-      const response = await axios.get(
-        `/api/file/download-mp3?fileId=${fileId}`
-      )
-      if (response.status === 200) {
-        const data = response.data
+      const response = await downloadMp3(fileId)
+      if (response.success) {
+        const data = response
         window.open(data.url, '_blank')
         setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
       }
     } catch (error) {
-      if (error instanceof AxiosError && error.response) {
-        const errorToastId = toast.error(error.response?.data?.message)
-        toast.dismiss(errorToastId)
-      }
+      toast.error('Failed to download MP3')
       setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
     }
   }
@@ -550,6 +550,13 @@ const FileList = ({
         open={openBulkDeleteDialog}
         onClose={() => setOpenBulkDeleteDialog(false)}
         fileIds={selectedFiles || []}
+        refetch={fetchPendingFiles}
+      />
+      <TrimFileModal
+        open={openTrimFileDialog}
+        onClose={() => setOpenTrimFileDialog(false)}
+        fileId={selectedFile?.fileId || ''}
+        endDuration={selectedFile?.duration || 0}
         refetch={fetchPendingFiles}
       />
     </div>

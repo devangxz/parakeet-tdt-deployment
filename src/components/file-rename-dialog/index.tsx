@@ -1,8 +1,9 @@
+'use client'
 import { Cross1Icon, ReloadIcon } from '@radix-ui/react-icons'
-import axios from 'axios'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
+import { renameFileAction } from '@/app/actions/file/rename'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -14,6 +15,7 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
+
 interface UpdateFileNameProps {
   open: boolean
   onClose: () => void
@@ -30,26 +32,26 @@ const RenameFileDialog = ({
   refetch,
 }: UpdateFileNameProps) => {
   const [newName, setNewName] = useState<string>(filename)
-  const [updateLoading, setUploadLoading] = useState(false)
+  const [updateLoading, setUpdateLoading] = useState(false)
 
-  const renameFile = async () => {
-    setUploadLoading(true)
+  const handleRenameFile = async () => {
+    setUpdateLoading(true)
     try {
-      await axios.post(`/api/file/rename`, {
-        fileId,
-        filename: newName,
-      })
-      const successToastId = toast.success(`Successfully updated file name`)
-      toast.dismiss(successToastId)
-      refetch()
-      setUploadLoading(false)
-      onClose()
-    } catch (err) {
-      const errorToastId = toast.error(`Error updating file name`)
-      toast.dismiss(errorToastId)
-      setUploadLoading(false)
+      const response = await renameFileAction(fileId, newName)
+      if (response.success) {
+        toast.success(`Successfully renamed file to ${newName}`)
+        refetch()
+        onClose()
+      } else {
+        toast.error('Failed to rename file')
+      }
+    } catch (error) {
+      toast.error('Failed to rename file')
+    } finally {
+      setUpdateLoading(false)
     }
   }
+
   return (
     <AlertDialog open={open}>
       <AlertDialogContent>
@@ -62,13 +64,14 @@ const RenameFileDialog = ({
                 type='text'
                 onChange={(event) => setNewName(event?.target?.value)}
                 placeholder='New File Name'
+                value={newName}
               />
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={renameFile}>
+          <AlertDialogAction onClick={handleRenameFile}>
             {updateLoading ? (
               <>
                 Please wait
