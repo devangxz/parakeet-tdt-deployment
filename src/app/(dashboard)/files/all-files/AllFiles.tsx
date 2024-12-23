@@ -17,6 +17,8 @@ import { downloadMp3 } from '@/app/actions/file/download-mp3'
 import { getFolders } from '@/app/actions/folders'
 import { getFolderHierarchy } from '@/app/actions/folders/parent'
 import { createOrder } from '@/app/actions/order'
+import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
+import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
 import DraftTranscriptFileDialog from '@/components/draft-transcript'
@@ -64,6 +66,8 @@ interface AllFile {
   status: string
   orderType: string
   orderId: number
+  txtSignedUrl: string
+  cfDocxSignedUrl: string
 }
 
 interface Folder {
@@ -132,17 +136,25 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
       if (!response?.success) {
         throw new Error(response?.message)
       }
-      const files = response?.data?.filesWithStatus?.map((file: any) => ({
-        id: file.fileId,
-        name: file.filename,
-        date: file.createdAt,
-        duration: file.duration,
-        fileStatus: file?.fileStatus,
-        status: file?.status,
-        orderType: file?.orderType,
-        orderId: file?.orderId,
-      }))
-      setAllFiles(files ?? [])
+      const files = []
+      for (const file of response?.data?.filesWithStatus || []) {
+        const txtRes = await getFileTxtSignedUrl(`${file.fileId}`)
+        const docxRes = await getFileDocxSignedUrl(`${file.fileId}`, 'CUSTOM_FORMATTING_DOC')
+
+        files.push({
+          id: file.fileId,
+          name: file.filename,
+          date: file.createdAt.toString(), // Convert Date to string
+          duration: file.duration,
+          fileStatus: file?.fileStatus,
+          status: file?.status,
+          orderType: file?.orderType,
+          orderId: file?.orderId,
+          txtSignedUrl: txtRes.signedUrl || '',
+          cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
+        })
+      }
+      setAllFiles(files)
     } catch (err) {
       console.error('Failed to fetch all files:', err)
     } finally {
@@ -443,19 +455,19 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
                   </DropdownMenuItem>
                   {getStatus(row.original.status)?.label !==
                     'Draft Transcript' && (
-                    <DropdownMenuItem
-                      className='text-red-500'
-                      onClick={() => {
-                        setSeletedFile({
-                          fileId: row.original.id,
-                          name: row.original.name,
-                        })
-                        setOpenDeleteDialog(true)
-                      }}
-                    >
-                      Delete
-                    </DropdownMenuItem>
-                  )}
+                      <DropdownMenuItem
+                        className='text-red-500'
+                        onClick={() => {
+                          setSeletedFile({
+                            fileId: row.original.id,
+                            name: row.original.name,
+                          })
+                          setOpenDeleteDialog(true)
+                        }}
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -648,6 +660,8 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
             date: file.date,
             duration: file.duration,
             orderType: file.orderType,
+            txtSignedUrl: file.txtSignedUrl,
+            cfDocxSignedUrl: file.cfDocxSignedUrl,
           }))}
           toggleCheckAndDownload={toggleCheckAndDownload}
           setToggleCheckAndDownload={setToggleCheckAndDownload}

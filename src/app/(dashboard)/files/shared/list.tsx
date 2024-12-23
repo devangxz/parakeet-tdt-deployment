@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
@@ -8,6 +9,8 @@ import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
 import { CheckAndDownload } from '../delivered/components/check-download'
+import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
+import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
 import { getFiles } from '@/app/actions/share-file/get-files'
 import { removeSharedFiles } from '@/app/actions/share-file/remove'
 import {
@@ -51,6 +54,8 @@ interface File {
   rating: string
   orderType: string
   orderId: number
+  txtSignedUrl: string
+  cfDocxSignedUrl: string
 }
 
 export default function SharedFilesPage({ files }: { files: File[] }) {
@@ -78,7 +83,18 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
     try {
       const response = await getFiles()
       if (response.success && 'data' in response) {
-        setSharedFiles(response.data ?? [])
+        const files = []
+        for (const file of response.data as any[]) {
+          const txtRes = await getFileTxtSignedUrl(`${file.fileId}`)
+          const docxRes = await getFileDocxSignedUrl(`${file.fileId}`, 'CUSTOM_FORMATTING_DOC')
+
+          files.push({
+            ...file,
+            txtSignedUrl: txtRes.signedUrl || '',
+            cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
+          })
+        }
+        setSharedFiles(files)
         setError(null)
       } else {
         setSharedFiles([])
@@ -298,25 +314,25 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
           <div className='flex items-center'>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-              <Button
-                variant='order'
-                className='not-rounded text-black w-[140px] mr-3'
-                onClick={async () => {
-                  try {
-                    if (selectedFiles.length === 0) {
-                      toast.error('Please select at least one file')
-                      return
+                <Button
+                  variant='order'
+                  className='not-rounded text-black w-[140px] mr-3'
+                  onClick={async () => {
+                    try {
+                      if (selectedFiles.length === 0) {
+                        toast.error('Please select at least one file')
+                        return
+                      }
+                      await navigator.clipboard.writeText(selectedFiles.join(','))
+                      toast.success('File Ids copied to clipboard')
+                    } catch (error) {
+                      toast.error('Failed to copy file Ids')
                     }
-                    await navigator.clipboard.writeText(selectedFiles.join(','))
-                    toast.success('File Ids copied to clipboard')
-                  } catch (error) {
-                    toast.error('Failed to copy file Ids')
-                  }
-                }}
-              >
-                Copy file Ids
-              </Button>
-            )}
+                  }}
+                >
+                  Copy file Ids
+                </Button>
+              )}
             <Button
               variant='order'
               className='not-rounded text-black w-[140px]'
@@ -348,6 +364,8 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
             date: file.deliveredTs,
             duration: file.duration,
             orderType: file.orderType,
+            txtSignedUrl: file.txtSignedUrl,
+            cfDocxSignedUrl: file.cfDocxSignedUrl,
           }))}
           toggleCheckAndDownload={toggleCheckAndDownload}
           setToggleCheckAndDownload={setToggleCheckAndDownload}
