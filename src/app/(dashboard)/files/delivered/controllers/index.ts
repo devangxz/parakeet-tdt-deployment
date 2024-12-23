@@ -16,33 +16,6 @@ export const orderController = async (
     payload as { fileId: string; filename?: string; docType?: string }
   )
 
-// /file-pdf-signed-url
-const downloadPDFFile = async ({
-  fileId,
-  docType,
-  filename,
-}: {
-  fileId: string
-  filename?: string
-  docType?: string
-}) => {
-  try {
-
-    const session = await getSession()
-
-    if (docType === 'TRANSCRIPTION_DOC') {
-      window.open(`${FILE_CACHE_URL}/get-tr-pdf/${fileId}?authToken=${session?.user?.token}`, '_blank');
-      return 'PDF file download initiated';
-    } else if (docType === 'CUSTOM_FORMATTING_DOC') {
-      window.open(`${FILE_CACHE_URL}/get-cf-pdf/${fileId}?authToken=${session?.user?.token}`, '_blank');
-      return 'PDF file download initiated';
-    }
-  } catch (err) {
-    console.error('Error downloading PDF file:', err)
-    throw new Error('Failed to download PDF file')
-  }
-}
-
 const downloadFile = async ({
   fileId,
   docType,
@@ -63,26 +36,6 @@ const downloadFile = async ({
     }
   } catch (err) {
     throw new Error('Failed to download file')
-  }
-}
-
-const downloadTxt = async ({
-  fileId,
-}: {
-  fileId: string
-  filename?: string
-  docType?: string
-}) => {
-  try {
-    const response = await axios.get(`/api/order/download-txt?fileId=${fileId}`)
-    const { url } = response.data
-
-    window.open(url, '_blank')
-
-    return 'Txt file downloaded successfully'
-  } catch (err) {
-    console.error('Error downloading TXT file:', err)
-    throw new Error('Failed to download TXT file')
   }
 }
 
@@ -132,37 +85,6 @@ const renameFile = async ({
   }
 }
 
-const downloadSubtitle = async ({
-  fileId,
-  filename,
-  docType,
-}: {
-  fileId: string
-  filename?: string
-  docType?: string
-}) => {
-  try {
-    const ext = docType?.toLowerCase()
-    const response = await axios.get(
-      `/api/order/download-subtitle?fileId=${fileId}&docType=${docType}`
-    )
-
-    const { content, type } = response.data
-
-    const blob = new Blob([content], { type })
-    const url = window.URL.createObjectURL(blob)
-    window.open(url, '_blank')
-
-    // Clean up the URL object after a delay to ensure download starts
-    setTimeout(() => {
-      window.URL.revokeObjectURL(url)
-    }, 100)
-
-    return `${docType} file downloaded Successfully`
-  } catch (err) {
-    throw err
-  }
-}
 const rateFile = async ({
   fileId,
   filename,
@@ -191,11 +113,6 @@ const actions = {
     filename?: string
     docType?: string
   }) => downloadFile(payload),
-  downloadPDFFile: (payload: {
-    fileId: string
-    filename?: string
-    docType?: string
-  }) => downloadPDFFile(payload),
   deleteFile: (payload: {
     fileId: string
     filename?: string
@@ -211,20 +128,10 @@ const actions = {
     filename?: string
     docType?: string
   }) => renameFile(payload),
-  downloadSubtitle: (payload: {
-    fileId: string
-    filename?: string
-    docType?: string
-  }) => downloadSubtitle(payload),
   rateFile: (payload: {
     fileId: string
     filename?: string
     docType?: string
     rating?: number
   }) => rateFile(payload),
-  downloadTxt: (payload: {
-    fileId: string
-    filename?: string
-    docType?: string
-  }) => downloadTxt(payload),
 }
