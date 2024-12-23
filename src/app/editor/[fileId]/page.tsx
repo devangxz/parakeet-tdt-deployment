@@ -4,7 +4,7 @@ import { ReloadIcon } from '@radix-ui/react-icons'
 import { Change, diffWords } from 'diff'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import React, { useCallback, useEffect, useState, useMemo } from 'react'
+import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
@@ -17,7 +17,7 @@ import {
   EditorTabComponent,
   InfoTabComponent,
 } from '@/components/editor/TabComponents'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/editor/Tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/editor/Tabs'
 import renderTitleInputs from '@/components/editor/TitleInputs'
 import { LineData } from '@/components/editor/transcriptUtils'
 import { Button } from '@/components/ui/button'
@@ -128,8 +128,8 @@ function EditorPage() {
   const [replaceText, setReplaceText] = useState('')
   const [matchCase, setMatchCase] = useState(false)
   const [lastSearchIndex, setLastSearchIndex] = useState<number>(-1)
-  const [selectedSidebarTab, setSelectedSidebarTab] = useState('notes')
-
+  const [findAndReplaceOpen, setFindAndReplaceOpen] = useState(false)
+  const findInputRef = useRef<HTMLInputElement>(null)
   interface PlayerEvent {
     t: number
     s: number
@@ -178,32 +178,41 @@ function EditorPage() {
     )
   }
 
+  const toggleFindAndReplace = () => {
+    setFindAndReplaceOpen(!findAndReplaceOpen)
+    setTimeout(() => {
+      if (findInputRef.current) {
+        findInputRef.current.focus()
+      }
+    }, 50)
+  }
+
   const shortcutControls = useMemo(() => {
     const controls: Partial<ShortcutControls> = {
       findNextOccurrenceOfString: () => {
-        if (selectedSidebarTab !== 'find') {
-          setSelectedSidebarTab('find')
+        if (!findAndReplaceOpen) {
+          toggleFindAndReplace()
         } else if (findText) {
           searchAndSelectInstance(findText)
         }
       },
       findThePreviousOccurrenceOfString: () => {
-        if (selectedSidebarTab !== 'find') {
-          setSelectedSidebarTab('find')
+        if (!findAndReplaceOpen) {
+          toggleFindAndReplace()
         } else if (findText) {
           searchAndSelectInstance(findText)
         }
       },
       replaceNextOccurrenceOfString: () => {
-        if (selectedSidebarTab !== 'find') {
-          setSelectedSidebarTab('find')
+        if (!findAndReplaceOpen) {
+          toggleFindAndReplace()
         } else if (findText && replaceText) {
           replaceTextInstance(findText, replaceText)
         }
       },
       replaceAllOccurrencesOfString: () => {
-        if (selectedSidebarTab !== 'find') {
-          setSelectedSidebarTab('find')
+        if (!findAndReplaceOpen) {
+          toggleFindAndReplace()
         } else if (findText && replaceText) {
           replaceTextInstance(findText, replaceText, true)
         }
@@ -213,6 +222,7 @@ function EditorPage() {
           searchAndSelectInstance(findText)
         }
       },
+
       saveChanges: () =>
         handleSave({
           getEditorText,
@@ -225,7 +235,7 @@ function EditorPage() {
         }),
     }
     return controls as ShortcutControls
-  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, selectedSidebarTab, findText, replaceText, matchCase, lastSearchIndex])
+  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, findText, replaceText, matchCase, lastSearchIndex])
 
   useShortcuts(shortcutControls)
 
@@ -474,6 +484,7 @@ function EditorPage() {
         setRegenCount={setRegenCount}
         setFileToUpload={setFileToUpload}
         fileToUpload={fileToUpload}
+        toggleFindAndReplace={toggleFindAndReplace}
       />
       <div className='flex flex-col flex-1 overflow-hidden'>
         <div className='flex justify-between px-16 mt-2 flex-shrink-0'></div>
@@ -551,55 +562,70 @@ function EditorPage() {
                 </div>
                 <div className='w-1/5'>
                   <div className='fixed w-[19%] h-[84%] bg-white ml-2 overflow-auto rounded-lg overflow-y-hidden border'>
-                    <Tabs defaultValue="notes" onValueChange={setSelectedSidebarTab}>
-                      <div className='flex bg-white border-b border-gray-200 text-md font-medium h-12'>
-                        <TabsList>
-                          <TabsTrigger className='text-base' value="notes">Notes</TabsTrigger>
-                          <TabsTrigger className='text-base' value="find">Find & Replace</TabsTrigger>
-                        </TabsList>
-                      </div>
-                      <TabsContent value="notes" className="mt-4 ">
-                        <Textarea
-                          placeholder='Start typing...'
-                          className='resize-none h-[calc(100vh-250px)] w-full border-none outline-none focus:outline-none focus-visible:ring-0 shadow-none'
-                          value={notes}
-                          onChange={handleNotesChange}
-                        />
-                      </TabsContent>
-
-                      <TabsContent value="find" className="mt-4">
-                        <div className='space-y-4 mx-3'>
-                          <Input
-                            placeholder='Find...'
-                            value={findText}
-                            onChange={handleFindChange}
-                          />
-                          <Input
-                            placeholder='Replace with...'
-                            value={replaceText}
-                            onChange={handleReplaceChange}
-                          />
-                          <div className='space-y-2'>
-                            <Button className='w-full' onClick={findHandler}>
-                              Find
-                            </Button>
-                            <Button className='w-full' onClick={replaceOneHandler}>
-                              Replace Once
-                            </Button>
-                            <Button className='w-full' onClick={replaceAllHandler}>
-                              Replace All
-                            </Button>
-                            <Label className='flex items-center space-x-2'>
+                    <div className='flex flex-col h-full'>
+                      <div className={`transition-all duration-300 ease-in-out ${findAndReplaceOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}>
+                        <div className={`transition-all duration-300 ease-in-out transform ${findAndReplaceOpen ? 'translate-y-0' : '-translate-y-4'}`}>
+                          <div className='flex bg-white border-b border-gray-200 text-md font-medium h-12'>
+                            <div className='flex items-center px-4 text-base'>Find & Replace</div>
+                          </div>
+                          <div className='space-y-4 p-4'>
+                            <Input
+                              placeholder='Find...'
+                              value={findText}
+                              onChange={handleFindChange}
+                              ref={findInputRef}
+                            />
+                            <Input
+                              placeholder='Replace with...'
+                              value={replaceText}
+                              onChange={handleReplaceChange}
+                            />
+                            <Label className='flex items-center space-x-2 mb-4'>
                               <Checkbox
                                 checked={matchCase}
                                 onCheckedChange={(checked) => setMatchCase(checked === true)}
                               />
                               <span>Match case</span>
                             </Label>
+                            <div className='inline-flex w-full rounded-md' role="group">
+                              <button 
+                                onClick={findHandler}
+                                className="inline-flex items-center justify-center whitespace-nowrap rounded-l-md rounded-r-none border-r-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                              >
+                                Find
+                              </button>
+                              <button 
+                                onClick={replaceOneHandler}
+                                className="inline-flex items-center justify-center whitespace-nowrap rounded-none border-r-0 border-l border-white/20 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                              >
+                                Replace
+                              </button>
+                              <button 
+                                onClick={replaceAllHandler}
+                                className="inline-flex items-center justify-center whitespace-nowrap rounded-r-md rounded-l-none border-l border-white/20 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                              >
+                                Replace All
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </TabsContent>
-                    </Tabs>
+                      </div>
+
+                      <div className='flex-1 flex flex-col transition-all duration-300 ease-in-out'>
+                        <div className='flex bg-white border-b border-gray-200 text-md font-medium h-12'>
+                          <div className='flex items-center px-4 text-base'>Notes</div>
+                        </div>
+                        <Textarea
+                          placeholder='Start typing...'
+                          className={`resize-none w-full border-none outline-none focus:outline-none focus-visible:ring-0 shadow-none p-4 transition-all duration-300 ease-in-out ${findAndReplaceOpen
+                              ? 'h-[calc(100vh-650px)]'
+                              : 'h-[calc(100vh-250px)]'
+                            }`}
+                          value={notes}
+                          onChange={handleNotesChange}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
