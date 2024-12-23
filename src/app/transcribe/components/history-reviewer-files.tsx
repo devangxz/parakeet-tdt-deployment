@@ -46,10 +46,10 @@ export default function HistoryFilesPage() {
 
             const { timeString, dateString } = getFormattedTimeStrings(
               assignment.status === 'COMPLETED'
-                ? assignment.completedTs.toISOString()
+                ? assignment.completedTs?.toISOString()
                 : assignment.status === 'ACCEPTED'
-                ? assignment.acceptedTs.toISOString()
-                : assignment.cancelledTs.toISOString()
+                ? assignment.acceptedTs?.toISOString()
+                : assignment.cancelledTs?.toISOString()
             )
 
             return {

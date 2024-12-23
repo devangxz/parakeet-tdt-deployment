@@ -60,21 +60,6 @@ const saveFileMetadata = async (metadata: Metadata): Promise<void> => {
     await prisma.file.create({
         data: fileData,
     });
-
-    if (isDuplicate) {
-        await prisma.file.findMany({
-            where: {
-                filename: metadata?.fileName,
-                userId: teamUserId,
-                NOT: {
-                    fileId: metadata?.fileId,
-                },
-            },
-            select: {
-                fileId: true,
-            },
-        });
-    }
 };
 
 export default saveFileMetadata;

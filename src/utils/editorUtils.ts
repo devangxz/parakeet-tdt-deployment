@@ -136,14 +136,16 @@ const downloadBlankDocx = async ({
     }))
     try {
         const response = await axios.get(
-            `/api/editor/download-blank-docx?fileId=${orderDetails.fileId}&type=${downloadableType}&orgName=${orderDetails.orgName}&templateName=${orderDetails.templateName}`
+            `/api/editor/download-blank-docx?fileId=${orderDetails.fileId}&type=${downloadableType}&orgName=${orderDetails.orgName}&templateName=${orderDetails.templateName}`,
+            { responseType: 'blob' }
         )
-        const { url } = response.data
-        if (url) {
-            window.open(url, '_blank')
-        } else {
-            throw new Error('No URL provided for download')
-        }
+        const url = window.URL.createObjectURL(new Blob([response.data]))
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${orderDetails.fileId}${downloadableType === 'marking' || orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === 'PRE_DELIVERED' ? '.docx' : '.txt'}`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
         toast.dismiss(toastId)
         const successToastId = toast.success(`File downloaded successfully`)
         toast.dismiss(successToastId)
@@ -531,6 +533,7 @@ const fetchFileDetails = async ({
         if (!orderRes?.orderDetails) {
             throw new Error('Order details not found')
         }
+
         const orderDetailsFormatted = {
             ...orderRes.orderDetails,
             orderId: orderRes.orderDetails.orderId.toString(),
@@ -874,10 +877,8 @@ const findParagraphStart = (quill: Quill, index: number): number => {
 const navigateAndPlayBlanks = (
     quill: Quill,
     audioPlayer: HTMLAudioElement | null,
-    setDisableGoToWord: (disable: boolean) => void,
     goToPrevious = false
 ) => {
-    setDisableGoToWord(true)
     if (!quill || !audioPlayer) return
 
     const text: string = quill.getText()
@@ -916,7 +917,6 @@ const navigateAndPlayBlanks = (
         playAudioAtTimestamp(audioPlayer, timestamp)
     }
 
-    setTimeout(() => setDisableGoToWord(false), 100)
 }
 
 const adjustTimestamps = (
@@ -965,9 +965,7 @@ const adjustTimestamps = (
 const playCurrentParagraphTimestamp = (
     quill: Quill,
     audioPlayer: HTMLAudioElement | null,
-    setDisableGoToWord: (disable: boolean) => void
 ) => {
-    setDisableGoToWord(true)
     if (!quill || !audioPlayer) return
 
     const selection = quill.getSelection()
@@ -985,8 +983,6 @@ const playCurrentParagraphTimestamp = (
     } else {
         toast.error('No timestamp found at the start of this paragraph.')
     }
-
-    setTimeout(() => setDisableGoToWord(false), 100)
 }
 
 const searchAndSelect = (

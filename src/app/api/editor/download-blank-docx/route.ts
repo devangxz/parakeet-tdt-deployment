@@ -4,7 +4,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
-import { getFileVersionSignedURLFromS3 } from '@/utils/backend-helper'
+import { getFileVersionFromS3, getFileVersionSignedURLFromS3 } from '@/utils/backend-helper'
+import { getTranscriptWithSpeakers, removeTimestamps } from '@/utils/getCustomerTranscript'
 
 export async function GET(req: NextRequest) {
   let fileId = ''
@@ -83,8 +84,33 @@ export async function GET(req: NextRequest) {
           return NextResponse.json({ message: 'File version not found' }, { status: 404 })
         }
 
-        const signedUrl = await getFileVersionSignedURLFromS3(`${fileId}.txt`, fileVersion?.s3VersionId)
-        return NextResponse.json({ url: signedUrl })
+        let transcript = (await getFileVersionFromS3(`${fileId}.txt`, fileVersion?.s3VersionId)).toString();
+
+        const invoiceFile = await prisma.invoiceFile.findFirst({
+          where: {
+            fileId,
+          },
+        })
+
+        const invoice = await prisma.invoice.findUnique({
+          where: {
+            invoiceId: invoiceFile?.invoiceId,
+          },
+        })
+
+        const options = JSON.parse(invoice?.options ?? '{}')
+
+        const speakers: { fn: string, ln: string }[] = options.sn ? options.sn[fileId] : [];
+
+        transcript = removeTimestamps(getTranscriptWithSpeakers(transcript, speakers))
+
+        return new NextResponse(transcript, {
+          status: 200,
+          headers: {
+            'Content-Disposition': `attachment; filename="${fileId}.txt"`,
+            'Content-Type': 'text/plain',
+          },
+        })
       }
 
     } else if (
