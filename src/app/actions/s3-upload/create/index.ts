@@ -50,7 +50,7 @@ export async function createMultipartUpload(
       ContentType: type,
       Metadata: {
         upload_environment: process.env.UPLOAD_ENVIRONMENT || 'STAGING',
-        type: 'ORIGINAL_FILE',
+        type: fileExtension.toLowerCase() === '.docx' ? 'DOCX_FILE' : 'ORIGINAL_FILE',
         user_id: user.userId?.toString(),
         team_user_id:
           user.internalTeamUserId?.toString() || user.userId?.toString(),

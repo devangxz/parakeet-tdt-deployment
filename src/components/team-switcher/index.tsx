@@ -156,12 +156,14 @@ export default function TeamSwitcher({ className }: TeamSwitcherProps) {
             className
           )}
         >
-          <Avatar
-            className='mr-2 h-5 w-5'
-            style={{ backgroundColor: selectedTeam.backgroundColor }}
-          ></Avatar>
-          {selectedTeam.label}
-          <CaretSortIcon className='ml-auto h-4 w-4 shrink-0 opacity-50' />
+          <div className='flex items-center min-w-0'>
+            <Avatar
+              className='flex-shrink-0 mr-2 h-5 w-5'
+              style={{ backgroundColor: selectedTeam.backgroundColor }}
+            />
+            <span className='truncate'>{selectedTeam.label}</span>
+          </div>
+          <CaretSortIcon className='ml-2 h-4 w-4 flex-shrink-0 opacity-50' />
         </Button>
       </PopoverTrigger>
       <PopoverContent className='w-[250px] p-0'>
@@ -188,7 +190,7 @@ export default function TeamSwitcher({ className }: TeamSwitcherProps) {
                     {team.label}
                     <CheckIcon
                       className={cn(
-                        'ml-auto h-4 w-4',
+                        'ml-2 h-4 w-4 flex-shrink-0',
                         selectedTeam.value === team.value
                           ? 'opacity-100'
                           : 'opacity-0'
