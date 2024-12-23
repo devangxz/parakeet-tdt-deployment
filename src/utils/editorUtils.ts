@@ -122,46 +122,6 @@ const updatePlayedPercentage = (
     setPlayedPercentage(Math.min(100, percentagePlayed)) // Ensure percentage does not exceed 100
 }
 
-const downloadBlankDocx = async ({
-    orderDetails,
-    downloadableType,
-    setButtonLoading,
-}: {
-    orderDetails: OrderDetails
-    downloadableType: string
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
-}) => {
-    const toastId = toast.loading('Downloading file...')
-    setButtonLoading((prevButtonLoading) => ({
-        ...prevButtonLoading,
-        download: true,
-    }))
-    try {
-        const response = await downloadBlankDocxAction(
-            orderDetails.fileId,
-            downloadableType,
-            orderDetails.orgName,
-            orderDetails.templateName
-        )
-        if (response.success && response.url) {
-            window.open(response.url, '_blank')
-            toast.dismiss(toastId)
-            const successToastId = toast.success(`File downloaded successfully`)
-            toast.dismiss(successToastId)
-        } else {
-            throw new Error(response.error || 'No download URL received')
-        }
-    } catch (error) {
-        toast.dismiss(toastId)
-        toast.error('Error downloading file')
-    } finally {
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            download: false,
-        }))
-    }
-}
-
 const convertSecondsToTimestamp = (seconds: number) => {
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
@@ -1061,7 +1021,6 @@ export {
     convertBlankToSeconds,
     convertTimestampToSeconds,
     updatePlayedPercentage,
-    downloadBlankDocx,
     convertSecondsToTimestamp,
     downloadMP3,
     handleTextFilesUpload,
