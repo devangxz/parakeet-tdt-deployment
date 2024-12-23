@@ -1309,8 +1309,6 @@ export default function Header({
                         <DownloadDocxDialog
                           orderDetails={orderDetails}
                           downloadableType={downloadableType}
-                          setButtonLoading={setButtonLoading}
-                          buttonLoading={buttonLoading}
                           setDownloadableType={setDownloadableType}
                         />
                       )}

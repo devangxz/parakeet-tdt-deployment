@@ -15,6 +15,8 @@ import ShareFileDialog from './components/share-file'
 import { orderController } from './controllers'
 import { downloadMp3 } from '@/app/actions/file/download-mp3'
 import { refetchFiles } from '@/app/actions/files'
+import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
+import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
 import RenameFileDialog from '@/components/file-rename-dialog'
@@ -46,6 +48,8 @@ interface File {
   orderType: string
   orderId: string
   uploadedByUser: User
+  txtSignedUrl: string
+  cfDocxSignedUrl: string
 }
 
 export default function DeliveredFilesPage({ files }: { files: File[] }) {
@@ -90,16 +94,27 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
 
     try {
       const updatedFiles = await refetchFiles('delivered')
-      const files =
-        updatedFiles?.map((file: any) => ({
-          id: file.fileId,
-          filename: file.filename,
-          date: file.Orders[0]?.deliveredTs,
-          duration: Number(file.duration),
-          orderType: file.Orders[0]?.orderType,
-          orderId: file.Orders[0]?.id,
-          uploadedByUser: file.uploadedByUser,
-        })) || []
+      const files: File[] = []
+      
+      if (updatedFiles) {
+        for (const file of updatedFiles as any[]) {
+          const txtRes = await getFileTxtSignedUrl(`${file.fileId}`)
+          const docxRes = await getFileDocxSignedUrl(`${file.fileId}`, 'CUSTOM_FORMATTING_DOC')
+
+          files.push({
+            id: file.fileId,
+            filename: file.filename,
+            date: file.Orders[0]?.deliveredTs,
+            duration: Number(file.duration),
+            orderType: file.Orders[0]?.orderType,
+            orderId: file.Orders[0]?.id,
+            uploadedByUser: file.uploadedByUser,
+            txtSignedUrl: txtRes.signedUrl || '',
+            cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
+          })
+        }
+      }
+      
       setDeliveredFiles(files)
       setError(null)
     } catch (err) {

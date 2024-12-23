@@ -5,6 +5,16 @@ interface CTMSWordWithCase extends CTMSWord {
     case?: 'success' | 'mismatch';
 }
 
+export interface CTMSWord {
+    start: number
+    end: number
+    word: string
+    punct: string
+    index: number
+    speaker: string
+    case?: 'success' | 'mismatch';
+}
+
 interface SubtitleOutput {
     srt: string;
     vtt: string;

@@ -1,4 +1,3 @@
-import { ReloadIcon } from "@radix-ui/react-icons";
 import { useSession } from "next-auth/react";
 
 import { Button } from "../ui/button";
@@ -7,17 +6,14 @@ import { Label } from "../ui/label";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { OrderDetails } from "@/app/editor/[fileId]/page";
 import { FILE_CACHE_URL } from "@/constants";
-import { ButtonLoading, downloadBlankDocx } from "@/utils/editorUtils";
 
 type DownloadDocxDialogProps = {
     orderDetails: OrderDetails;
     downloadableType: string;
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>;
-    buttonLoading: ButtonLoading;
     setDownloadableType: React.Dispatch<React.SetStateAction<string>>;
 };
 
-const DownloadDocxDialog = ({ orderDetails, downloadableType, setButtonLoading, buttonLoading, setDownloadableType }: DownloadDocxDialogProps) => {
+const DownloadDocxDialog = ({ orderDetails, downloadableType, setDownloadableType }: DownloadDocxDialogProps) => {
     const { data: session } = useSession()
 
     return <Dialog>
@@ -48,15 +44,8 @@ const DownloadDocxDialog = ({ orderDetails, downloadableType, setButtonLoading, 
                 </RadioGroup>
             </DialogHeader>
             <DialogClose asChild>
-                {downloadableType === 'no-marking' ? <Button
-                    disabled={buttonLoading.download}
-                    onClick={downloadBlankDocx.bind(null, { orderDetails, downloadableType, setButtonLoading })}
-                >
-                    {' '}
-                    {buttonLoading.download && (
-                        <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                    )}{' '}
-                    Download File
+                {downloadableType === 'no-marking' ? <Button asChild>
+                    <a target="_blank" href={`${FILE_CACHE_URL}/get-qc-txt/${orderDetails.fileId}?orgName=${orderDetails.orgName}&authToken=${session?.user?.token}`}>Download File</a>
                 </Button>
                     :
                     <Button asChild>

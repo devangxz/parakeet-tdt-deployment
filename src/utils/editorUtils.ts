@@ -5,11 +5,13 @@ import Quill from 'quill'
 import { toast } from 'sonner'
 
 import axiosInstance from './axios'
+import { downloadBlankDocxAction } from '@/app/actions/editor/download-docx'
 import { getFrequentTermsAction } from '@/app/actions/editor/frequent-terms'
 import { getOrderDetailsAction } from '@/app/actions/editor/order-details'
 import { reportFileAction } from '@/app/actions/editor/report-file'
 import { submitQCAction } from '@/app/actions/editor/submit-qc'
 import { submitReviewAction } from '@/app/actions/editor/submit-review'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { OrderDetails, UploadFilesType } from '@/app/editor/[fileId]/page'
 import { LineData, updateContent } from '@/components/editor/transcriptUtils'
 import {
@@ -135,20 +137,20 @@ const downloadBlankDocx = async ({
         download: true,
     }))
     try {
-        const response = await axios.get(
-            `/api/editor/download-blank-docx?fileId=${orderDetails.fileId}&type=${downloadableType}&orgName=${orderDetails.orgName}&templateName=${orderDetails.templateName}`,
-            { responseType: 'blob' }
+        const response = await downloadBlankDocxAction(
+            orderDetails.fileId,
+            downloadableType,
+            orderDetails.orgName,
+            orderDetails.templateName
         )
-        const url = window.URL.createObjectURL(new Blob([response.data]))
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${orderDetails.fileId}${downloadableType === 'marking' || orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === 'PRE_DELIVERED' ? '.docx' : '.txt'}`
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-        toast.dismiss(toastId)
-        const successToastId = toast.success(`File downloaded successfully`)
-        toast.dismiss(successToastId)
+        if (response.success && response.url) {
+            window.open(response.url, '_blank')
+            toast.dismiss(toastId)
+            const successToastId = toast.success(`File downloaded successfully`)
+            toast.dismiss(successToastId)
+        } else {
+            throw new Error(response.error || 'No download URL received')
+        }
     } catch (error) {
         toast.dismiss(toastId)
         toast.error('Error downloading file')
@@ -170,84 +172,12 @@ const convertSecondsToTimestamp = (seconds: number) => {
         .padStart(4, '0')}`
 }
 
-const downloadEditorDocxFile = async (
-    orderDetails: OrderDetails,
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
-) => {
-    const toastId = toast.loading('Downloading file...')
-    setButtonLoading((prevButtonLoading) => ({
-        ...prevButtonLoading,
-        download: true,
-    }))
-    try {
-        const response = await axiosInstance.get(
-            `${BACKEND_URL}/file-docx-signed-url?fileId=${orderDetails.fileId}&docType=TRANSCRIPTION_DOC`
-        )
-        const url = response?.data?.signedUrl
-        if (url) {
-            window.location.href = url
-        } else {
-            console.error('No URL provided for download.')
-            throw 'No URL provided for download.'
-        }
-        toast.dismiss(toastId)
-        const successToastId = toast.success(`File downloaded successfully`)
-        toast.dismiss(successToastId)
-    } catch (error) {
-        toast.dismiss(toastId)
-        toast.error('Error downloading file')
-    } finally {
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            download: false,
-        }))
-    }
-}
-
-const downloadEditorTextFile = async (
-    orderDetails: OrderDetails,
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
-) => {
-    const toastId = toast.loading('Downloading file...')
-    setButtonLoading((prevButtonLoading) => ({
-        ...prevButtonLoading,
-        download: true,
-    }))
-    try {
-        const response = await axiosInstance.get(
-            `${BACKEND_URL}/download-text-file?fileId=${orderDetails.fileId}`,
-            { responseType: 'blob' }
-        )
-        const url = window.URL.createObjectURL(new Blob([response.data]))
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${orderDetails.fileId}.txt`
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-
-        toast.dismiss(toastId)
-        const successToastId = toast.success(`File downloaded successfully`)
-        toast.dismiss(successToastId)
-    } catch (error) {
-        toast.dismiss(toastId)
-        toast.error('Error downloading file')
-    } finally {
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            download: false,
-        }))
-    }
-}
-
 const downloadMP3 = async (orderDetails: OrderDetails) => {
     const toastId = toast.loading('Downloading MP3...')
     try {
-        const response = await axios.get(
-            `/api/editor/download-mp3?fileId=${orderDetails.fileId}`
-        )
-        if (response.data?.url) {
-            window.open(response.data.url, '_blank')
+        const response = await getSignedUrlAction(`${orderDetails.fileId}.mp3`, 60)
+        if (response.success && response.signedUrl) {
+            window.open(response.signedUrl, '_blank')
             toast.dismiss(toastId)
             toast.success(`MP3 downloaded successfully`)
         } else {
@@ -1133,8 +1063,6 @@ export {
     updatePlayedPercentage,
     downloadBlankDocx,
     convertSecondsToTimestamp,
-    downloadEditorDocxFile,
-    downloadEditorTextFile,
     downloadMP3,
     handleTextFilesUpload,
     uploadTextFile,
