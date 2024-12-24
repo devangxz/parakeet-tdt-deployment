@@ -545,7 +545,6 @@ const handleSave = async (
         }
 
         //TODO: Implement this
-        console.log(playerEvents)
         // Get last saved index from localStorage
         // const lastSavedIndex = parseInt(localStorage.getItem(`${orderDetails.fileId}_lastEventIndex`) || '-1');
 
@@ -989,12 +988,62 @@ const replaceTextHandler = (
         toastInstance.error('Text not found')
     }
 }
+const insertTimestampAndSpeakerInitialAtStartOfCurrentLine = (
+    audioPlayer: HTMLAudioElement | null,
+    quill: Quill | undefined
+) => {
+    if (!audioPlayer || !quill) return;
+
+    const currentTime = audioPlayer.currentTime;
+    const formattedTime = convertSecondsToTimestamp(currentTime);
+    const currentSelection = quill.getSelection();
+
+    let paragraphStart = currentSelection ? currentSelection.index : 0;
+    while (paragraphStart > 0 && quill.getText(paragraphStart - 1, 1) !== '\n') {
+        paragraphStart--;
+    }
+
+    // Check for existing timestamp and speaker pattern at start of line
+    const lineText = quill.getText(paragraphStart, 14); // Get enough text to check pattern
+    const timestampSpeakerPattern = /^\d{1}:\d{2}:\d{2}\.\d{1} S\d+: /;
+
+    if (timestampSpeakerPattern.test(lineText)) {
+        // If pattern exists, delete it before inserting new one
+        const match = lineText.match(timestampSpeakerPattern);
+        if (match) {
+            quill.deleteText(paragraphStart, match[0].length);
+        }
+    }
+
+    quill.insertText(paragraphStart, formattedTime + ' S1: ', 'user');
+
+    if (currentSelection) {
+        quill.setSelection(currentSelection.index + formattedTime.length, currentSelection.length);
+    }
+};
 
 const insertTimestampBlankAtCursorPosition = (
     audioPlayer: HTMLAudioElement | null,
     quill: Quill | undefined
 ) => {
     if (!audioPlayer || !quill) return
+
+    const cursorPosition = quill.getSelection()?.index || 0
+
+    // Check if cursor is at start of paragraph
+    let isStartOfParagraph = true;
+    if (cursorPosition > 0) {
+        const textBeforeCursor = quill.getText(cursorPosition - 1, 1);
+        if (textBeforeCursor !== '\n') {
+            isStartOfParagraph = false;
+        }
+    }
+
+    if (isStartOfParagraph) {
+        // Call the other function instead
+        insertTimestampAndSpeakerInitialAtStartOfCurrentLine(audioPlayer, quill);
+        return;
+    }
 
     const currentTime = audioPlayer.currentTime
 
@@ -1009,10 +1058,7 @@ const insertTimestampBlankAtCursorPosition = (
             .toString()
             .padStart(2, '0')}.${milliseconds}] ____`
 
-    const cursorPosition = quill.getSelection()?.index || 0
     quill.insertText(cursorPosition, formattedTime)
-    // quill.formatText(cursorPosition, formattedTime.length, { color: 'red' });
-
     quill.setSelection(cursorPosition + formattedTime.length, 0)
 }
 
@@ -1039,5 +1085,6 @@ export {
     searchAndSelect,
     replaceTextHandler,
     insertTimestampBlankAtCursorPosition,
+    insertTimestampAndSpeakerInitialAtStartOfCurrentLine
 }
 export type { ConvertedASROutput }

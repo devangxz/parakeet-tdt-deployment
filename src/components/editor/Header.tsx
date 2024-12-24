@@ -281,6 +281,7 @@ export default function Header({
   const [audioUrl, setAudioUrl] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
   const [docxUrl, setDocxUrl] = useState('')
+  const [speed, setSpeed] = useState(100)
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -448,6 +449,7 @@ export default function Header({
     if (!audio) return
     const handleLoadedMetadata = () => {
       setAudioDuration(audio.duration)
+      setSpeed(audio.playbackRate * 100)
       if (getAudioPlayer) getAudioPlayer(audio)
     }
     audio.addEventListener('loadedmetadata', handleLoadedMetadata)
@@ -909,6 +911,36 @@ export default function Header({
     )
   }, [audioPlayer, quillRef])
 
+  const handleSpeedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const audio = audioPlayer.current
+    if (!audio) return
+    audio.playbackRate = Number(e.target.value) / 100
+  }
+
+  useEffect(() => {
+    const audio = audioPlayer.current
+    if (!audio) return
+
+    const handleRateChange = () => {
+      setSpeed(Math.floor(audio.playbackRate * 100))
+    }
+
+    audio.addEventListener('ratechange', handleRateChange)
+
+    return () => {
+      audio.removeEventListener('ratechange', handleRateChange)
+    }
+  }, [audioPlayer])
+
+  const capitalizeWord = () => {
+    if (quillRef?.current) {
+      const quill = quillRef.current.getEditor();
+      const text = quill.getText();
+      const modifiedText = text.replace(/\.\s+([a-z])/g, (match, letter) => `. ${letter.toUpperCase()}`);
+      quill.setText(modifiedText);
+    }
+  }
+
   return (
     <div className='min-h-24 relative mx-2'>
       {!isPlayerLoaded && (
@@ -1207,13 +1239,27 @@ export default function Header({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              
+
             </div>
 
             <div className='flex gap-2'>
+              <div className='flex items-center'>
+                <Label htmlFor="speed">Speed:</Label>
+                <div className="relative ml-2">
+                  <Input
+                    id='speed'
+                    placeholder='Speed'
+                    value={speed}
+                    onChange={handleSpeedChange}
+                    type='number'
+                    className='w-20 h-9 pr-6'
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">%</span>
+                </div>
+              </div>
               <Dialog>
                 <DropdownMenu>
-                  <DropdownMenuTrigger className='flex border border-gray-200 px-3 rounded-3xl items-center ml-3 h-10 shadow-none hover:bg-accent transition-colors'>
+                  <DropdownMenuTrigger className='flex border border-gray-200 px-3 rounded-3xl items-center h-10 shadow-none hover:bg-accent transition-colors'>
                     <div className='flex items-center justify-center mr-2'>
                       Options
                     </div>
@@ -1412,7 +1458,8 @@ export default function Header({
               <div className='flex items-center'>
                 {(step === 'QC' || session?.user?.role === 'OM') && (
                   <Button
-                    onClick={() =>
+                    onClick={() => {
+                      capitalizeWord()
                       handleSave({
                         getEditorText,
                         orderDetails,
@@ -1422,6 +1469,7 @@ export default function Header({
                         lines,
                         playerEvents,
                       })
+                    }
                     }
                     disabled={buttonLoading.save}
                     className='w-24 mr-2'
