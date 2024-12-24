@@ -21,11 +21,13 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PAT_FOR_STAGING }}
+          password: ${{ secrets.PAT_FOR_YOUTUBE_WORKER_STAGING }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
+          context: .
+          file: ./Dockerfile.youtube
           push: true
           tags: ghcr.io/yuktiscribie/staging-scribie-youtube-worker:latest
 
