@@ -42,7 +42,8 @@ const DropboxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     isUploading,
     setIsUploading,
   } = useUpload()
-  const { isDropboxServiceReady, initializeDropbox } = useImportService()
+  const { isDropboxServiceReady, initializeDropbox, dropboxInitError } =
+    useImportService()
   const [isPickerLoading, setIsPickerLoading] = useState(false)
 
   const initializeMultiPartUpload = async (
@@ -472,16 +473,17 @@ const DropboxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             className='mt-4 px-5 py-2 bg-[#007ee5] rounded-[32px] text-white font-medium border border-[#007ee5] hover:bg-[#0071ce] transition-colors'
           >
             <div className='flex items-center justify-center'>
-              {(!isDropboxServiceReady || isPickerLoading) && (
+              {isPickerLoading && (
                 <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
               )}
-              <span>
-                {!isDropboxServiceReady
-                  ? 'Initializing...'
-                  : 'Select from Dropbox'}
-              </span>
+              <span>Select from Dropbox</span>
             </div>
           </button>
+          {dropboxInitError && (
+            <p className='text-xs text-red-500'>
+              Failed to connect to Dropbox. Please try again later.
+            </p>
+          )}
         </div>
       </div>
     </div>

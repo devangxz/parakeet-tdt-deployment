@@ -129,6 +129,7 @@ function EditorPage() {
   const [matchCase, setMatchCase] = useState(false)
   const [lastSearchIndex, setLastSearchIndex] = useState<number>(-1)
   const [findAndReplaceOpen, setFindAndReplaceOpen] = useState(false)
+  const [matchCount, setMatchCount] = useState(0)
   const findInputRef = useRef<HTMLInputElement>(null)
   interface PlayerEvent {
     t: number
@@ -147,6 +148,18 @@ function EditorPage() {
     () => quillRef?.current?.getEditor().getText() || '',
     [quillRef]
   )
+
+  const countMatches = (searchText: string) => {
+    if (!quillRef?.current || !searchText) return 0
+    const quill = quillRef.current.getEditor()
+    const text = quill.getText()
+
+    if (matchCase) {
+      return (text.match(new RegExp(searchText, 'g')) || []).length
+    } else {
+      return (text.match(new RegExp(searchText, 'gi')) || []).length
+    }
+  }
 
   const replaceTextInstance = (
     findText: string,
@@ -433,6 +446,7 @@ function EditorPage() {
   const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value
     setFindText(text)
+    setMatchCount(countMatches(text))
   }
 
   const handleReplaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -446,10 +460,12 @@ function EditorPage() {
 
   const replaceOneHandler = () => {
     replaceTextInstance(findText, replaceText)
+    setMatchCount(countMatches(findText))
   }
 
   const replaceAllHandler = () => {
     replaceTextInstance(findText, replaceText, true)
+    setMatchCount(countMatches(findText))
   }
 
   return (
@@ -576,12 +592,18 @@ function EditorPage() {
                             </Button>
                           </div>
                           <div className='space-y-4 p-4'>
-                            <Input
-                              placeholder='Find...'
-                              value={findText}
-                              onChange={handleFindChange}
-                              ref={findInputRef}
-                            />
+                            <div className="relative">
+                              <Input
+                                placeholder='Find...'
+                                value={findText}
+                                onChange={handleFindChange}
+                              />
+                              {findText && (
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                                  {matchCount} matches
+                                </span>
+                              )}
+                            </div>
                             <Input
                               placeholder='Replace with...'
                               value={replaceText}
@@ -590,7 +612,10 @@ function EditorPage() {
                             <Label className='flex items-center space-x-2 mb-4'>
                               <Checkbox
                                 checked={matchCase}
-                                onCheckedChange={(checked) => setMatchCase(checked === true)}
+                                onCheckedChange={(checked) => {
+                                  setMatchCase(checked === true)
+                                  setMatchCount(countMatches(findText))
+                                }}
                               />
                               <span>Match case</span>
                             </Label>
@@ -624,10 +649,7 @@ function EditorPage() {
                         </div>
                         <Textarea
                           placeholder='Start typing...'
-                          className={`resize-none w-full border-none outline-none focus:outline-none focus-visible:ring-0 shadow-none p-4 transition-all duration-300 ease-in-out ${findAndReplaceOpen
-                            ? 'h-[calc(100vh-650px)]'
-                            : 'h-[calc(100vh-250px)]'
-                            }`}
+                          className={`resize-none w-full border-none outline-none focus:outline-none focus-visible:ring-0 shadow-none p-4 transition-all duration-300 ease-in-out h-full`}
                           value={notes}
                           onChange={handleNotesChange}
                         />
