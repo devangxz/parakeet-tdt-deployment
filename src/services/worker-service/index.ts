@@ -35,15 +35,7 @@ export class WorkerQueueService {
     queueName: QueueName,
     jobData: Record<string, unknown>
   ): Promise<undefined> {
-    const jobId = jobData.fileId as string
-    await queues[queueName].add(
-      queueName,
-      { queueName, ...jobData },
-      {
-        jobId,
-        removeOnComplete: true,
-      }
-    )
+    await queues[queueName].add(queueName, { queueName, ...jobData })
     return
   }
 
@@ -52,23 +44,18 @@ export class WorkerQueueService {
   }
 
   async hasExistingJob(queueName: QueueName, fileId: string): Promise<boolean> {
-    const queue = this.getQueue(queueName)
     try {
-      const jobById = await queue.getJob(fileId)
-      if (jobById !== null) return true
+      const queue = this.getQueue(queueName)
 
-      const jobs = await queue.getJobs(
-        ['waiting', 'active', 'delayed'],
-        0,
-        50,
-        false
-      )
-      return jobs.some((job) => job.data.fileId === fileId)
+      const [waiting, active, delayed] = await Promise.all([
+        queue.getWaiting().catch(() => []),
+        queue.getActive().catch(() => []),
+        queue.getDelayed().catch(() => []),
+      ])
+
+      const allJobs = [...waiting, ...active, ...delayed]
+      return allJobs.some((job) => job.data.fileId === fileId)
     } catch (error) {
-      console.error(
-        `Error checking queue ${queueName} for fileId ${fileId}:`,
-        error
-      )
       return false
     }
   }
