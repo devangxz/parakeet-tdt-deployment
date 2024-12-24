@@ -63,12 +63,14 @@ import {
   SelectValue,
 } from '../ui/select'
 import { Textarea } from '../ui/textarea'
+import { downloadBlankDocxAction } from '@/app/actions/editor/download-docx'
 import { getFormattingOptionsAction } from '@/app/actions/editor/get-formatting-options'
 import { getSpeakerNamesAction } from '@/app/actions/editor/get-speaker-names'
 import { requestReReviewAction } from '@/app/actions/editor/re-review'
 import { requestExtensionAction } from '@/app/actions/editor/request-extension'
 import { setFormattingOptionsAction } from '@/app/actions/editor/set-formatting-options'
 import { updateSpeakerNameAction } from '@/app/actions/editor/update-speaker-name'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { getTextFile } from '@/app/actions/get-text-file'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import {
@@ -88,7 +90,6 @@ import DefaultShortcuts, {
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   adjustTimestamps,
-  downloadBlankDocx,
   downloadMP3,
   getFrequentTermsHandler,
   handleSave,
@@ -279,6 +280,9 @@ export default function Header({
   const [downloadableType, setDownloadableType] = useState('marking')
   const [asrFileUrl, setAsrFileUrl] = useState('')
   const [reReviewComment, setReReviewComment] = useState('')
+  const [audioUrl, setAudioUrl] = useState('')
+  const [videoUrl, setVideoUrl] = useState('')
+  const [docxUrl, setDocxUrl] = useState('')
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -288,6 +292,18 @@ export default function Header({
       setSelection({ index: range.index, length: range.length })
     } else {
       setSelection(null)
+    }
+  }
+
+  const getDocxUrl = async () => {
+    const response = await downloadBlankDocxAction(
+      orderDetails.fileId,
+      downloadableType,
+      orderDetails.orgName,
+      orderDetails.templateName
+    )
+    if (response.success && response.url) {
+      setDocxUrl(response.url)
     }
   }
 
@@ -312,6 +328,10 @@ export default function Header({
       } else {
         currentStep = 'QC'
       }
+    }
+
+    if (orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === 'PRE_DELIVERED') {
+      getDocxUrl()
     }
 
     setStep(currentStep)
@@ -406,9 +426,23 @@ export default function Header({
     }
   }
 
+  const fetchAudioUrl = async () => {
+    try {
+      const { success, signedUrl } = await getSignedUrlAction(`${orderDetails.fileId}.mp3`, 3600)
+      if (success && signedUrl) {
+        setAudioUrl(signedUrl)
+      } else {
+        throw new Error('Failed to fetch audio file')
+      }
+    } catch (error) {
+      toast.error('Failed to fetch audio file')
+    }
+  }
+
   useEffect(() => {
     if (!orderDetails.fileId) return
     fetchWaveform()
+    fetchAudioUrl()
   }, [orderDetails.fileId])
 
   useEffect(() => {
@@ -585,8 +619,21 @@ export default function Header({
     }
   }, [audioPlayer, videoRef, videoPlayerOpen])
 
-  const toggleVideo = () => {
-    setVideoPlayerOpen(!videoPlayerOpen)
+  const toggleVideo = async () => {
+    try {
+      if (!videoUrl) {
+        const { success, signedUrl } = await getSignedUrlAction(`${orderDetails.fileId}.mp4`, 3600)
+        if (success && signedUrl) {
+          setVideoUrl(signedUrl)
+        } else {
+          throw new Error('Failed to fetch video file')
+        }
+
+      }
+      setVideoPlayerOpen(!videoPlayerOpen)
+    } catch (error) {
+      toast.error('Failed to fetch video file')
+    }
   }
 
   const handleAutoCapitalize = useCallback(
@@ -928,7 +975,7 @@ export default function Header({
         <audio
           ref={audioPlayer}
           className='hidden'
-          src={`/api/editor/get-audio/${orderDetails.fileId}`}
+          src={`${audioUrl}`}
         ></audio>
 
         <div className='flex items-center h-full'>
@@ -1291,22 +1338,15 @@ export default function Header({
                       {orderDetails.status === 'FINALIZER_ASSIGNED' ||
                         orderDetails.status === 'PRE_DELIVERED' ? (
                         <Button
-                          onClick={() =>
-                            downloadBlankDocx({
-                              orderDetails,
-                              downloadableType: 'markings',
-                              setButtonLoading,
-                            })
-                          }
+                          variant="outline"
+                          asChild
                         >
-                          Download DOCX
+                          <a href={docxUrl} target='_blank'>Download DOCX</a>
                         </Button>
                       ) : (
                         <DownloadDocxDialog
                           orderDetails={orderDetails}
                           downloadableType={downloadableType}
-                          setButtonLoading={setButtonLoading}
-                          buttonLoading={buttonLoading}
                           setDownloadableType={setDownloadableType}
                         />
                       )}
@@ -1648,7 +1688,7 @@ export default function Header({
         <div className='relative w-full h-full'>
           <video
             ref={videoRef}
-            src={`/api/editor/get-video/${orderDetails.fileId}`}
+            src={`${videoUrl}`}
             className='w-full h-full'
             controls={false}
             onMouseDown={handleDragChange}

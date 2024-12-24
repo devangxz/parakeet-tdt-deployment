@@ -2,6 +2,8 @@
 import { getServerSession } from 'next-auth/next'
 
 import List from './list'
+import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
+import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import { getFilesByStatus } from '@/services/file-service/get-files'
 import { User } from '@/types/files'
@@ -14,6 +16,8 @@ interface File {
   orderType: string
   orderId: string
   uploadedByUser: User
+  txtSignedUrl: string
+  cfDocxSignedUrl: string
 }
 
 export default async function DeliveredFilesPage() {
@@ -24,18 +28,25 @@ export default async function DeliveredFilesPage() {
     user?.userId as number,
     user?.internalTeamUserId as number | null
   )
-  let files: File[] = []
+  const files: File[] = []
 
   if (response?.success && response.data) {
-    files = response.data.map((file: any) => ({
-      id: file.fileId,
-      filename: file.filename,
-      date: file.Orders[0]?.deliveredTs,
-      duration: Number(file.duration),
-      orderType: file.Orders[0]?.orderType,
-      orderId: file.Orders[0]?.id,
-      uploadedByUser: file.uploadedByUser,
-    }))
+    for (const file of response.data as any[]) {
+      const txtRes = await getFileTxtSignedUrl(`${file.fileId}`)
+      const docxRes = await getFileDocxSignedUrl(`${file.fileId}`, 'CUSTOM_FORMATTING_DOC')
+
+      files.push({
+        id: file.fileId,
+        filename: file.filename,
+        date: file.Orders[0]?.deliveredTs,
+        duration: Number(file.duration),
+        orderType: file.Orders[0]?.orderType,
+        orderId: file.Orders[0]?.id,
+        uploadedByUser: file.uploadedByUser,
+        txtSignedUrl: txtRes.signedUrl || '',
+        cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
+      })
+    }
   }
 
   return (
