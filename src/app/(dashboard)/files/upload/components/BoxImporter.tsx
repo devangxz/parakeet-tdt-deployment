@@ -43,7 +43,7 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     isUploading,
     setIsUploading,
   } = useUpload()
-  const { isBoxServiceReady } = useImportService()
+  const { isBoxServiceReady, boxInitError } = useImportService()
   const [isPickerLoading, setIsPickerLoading] = useState(false)
 
   const authWindowRef = useRef<Window | null>(null)
@@ -629,14 +629,17 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             className='mt-4 px-5 py-2 bg-[#009dd6] rounded-[32px] text-white font-medium border border-[#009dd6] hover:bg-[#008cbf] transition-colors'
           >
             <div className='flex items-center justify-center'>
-              {(!isBoxServiceReady || isPickerLoading) && (
+              {isPickerLoading && (
                 <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
               )}
-              <span>
-                {!isBoxServiceReady ? 'Initializing...' : 'Select from Box'}
-              </span>
+              <span>Select from Box</span>
             </div>
           </button>
+          {boxInitError && (
+            <p className='text-xs text-red-500'>
+              Failed to connect to Box. Please try again later.
+            </p>
+          )}
         </div>
       </div>
     </div>

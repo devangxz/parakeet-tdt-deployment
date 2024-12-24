@@ -42,7 +42,7 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     isUploading,
     setIsUploading,
   } = useUpload()
-  const { isOneDriveServiceReady } = useImportService()
+  const { isOneDriveServiceReady, oneDriveInitError } = useImportService()
   const [isPickerLoading, setIsPickerLoading] = useState(false)
   const [isPreparingFiles, setIsPreparingFiles] = useState(false)
   const [preparingProgress, setPreparingProgress] = useState('')
@@ -651,20 +651,19 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             className='mt-4 px-5 py-2 bg-[#094ab1] rounded-[32px] text-white font-medium border border-[#094ab1] hover:bg-[#083d94] transition-colors'
           >
             <div className='flex items-center justify-center'>
-              {(!isOneDriveServiceReady ||
-                isPickerLoading ||
-                isPreparingFiles) && (
+              {(isPickerLoading || isPreparingFiles) && (
                 <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
               )}
               <span>
-                {!isOneDriveServiceReady
-                  ? 'Initializing...'
-                  : isPreparingFiles
-                  ? preparingProgress
-                  : 'Select from OneDrive'}
+                {isPreparingFiles ? preparingProgress : 'Select from OneDrive'}
               </span>
             </div>
           </button>
+          {oneDriveInitError && (
+            <p className='text-xs text-red-500'>
+              Failed to connect to OneDrive. Please try again later.
+            </p>
+          )}
         </div>
       </div>
     </div>
