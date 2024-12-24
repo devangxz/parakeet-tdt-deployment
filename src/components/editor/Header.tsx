@@ -71,6 +71,7 @@ import { requestExtensionAction } from '@/app/actions/editor/request-extension'
 import { setFormattingOptionsAction } from '@/app/actions/editor/set-formatting-options'
 import { updateSpeakerNameAction } from '@/app/actions/editor/update-speaker-name'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
+import { getTextFile } from '@/app/actions/get-text-file'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import {
   TooltipProvider,
@@ -277,6 +278,7 @@ export default function Header({
   const [step, setStep] = useState<string>('')
   const [cfd, setCfd] = useState('')
   const [downloadableType, setDownloadableType] = useState('marking')
+  const [asrFileUrl, setAsrFileUrl] = useState('')
   const [reReviewComment, setReReviewComment] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
@@ -909,6 +911,13 @@ export default function Header({
     )
   }, [audioPlayer, quillRef])
 
+  const handleDropdownMenuOpenChange = async (open: boolean) => {
+    if (open) {
+      const asrFileUrl = await getTextFile(orderDetails.fileId, 'ASR')
+      setAsrFileUrl(asrFileUrl?.signedUrl || '')
+    }
+  }
+
   return (
     <div className='min-h-24 relative mx-2'>
       {!isPlayerLoaded && (
@@ -1207,12 +1216,12 @@ export default function Header({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              
+
             </div>
 
             <div className='flex gap-2'>
               <Dialog>
-                <DropdownMenu>
+                <DropdownMenu onOpenChange={handleDropdownMenuOpenChange}>
                   <DropdownMenuTrigger className='flex border border-gray-200 px-3 rounded-3xl items-center ml-3 h-10 shadow-none hover:bg-accent transition-colors'>
                     <div className='flex items-center justify-center mr-2'>
                       Options
@@ -1286,9 +1295,9 @@ export default function Header({
                         Formatting Options
                       </DropdownMenuItem>
                     )}
-                    <DialogTrigger asChild>
-                      {/* <DropdownMenuItem>Change Editor Mode</DropdownMenuItem> */}
-                    </DialogTrigger>
+                    <DropdownMenuItem asChild>
+                      <a href={asrFileUrl} target='_blank'>Download ASR text</a>
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <DialogContent>
