@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "outDir": "./dist",
+    "noEmit": false,
+    "moduleResolution": "node",
+    "isolatedModules": false,
+    "incremental": false,
+    "jsx": "react",
+    "plugins": []
+  },
+  "include": [
+    "src/workers/youtubeWorker.ts",
+    "src/lib/**/*",
+    "src/services/**/*"
+  ],
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.spec.ts"]
+}
