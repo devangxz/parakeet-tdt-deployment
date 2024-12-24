@@ -642,10 +642,7 @@ function EditorPage() {
                         </div>
                         <Textarea
                           placeholder='Start typing...'
-                          className={`resize-none w-full border-none outline-none focus:outline-none focus-visible:ring-0 shadow-none p-4 transition-all duration-300 ease-in-out ${findAndReplaceOpen
-                            ? 'h-[calc(100vh-650px)]'
-                            : 'h-[calc(100vh-250px)]'
-                            }`}
+                          className={`resize-none w-full border-none outline-none focus:outline-none focus-visible:ring-0 shadow-none p-4 transition-all duration-300 ease-in-out h-full`}
                           value={notes}
                           onChange={handleNotesChange}
                         />
