@@ -28,6 +28,16 @@ export function DataTableToolbar<TData>({
           }
           className='h-8 w-[150px] lg:w-[250px]'
         />
+        {table.getColumn('orgName') && (
+          <DataTableFacetedFilter
+            column={table.getColumn('orgName')}
+            title='Organization'
+            options={[
+              { value: 'REMOTELEGAL', label: 'Remote Legal' },
+              { value: 'ACR', label: 'ACR' },
+            ]}
+          />
+        )}
         {table.getColumn('status') && (
           <DataTableFacetedFilter
             column={table.getColumn('status')}

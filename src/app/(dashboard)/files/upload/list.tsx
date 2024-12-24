@@ -8,12 +8,15 @@ import React, { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
+import { copyFile } from '@/app/actions/file/copy'
 import { downloadMp3 } from '@/app/actions/file/download-mp3'
+import { getRefundInvoice } from '@/app/actions/file/refund-invoice'
 import { refetchFiles } from '@/app/actions/files'
 import { createOrder } from '@/app/actions/order'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
 import RenameFileDialog from '@/components/file-rename-dialog'
+import PaymentsDetailsModal from '@/components/payment-details-modal'
 import TrimFileModal from '@/components/trim-file-modal'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -48,6 +51,7 @@ interface File {
   fileStatus: string
   status: string
   uploadedByUser: User
+  isRefunded: boolean
 }
 
 const FileList = ({
@@ -79,6 +83,8 @@ const FileList = ({
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
+  const [openDetailsDialog, setOpenDetailsDialog] = useState(false)
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>('')
 
   useEffect(() => {
     const fileId = Object.keys(playing)[0]
@@ -104,6 +110,7 @@ const FileList = ({
         fileStatus: file?.fileStatus,
         status: file?.status,
         uploadedByUser: file.uploadedByUser,
+        isRefunded: file.Orders[0]?.status === 'REFUNDED',
       }))
       setPendingFiles(files ?? [])
       setError(null)
@@ -213,6 +220,36 @@ const FileList = ({
       }
     } catch (error) {
       setBulkLoading(false)
+    }
+  }
+
+  const refundStatus = async (fileId: string) => {
+    setLoadingFileOrder((prev) => ({ ...prev, [fileId]: true }))
+    const response = await getRefundInvoice(fileId)
+    if (response.success && response.invoiceId) {
+      setSelectedInvoiceId(response.invoiceId)
+      setOpenDetailsDialog(true)
+    } else {
+      toast.error('Failed to get refund invoice')
+    }
+    setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
+  }
+
+  const copyFileHandler = async (fileId: string) => {
+    setLoadingFileOrder((prev) => ({ ...prev, [fileId]: true }))
+    try {
+      const response = await copyFile(fileId)
+
+      if (response.success) {
+        fetchPendingFiles()
+        toast.success('File copied successfully')
+      } else {
+        toast.error('Failed to copy file')
+      }
+    } catch (error) {
+      toast.error('Failed to copy file')
+    } finally {
+      setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
     }
   }
 
@@ -341,17 +378,32 @@ const FileList = ({
             <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
           </Button>
         ) : (
-          <Button
-            variant='order'
-            className='format-button text-black w-[140px]'
-            onClick={() =>
-              orderFile(row.original.id, session?.user?.orderType as string)
-            }
-          >
-            {session && session.user?.orderType !== 'TRANSCRIPTION'
-              ? 'Format'
-              : 'Transcribe'}
-          </Button>
+          <>
+            {row.original.isRefunded ? (
+              <Button
+                variant='order'
+                className='format-button text-red w-[140px]'
+                style={{
+                  color: '#ef4444',
+                }}
+                onClick={() => refundStatus(row.original.id)}
+              >
+                Refund Status
+              </Button>
+            ) : (
+              <Button
+                variant='order'
+                className='format-button text-black w-[140px]'
+                onClick={() =>
+                  orderFile(row.original.id, session?.user?.orderType as string)
+                }
+              >
+                {session && session.user?.orderType !== 'TRANSCRIPTION'
+                  ? 'Format'
+                  : 'Transcribe'}
+              </Button>
+            )}
+          </>
         )}
 
         <DropdownMenu>
@@ -397,6 +449,13 @@ const FileList = ({
               }}
             >
               Trim Audio
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                copyFileHandler(row.original.id)
+              }}
+            >
+              Copy File
             </DropdownMenuItem>
             <DropdownMenuItem
               className='text-red-500'
@@ -558,6 +617,12 @@ const FileList = ({
         fileId={selectedFile?.fileId || ''}
         endDuration={selectedFile?.duration || 0}
         refetch={fetchPendingFiles}
+      />
+      <PaymentsDetailsModal
+        open={openDetailsDialog}
+        onClose={() => setOpenDetailsDialog(false)}
+        selectedInvoiceId={selectedInvoiceId}
+        session={session!}
       />
     </div>
   )

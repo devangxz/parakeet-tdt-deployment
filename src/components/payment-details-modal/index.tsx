@@ -566,7 +566,7 @@ const InvoicesDetailDialog = ({
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className='sm:max-w-[792px]'>
           <DialogHeader>
-            <DialogTitle>Invoice for</DialogTitle>
+            <DialogTitle>Invoice Details</DialogTitle>
           </DialogHeader>
           {isInvoiceLoading ? (
             <div className='flex items-center justify-center'>

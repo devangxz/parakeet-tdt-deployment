@@ -8,6 +8,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
+import getOrgName from '@/utils/getOrgName'
 
 export async function getAssignedFiles(type: string) {
   const session = await getServerSession(authOptions)
@@ -75,8 +76,10 @@ export async function getAssignedFiles(type: string) {
         file.order,
         transcriberId
       )
+      const orgName = await getOrgName(file.order.userId)
       file.order.cf_cost = transcriberCost.cost
       file.order.cf_rate = transcriberCost.rate
+      file.order.orgName = orgName
     }
 
     logger.info(`Assigned CF files fetched successfully for ${transcriberId}`)
