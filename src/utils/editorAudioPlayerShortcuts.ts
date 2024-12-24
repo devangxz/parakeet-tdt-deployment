@@ -37,6 +37,9 @@ interface DefaultShortcuts {
     decreasePlaybackSpeed: string;
     // focusOnPlaybackSpeedTextBox: string;
     playAudioFromTheStartOfCurrentParagraph: string;
+    capitalizeFirstLetter: string;
+    uppercaseWord: string;
+    lowercaseWord: string;
     // playFromStartOfNextParagraph: string;
     // playFromStartOfPreviousParagraph: string;
     // moveLeftByACharacter: string;
@@ -127,6 +130,9 @@ export interface ShortcutControls {
     playPreviousBlankInstance: () => void;
     playCurrentParagraphInstance: () => void;
     adjustTimestampsInstance: () => void;
+    capitalizeFirstLetter: () => void;
+    uppercaseWord: () => void;
+    lowercaseWord: () => void;
     // playFromStartOfNextParagraph: () => void;
     // playFromStartOfPreviousParagraph: () => void;
     // moveLeftByACharacter: () => void;
@@ -209,6 +215,9 @@ const defaultShortcuts: DefaultShortcuts = {
     increaseFontSize: 'Control+Shift+ArrowUp',
     decreaseFontSize: 'Control+Shift+ArrowDown',
     repeatLastFind: 'Control+G',
+    capitalizeFirstLetter: 'Control+Alt+U',
+    uppercaseWord: 'Control+U',
+    lowercaseWord: 'Control+L',
     // focusGotoTimestampTextBox: "Control+M",
     // scrollToTheStartOfFile: "Control+ArrowLeft",
     // scrollToTheEndOfFile: "Control+ArrowRight",

@@ -1,6 +1,6 @@
 'use client'
 
-import { ReloadIcon } from '@radix-ui/react-icons'
+import { Cross1Icon, ReloadIcon } from '@radix-ui/react-icons'
 import { Change, diffWords } from 'diff'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -581,8 +581,15 @@ function EditorPage() {
                     <div className='flex flex-col h-full'>
                       <div className={`transition-all duration-300 ease-in-out ${findAndReplaceOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}>
                         <div className={`transition-all duration-300 ease-in-out transform ${findAndReplaceOpen ? 'translate-y-0' : '-translate-y-4'}`}>
-                          <div className='flex bg-white border-b border-gray-200 text-md font-medium h-12'>
+                          <div className='flex justify-between bg-white border-b border-gray-200 text-md font-medium h-12'>
                             <div className='flex items-center px-4 text-base'>Find & Replace</div>
+                            <Button
+                              variant="ghost"
+                              className='h-8 w-8 p-0 mr-2 my-auto hover:bg-gray-100'
+                              onClick={() => setFindAndReplaceOpen(false)}
+                            >
+                              <Cross1Icon className='h-4 w-4' />
+                            </Button>
                           </div>
                           <div className='space-y-4 p-4'>
                             <div className="relative">

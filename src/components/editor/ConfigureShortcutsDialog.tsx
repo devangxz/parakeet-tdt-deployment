@@ -55,13 +55,18 @@ const ConfigureShortcutsDialog = ({ isConfigureShortcutsModalOpen, setIsConfigur
             return;
         }
 
-        for (let i = 0; i < shortcuts.length; i++) {
-            const item = shortcuts[i];
-            if (item.shortcut === newShortcut) {
-                toast.error(`This shortcut is already in use for ${formatAction(item.key)}`);
-                return;
+        // Find any existing action using this shortcut
+        const existingAction = shortcuts.find(item => item.shortcut === newShortcut);
+        if (existingAction) {
+            // Get the current shortcut of the selected action
+            const currentShortcut = shortcuts.find(item => item.key === selectedAction)?.shortcut;
+            if (currentShortcut) {
+                // Swap shortcuts between the two actions
+                updateShortcut(existingAction.key as keyof DefaultShortcuts, currentShortcut);
+                toast.info(`Shortcut "${formatShortcutKey(currentShortcut)}" has been assigned to "${formatAction(existingAction.key)}"`);
             }
         }
+
         updateShortcut(selectedAction, newShortcut);
         setIsConfigureShortcutsModalOpen(false);
         setSelectedAction('');
