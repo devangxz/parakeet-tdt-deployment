@@ -11,7 +11,7 @@ import s3Client from '@/lib/s3-client'
 import { generateUniqueId } from '@/utils/generateUniqueId'
 
 export async function copyFile(fileId: string) {
-  const bucketName = process.env.AWS_S3_BUCKET
+  const bucketName = process.env.AWS_S3_BUCKET_NAME
   const newFileId = generateUniqueId()
   const session = await getServerSession(authOptions)
   const user = session?.user
