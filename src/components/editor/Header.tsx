@@ -924,7 +924,7 @@ export default function Header({
     if (!audio) return
 
     const handleRateChange = () => {
-      setSpeed(Math.floor(audio.playbackRate * 100))
+      setSpeed(Math.round(audio.playbackRate * 100))
     }
 
     audio.addEventListener('ratechange', handleRateChange)
