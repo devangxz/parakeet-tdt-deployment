@@ -439,24 +439,23 @@ const FileList = ({
               Rename
             </DropdownMenuItem>
             <DropdownMenuItem
-              className='text-red-500'
               onClick={() => {
                 setSeletedFile({
                   fileId: row.original.id,
                   name: row.original.name,
                   duration: row.original.duration,
                 })
-                setOpenDeleteDialog(true)
+                setOpenTrimFileDialog(true)
               }}
             >
-              Copy File
+              Trim Audio
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
                 copyFileHandler(row.original.id)
               }}
             >
-              Trim Audio
+              Copy File
             </DropdownMenuItem>
             <DropdownMenuItem
               className='text-red-500'
