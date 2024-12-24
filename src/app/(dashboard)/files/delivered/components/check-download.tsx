@@ -1,5 +1,6 @@
-import { ReloadIcon, StarFilledIcon, StarIcon } from '@radix-ui/react-icons'
+import { StarFilledIcon, StarIcon } from '@radix-ui/react-icons'
 import { Session } from 'next-auth'
+import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -14,12 +15,15 @@ import {
   DialogFooter,
   DialogHeader,
 } from '@/components/ui/dialog'
+import { FILE_CACHE_URL } from '@/constants'
 interface FileItem {
   id: string
   filename: string
   date: string
   duration: number
   orderType: string
+  txtSignedUrl: string
+  cfDocxSignedUrl: string
 }
 interface CheckAndDownloadProps {
   selected: string
@@ -37,21 +41,15 @@ export function CheckAndDownload({
   setToggleCheckAndDownload,
   orderId,
 }: CheckAndDownloadProps) {
-  const { filename, id, orderType } =
+  const { filename, id, orderType, txtSignedUrl, cfDocxSignedUrl } =
     files &&
     (files?.find((file: FileItem) => file?.id === selected) as FileItem)
   const storedrating = Number(localStorage.getItem('rating'))
   const [hover, setHover] = useState<null | number>(null)
-  const [docxLoading, setDocxLoading] = useState<boolean>(false)
-  const [pdfLoading, setPdfLoading] = useState<boolean>(false)
-  const [cfDocxLoading, setCfDocxLoading] = useState<boolean>(false)
-  const [cfPdfLoading, setCfPdfLoading] = useState<boolean>(false)
-  const [srtLoading, setSRTLoading] = useState<boolean>(false)
-  const [vttLoading, setVTTLoading] = useState<boolean>(false)
-  const [txtLoading, setTxtLoading] = useState<boolean>(false)
   const [showSubtitle, setShowSubtitle] = useState<boolean>(false)
   const [rating, setRating] = useState<null | number>(storedrating || null)
   const ratingMessages = ['Poor', 'Bad', 'Okay', 'Good', 'Excellent']
+  const { data: session } = useSession()
   const controller = async (
     payload: {
       fileId: string
@@ -64,7 +62,9 @@ export function CheckAndDownload({
     const toastId = toast.loading(`Processing your request...`)
     try {
       const response = await orderController(payload, type)
-      toast.dismiss(toastId)
+      setTimeout(() => {
+        toast.dismiss(toastId)
+      }, 100)
       const successToastId = toast.success(`${response}`)
       toast.dismiss(successToastId)
     } catch (err) {
@@ -93,33 +93,9 @@ export function CheckAndDownload({
 
   const docx = {
     name: `${filename}`,
-    signedUrl: async (docType: string) => {
-      docType == 'CUSTOM_FORMATTING_DOC'
-        ? setCfDocxLoading(true)
-        : setDocxLoading(true)
-      await controller(
-        { fileId: id, filename, docType: docType },
-        'downloadFile'
-      )
-      docType == 'CUSTOM_FORMATTING_DOC'
-        ? setCfDocxLoading(false)
-        : setDocxLoading(false)
-    },
   }
   const pdf = {
     name: `${filename}`,
-    signedUrl: async (docType: string) => {
-      docType == 'CUSTOM_FORMATTING_DOC'
-        ? setCfPdfLoading(true)
-        : setPdfLoading(true)
-      await controller(
-        { fileId: id, filename, docType: docType },
-        'downloadPDFFile'
-      )
-      docType == 'CUSTOM_FORMATTING_DOC'
-        ? setCfPdfLoading(false)
-        : setPdfLoading(false)
-    },
   }
 
   const subTitile = {
@@ -127,36 +103,10 @@ export function CheckAndDownload({
     getSubtitleFile: async () => {
       setShowSubtitle(!showSubtitle)
     },
-    downloadSubtitle: async (docType: string) => {
-      try {
-        docType == 'VTT' ? setVTTLoading(true) : setSRTLoading(true)
-        await controller(
-          { fileId: id, filename: filename, docType: docType },
-          'downloadSubtitle'
-        )
-      } catch (err) {
-        console.error(err)
-      } finally {
-        docType == 'VTT' ? setVTTLoading(false) : setSRTLoading(false)
-      }
-    },
   }
 
   const txtFile = {
     name: `${filename}`,
-    downloadTxt: async (docType: string) => {
-      try {
-        setTxtLoading(true)
-        await controller(
-          { fileId: id, filename: filename, docType: docType },
-          'downloadTxt'
-        )
-      } catch (err) {
-        console.error(err)
-      } finally {
-        setTxtLoading(false)
-      }
-    },
   }
   // Rating
   useEffect(() => {
@@ -206,10 +156,10 @@ export function CheckAndDownload({
                       `/editor/${id}`,
                       '_blank',
                       'toolbar=no,location=no,menubar=no,width=' +
-                        window.screen.width +
-                        ',height=' +
-                        window.screen.height +
-                        ',left=0,top=0'
+                      window.screen.width +
+                      ',height=' +
+                      window.screen.height +
+                      ',left=0,top=0'
                     )
                   }
                 >
@@ -232,23 +182,8 @@ export function CheckAndDownload({
               </p>
               {/* docx  */}
               <div className='max-w-full flex justify-between'>
-                <div className='text-primary'>{`${docx?.name}_cf.docx`}</div>
+                <a target='_blank' href={cfDocxSignedUrl} className='text-primary'>{`${docx?.name}_cf.docx`}</a>
                 <div className='flex space-x-2'>
-                  {cfDocxLoading ? (
-                    <div className='border-2 rounded-md p-[3px] cursor-pointer flex items-center text-[0.875rem] md:px-[.5rem]'>
-                      <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                      Saving to Device
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => {
-                        docx?.signedUrl('CUSTOM_FORMATTING_DOC')
-                      }}
-                      className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'
-                    >
-                      Save to Device
-                    </div>
-                  )}
                   {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'>
                     Save to Dropbox
                   </div>
@@ -259,23 +194,8 @@ export function CheckAndDownload({
               </div>
               {/* pdf  */}
               <div className='max-w-full flex justify-between'>
-                <div className='text-primary'>{`${pdf?.name}_cf.pdf`}</div>
+                <a href={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${session?.user?.token}`} target='_blank' className='text-primary'>{`${pdf?.name}_cf.pdf`}</a>
                 <div className='flex space-x-2'>
-                  {cfPdfLoading ? (
-                    <div className='border-2 rounded-md p-[3px] cursor-pointer flex items-center text-[0.875rem] md:px-[.5rem]'>
-                      <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                      Saving to Device
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => {
-                        pdf?.signedUrl('CUSTOM_FORMATTING_DOC')
-                      }}
-                      className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'
-                    >
-                      Save to Device
-                    </div>
-                  )}
                   {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'>
                     Save to Dropbox
                   </div>
@@ -294,23 +214,9 @@ export function CheckAndDownload({
               </p>
               {/* docx  */}
               <div className='max-w-full flex justify-between'>
-                <div className='text-primary'>{`${docx?.name}.docx`}</div>
+                <a href={`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${session?.user?.token}`}
+                  target='_blank' className='text-primary'>{`${docx?.name}.docx`}</a>
                 <div className='flex space-x-2'>
-                  {docxLoading ? (
-                    <div className='border-2 rounded-md p-[3px] cursor-pointer flex items-center text-[0.875rem] md:px-[.5rem]'>
-                      <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                      Saving to Device
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => {
-                        docx?.signedUrl('TRANSCRIPTION_DOC')
-                      }}
-                      className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'
-                    >
-                      Save to Device
-                    </div>
-                  )}
                   {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem] '>
                   Save to Dropbox
                 </div>
@@ -321,23 +227,8 @@ export function CheckAndDownload({
               </div>
               {/* pdf  */}
               <div className='max-w-full flex justify-between'>
-                <div className='text-primary'>{`${pdf?.name}.pdf`}</div>
+                <a href={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${session?.user?.token}`} target='_blank' className='text-primary'>{`${pdf?.name}.pdf`}</a>
                 <div className='flex space-x-2'>
-                  {pdfLoading ? (
-                    <div className='border-2 rounded-md p-[3px] cursor-pointer flex items-center text-[0.875rem] md:px-[.5rem]'>
-                      <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                      Saving to Device
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => {
-                        pdf?.signedUrl('TRANSCRIPTION_DOC')
-                      }}
-                      className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'
-                    >
-                      Save to Device
-                    </div>
-                  )}
                   {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'>
                   Save to Dropbox
                 </div>
@@ -348,23 +239,8 @@ export function CheckAndDownload({
               </div>
               {/* txt  */}
               <div className='max-w-full flex justify-between'>
-                <div className='text-primary'>{`${txtFile?.name}.txt`}</div>
+                <a target='_blank' href={txtSignedUrl} className='text-primary'>{`${txtFile?.name}.txt`}</a>
                 <div className='flex space-x-2'>
-                  {txtLoading ? (
-                    <div className='border-2 rounded-md p-[3px] cursor-pointer flex items-center text-[0.875rem] md:px-[.5rem]'>
-                      <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                      Saving to Device
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => {
-                        txtFile?.downloadTxt('TXT')
-                      }}
-                      className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'
-                    >
-                      Save to Device
-                    </div>
-                  )}
                   {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem] '>
                   Save to Dropbox
                 </div>
@@ -381,23 +257,8 @@ export function CheckAndDownload({
               <p className='text-sm font-semibold text-slate-700'>Subtitles</p>
               {/* srt  */}
               <div className='max-w-full flex justify-between'>
-                <div className='text-primary'>{`${filename}.srt`}</div>
+                <a href={`${FILE_CACHE_URL}/get-subtitles/${id}?authToken=${session?.user?.token}&ext=srt`} target='_blank' className='text-primary'>{`${filename}.srt`}</a>
                 <div className='flex space-x-2'>
-                  {srtLoading ? (
-                    <div className='border-2 rounded-md p-[3px] cursor-pointer flex items-center text-[0.875rem] md:px-[.5rem]'>
-                      <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                      Saving to Device
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => {
-                        subTitile?.downloadSubtitle('SRT')
-                      }}
-                      className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'
-                    >
-                      Save to Device
-                    </div>
-                  )}
                   {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'>
                     Save to Dropbox
                   </div>
@@ -409,23 +270,8 @@ export function CheckAndDownload({
               {/* vtt  */}
 
               <div className='max-w-full flex justify-between'>
-                <div className='text-primary'>{`${filename}.vtt`}</div>
+                <a href={`${FILE_CACHE_URL}/get-subtitles/${id}?authToken=${session?.user?.token}&ext=vtt`} target='_blank' className='text-primary'>{`${filename}.vtt`}</a>
                 <div className='flex space-x-2'>
-                  {vttLoading ? (
-                    <div className='border-2 rounded-md p-[3px] cursor-pointer flex items-center text-[0.875rem] md:px-[.5rem]'>
-                      <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                      Saving to Device
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => {
-                        subTitile?.downloadSubtitle('VTT')
-                      }}
-                      className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'
-                    >
-                      Save to Device
-                    </div>
-                  )}
                   {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'>
                     Save to Dropbox
                   </div>
