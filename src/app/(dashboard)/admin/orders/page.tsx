@@ -54,6 +54,7 @@ interface File {
   fileCost: FileCost
   rateBonus: number
   type: string
+  orgName: string
 }
 
 export default function OrdersPage() {
@@ -107,6 +108,7 @@ export default function OrdersPage() {
             fileCost: order.fileCost,
             rateBonus: order.rateBonus,
             type: order.orderType,
+            orgName: order.orgName,
           }
         })
         setPendingOrders(orders ?? [])
@@ -266,9 +268,22 @@ export default function OrdersPage() {
                 </TooltipContent>
               </Tooltip>
             )}
+            {row.original.orgName.length > 0 && (
+              <Badge
+                variant='outline'
+                className='font-semibold text-[10px] text-green-600'
+              >
+                {row.original.orgName}
+              </Badge>
+            )}
           </div>
         </div>
       ),
+    },
+    {
+      accessorKey: 'orgName',
+      header: 'Organization',
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
       accessorKey: 'duration',

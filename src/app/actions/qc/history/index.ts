@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import getOrgName from '@/utils/getOrgName'
 
 export async function getHistoryQCFiles(type?: string | null) {
   try {
@@ -77,8 +78,10 @@ export async function getHistoryQCFiles(type?: string | null) {
     }
 
     for (const file of historyQCFiles as any) {
+      const orgName = await getOrgName(file.order.userId)
       file.earnings =
         file.order.status === OrderStatus.DELIVERED ? file.earnings : 0
+      file.orgName = orgName
     }
 
     logger.info(
