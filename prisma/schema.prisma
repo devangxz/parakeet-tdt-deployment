@@ -649,6 +649,17 @@ model ApiKey {
   @@map("scb_api_keys")
 }
 
+model YouTubeFile {
+  id         Int      @id @default(autoincrement())
+  fileId     String   @unique @map("file_id")
+  youtubeUrl String   @map("youtube_url")
+  isImported Boolean?  @default(false) @map("is_imported")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([fileId])
+  @@map("scb_youtube_files")
+}
+
 //  ███████ ███    ██ ██    ██ ███    ███ ███████
 //  ██      ████   ██ ██    ██ ████  ████ ██
 //  █████   ██ ██  ██ ██    ██ ██ ████ ██ ███████
