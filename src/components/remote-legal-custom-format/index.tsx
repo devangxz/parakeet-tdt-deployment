@@ -567,7 +567,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
                 {files.map((file, index) => (
                   <>
                     <div
-                      className='flex-col lg:flex lg:flex-row justify-between ml-3 mr-5 mt-5'
+                      className='flex-col lg:flex lg:flex-row gap-20 justify-between ml-3 mr-5 mt-5'
                       key={index}
                     >
                       <div className='flex items-center gap-2 mt-[-20px]'>
@@ -594,13 +594,13 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
                             <div className='mt-2'>
                               Cost{' '}
                               <span className='text-black font-medium'>
-                                ${file.cost}
+                                ${file.cost.toFixed(2)}
                               </span>
                             </div>
                           </div>
                         </div>
                       </div>
-                      <div className='text-md font-normal mt-5 lg:mt-0 w-[350px]'>
+                      <div className='text-md font-normal mt-5 lg:mt-0 w-full'>
                         <div className='text-md font-medium'>Instructions</div>
                         <Textarea
                           placeholder='Enter here'
@@ -612,7 +612,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
                             )
                           }
                           rows={4}
-                          className='w-[345px]'
+                          className='w-full'
                         />
                       </div>
                     </div>

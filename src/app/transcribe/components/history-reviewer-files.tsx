@@ -21,6 +21,7 @@ import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
 interface File extends BaseTranscriberFile {
   qc_cost: number
   jobId: number
+  orgName: string
 }
 
 export default function HistoryFilesPage() {
@@ -73,6 +74,7 @@ export default function HistoryFilesPage() {
               diff,
               rate: assignment.earnings,
               instructions: null,
+              orgName: assignment.orgName,
             }
           })
           .sort(
@@ -171,6 +173,14 @@ export default function HistoryFilesPage() {
                 <p>PWER</p>
               </TooltipContent>
             </Tooltip>
+            {row.original.orgName.length > 0 && (
+              <Badge
+                variant='outline'
+                className='font-semibold text-[10px] text-green-600'
+              >
+                {row.original.orgName}
+              </Badge>
+            )}
           </div>
         </div>
       ),

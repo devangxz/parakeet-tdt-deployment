@@ -9,6 +9,7 @@ import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { isTranscriberICQC } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
+import getOrgName from '@/utils/getOrgName'
 
 export async function getAvailableQCFiles(type?: string | null) {
   try {
@@ -76,8 +77,10 @@ export async function getAvailableQCFiles(type?: string | null) {
 
     for (const file of qcFiles as any) {
       const transcriberCost = await calculateTranscriberCost(file, user.userId)
+      const orgName = await getOrgName(file.userId)
       file.qc_cost = transcriberCost.cost
       file.rate = transcriberCost.rate
+      file.orgName = orgName
     }
 
     const isTranscriberICQCResult = await isTranscriberICQC(user.userId)
