@@ -87,6 +87,14 @@ export async function getFilesByStatus(
               },
             ],
           },
+          include: {
+            Orders: {
+              select: {
+                status: true,
+                id: true,
+              },
+            },
+          },
           orderBy: {
             createdAt: 'desc',
           },

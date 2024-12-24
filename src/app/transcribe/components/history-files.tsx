@@ -34,6 +34,7 @@ interface File extends BaseTranscriberFile {
   qc_cost: number
   jobId: number
   jobType: string
+  orgName: string
 }
 
 export default function HistoryFilesPage() {
@@ -98,6 +99,7 @@ export default function HistoryFilesPage() {
               rate,
               instructions: null,
               jobType: assignment.type,
+              orgName: assignment.orgName,
             }
           })
           .sort(
@@ -210,6 +212,14 @@ export default function HistoryFilesPage() {
                   <p>Custom Formatting</p>
                 </TooltipContent>
               </Tooltip>
+            )}
+            {row.original.orgName.length > 0 && (
+              <Badge
+                variant='outline'
+                className='font-semibold text-[10px] text-green-600'
+              >
+                {row.original.orgName}
+              </Badge>
             )}
           </div>
         </div>

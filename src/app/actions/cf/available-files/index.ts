@@ -9,6 +9,7 @@ import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { isTranscriberICQC } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
+import getOrgName from '@/utils/getOrgName'
 export async function getAvailableFiles(type: string) {
   const session = await getServerSession(authOptions)
   const user = session?.user
@@ -66,8 +67,10 @@ export async function getAvailableFiles(type: string) {
 
     for (const file of cfFiles as any) {
       const transcriberCost = await calculateTranscriberCost(file, userId)
+      const orgName = await getOrgName(file.userId)
       file.cf_cost = transcriberCost.cost
       file.cf_rate = transcriberCost.rate
+      file.orgName = orgName
     }
 
     const isTranscriberICQCResult = await isTranscriberICQC(userId)

@@ -24,6 +24,7 @@ import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
 
 interface File extends BaseTranscriberFile {
   qc_cost: number
+  orgName: string
 }
 
 interface Props {
@@ -93,6 +94,7 @@ export default function AvailableFilesPage({ changeTab }: Props) {
             diff,
             rate: order.rate,
             instructions: order.instructions,
+            orgName: order.orgName,
           }
         })
         setAvailableFiles(orders ?? [])
@@ -231,6 +233,14 @@ export default function AvailableFilesPage({ changeTab }: Props) {
                   <p>Custom Formatting</p>
                 </TooltipContent>
               </Tooltip>
+            )}
+            {row.original.orgName.length > 0 && (
+              <Badge
+                variant='outline'
+                className='font-semibold text-[10px] text-green-600'
+              >
+                {row.original.orgName}
+              </Badge>
             )}
           </div>
         </div>

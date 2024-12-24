@@ -5,6 +5,7 @@ import { OrderStatus } from '@prisma/client'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import calculateFileCost from '@/utils/calculateFileCost'
+import getOrgName from '@/utils/getOrgName'
 
 export async function fetchPendingOrders() {
   try {
@@ -31,7 +32,8 @@ export async function fetchPendingOrders() {
     const ordersWithCost = await Promise.all(
       pendingOrders.map(async (order) => {
         const fileCost = await calculateFileCost(order)
-        return { ...order, fileCost }
+        const orgName = await getOrgName(order.userId)
+        return { ...order, fileCost, orgName }
       })
     )
 
