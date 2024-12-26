@@ -24,9 +24,10 @@ interface EditorProps {
     content: { insert: string }[]
     setContent: (content: { insert: string }[]) => void
     getLines: (lineData: LineData[]) => void
+    setSelectionHandler: () => void
 }
 
-export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, orderDetails, content, setContent, getLines }: EditorProps) {
+export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, orderDetails, content, setContent, getLines, setSelectionHandler }: EditorProps) {
     const quillRef = useRef<ReactQuill>(null)
     const [lines, setLines] = useState<LineData[]>([])
     const quillModules = {
@@ -350,9 +351,10 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
                 modules={quillModules}
                 value={{ ops: content }}
                 onChange={handleContentChange}
-                formats={['size']}
+                formats={['size', 'background']}
                 className='h-full'
-                readOnly={(orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === "REVIEWER_ASSIGNED")}
+                readOnly={(orderDetails.status === 'FINALIZER_ASSIGNED')}
+                onChangeSelection={setSelectionHandler}
             />
             {/* </ContextMenuTrigger>
                 <ContextMenuContent>

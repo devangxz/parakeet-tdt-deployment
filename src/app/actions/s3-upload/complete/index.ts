@@ -23,7 +23,7 @@ export async function completeMultipartUpload(
 
     logger.info(`File uploaded successfully. File: ${sendBackData.key}`)
 
-    await prisma.uploadSession.delete({
+    await prisma.uploadSession.deleteMany({
       where: {
         uploadId: sendBackData.uploadId,
       },

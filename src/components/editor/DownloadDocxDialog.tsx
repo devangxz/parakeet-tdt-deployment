@@ -26,12 +26,12 @@ const DownloadDocxDialog = ({ orderDetails, downloadableType, setDownloadableTyp
                     Choose transcript type to download
                 </DialogTitle>
                 <RadioGroup
-                    defaultValue='marking'
+                    value={downloadableType}
                     onValueChange={setDownloadableType}
                     className='flex gap-10 mb-5'
                 >
                     <div className='flex items-center space-x-2'>
-                        <RadioGroupItem value='marking' id='marking' />
+                        <RadioGroupItem disabled={!orderDetails.LLMDone} value='marking' id='marking' />
                         <Label htmlFor='marking'>With Markings</Label>
                     </div>
                     <div className='flex items-center space-x-2'>
