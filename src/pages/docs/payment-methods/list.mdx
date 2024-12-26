@@ -5,14 +5,8 @@ Get a list of payment methods for the authenticated user.
 ## Endpoint
 
 ```http
-GET ${baseUrl}/users/{userId}/payment-methods
+GET ${baseUrl}/users/payment-methods
 ```
-
-## Path Parameters
-
-| Parameter | Type   | Description    |
-| --------- | ------ | -------------- |
-| userId    | number | ID of the user |
 
 ## Response
 
@@ -20,27 +14,21 @@ GET ${baseUrl}/users/{userId}/payment-methods
 interface PaymentMethodsResponse {
   success: boolean
   data: {
-    paymentMethods: {
-      id: string
-      type: 'CARD' | 'PAYPAL'
-      isDefault: boolean
-      details: {
-        last4?: string
-        brand?: string
-        expiryMonth?: number
-        expiryYear?: number
-        paypalEmail?: string
-      }
-      createdAt: string
-    }[]
-  }
+    type: 'PP' | 'CC'
+    token: string
+    last4: string | null
+    ppAccount: string | null
+    userId: string
+    image: string
+    desc: string
+  }[]
 }
 ```
 
 ## Example Request
 
 ```typescript
-const response = await fetch('${baseUrl}/users/123/payment-methods', {
+const response = await fetch('${baseUrl}/users/payment-methods', {
   headers: {
     Authorization: 'Basic YOUR_API_KEY',
   },
@@ -51,10 +39,9 @@ const data = await response.json()
 
 ## Error Codes
 
-| Status Code | Description    |
-| ----------- | -------------- |
-| 200         | Success        |
-| 401         | Unauthorized   |
-| 403         | Forbidden      |
-| 404         | User Not Found |
-| 500         | Server Error   |
+| Status Code | Description  |
+| ----------- | ------------ |
+| 200         | Success      |
+| 401         | Unauthorized |
+| 403         | Forbidden    |
+| 500         | Server Error |

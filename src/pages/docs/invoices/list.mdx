@@ -5,24 +5,8 @@ Get a list of invoices.
 ## Endpoint
 
 ```http
-GET ${baseUrl}/users/{userId}/invoices
+GET ${baseUrl}/users/invoices
 ```
-
-## Path Parameters
-
-| Parameter | Type   | Description    |
-| --------- | ------ | -------------- |
-| userId    | number | ID of the user |
-
-## Query Parameters
-
-| Parameter | Type   | Description                               |
-| --------- | ------ | ----------------------------------------- |
-| page      | number | Page number for pagination (default: 1)   |
-| limit     | number | Number of invoices per page (default: 10) |
-| status    | string | Filter by invoice status                  |
-| startDate | string | Filter by start date (YYYY-MM-DD)         |
-| endDate   | string | Filter by end date (YYYY-MM-DD)           |
 
 ## Response
 
@@ -30,53 +14,36 @@ GET ${baseUrl}/users/{userId}/invoices
 interface InvoiceListResponse {
   success: boolean
   data: {
-    invoices: {
-      id: number
-      invoiceId: string
-      type: InvoiceType
-      amount: number
-      discount: number
-      fee: number
-      status: InvoiceStatus
-      paymentMethod: PaymentMethod
-      transactionId?: string
-      creditsUsed: number
-      orderRate: number
-      createdAt: string
-      items: {
-        fileId: string
-        filename: string
-        price: number
-      }[]
-    }[]
-    total: number
-    page: number
-    limit: number
-  }
+    u: string
+    fullname: string
+    email: string
+    id: string
+    amt: number
+    ts: string
+    t: string
+    ra: number
+    cr: number
+  }[]
 }
 ```
 
 ## Example Request
 
 ```typescript
-const response = await fetch(
-  '${baseUrl}/users/123/invoices?page=1&limit=20&status=PAID',
-  {
-    headers: {
-      Authorization: 'Basic YOUR_API_KEY',
-    },
-  }
-)
+const response = await fetch('${baseUrl}/users/invoices', {
+  headers: {
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+})
 
 const data = await response.json()
 ```
 
 ## Error Codes
 
-| Status Code | Description    |
-| ----------- | -------------- |
-| 200         | Success        |
-| 401         | Unauthorized   |
-| 403         | Forbidden      |
-| 404         | User Not Found |
-| 500         | Server Error   |
+| Status Code | Description  |
+| ----------- | ------------ |
+| 200         | Success      |
+| 401         | Unauthorized |
+| 403         | Forbidden    |
+| 500         | Server Error |

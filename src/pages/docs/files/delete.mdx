@@ -5,10 +5,10 @@ Delete a file from the system.
 ## Endpoint
 
 ```http
-DELETE ${baseUrl}/files/{fileId}
+DELETE ${baseUrl}/files
 ```
 
-## Path Parameters
+## Query Parameters
 
 | Parameter | Type   | Description              |
 | --------- | ------ | ------------------------ |
@@ -19,17 +19,14 @@ DELETE ${baseUrl}/files/{fileId}
 ```typescript
 interface DeleteFileResponse {
   success: boolean
-  data: {
-    fileId: string
-    deletedAt: string
-  }
+  message: string
 }
 ```
 
 ## Example Request
 
 ```typescript
-const response = await fetch('${baseUrl}/files/abc123', {
+const response = await fetch('${baseUrl}/files?fileId=abc123', {
   method: 'DELETE',
   headers: {
     Authorization: 'Basic YOUR_API_KEY',

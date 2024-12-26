@@ -28,7 +28,23 @@ export async function GET(req: NextRequest) {
       user.internalTeamUserId
     )
 
-    return NextResponse.json(files)
+    return NextResponse.json({
+      success: true,
+      data: files?.data?.map((file) => ({
+        fileId: file.fileId,
+        filename: file.filename,
+        duration: file.duration,
+        filesize: file.filesize,
+        uploadedBy: {
+          email: file.uploadedByUser.email,
+          firstname: file.uploadedByUser.firstName,
+          lastname: file.uploadedByUser.lastName,
+        },
+        createdAt: file.createdAt,
+        customInstructions: file.customInstructions,
+        downloadCount: file.downloadCount,
+      })),
+    })
   } catch (error) {
     console.error('Error fetching files:', error)
     return NextResponse.json(

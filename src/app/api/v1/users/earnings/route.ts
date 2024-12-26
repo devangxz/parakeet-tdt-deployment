@@ -75,7 +75,10 @@ export async function GET(req: NextRequest) {
     earnings['CURRENT_BALANCE'] = earnings['TOTAL'] - earnings['WITHDRAWAL']
 
     logger.info(`Earnings fetched successfully for ${transcriberId}`)
-    return NextResponse.json(earnings)
+    return NextResponse.json({
+      success: true,
+      data: earnings,
+    })
   } catch (error) {
     logger.error(`Error fetching user earnings`, error)
     return NextResponse.json(

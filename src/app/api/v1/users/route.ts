@@ -13,7 +13,26 @@ export async function GET(req: NextRequest) {
     }
 
     const result = await getUserInfo(user.userId)
-    return NextResponse.json(result)
+    return NextResponse.json({
+      success: true,
+      data: {
+        email: result.info?.email,
+        firstname: result.info?.firstname,
+        lastname: result.info?.lastname,
+        address1: result.info?.address1,
+        address2: result.info?.address2,
+        city: result.info?.city,
+        state: result.info?.state,
+        country: result.info?.country,
+        postalCode: result.info?.postalCode,
+        phoneNumber: result.info?.phoneNumber,
+        referralCode: result.info?.referralCode,
+        paypalId: result.info?.paypalId,
+        secondaryEmail: result.secondaryEmail?.secondaryEmail,
+        splInstructions: result.info?.splInstructions,
+        industry: result.info?.industry,
+      },
+    })
   } catch (error) {
     logger.error('Error fetching user info:', error)
     return NextResponse.json(

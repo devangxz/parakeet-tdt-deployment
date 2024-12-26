@@ -11,18 +11,58 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    const defaultOptions = await prisma.defaultOption.findUnique({
-      where: { userId: user.userId },
-    })
-
-    if (!defaultOptions) {
-      return NextResponse.json({})
+    const orderId = req.nextUrl.searchParams.get('orderId')
+    if (!orderId) {
+      return NextResponse.json(
+        { message: 'Order ID is required' },
+        { status: 400 }
+      )
     }
 
-    const options = JSON.parse(defaultOptions.options ?? '{}')
+    const order = await prisma.order.findUnique({
+      where: { id: Number(orderId) },
+    })
+
+    if (!order) {
+      return NextResponse.json({ message: 'Order not found' }, { status: 404 })
+    }
+
+    const invoiceFile = await prisma.invoiceFile.findFirst({
+      where: { fileId: order.fileId },
+    })
+
+    if (!invoiceFile) {
+      return NextResponse.json({ message: 'Order not found' }, { status: 404 })
+    }
+
+    const invoice = await prisma.invoice.findUnique({
+      where: { invoiceId: invoiceFile.invoiceId },
+    })
+
+    if (!invoice) {
+      return NextResponse.json(
+        { message: 'Invoice not found' },
+        { status: 404 }
+      )
+    }
+
+    const options = JSON.parse(invoice.options ?? '{}')
+
     logger.info(`Retrieved order options for user ${user.userId}`)
 
-    return NextResponse.json(options)
+    return NextResponse.json({
+      success: true,
+      data: {
+        speaker_tracking: options.sif,
+        speaker_initial: options.si,
+        template: options.tmp,
+        language: options.sp,
+        audio_time_coding: options.ts,
+        rush_order: options.exd,
+        strict_verbatim: options.vb,
+        subtitle_file: options.sub,
+      },
+    })
   } catch (error) {
     logger.error(`Failed to get order options: ${error}`)
     return NextResponse.json(
@@ -40,15 +80,48 @@ export async function POST(req: NextRequest) {
     }
 
     const options = await req.json()
-    if (!options || typeof options !== 'object') {
-      return NextResponse.json({ message: 'Invalid options' }, { status: 400 })
+
+    const order = await prisma.order.findUnique({
+      where: { id: Number(options.orderId) },
+    })
+
+    if (!order) {
+      return NextResponse.json({ message: 'Order not found' }, { status: 404 })
     }
 
-    const optionsString = JSON.stringify(options)
-    await prisma.defaultOption.upsert({
-      where: { userId: user.userId },
-      update: { options: optionsString },
-      create: { userId: user.userId, options: optionsString },
+    const invoiceFile = await prisma.invoiceFile.findFirst({
+      where: { fileId: order.fileId },
+    })
+
+    if (!invoiceFile) {
+      return NextResponse.json({ message: 'Order not found' }, { status: 404 })
+    }
+
+    const invoice = await prisma.invoice.findUnique({
+      where: { invoiceId: invoiceFile.invoiceId },
+    })
+
+    if (!invoice) {
+      return NextResponse.json(
+        { message: 'Invoice not found' },
+        { status: 404 }
+      )
+    }
+
+    const newOptions = {
+      ...JSON.parse(invoice.options ?? '{}'),
+      sif: options.speaker_tracking ? 1 : 0,
+      si: options.speaker_initial,
+      tmp: options.template,
+      sp: options.language,
+      ts: options.audio_time_coding ? 1 : 0,
+      exd: options.rush_order ? 1 : 0,
+      sub: options.subtitle_file ? 1 : 0,
+    }
+
+    await prisma.invoice.update({
+      where: { invoiceId: invoice.invoiceId },
+      data: { options: JSON.stringify(newOptions) },
     })
 
     return NextResponse.json({

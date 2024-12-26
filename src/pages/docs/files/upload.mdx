@@ -12,11 +12,10 @@ POST ${baseUrl}/files/upload
 
 Multipart form data with the following fields:
 
-| Field        | Type   | Description                  |
-| ------------ | ------ | ---------------------------- |
-| file         | File   | The file to upload           |
-| folderId     | number | Optional folder ID           |
-| instructions | string | Optional custom instructions |
+| Field | Type   | Description                                                   |
+| ----- | ------ | ------------------------------------------------------------- |
+| file  | File   | The file to upload (required if url not provided)             |
+| url   | string | The URL of the file to upload (required if file not provided) |
 
 ## Response
 
@@ -24,17 +23,7 @@ Multipart form data with the following fields:
 interface FileUploadResponse {
   success: boolean
   data: {
-    id: number
     fileId: string
-    filename: string
-    duration: number
-    filesize: string
-    status: FileStatus
-    uploadedBy: {
-      id: number
-      email: string
-    }
-    createdAt: string
   }
 }
 ```

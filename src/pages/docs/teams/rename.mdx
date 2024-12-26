@@ -1,44 +1,43 @@
-# Create Team
+# Update Team Name
 
-Create a new team.
+Update the name of a team.
 
 ## Endpoint
 
 ```http
-POST ${baseUrl}/teams
+PUT ${baseUrl}/teams/rename
 ```
 
 ## Request Body
 
 ```typescript
-interface CreateTeamRequest {
-  name: string
+interface RenameTeamRequest {
+  teamId: number
+  newTeamName: string
 }
 ```
 
 ## Response
 
 ```typescript
-interface CreateTeamResponse {
+interface RenameTeamResponse {
   success: boolean
-  data: {
-    id: number
-    name: string
-  }
+  message: string
 }
 ```
 
 ## Example Request
 
 ```typescript
-const response = await fetch('${baseUrl}/teams', {
-  method: 'POST',
+const response = await fetch('${baseUrl}/teams/rename', {
+  method: 'PUT',
   headers: {
     'Content-Type': 'application/json',
     Authorization: 'Basic YOUR_API_KEY',
   },
   body: JSON.stringify({
-    name: 'Engineering Team',
+    teamId: 123,
+    newTeamName: 'Engineering Team',
   }),
 })
 

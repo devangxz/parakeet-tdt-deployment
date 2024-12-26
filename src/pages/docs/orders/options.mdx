@@ -7,8 +7,14 @@ Get or update order options.
 ### Endpoint
 
 ```http
-GET ${baseUrl}/orders/{orderId}/options
+GET ${baseUrl}/orders/options
 ```
+
+### Query Parameters
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| orderId   | string | Order ID    |
 
 ### Response
 
@@ -16,22 +22,14 @@ GET ${baseUrl}/orders/{orderId}/options
 interface OrderOptionsResponse {
   success: boolean
   data: {
-    options: {
-      customFormatting: boolean
-      timestamping: boolean
-      verbatim: boolean
-      rushDelivery: boolean
-      additionalProofing: boolean
-      speakerLabels: boolean
-      customInstructions?: string
-    }
-    pricing: {
-      basePrice: number
-      customFormattingPrice?: number
-      rushDeliveryPrice?: number
-      additionalProofingPrice?: number
-      total: number
-    }
+    speaker_tracking: boolean
+    speaker_initial: number
+    template: number
+    language: string
+    audio_time_coding: boolean
+    rush_order: boolean
+    strict_verbatim: boolean
+    subtitle_file: boolean
   }
 }
 ```
@@ -41,20 +39,21 @@ interface OrderOptionsResponse {
 ### Endpoint
 
 ```http
-PUT ${baseUrl}/orders/{orderId}/options
+PUT ${baseUrl}/orders/options
 ```
 
 ### Request Body
 
 ```typescript
 interface UpdateOrderOptionsRequest {
-  customFormatting?: boolean
-  timestamping?: boolean
-  verbatim?: boolean
-  rushDelivery?: boolean
-  additionalProofing?: boolean
-  speakerLabels?: boolean
-  customInstructions?: string
+  orderId: number
+  speaker_tracking: boolean
+  speaker_initial: number
+  template: number
+  language: string
+  audio_time_coding: boolean
+  rush_order: boolean
+  subtitle_file: boolean
 }
 ```
 
@@ -62,24 +61,28 @@ interface UpdateOrderOptionsRequest {
 
 ```typescript
 // Get options
-const getOptions = await fetch('${baseUrl}/orders/123/options', {
+const getOptions = await fetch('${baseUrl}/orders/options?orderId=123', {
   headers: {
     Authorization: 'Basic YOUR_API_KEY',
   },
 })
 
 // Update options
-const updateOptions = await fetch('${baseUrl}/orders/123/options', {
+const updateOptions = await fetch('${baseUrl}/orders/options', {
   method: 'PUT',
   headers: {
     'Content-Type': 'application/json',
     Authorization: 'Basic YOUR_API_KEY',
   },
   body: JSON.stringify({
-    customFormatting: true,
-    timestamping: true,
-    additionalProofing: true,
-    customInstructions: 'Please mark speaker changes',
+    orderId: 123,
+    speaker_tracking: true,
+    speaker_initial: 1,
+    template: 1,
+    language: 'en_US',
+    audio_time_coding: true,
+    rush_order: true,
+    subtitle_file: true,
   }),
 })
 ```

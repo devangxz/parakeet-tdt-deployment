@@ -42,7 +42,10 @@ export async function GET(req: NextRequest) {
     logger.info(
       `found ${paymentMethods.length} payment methods for user ${userId}`
     )
-    return NextResponse.json(paymentMethods)
+    return NextResponse.json({
+      success: true,
+      data: paymentMethods,
+    })
   } catch (error) {
     logger.error(`Failed to get payment methods`, error)
     return NextResponse.json(

@@ -198,8 +198,6 @@ export async function POST(req: NextRequest) {
 
     const { fileIds, orderType } = await req.json()
 
-    console.log('ffdvfdv', fileIds, orderType)
-
     if (!fileIds || !orderType) {
       return NextResponse.json(
         { message: 'File IDs and order type are required' },
@@ -271,5 +269,35 @@ export async function POST(req: NextRequest) {
       { message: 'Error processing order' },
       { status: 500 }
     )
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const user = await authenticateRequest(req)
+    if (!user) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+
+    const orders = await prisma.order.findMany({
+      where: {
+        userId: user.userId,
+      },
+    })
+
+    return NextResponse.json({
+      success: true,
+      data: orders.map((order) => ({
+        orderId: order.id,
+        fileId: order.fileId,
+        status: order.status,
+        orderType: order.orderType,
+        createdAt: order.createdAt,
+        deliveryTime: order.deliveryTs,
+        instructions: order.instructions,
+      })),
+    })
+  } catch (error) {
+    logger.error(`Failed to get invoices: ${error}`)
   }
 }

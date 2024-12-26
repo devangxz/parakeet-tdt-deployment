@@ -21,29 +21,24 @@ GET ${baseUrl}/teams
 interface TeamListResponse {
   success: boolean
   data: {
-    teams: {
+    team: {
       id: number
       name: string
-      owner: {
-        id: number
-        email: string
-        firstname: string
-        lastname: string
-      }
-      membersCount: number
-      createdAt: string
+    }
+    members: {
+      id: number
+      role: string
+      status: string
+      email: string
     }[]
-    total: number
-    page: number
-    limit: number
-  }
+  }[]
 }
 ```
 
 ## Example Request
 
 ```typescript
-const response = await fetch('${baseUrl}/teams?page=1&limit=10', {
+const response = await fetch('${baseUrl}/teams', {
   headers: {
     Authorization: 'Basic YOUR_API_KEY',
   },

@@ -7,8 +7,14 @@ Manage team members.
 ### Endpoint
 
 ```http
-GET ${baseUrl}/teams/{teamId}/members
+GET ${baseUrl}/teams/members
 ```
+
+### Query Parameters
+
+| Parameter | Required | Description                            |
+| --------- | -------- | -------------------------------------- |
+| teamId    | Yes      | The ID of the team to get members for. |
 
 ### Response
 
@@ -16,16 +22,13 @@ GET ${baseUrl}/teams/{teamId}/members
 interface TeamMembersResponse {
   success: boolean
   data: {
-    members: {
-      id: number
-      email: string
-      firstname: string
-      lastname: string
-      role: 'MANAGER' | 'USER' | 'SUPERVISOR'
-      joinedAt: string
-    }[]
-    total: number
-  }
+    fullname: string | null
+    email: string
+    status: string
+    userId: number
+    teamId: number
+    role: string
+  }[]
 }
 ```
 
@@ -34,15 +37,16 @@ interface TeamMembersResponse {
 ### Endpoint
 
 ```http
-POST ${baseUrl}/teams/{teamId}/members
+POST ${baseUrl}/teams/member/add
 ```
 
 ### Request Body
 
 ```typescript
 interface AddTeamMemberRequest {
-  email: string
-  role: 'MANAGER' | 'USER' | 'SUPERVISOR'
+  memberEmail: string
+  memberRole: 'MANAGER' | 'USER' | 'SUPERVISOR'
+  teamId: number
 }
 ```
 
@@ -51,38 +55,53 @@ interface AddTeamMemberRequest {
 ### Endpoint
 
 ```http
-DELETE ${baseUrl}/teams/{teamId}/members/{userId}
+DELETE ${baseUrl}/teams/member/delete
+```
+
+### Request Body
+
+```typescript
+interface DeleteTeamMemberRequest {
+  memberId: number
+  teamId: number
+}
 ```
 
 ### Example Requests
 
 ```typescript
 // List members
-const members = await fetch('${baseUrl}/teams/123/members', {
+const members = await fetch('${baseUrl}/teams/members?teamId=123', {
   headers: {
     Authorization: 'Basic YOUR_API_KEY',
   },
 })
 
 // Add member
-const addMember = await fetch('${baseUrl}/teams/123/members', {
+const addMember = await fetch('${baseUrl}/teams/member/add', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
     Authorization: 'Basic YOUR_API_KEY',
   },
   body: JSON.stringify({
-    email: 'newmember@example.com',
-    role: 'USER',
+    memberEmail: 'newmember@example.com',
+    memberRole: 'USER',
+    teamId: 123,
   }),
 })
 
 // Remove member
-const removeMember = await fetch('${baseUrl}/teams/123/members/456', {
+const removeMember = await fetch('${baseUrl}/teams/member/delete', {
   method: 'DELETE',
   headers: {
+    'Content-Type': 'application/json',
     Authorization: 'Basic YOUR_API_KEY',
   },
+  body: JSON.stringify({
+    memberId: 456,
+    teamId: 123,
+  }),
 })
 ```
 

@@ -20,7 +20,10 @@ export async function GET(req: NextRequest) {
     }
 
     logger.info(`Sent ${invoices.data.length} invoices for user ${user.userId}`)
-    return NextResponse.json(invoices.data)
+    return NextResponse.json({
+      success: true,
+      data: invoices.data,
+    })
   } catch (error) {
     logger.error(`Failed to get invoices: ${error}`)
     return NextResponse.json(

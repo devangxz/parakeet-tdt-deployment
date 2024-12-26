@@ -7,7 +7,7 @@ Get or update a user's preferences settings.
 ### Endpoint
 
 ```http
-GET ${baseUrl}/users/{userId}/preferences
+GET ${baseUrl}/users/preferences
 ```
 
 ### Response
@@ -16,21 +16,16 @@ GET ${baseUrl}/users/{userId}/preferences
 interface UserPreferencesResponse {
   success: boolean
   data: {
-    language: string
-    recordsPerPage: number
-    notifications: {
+    preferences: {
+      id: number
       transcriptOrder: boolean
       newsletter: boolean
+      ccStored: boolean
       transcriptDelivered: boolean
       transcriptCancelled: boolean
       transcriptRefund: boolean
-      teamMemberWhoOrdered: boolean
     }
-    splInstructions?: string
-    defaultOptions?: {
-      options: string
-      instructions: string
-    }
+    recordsPerPage: number
   }
 }
 ```
@@ -40,46 +35,43 @@ interface UserPreferencesResponse {
 ### Endpoint
 
 ```http
-PUT ${baseUrl}/users/{userId}/preferences
+PUT ${baseUrl}/users/preferences
 ```
 
 ### Request Body
 
 ```typescript
 interface UpdatePreferencesRequest {
-  language?: string
-  recordsPerPage?: number
-  notifications?: {
-    transcriptOrder?: boolean
-    newsletter?: boolean
-    transcriptDelivered?: boolean
-    transcriptCancelled?: boolean
-    transcriptRefund?: boolean
-    teamMemberWhoOrdered?: boolean
+  preferences: {
+    transcriptOrder: boolean
+    newsletter: boolean
+    ccStored: boolean
+    transcriptDelivered: boolean
+    transcriptCancelled: boolean
+    transcriptRefund: boolean
   }
-  splInstructions?: string
-  defaultOptions?: {
-    options?: string
-    instructions?: string
-  }
+  recordsPerPage: number
 }
 ```
 
 ### Example Request
 
 ```typescript
-const response = await fetch('${baseUrl}/users/123/preferences', {
+const response = await fetch('${baseUrl}/users/preferences', {
   method: 'PUT',
   headers: {
     'Content-Type': 'application/json',
     Authorization: 'Basic YOUR_API_KEY',
   },
   body: JSON.stringify({
-    language: 'en',
     recordsPerPage: 20,
-    notifications: {
+    preferences: {
       transcriptOrder: true,
       newsletter: false,
+      ccStored: true,
+      transcriptDelivered: true,
+      transcriptCancelled: true,
+      transcriptRefund: true,
     },
   }),
 })
@@ -95,5 +87,4 @@ const data = await response.json()
 | 400         | Invalid Request Body |
 | 401         | Unauthorized         |
 | 403         | Forbidden            |
-| 404         | User Not Found       |
 | 500         | Server Error         |

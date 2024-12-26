@@ -52,8 +52,21 @@ export async function GET(req: NextRequest) {
     logger.info(`Invoice details fetched for ${invoiceId}`)
 
     const responseData = {
-      invoice: invoice,
-      files: filesWithInvoiceInfo.map(({ File }) => File),
+      success: true,
+      data: {
+        invoice: {
+          invoiceId: invoice.invoiceId,
+          amount: invoice.amount,
+          discount: invoice.discount,
+          fee: invoice.fee,
+          status: invoice.status,
+          paymentMethod: invoice.paymentMethod,
+          transactionId: invoice.transactionId,
+          creditsUsed: invoice.creditsUsed,
+          refundAmount: invoice.refundAmount,
+        },
+        files: filesWithInvoiceInfo.map(({ File }) => File),
+      },
     }
 
     return NextResponse.json(responseData)

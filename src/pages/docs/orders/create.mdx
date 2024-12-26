@@ -1,6 +1,6 @@
 # Create Order
 
-Create a new transcription order.
+Create a new order.
 
 ## Endpoint
 
@@ -12,16 +12,8 @@ POST ${baseUrl}/orders
 
 ```typescript
 interface CreateOrderRequest {
-  fileId: string
-  priority?: number
-  tat?: number
-  instructions?: string
-  options?: {
-    customFormatting?: boolean
-    timestamping?: boolean
-    verbatim?: boolean
-    rushDelivery?: boolean
-  }
+  fileIds: string[]
+  orderType: 'TRANSCRIPTION' | 'TRANSCRIPTION_FORMATTING'
 }
 ```
 
@@ -31,20 +23,11 @@ interface CreateOrderRequest {
 interface CreateOrderResponse {
   success: boolean
   data: {
-    id: number
-    fileId: string
-    status: OrderStatus
-    orderTs: string
-    deadlineTs: string
-    priority: number
-    tat: number
-    instructions?: string
-    options: {
-      customFormatting: boolean
-      timestamping: boolean
-      verbatim: boolean
-      rushDelivery: boolean
-    }
+    orderId: string
+    transactionId: string
+    paymentMethod: 'CREDITCARD' | 'PAYPAL'
+    pp_account?: string
+    cc_last4?: string
   }
 }
 ```
@@ -59,13 +42,8 @@ const response = await fetch('${baseUrl}/orders', {
     Authorization: 'Basic YOUR_API_KEY',
   },
   body: JSON.stringify({
-    fileId: 'abc123',
-    priority: 1,
-    instructions: 'Please include speaker labels',
-    options: {
-      timestamping: true,
-      verbatim: true,
-    },
+    fileIds: ['abc123', 'def456'],
+    orderType: 'TRANSCRIPTION',
   }),
 })
 
@@ -79,5 +57,5 @@ const data = await response.json()
 | 201         | Order Created Successfully |
 | 400         | Invalid Request            |
 | 401         | Unauthorized               |
-| 404         | File Not Found             |
+| 404         | Files Not Found            |
 | 500         | Server Error               |

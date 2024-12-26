@@ -55,7 +55,10 @@ export async function PUT(req: NextRequest) {
 
     logger.info(`Successfully rename team to ${newTeamName} for ${userId}`)
 
-    return NextResponse.json(`Successfully changed team name to ${newTeamName}`)
+    return NextResponse.json({
+      success: true,
+      message: `Successfully changed team name to ${newTeamName}`,
+    })
   } catch (error) {
     logger.error(`Failed to rename team, ${error}`)
     return NextResponse.json(

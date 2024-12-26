@@ -90,7 +90,10 @@ export async function GET(req: NextRequest) {
       `Found ${members.team_members.length} team members of team ${team.name} for user ${userId}`
     )
 
-    return NextResponse.json(members)
+    return NextResponse.json({
+      success: true,
+      data: members.team_members,
+    })
   } catch (error) {
     logger.error(`Failed to get team members, ${error}`)
     return NextResponse.json(

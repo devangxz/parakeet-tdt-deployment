@@ -1,6 +1,6 @@
 # User Credits
 
-Manage user credit balance and transactions.
+Get user credit balance.
 
 ## Get Credits
 
@@ -15,16 +15,7 @@ GET ${baseUrl}/users/credits
 ```typescript
 interface UserCreditsResponse {
   success: boolean
-  data: {
-    balance: number
-    transactions: {
-      id: number
-      amount: number
-      type: 'ADD' | 'USE' | 'REFUND'
-      description: string
-      createdAt: string
-    }[]
-  }
+  creditsBalance: number
 }
 ```
 
@@ -33,7 +24,7 @@ interface UserCreditsResponse {
 ### Endpoint
 
 ```http
-POST ${baseUrl}/users/{userId}/credits
+POST ${baseUrl}/users/credits
 ```
 
 ### Request Body
@@ -41,8 +32,6 @@ POST ${baseUrl}/users/{userId}/credits
 ```typescript
 interface AddCreditsRequest {
   amount: number
-  source: 'PURCHASE' | 'REFUND' | 'BONUS'
-  description?: string
 }
 ```
 
@@ -51,23 +40,16 @@ interface AddCreditsRequest {
 ```typescript
 interface AddCreditsResponse {
   success: boolean
-  data: {
-    balance: number
-    transaction: {
-      id: number
-      amount: number
-      type: 'ADD'
-      description: string
-      createdAt: string
-    }
-  }
+  transactionId: string
+  paymentMethod: string
+  cc_last4: string
 }
 ```
 
 ### Example Request
 
 ```typescript
-const response = await fetch('${baseUrl}/users/123/credits', {
+const response = await fetch('${baseUrl}/users/credits', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -75,8 +57,6 @@ const response = await fetch('${baseUrl}/users/123/credits', {
   },
   body: JSON.stringify({
     amount: 100,
-    source: 'PURCHASE',
-    description: 'Credit purchase',
   }),
 })
 
@@ -91,5 +71,4 @@ const data = await response.json()
 | 400         | Invalid Request Body |
 | 401         | Unauthorized         |
 | 403         | Forbidden            |
-| 404         | User Not Found       |
 | 500         | Server Error         |

@@ -58,7 +58,12 @@ export async function GET(req: NextRequest) {
 
     logger.info(`Transcript fetched successfully for file ${fileId}`)
 
-    return NextResponse.json(signedUrl)
+    return NextResponse.json({
+      success: true,
+      data: {
+        downloadUrl: signedUrl,
+      },
+    })
   } catch (error) {
     logger.error('Error fetching transcript:', error)
     return NextResponse.json(

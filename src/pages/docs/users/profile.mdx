@@ -7,7 +7,7 @@ Get or update a user's profile information.
 ### Endpoint
 
 ```http
-GET ${baseUrl}/users/{userId}/profile
+GET ${baseUrl}/users
 ```
 
 ### Response
@@ -16,7 +16,6 @@ GET ${baseUrl}/users/{userId}/profile
 interface UserProfileResponse {
   success: boolean
   data: {
-    id: number
     email: string
     firstname: string
     lastname: string
@@ -27,7 +26,11 @@ interface UserProfileResponse {
     country?: string
     postalCode?: string
     phoneNumber?: string
-    createdAt: string
+    referralCode: string
+    paypalId?: string
+    secondaryEmail?: string
+    splInstructions?: string
+    industry?: string
   }
 }
 ```
@@ -37,7 +40,7 @@ interface UserProfileResponse {
 ### Endpoint
 
 ```http
-PUT ${baseUrl}/users/{userId}/profile
+PUT ${baseUrl}/users
 ```
 
 ### Request Body
@@ -59,7 +62,7 @@ interface UpdateProfileRequest {
 ### Example Request
 
 ```typescript
-const response = await fetch('${baseUrl}/users/123/profile', {
+const response = await fetch('${baseUrl}/users', {
   method: 'PUT',
   headers: {
     'Content-Type': 'application/json',
@@ -85,5 +88,4 @@ const data = await response.json()
 | 400         | Invalid Request Body |
 | 401         | Unauthorized         |
 | 403         | Forbidden            |
-| 404         | User Not Found       |
 | 500         | Server Error         |

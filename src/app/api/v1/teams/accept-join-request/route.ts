@@ -64,7 +64,10 @@ export async function PUT(req: NextRequest) {
 
     logger.info(`Successfully accepted team invite for user ${userId}`)
 
-    return NextResponse.json('Team invite accepted successfully')
+    return NextResponse.json({
+      success: true,
+      message: 'Team invite accepted successfully',
+    })
   } catch (error) {
     logger.error(`Failed to accept team invite, ${error}`)
     return NextResponse.json(

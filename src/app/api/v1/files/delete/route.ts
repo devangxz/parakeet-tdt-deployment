@@ -24,7 +24,10 @@ export async function DELETE(req: NextRequest) {
     await deleteFile({ userId: user.userId, fileId })
     logger.info(`File with ID ${fileId} deleted successfully`)
 
-    return NextResponse.json('File deleted successfully')
+    return NextResponse.json({
+      success: true,
+      message: 'File deleted successfully',
+    })
   } catch (error) {
     logger.error(`Failed to delete file: ${error}`)
     return NextResponse.json(
