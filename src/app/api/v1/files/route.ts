@@ -24,8 +24,8 @@ export async function GET(req: NextRequest) {
 
     const files = await getFilesByStatus(
       status,
-      user.userId as number,
-      user.internalTeamUserId as number
+      user.userId,
+      user.internalTeamUserId
     )
 
     return NextResponse.json(files)

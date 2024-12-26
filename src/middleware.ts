@@ -13,6 +13,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
+  if (requestedUrl.startsWith('/api/v1')) {
+    return NextResponse.next()
+  }
+
   if (requestedUrl.startsWith('/api')) {
     const apiKey = req.headers.get('x-api-key')
 
