@@ -1,11 +1,87 @@
 // eslint-disable-next-line import/no-anonymous-default-export
 export default {
-  logo: <span> Scribie API Documentation</span>,
+  logo: (
+    <>
+      <svg
+        width='36'
+        height='36'
+        viewBox='0 0 36 36'
+        fill='none'
+        xmlns='http://www.w3.org/2000/svg'
+      >
+        <circle cx='18' cy='18' r='18' fill='#6442ED' />
+        <path
+          d='M11.1428 20.944V16.4354C11.1561 15.5492 11.3443 14.6743 11.6964 13.8609C12.0485 13.0475 12.5576 12.3116 13.1946 11.6953C13.8316 11.079 14.5839 10.5944 15.4085 10.2694C16.2331 9.94438 17.1137 9.78524 17.9999 9.80113C18.8861 9.78524 19.7667 9.94438 20.5913 10.2694C21.4159 10.5944 22.1682 11.079 22.8052 11.6953C23.4422 12.3116 23.9514 13.0475 24.3035 13.8609C24.6554 14.6743 24.8437 15.5492 24.857 16.4354V20.944'
+          stroke='white'
+          stroke-width='1.71429'
+          stroke-linecap='round'
+          stroke-linejoin='round'
+        />
+        <path
+          d='M8.57134 18.3728H10.2856C10.513 18.3728 10.731 18.4631 10.8917 18.6239C11.0525 18.7846 11.1428 19.0026 11.1428 19.2299V24.3728C11.1428 24.6001 11.0525 24.8182 10.8917 24.9789C10.731 25.1396 10.513 25.2299 10.2856 25.2299H8.57134C8.11668 25.2299 7.68065 25.0493 7.35916 24.7278C7.03767 24.4064 6.85706 23.9703 6.85706 23.5157V20.0871C6.85706 19.6324 7.03767 19.1964 7.35916 18.8749C7.68065 18.5534 8.11668 18.3728 8.57134 18.3728Z'
+          fill='white'
+          stroke='white'
+          stroke-width='1.71429'
+          stroke-linecap='round'
+          stroke-linejoin='round'
+        />
+        <path
+          d='M27.4285 25.2299H25.7142C25.4869 25.2299 25.2688 25.1396 25.108 24.9789C24.9474 24.8182 24.8571 24.6001 24.8571 24.3728V19.2299C24.8571 19.0026 24.9474 18.7846 25.108 18.6239C25.2688 18.4631 25.4869 18.3728 25.7142 18.3728H27.4285C27.8831 18.3728 28.3192 18.5534 28.6407 18.8749C28.9621 19.1964 29.1428 19.6324 29.1428 20.0871V23.5157C29.1428 23.9703 28.9621 24.4064 28.6407 24.7278C28.3192 25.0493 27.8831 25.2299 27.4285 25.2299Z'
+          fill='white'
+          stroke='white'
+          stroke-width='1.71429'
+          stroke-linecap='round'
+          stroke-linejoin='round'
+        />
+        <path
+          d='M15 19H21'
+          stroke='white'
+          stroke-width='1.7'
+          stroke-linecap='round'
+        />
+        <path
+          d='M15 22H21'
+          stroke='white'
+          stroke-width='1.7'
+          stroke-linecap='round'
+        />
+        <path
+          d='M15 25H21'
+          stroke='white'
+          stroke-width='1.7'
+          stroke-linecap='round'
+        />
+      </svg>
+      <span style={{ marginLeft: '.4em' }}>Scribie API Documentation</span>
+    </>
+  ),
   head: (
     <>
       <meta name='viewport' content='width=device-width, initial-scale=1.0' />
       <meta property='og:title' content='Scribie API Documentation' />
       <meta property='og:description' content='Scribie API Documentation' />
+      <meta
+        property='og:image'
+        content='https://scribie.ai/assets/images/logo.svg'
+      />
+      <title>Scribie API Documentation</title>
+      <link rel='icon' href='https://scribie.ai/assets/images/logo.svg' />
     </>
   ),
+  sidebar: {
+    toggleButton: true,
+    defaultMenuCollapseLevel: 1,
+    autoCollapse: true,
+  },
+  gitTimestamp: false,
+  footer: {
+    content: (
+      <a href='https://scribie.ai' target='_blank'>
+        Scribie {new Date().getFullYear()} © Documentation
+      </a>
+    ),
+  },
+  themeSwitch: {
+    component: null,
+  },
 }
