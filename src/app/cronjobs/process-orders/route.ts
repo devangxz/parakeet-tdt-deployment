@@ -52,10 +52,13 @@ export async function POST() {
       })
       
       if (youtubeFile && youtubeFile?.isImported === null) {
+        logger.info(`Checking if file ${file?.fileId} exists in YouTube queue`)
         const isInYoutubeQueue = await workerQueueService.hasExistingJob(
           WORKER_QUEUE_NAMES.YOUTUBE_VIDEO_PROCESSING,
           file?.fileId
         )
+        logger.info(`File ${file?.fileId} exists in YouTube queue: ${isInYoutubeQueue}`)
+
         if (!isInYoutubeQueue) {
           logger.info(
             `Adding YouTube file ${file.fileId} to YouTube queue - URL: ${youtubeFile?.youtubeUrl}`
@@ -87,10 +90,13 @@ export async function POST() {
       }
 
       if (!fileRecord?.converted) {
+        logger.info(`Checking if file ${file?.fileId} exists in conversion queue`)
         const isInConversionQueue = await workerQueueService.hasExistingJob(
           WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION,
           file?.fileId
         )
+        logger.info(`File ${file?.fileId} exists in conversion queue: ${isInConversionQueue}`)
+
         if (!isInConversionQueue) {
           logger.info(`Adding file ${file?.fileId} to conversion queue`)
 
@@ -132,10 +138,13 @@ export async function POST() {
             `Converted file ${file?.fileId} not found in S3, triggering reconversion`
           )
 
+          logger.info(`Checking if file ${file?.fileId} exists in conversion queue`)
           const isInConversionQueue = await workerQueueService.hasExistingJob(
             WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION,
             file?.fileId
           )
+          logger.info(`File ${file?.fileId} exists in conversion queue: ${isInConversionQueue}`)
+
           if (!isInConversionQueue) {
             await workerQueueService.createJob(
               WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION,
@@ -162,10 +171,13 @@ export async function POST() {
           continue
         }
 
+        logger.info(`Checking if file ${file?.fileId} exists in ASR queue`)
         const isInASRQueue = await workerQueueService.hasExistingJob(
           WORKER_QUEUE_NAMES.AUTOMATIC_SPEECH_RECOGNITION,
           file?.fileId
         )
+        logger.info(`File ${file?.fileId} exists in ASR queue: ${isInASRQueue}`)
+
         if (!isInASRQueue) {
           logger.info(`Adding file ${file?.fileId} to ASR queue`)
 

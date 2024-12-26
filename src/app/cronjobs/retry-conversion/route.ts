@@ -51,10 +51,13 @@ export async function POST() {
           continue
         }
 
+        logger.info(`Checking if file ${file?.fileId} exists in conversion queue`)
         const hasExistingJob = await workerQueueService.hasExistingJob(
           WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION,
           file?.fileId
         )
+        logger.info(`File ${file?.fileId} exists in conversion queue: ${hasExistingJob}`)
+
         if (hasExistingJob) {
           logger.info(`Skipping file ${file?.fileId} - existing job found`)
           continue

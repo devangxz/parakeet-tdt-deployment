@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import { Readable } from 'stream'
 
 import {
+  HeadObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   DeleteObjectCommand,
@@ -907,24 +908,15 @@ const bucketName = process.env.AWS_S3_BUCKET_NAME ?? ''
 
 export async function fileExistsInS3(key: string): Promise<boolean> {
   logger.info(`Checking if file exists in S3: ${key}`)
-  const command = new GetObjectCommand({
-    Bucket: bucketName,
-    Key: key,
-  })
-
   try {
-    await s3Client.send(command)
+    await s3Client.send(new HeadObjectCommand({ Bucket: bucketName, Key: key }));
     logger.info(`File exists in S3: ${key}`)
     return true
   } catch (error) {
-    if (error instanceof Error && error.name === 'NoSuchKey') {
-      logger.info(`File does not exist in S3: ${key}`)
-      return false
-    }
     logger.error(
       `Error checking if file exists in S3: ${key}, ${String(error)}`
     )
-    throw error
+    return false
   }
 }
 

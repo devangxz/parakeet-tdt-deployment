@@ -555,7 +555,6 @@ const handleSave = async (
         // localStorage.setItem(`${orderDetails.fileId}_lastEventIndex`, (playerEvents.length - 1).toString());
 
         // Save notes and other data
-        localStorage.setItem(orderDetails.fileId, JSON.stringify({ notes: notes }))
 
         await axiosInstance.post(`${FILE_CACHE_URL}/save-transcript`, {
             fileId: orderDetails.fileId,
@@ -672,6 +671,7 @@ const handleSubmit = async ({
         }
 
         localStorage.removeItem('transcript')
+        localStorage.removeItem(orderDetails.fileId)
         toast.dismiss(toastId)
         const successToastId = toast.success(`Transcription submitted successfully`)
         toast.dismiss(successToastId)
