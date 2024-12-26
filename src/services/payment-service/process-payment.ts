@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { InvoiceType, OrderStatus, OrderType } from '@prisma/client'
 
-import { WORKER_QUEUE_NAMES, workerQueueService } from '../worker-service'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance, sendTemplateMail } from '@/lib/ses'
-import { fileExistsInS3, getEmailDetails } from '@/utils/backend-helper'
+import { getEmailDetails } from '@/utils/backend-helper'
 
 const addHours = (date: string | number | Date, hours: number) => {
   const result = new Date(date)
@@ -75,51 +74,6 @@ export const processPayment = async (
           },
         })
 
-        const fileRecord = await prisma.file.findUnique({
-          where: { fileId },
-          select: {
-            converted: true,
-            fileKey: true,
-            userId: true,
-            user: {
-              select: {
-                email: true
-              }
-            }
-          }
-        })
-
-        const fileExists = await fileExistsInS3(`${fileId}.mp3`)
-
-        if (fileRecord?.converted) {
-          if (fileExists) {
-            await workerQueueService.createJob(
-              WORKER_QUEUE_NAMES.AUTOMATIC_SPEECH_RECOGNITION,
-              { fileId }
-            )
-          } else {
-            await workerQueueService.createJob(
-              WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION,
-              {
-                fileKey: fileRecord.fileKey,
-                userEmailId: fileRecord.user?.email,
-                fileId
-              }
-            )
-            logger.info(`Triggered conversion retry for file ${fileId} - fileKey: ${fileRecord?.fileKey}, userEmail: ${fileRecord?.user?.email}`)
-
-            await ses.sendAlert(
-              `File Conversion Retry Triggered`,
-              `Conversion missing for file ${fileRecord.fileKey} uploaded by ${fileRecord.user?.email}. Triggered reconversion.`,
-              'software'
-            )
-
-            logger.error(`File ${fileId}.mp3 does not exist in s3, not creating an ASR job`)
-          }
-        } else {
-          logger.error(`File ${fileId}.mp3 does not exist in s3, not creating an ASR job`)
-        }
-
         // TODO: add order service
         // await OrderService.add(order.id, OrderTrigger.CREATE_ORDER)
         // logger.info(`Order created for file ${fileId}`)
@@ -146,8 +100,9 @@ export const processPayment = async (
       let body = ''
       fileInfo.forEach((file, index) => {
         body += '<tr>'
-        body += `<td style='text-align:center;border:1px solid #cccccc;padding:5px' align='center' border='1' cellpadding='5'>${index + 1
-          }</td>`
+        body += `<td style='text-align:center;border:1px solid #cccccc;padding:5px' align='center' border='1' cellpadding='5'>${
+          index + 1
+        }</td>`
         body += `<td style='text-align:left;border:1px solid #cccccc;padding:5px' align='left' border='1' cellpadding='5'><a target='_blank' href='https://${process.env.SERVER}/files/all-files/?ids=${file.fileId}'>${file.File.filename}</a></td>`
         body += `<td style='text-align:center;border:1px solid #cccccc;padding:5px' align='center' border='1' cellpadding='5'>${new Date(
           file.createdAt

@@ -1,6 +1,6 @@
 'use client'
 
-import { ReloadIcon } from '@radix-ui/react-icons'
+import { Cross1Icon, ReloadIcon } from '@radix-ui/react-icons'
 import { Change, diffWords } from 'diff'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -129,6 +129,7 @@ function EditorPage() {
   const [matchCase, setMatchCase] = useState(false)
   const [lastSearchIndex, setLastSearchIndex] = useState<number>(-1)
   const [findAndReplaceOpen, setFindAndReplaceOpen] = useState(false)
+  const [matchCount, setMatchCount] = useState(0)
   const findInputRef = useRef<HTMLInputElement>(null)
   interface PlayerEvent {
     t: number
@@ -147,6 +148,18 @@ function EditorPage() {
     () => quillRef?.current?.getEditor().getText() || '',
     [quillRef]
   )
+
+  const countMatches = (searchText: string) => {
+    if (!quillRef?.current || !searchText) return 0
+    const quill = quillRef.current.getEditor()
+    const text = quill.getText()
+
+    if (matchCase) {
+      return (text.match(new RegExp(searchText, 'g')) || []).length
+    } else {
+      return (text.match(new RegExp(searchText, 'gi')) || []).length
+    }
+  }
 
   const replaceTextInstance = (
     findText: string,
@@ -433,6 +446,7 @@ function EditorPage() {
   const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value
     setFindText(text)
+    setMatchCount(countMatches(text))
   }
 
   const handleReplaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -446,10 +460,12 @@ function EditorPage() {
 
   const replaceOneHandler = () => {
     replaceTextInstance(findText, replaceText)
+    setMatchCount(countMatches(findText))
   }
 
   const replaceAllHandler = () => {
     replaceTextInstance(findText, replaceText, true)
+    setMatchCount(countMatches(findText))
   }
 
   return (
@@ -565,16 +581,29 @@ function EditorPage() {
                     <div className='flex flex-col h-full'>
                       <div className={`transition-all duration-300 ease-in-out ${findAndReplaceOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}>
                         <div className={`transition-all duration-300 ease-in-out transform ${findAndReplaceOpen ? 'translate-y-0' : '-translate-y-4'}`}>
-                          <div className='flex bg-white border-b border-gray-200 text-md font-medium h-12'>
+                          <div className='flex justify-between bg-white border-b border-gray-200 text-md font-medium h-12'>
                             <div className='flex items-center px-4 text-base'>Find & Replace</div>
+                            <Button
+                              variant="ghost"
+                              className='h-8 w-8 p-0 mr-2 my-auto hover:bg-gray-100'
+                              onClick={() => setFindAndReplaceOpen(false)}
+                            >
+                              <Cross1Icon className='h-4 w-4' />
+                            </Button>
                           </div>
                           <div className='space-y-4 p-4'>
-                            <Input
-                              placeholder='Find...'
-                              value={findText}
-                              onChange={handleFindChange}
-                              ref={findInputRef}
-                            />
+                            <div className="relative">
+                              <Input
+                                placeholder='Find...'
+                                value={findText}
+                                onChange={handleFindChange}
+                              />
+                              {findText && (
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                                  {matchCount} matches
+                                </span>
+                              )}
+                            </div>
                             <Input
                               placeholder='Replace with...'
                               value={replaceText}
@@ -583,24 +612,27 @@ function EditorPage() {
                             <Label className='flex items-center space-x-2 mb-4'>
                               <Checkbox
                                 checked={matchCase}
-                                onCheckedChange={(checked) => setMatchCase(checked === true)}
+                                onCheckedChange={(checked) => {
+                                  setMatchCase(checked === true)
+                                  setMatchCount(countMatches(findText))
+                                }}
                               />
                               <span>Match case</span>
                             </Label>
                             <div className='inline-flex w-full rounded-md' role="group">
-                              <button 
+                              <button
                                 onClick={findHandler}
                                 className="inline-flex items-center justify-center whitespace-nowrap rounded-l-md rounded-r-none border-r-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
                               >
                                 Find
                               </button>
-                              <button 
+                              <button
                                 onClick={replaceOneHandler}
                                 className="inline-flex items-center justify-center whitespace-nowrap rounded-none border-r-0 border-l border-white/20 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
                               >
                                 Replace
                               </button>
-                              <button 
+                              <button
                                 onClick={replaceAllHandler}
                                 className="inline-flex items-center justify-center whitespace-nowrap rounded-r-md rounded-l-none border-l border-white/20 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
                               >
@@ -617,10 +649,7 @@ function EditorPage() {
                         </div>
                         <Textarea
                           placeholder='Start typing...'
-                          className={`resize-none w-full border-none outline-none focus:outline-none focus-visible:ring-0 shadow-none p-4 transition-all duration-300 ease-in-out ${findAndReplaceOpen
-                              ? 'h-[calc(100vh-650px)]'
-                              : 'h-[calc(100vh-250px)]'
-                            }`}
+                          className={`resize-none w-full border-none outline-none focus:outline-none focus-visible:ring-0 shadow-none p-4 transition-all duration-300 ease-in-out h-full`}
                           value={notes}
                           onChange={handleNotesChange}
                         />

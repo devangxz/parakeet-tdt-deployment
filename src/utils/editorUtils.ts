@@ -5,11 +5,13 @@ import Quill from 'quill'
 import { toast } from 'sonner'
 
 import axiosInstance from './axios'
+import { downloadBlankDocxAction } from '@/app/actions/editor/download-docx'
 import { getFrequentTermsAction } from '@/app/actions/editor/frequent-terms'
 import { getOrderDetailsAction } from '@/app/actions/editor/order-details'
 import { reportFileAction } from '@/app/actions/editor/report-file'
 import { submitQCAction } from '@/app/actions/editor/submit-qc'
 import { submitReviewAction } from '@/app/actions/editor/submit-review'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { OrderDetails, UploadFilesType } from '@/app/editor/[fileId]/page'
 import { LineData, updateContent } from '@/components/editor/transcriptUtils'
 import {
@@ -120,46 +122,6 @@ const updatePlayedPercentage = (
     setPlayedPercentage(Math.min(100, percentagePlayed)) // Ensure percentage does not exceed 100
 }
 
-const downloadBlankDocx = async ({
-    orderDetails,
-    downloadableType,
-    setButtonLoading,
-}: {
-    orderDetails: OrderDetails
-    downloadableType: string
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
-}) => {
-    const toastId = toast.loading('Downloading file...')
-    setButtonLoading((prevButtonLoading) => ({
-        ...prevButtonLoading,
-        download: true,
-    }))
-    try {
-        const response = await axios.get(
-            `/api/editor/download-blank-docx?fileId=${orderDetails.fileId}&type=${downloadableType}&orgName=${orderDetails.orgName}&templateName=${orderDetails.templateName}`,
-            { responseType: 'blob' }
-        )
-        const url = window.URL.createObjectURL(new Blob([response.data]))
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${orderDetails.fileId}${downloadableType === 'marking' || orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === 'PRE_DELIVERED' ? '.docx' : '.txt'}`
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-        toast.dismiss(toastId)
-        const successToastId = toast.success(`File downloaded successfully`)
-        toast.dismiss(successToastId)
-    } catch (error) {
-        toast.dismiss(toastId)
-        toast.error('Error downloading file')
-    } finally {
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            download: false,
-        }))
-    }
-}
-
 const convertSecondsToTimestamp = (seconds: number) => {
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
@@ -170,97 +132,17 @@ const convertSecondsToTimestamp = (seconds: number) => {
         .padStart(4, '0')}`
 }
 
-const downloadEditorDocxFile = async (
-    orderDetails: OrderDetails,
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
-) => {
-    const toastId = toast.loading('Downloading file...')
-    setButtonLoading((prevButtonLoading) => ({
-        ...prevButtonLoading,
-        download: true,
-    }))
-    try {
-        const response = await axiosInstance.get(
-            `${BACKEND_URL}/file-docx-signed-url?fileId=${orderDetails.fileId}&docType=TRANSCRIPTION_DOC`
-        )
-        const url = response?.data?.signedUrl
-        if (url) {
-            window.location.href = url
-        } else {
-            console.error('No URL provided for download.')
-            throw 'No URL provided for download.'
-        }
-        toast.dismiss(toastId)
-        const successToastId = toast.success(`File downloaded successfully`)
-        toast.dismiss(successToastId)
-    } catch (error) {
-        toast.dismiss(toastId)
-        toast.error('Error downloading file')
-    } finally {
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            download: false,
-        }))
-    }
-}
-
-const downloadEditorTextFile = async (
-    orderDetails: OrderDetails,
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
-) => {
-    const toastId = toast.loading('Downloading file...')
-    setButtonLoading((prevButtonLoading) => ({
-        ...prevButtonLoading,
-        download: true,
-    }))
-    try {
-        const response = await axiosInstance.get(
-            `${BACKEND_URL}/download-text-file?fileId=${orderDetails.fileId}`,
-            { responseType: 'blob' }
-        )
-        const url = window.URL.createObjectURL(new Blob([response.data]))
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${orderDetails.fileId}.txt`
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-
-        toast.dismiss(toastId)
-        const successToastId = toast.success(`File downloaded successfully`)
-        toast.dismiss(successToastId)
-    } catch (error) {
-        toast.dismiss(toastId)
-        toast.error('Error downloading file')
-    } finally {
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            download: false,
-        }))
-    }
-}
-
 const downloadMP3 = async (orderDetails: OrderDetails) => {
     const toastId = toast.loading('Downloading MP3...')
     try {
-        const response = await axios.get(
-            `/api/editor/download-mp3?fileId=${orderDetails.fileId}`,
-            { responseType: 'blob' }
-        )
-        if (response.status === 200) {
-            const blob = new Blob([response.data], { type: 'audio/mpeg' })
-            const url = window.URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `${orderDetails.fileId}.mp3`
-            document.body.appendChild(a)
-            a.click()
-            a.remove()
-            window.URL.revokeObjectURL(url)
+        const response = await getSignedUrlAction(`${orderDetails.fileId}.mp3`, 60)
+        if (response.success && response.signedUrl) {
+            window.open(response.signedUrl, '_blank')
+            toast.dismiss(toastId)
+            toast.success(`MP3 downloaded successfully`)
+        } else {
+            throw new Error('No download URL received')
         }
-
-        toast.dismiss(toastId)
-        toast.success(`MP3 downloaded successfully`)
     } catch (error) {
         toast.dismiss(toastId)
         toast.error('Error downloading mp3')
@@ -663,7 +545,6 @@ const handleSave = async (
         }
 
         //TODO: Implement this
-        console.log(playerEvents)
         // Get last saved index from localStorage
         // const lastSavedIndex = parseInt(localStorage.getItem(`${orderDetails.fileId}_lastEventIndex`) || '-1');
 
@@ -1107,12 +988,62 @@ const replaceTextHandler = (
         toastInstance.error('Text not found')
     }
 }
+const insertTimestampAndSpeakerInitialAtStartOfCurrentLine = (
+    audioPlayer: HTMLAudioElement | null,
+    quill: Quill | undefined
+) => {
+    if (!audioPlayer || !quill) return;
+
+    const currentTime = audioPlayer.currentTime;
+    const formattedTime = convertSecondsToTimestamp(currentTime);
+    const currentSelection = quill.getSelection();
+
+    let paragraphStart = currentSelection ? currentSelection.index : 0;
+    while (paragraphStart > 0 && quill.getText(paragraphStart - 1, 1) !== '\n') {
+        paragraphStart--;
+    }
+
+    // Check for existing timestamp and speaker pattern at start of line
+    const lineText = quill.getText(paragraphStart, 14); // Get enough text to check pattern
+    const timestampSpeakerPattern = /^\d{1}:\d{2}:\d{2}\.\d{1} S\d+: /;
+
+    if (timestampSpeakerPattern.test(lineText)) {
+        // If pattern exists, delete it before inserting new one
+        const match = lineText.match(timestampSpeakerPattern);
+        if (match) {
+            quill.deleteText(paragraphStart, match[0].length);
+        }
+    }
+
+    quill.insertText(paragraphStart, formattedTime + ' S1: ', 'user');
+
+    if (currentSelection) {
+        quill.setSelection(currentSelection.index + formattedTime.length, currentSelection.length);
+    }
+};
 
 const insertTimestampBlankAtCursorPosition = (
     audioPlayer: HTMLAudioElement | null,
     quill: Quill | undefined
 ) => {
     if (!audioPlayer || !quill) return
+
+    const cursorPosition = quill.getSelection()?.index || 0
+
+    // Check if cursor is at start of paragraph
+    let isStartOfParagraph = true;
+    if (cursorPosition > 0) {
+        const textBeforeCursor = quill.getText(cursorPosition - 1, 1);
+        if (textBeforeCursor !== '\n') {
+            isStartOfParagraph = false;
+        }
+    }
+
+    if (isStartOfParagraph) {
+        // Call the other function instead
+        insertTimestampAndSpeakerInitialAtStartOfCurrentLine(audioPlayer, quill);
+        return;
+    }
 
     const currentTime = audioPlayer.currentTime
 
@@ -1127,10 +1058,7 @@ const insertTimestampBlankAtCursorPosition = (
             .toString()
             .padStart(2, '0')}.${milliseconds}] ____`
 
-    const cursorPosition = quill.getSelection()?.index || 0
     quill.insertText(cursorPosition, formattedTime)
-    // quill.formatText(cursorPosition, formattedTime.length, { color: 'red' });
-
     quill.setSelection(cursorPosition + formattedTime.length, 0)
 }
 
@@ -1139,10 +1067,7 @@ export {
     convertBlankToSeconds,
     convertTimestampToSeconds,
     updatePlayedPercentage,
-    downloadBlankDocx,
     convertSecondsToTimestamp,
-    downloadEditorDocxFile,
-    downloadEditorTextFile,
     downloadMP3,
     handleTextFilesUpload,
     uploadTextFile,
@@ -1160,5 +1085,6 @@ export {
     searchAndSelect,
     replaceTextHandler,
     insertTimestampBlankAtCursorPosition,
+    insertTimestampAndSpeakerInitialAtStartOfCurrentLine
 }
 export type { ConvertedASROutput }
