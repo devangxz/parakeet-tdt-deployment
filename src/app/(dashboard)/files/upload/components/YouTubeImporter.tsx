@@ -61,7 +61,7 @@ const YouTubeImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             file.url,
             file.fileId
           )
-          if (metadataResponse.status === 'SUCCESS') {
+          if (metadataResponse.success) {
             updateUploadStatus(file.name, {
               progress: 100,
               status: 'completed',
@@ -71,22 +71,27 @@ const YouTubeImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             updateUploadStatus(file.name, {
               progress: 0,
               status: 'failed',
-              error: 'Invalid file',
+              error: `Validation failed - ${metadataResponse.message}`,
             })
+
+            toast.error(
+              `Error validating YouTube URL: ${file.url} - ${metadataResponse.message}`
+            )
           }
         } catch (error) {
           const errorMessage = axios.isAxiosError(error)
             ? error.response?.data?.error
             : 'Invalid YouTube URL'
 
-          toast.error(
-            `Error validating YouTube URL: ${file.url} - ${errorMessage}`
-          )
           updateUploadStatus(file.name, {
             progress: 0,
             status: 'failed',
             error: `Validation failed - ${errorMessage}`,
           })
+
+          toast.error(
+            `Error validating YouTube URL: ${file.url} - ${errorMessage}`
+          )
         }
       }
     } catch (error) {
