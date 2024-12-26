@@ -36,9 +36,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    const userInfo = {
+    const userInfo: UserInfo = {
       userId: userDetails.userId,
-      internalTeamUserId: userDetails.internalTeamUserId,
+      internalTeamUserId: userDetails.internalTeamUserId || undefined,
     }
 
     const formData = await req.formData()
