@@ -16,7 +16,7 @@ export async function getFileDocxSignedUrl(
 
         const session = await getServerSession(authOptions)
         const user = session?.user
-        const userId = user?.userId as number
+        const userId = user?.internalTeamUserId || user?.userId
 
         if (docType === "CUSTOM_FORMATTING_DOC") {
             const fileVersion = await prisma.fileVersion.findFirst({
@@ -26,7 +26,7 @@ export async function getFileDocxSignedUrl(
                     userId
                 },
                 orderBy: {
-                    updatedAt: 'desc',
+                    createdAt: 'desc',
                 },
             })
 
