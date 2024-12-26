@@ -880,52 +880,50 @@ const searchAndSelect = (
     matchCase: boolean,
     lastSearchIndex: number,
     setLastSearchIndex: (index: number) => void,
-    toastInstance: { error: (msg: string) => void }
+    toastInstance: { error: (msg: string) => void },
+    selection: { index: number; length: number } | null,
+    matchSelection: boolean
 ) => {
     if (!quill) return
 
-    const text = quill.getText()
-    const currentSelection = quill.getSelection()
-    let startIndex = 0
+    const searchRange = {
+        start: 0,
+        end: quill.getText().length
+    }
 
+    // If there's a selection, limit search to that range
+    if (selection && selection.length > 0 && matchSelection) {
+        searchRange.start = selection.index
+        searchRange.end = selection.index + selection.length
+    }
+
+    const text = quill.getText(searchRange.start, searchRange.end - searchRange.start)
     const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase()
 
-    // Check if the current selection matches the search text and adjust the start index accordingly
-    if (currentSelection) {
-        const selectionText = text.substr(
-            currentSelection.index,
-            currentSelection.length
-        )
-        if (
-            (matchCase && selectionText === searchText) ||
-            (!matchCase && selectionText.toLowerCase() === effectiveSearchText)
-        ) {
-            startIndex = currentSelection.index + searchText.length
-        } else {
-            startIndex = lastSearchIndex + 1
-        }
+    let startIndex = lastSearchIndex + 1 - searchRange.start
+    if (startIndex < 0 || startIndex >= text.length) {
+        startIndex = 0
     }
 
     let index = matchCase
         ? text.indexOf(searchText, startIndex)
         : text.toLowerCase().indexOf(effectiveSearchText, startIndex)
 
-    // If not found from the current position, start from the beginning
+    // If not found from current position, wrap to start of search range
     if (index === -1 && startIndex !== 0) {
-        startIndex = 0
         index = matchCase
-            ? text.indexOf(searchText, startIndex)
-            : text.toLowerCase().indexOf(effectiveSearchText, startIndex)
+            ? text.indexOf(searchText, 0)
+            : text.toLowerCase().indexOf(effectiveSearchText, 0)
     }
 
     if (index !== -1) {
-        // Select the found text
-        quill.setSelection(index, searchText.length)
-        setLastSearchIndex(index)
+        // Adjust index relative to document start
+        const absoluteIndex = index + searchRange.start
+        quill.setSelection(absoluteIndex, searchText.length)
+        setLastSearchIndex(absoluteIndex)
     } else {
-        // If text is not found, reset the search
         setLastSearchIndex(-1)
-        toastInstance.error('Text not found')
+        toastInstance.error('Text not found in selected range')
     }
 }
 
@@ -935,32 +933,46 @@ const replaceTextHandler = (
     replaceWith: string,
     replaceAll: boolean,
     matchCase: boolean,
-    toastInstance: { error: (msg: string) => void }
+    toastInstance: { error: (msg: string) => void },
+    selection: { index: number; length: number } | null,
+    matchSelection: boolean
 ) => {
     if (!quill) return
 
     let replaced = false
-    const text = quill.getText()
+    const searchRange = {
+        start: 0,
+        end: quill.getText().length
+    }
+
+    // If there's a selection, limit replacements to that range
+    if (selection && selection.length > 0 && matchSelection) {
+        searchRange.start = selection.index
+        searchRange.end = selection.index + selection.length
+    }
+
+    const text = quill.getText(searchRange.start, searchRange.end - searchRange.start)
     const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase()
     const textToSearch = matchCase ? text : text.toLowerCase()
 
     const replace = (index: number) => {
-        quill.deleteText(index, searchText.length)
-        quill.insertText(index, replaceWith)
+        const absoluteIndex = index + searchRange.start
+        quill.deleteText(absoluteIndex, searchText.length)
+        quill.insertText(absoluteIndex, replaceWith)
         replaced = true
     }
 
     if (replaceAll) {
         let startIndex = 0
         let index = textToSearch.indexOf(effectiveSearchText, startIndex)
+
         while (index !== -1) {
             replace(index)
             startIndex = index + replaceWith.length
-            // Update textToSearch to reflect changes made by replacement
-            const updatedText = quill.getText()
-            const updatedTextToSearch = matchCase
-                ? updatedText
-                : updatedText.toLowerCase()
+
+            // Update text after replacement
+            const updatedText = quill.getText(searchRange.start, searchRange.end - searchRange.start)
+            const updatedTextToSearch = matchCase ? updatedText : updatedText.toLowerCase()
             index = updatedTextToSearch.indexOf(effectiveSearchText, startIndex)
         }
     } else {
@@ -974,7 +986,7 @@ const replaceTextHandler = (
                 (matchCase && selectedText === searchText) ||
                 (!matchCase && selectedText.toLowerCase() === effectiveSearchText)
             ) {
-                replace(currentSelection.index)
+                replace(currentSelection.index - searchRange.start)
             }
         } else {
             const index = textToSearch.indexOf(effectiveSearchText)
@@ -985,9 +997,10 @@ const replaceTextHandler = (
     }
 
     if (!replaced) {
-        toastInstance.error('Text not found')
+        toastInstance.error('Text not found in selected range')
     }
 }
+
 const insertTimestampAndSpeakerInitialAtStartOfCurrentLine = (
     audioPlayer: HTMLAudioElement | null,
     quill: Quill | undefined
