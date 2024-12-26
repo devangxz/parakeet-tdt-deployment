@@ -7,12 +7,6 @@ import 'react-quill/dist/quill.snow.css'
 
 import { LineData, CTMSWord, WordData } from './transcriptUtils'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
-import {
-    ContextMenu,
-    ContextMenuContent,
-    ContextMenuItem,
-    ContextMenuTrigger,
-} from "@/components/ui/context-menu"
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 import { ConvertedASROutput, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
 
@@ -30,9 +24,10 @@ interface EditorProps {
     content: { insert: string }[]
     setContent: (content: { insert: string }[]) => void
     getLines: (lineData: LineData[]) => void
+    setSelectionHandler: () => void
 }
 
-export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, orderDetails, content, setContent, getLines }: EditorProps) {
+export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, orderDetails, content, setContent, getLines, setSelectionHandler }: EditorProps) {
     const quillRef = useRef<ReactQuill>(null)
     const [lines, setLines] = useState<LineData[]>([])
     const quillModules = {
@@ -298,69 +293,70 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         getQuillRef(quillRef)
     }, [quillRef])
 
-    const handleContextMenuSelect = useCallback((action: string) => {
-        if (!quillRef.current) return;
-        const quill = quillRef.current.getEditor();
-        const selection = quill.getSelection();
+    // const handleContextMenuSelect = useCallback((action: string) => {
+    //     if (!quillRef.current) return;
+    //     const quill = quillRef.current.getEditor();
+    //     const selection = quill.getSelection();
 
-        if (!selection) return;
+    //     if (!selection) return;
 
-        switch (action) {
-            case 'google':
-                googleSearchSelectedWord();
-                break;
-            case 'define':
-                defineSelectedWord();
-                break;
-            case 'play-word':
-                handleEditorClick();
-                break;
-        }
-    }, [googleSearchSelectedWord, defineSelectedWord, handleEditorClick]);
+    //     switch (action) {
+    //         case 'google':
+    //             googleSearchSelectedWord();
+    //             break;
+    //         case 'define':
+    //             defineSelectedWord();
+    //             break;
+    //         case 'play-word':
+    //             handleEditorClick();
+    //             break;
+    //     }
+    // }, [googleSearchSelectedWord, defineSelectedWord, handleEditorClick]);
 
-    const handleContextMenuOpen = () => {
-        if (!quillRef.current) return;
-        const quill = quillRef.current.getEditor();
+    // const handleContextMenuOpen = () => {
+    //     if (!quillRef.current) return;
+    //     const quill = quillRef.current.getEditor();
 
-        // Get the clicked position relative to the editor
-        // Get the text position from the coordinates
-        const textPosition = quill.getSelection(true);
-        if (!textPosition) return;
+    //     // Get the clicked position relative to the editor
+    //     // Get the text position from the coordinates
+    //     const textPosition = quill.getSelection(true);
+    //     if (!textPosition) return;
 
-        // Find word boundaries
-        const text = quill.getText();
-        let wordStart = textPosition.index;
-        let wordEnd = textPosition.index;
+    //     // Find word boundaries
+    //     const text = quill.getText();
+    //     let wordStart = textPosition.index;
+    //     let wordEnd = textPosition.index;
 
-        // Find start of word
-        while (wordStart > 0 && !/\s/.test(text[wordStart - 1])) {
-            wordStart--;
-        }
+    //     // Find start of word
+    //     while (wordStart > 0 && !/\s/.test(text[wordStart - 1])) {
+    //         wordStart--;
+    //     }
 
-        // Find end of word
-        while (wordEnd < text.length && !/\s/.test(text[wordEnd])) {
-            wordEnd++;
-        }
+    //     // Find end of word
+    //     while (wordEnd < text.length && !/\s/.test(text[wordEnd])) {
+    //         wordEnd++;
+    //     }
 
-        // Select the word
-        quill.setSelection(wordStart, wordEnd - wordStart);
-    }
+    //     // Select the word
+    //     quill.setSelection(wordStart, wordEnd - wordStart);
+    // }
 
     return (
         <>
-            <ContextMenu>
-                <ContextMenuTrigger className="w-full h-full" onContextMenu={handleContextMenuOpen}>
-                    <ReactQuill
-                        ref={quillRef}
-                        theme='snow'
-                        modules={quillModules}
-                        value={{ ops: content }}
-                        onChange={handleContentChange}
-                        formats={['size']}
-                        className='h-full'
-                        readOnly={(orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === "REVIEWER_ASSIGNED")}
-                    />
-                </ContextMenuTrigger>
+            {/* <ContextMenu>
+                <ContextMenuTrigger className="w-full h-full" onContextMenu={handleContextMenuOpen}> */}
+            <ReactQuill
+                ref={quillRef}
+                theme='snow'
+                modules={quillModules}
+                value={{ ops: content }}
+                onChange={handleContentChange}
+                formats={['size', 'background']}
+                className='h-full'
+                readOnly={(orderDetails.status === 'FINALIZER_ASSIGNED')}
+                onChangeSelection={setSelectionHandler}
+            />
+            {/* </ContextMenuTrigger>
                 <ContextMenuContent>
                     <ContextMenuItem onSelect={() => handleContextMenuSelect('play-word')}>
                         Play Word
@@ -372,7 +368,7 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
                         Define Word
                     </ContextMenuItem>
                 </ContextMenuContent>
-            </ContextMenu>
+            </ContextMenu> */}
 
         </>
 

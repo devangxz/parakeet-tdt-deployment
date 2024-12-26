@@ -96,6 +96,7 @@ export async function getOrderDetailsAction(fileId: string) {
       userId: resultJson.user_id,
       remainingTime: remainingTime.toString(),
       duration: file?.duration?.toString(),
+      LLMDone: resultJson.LLMDone,
     }
 
     logger.info(`orderDetails fetched for file ${resultJson.file_id}`)

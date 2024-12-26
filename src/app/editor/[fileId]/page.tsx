@@ -63,6 +63,7 @@ export type OrderDetails = {
   userId: string
   remainingTime: string
   duration: string
+  LLMDone: boolean
 }
 
 export type UploadFilesType = {
@@ -85,6 +86,7 @@ function EditorPage() {
     userId: '',
     remainingTime: '',
     duration: '',
+    LLMDone: false,
   })
   const [cfd, setCfd] = useState('')
   const [notes, setNotes] = useState('')
@@ -130,12 +132,25 @@ function EditorPage() {
   const [lastSearchIndex, setLastSearchIndex] = useState<number>(-1)
   const [findAndReplaceOpen, setFindAndReplaceOpen] = useState(false)
   const [matchCount, setMatchCount] = useState(0)
+  const [matchSelection, setMatchSelection] = useState(false)
   const findInputRef = useRef<HTMLInputElement>(null)
+  const [selection, setSelection] = useState<{
+    index: number
+    length: number
+  } | null>(null)
   interface PlayerEvent {
     t: number
     s: number
   }
 
+  const setSelectionHandler = () => {
+    const quill = quillRef?.current?.getEditor()
+    if (!quill) return
+    const range = quill.getSelection()
+    if (range) {
+      setSelection({ index: range.index, length: range.length })
+    }
+  }
   const [playerEvents, setPlayerEvents] = useState<PlayerEvent[]>([])
 
   const isActive = usePreventMultipleTabs((params?.fileId as string) || '')
@@ -152,7 +167,10 @@ function EditorPage() {
   const countMatches = (searchText: string) => {
     if (!quillRef?.current || !searchText) return 0
     const quill = quillRef.current.getEditor()
-    const text = quill.getText()
+    let text = quill.getText()
+    if (selection && selection.length > 0 && matchSelection) {
+      text = text.slice(selection.index, selection.index + selection.length)
+    }
 
     if (matchCase) {
       return (text.match(new RegExp(searchText, 'g')) || []).length
@@ -164,6 +182,10 @@ function EditorPage() {
   const replaceTextInstance = (
     findText: string,
     replaceText: string,
+    selection: {
+      index: number
+      length: number
+    } | null,
     replaceAll = false
   ) => {
     if (!quillRef?.current) return
@@ -174,11 +196,16 @@ function EditorPage() {
       replaceText,
       replaceAll,
       matchCase,
-      toast
+      toast,
+      selection,
+      matchSelection
     )
   }
 
-  const searchAndSelectInstance = (searchText: string) => {
+  const searchAndSelectInstance = (searchText: string, selection: {
+    index: number
+    length: number
+  } | null) => {
     if (!quillRef?.current) return
     const quill = quillRef.current.getEditor()
     searchAndSelect(
@@ -187,12 +214,15 @@ function EditorPage() {
       matchCase,
       lastSearchIndex,
       setLastSearchIndex,
-      toast
+      toast,
+      selection,
+      matchSelection
     )
   }
 
   const toggleFindAndReplace = () => {
     setFindAndReplaceOpen(!findAndReplaceOpen)
+    setSelectionHandler()
     setTimeout(() => {
       if (findInputRef.current) {
         findInputRef.current.focus()
@@ -206,33 +236,33 @@ function EditorPage() {
         if (!findAndReplaceOpen) {
           toggleFindAndReplace()
         } else if (findText) {
-          searchAndSelectInstance(findText)
+          searchAndSelectInstance(findText, selection)
         }
       },
       findThePreviousOccurrenceOfString: () => {
         if (!findAndReplaceOpen) {
           toggleFindAndReplace()
         } else if (findText) {
-          searchAndSelectInstance(findText)
+          searchAndSelectInstance(findText, selection)
         }
       },
       replaceNextOccurrenceOfString: () => {
         if (!findAndReplaceOpen) {
           toggleFindAndReplace()
         } else if (findText && replaceText) {
-          replaceTextInstance(findText, replaceText)
+          replaceTextInstance(findText, replaceText, selection)
         }
       },
       replaceAllOccurrencesOfString: () => {
         if (!findAndReplaceOpen) {
           toggleFindAndReplace()
         } else if (findText && replaceText) {
-          replaceTextInstance(findText, replaceText, true)
+          replaceTextInstance(findText, replaceText, selection, true)
         }
       },
       repeatLastFind: () => {
         if (findText) {
-          searchAndSelectInstance(findText)
+          searchAndSelectInstance(findText, selection)
         }
       },
 
@@ -455,18 +485,22 @@ function EditorPage() {
   }
 
   const findHandler = () => {
-    searchAndSelectInstance(findText)
+    searchAndSelectInstance(findText, selection)
   }
 
   const replaceOneHandler = () => {
-    replaceTextInstance(findText, replaceText)
+    replaceTextInstance(findText, replaceText, selection)
     setMatchCount(countMatches(findText))
   }
 
   const replaceAllHandler = () => {
-    replaceTextInstance(findText, replaceText, true)
+    replaceTextInstance(findText, replaceText, selection, true)
     setMatchCount(countMatches(findText))
   }
+
+  useEffect(() => {
+    setMatchCount(countMatches(findText))
+  }, [matchSelection, matchCase])
 
   return (
     <div className='bg-[#F7F5FF] h-screen flex flex-col overflow-hidden'>
@@ -550,6 +584,7 @@ function EditorPage() {
                         audioPlayer={audioPlayer}
                         audioDuration={audioDuration}
                         getQuillRef={getQuillRef}
+                        setSelectionHandler={setSelectionHandler}
                       />
 
                       <DiffTabComponent diff={diff} />
@@ -609,16 +644,26 @@ function EditorPage() {
                               value={replaceText}
                               onChange={handleReplaceChange}
                             />
-                            <Label className='flex items-center space-x-2 mb-4'>
-                              <Checkbox
-                                checked={matchCase}
-                                onCheckedChange={(checked) => {
-                                  setMatchCase(checked === true)
-                                  setMatchCount(countMatches(findText))
-                                }}
-                              />
-                              <span>Match case</span>
-                            </Label>
+                            <div className="flex items-center space-x-4 mb-4">
+                              <Label className='flex items-center space-x-2'>
+                                <Checkbox
+                                  checked={matchCase}
+                                  onCheckedChange={(checked) => {
+                                    setMatchCase(checked === true)
+                                  }}
+                                />
+                                <span>Match case</span>
+                              </Label>
+                              <Label className='flex items-center space-x-2'>
+                                <Checkbox
+                                  checked={matchSelection}
+                                  onCheckedChange={(checked) => {
+                                    setMatchSelection(checked === true)
+                                  }}
+                                />
+                                <span>Selection</span>
+                              </Label>
+                            </div>
                             <div className='inline-flex w-full rounded-md' role="group">
                               <button
                                 onClick={findHandler}
