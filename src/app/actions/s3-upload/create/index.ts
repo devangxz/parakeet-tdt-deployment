@@ -17,23 +17,33 @@ export async function createMultipartUpload(
   fileId: string,
   size: number,
   source: string,
-  sourceId: string | null
+  sourceId: string | null,
+  apiUser?: {
+    userId: number
+    internalTeamUserId?: number
+  }
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    const user = session?.user
+    let user
 
-    if (!user) {
-      return {
-        success: false,
-        message: 'User not found',
+    if (apiUser) {
+      user = apiUser
+    } else {
+      const session = await getServerSession(authOptions)
+      user = session?.user
+
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+        }
       }
-    }
 
-    if (!requireCustomer(user)) {
-      return {
-        success: false,
-        message: 'Action is not allowed',
+      if (!requireCustomer(user)) {
+        return {
+          success: false,
+          message: 'Action is not allowed',
+        }
       }
     }
 
@@ -50,7 +60,10 @@ export async function createMultipartUpload(
       ContentType: type,
       Metadata: {
         upload_environment: process.env.UPLOAD_ENVIRONMENT || 'STAGING',
-        type: fileExtension.toLowerCase() === '.docx' ? 'DOCX_FILE' : 'ORIGINAL_FILE',
+        type:
+          fileExtension.toLowerCase() === '.docx'
+            ? 'DOCX_FILE'
+            : 'ORIGINAL_FILE',
         user_id: user.userId?.toString(),
         team_user_id:
           user.internalTeamUserId?.toString() || user.userId?.toString(),
@@ -60,19 +73,21 @@ export async function createMultipartUpload(
     })
     const data = await s3Client.send(command)
 
-    await prisma.uploadSession.create({
-      data: {
-        uploadId: data.UploadId!,
-        key: data.Key!,
-        userId: user.userId,
-        sourceInfo: {
-          sourceType: source,
-          sourceId: sourceId || null,
-          fileName: originalName,
-          fileSize: size,
+    if (!apiUser) {
+      await prisma.uploadSession.create({
+        data: {
+          uploadId: data.UploadId!,
+          key: data.Key!,
+          userId: user.userId,
+          sourceInfo: {
+            sourceType: source,
+            sourceId: sourceId || null,
+            fileName: originalName,
+            fileSize: size,
+          },
         },
-      },
-    })
+      })
+    }
 
     return {
       success: true,

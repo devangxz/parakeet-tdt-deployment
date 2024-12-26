@@ -327,11 +327,6 @@ function EditorPage() {
       setCtms,
       setPlayerEvents,
     })
-
-    const file = localStorage.getItem(orderDetails?.fileId as string)
-    if (file) {
-      setNotes(JSON.parse(file).notes)
-    }
   }, [])
 
   const handleTabChange = () => {
@@ -410,6 +405,12 @@ function EditorPage() {
     if (step !== 'QC' && orderDetails.orderId) {
       getEditorModeOptions()
     }
+
+    const file = localStorage.getItem(orderDetails?.fileId as string)
+    console.log(file)
+    if (file) {
+      setNotes(JSON.parse(file).notes)
+    }
   }, [orderDetails])
 
   useEffect(() => {
@@ -471,6 +472,8 @@ function EditorPage() {
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value
     setNotes(text)
+
+    localStorage.setItem(orderDetails.fileId, JSON.stringify({ notes: text }))
   }
 
   const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -694,7 +697,7 @@ function EditorPage() {
                         </div>
                         <Textarea
                           placeholder='Start typing...'
-                          className={`resize-none w-full border-none outline-none focus:outline-none focus-visible:ring-0 shadow-none p-4 transition-all duration-300 ease-in-out h-full`}
+                          className={`resize-none w-full border-none outline-none focus:outline-none focus-visible:ring-0 shadow-none p-4 transition-all duration-300 ease-in-out h-5/6`}
                           value={notes}
                           onChange={handleNotesChange}
                         />
