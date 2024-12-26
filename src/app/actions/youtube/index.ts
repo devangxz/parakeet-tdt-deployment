@@ -203,7 +203,7 @@ export async function getYoutubeMetadata(url: string, fileId: string) {
       `YouTube file metadata saved successfully for fileId: ${fileId}, userId: ${user?.userId}, url: ${url}`
     )
 
-    return { success: true, status: 'SUCCESS' }
+    return { success: true, message: 'YouTube video metadata saved successfully' }
   } catch (error) {
     logger.error(`Failed to get YouTube Metadata: ${error}`)
     return {
