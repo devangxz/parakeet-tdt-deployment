@@ -15,6 +15,7 @@ import Slider from 'rc-slider'
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { toast } from 'sonner'
 
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import {
     TooltipProvider,
     Tooltip,
@@ -86,6 +87,7 @@ export default function AudioPlayer({ fileId, getAudioPlayer }: { fileId: string
     const audioPlayer = useRef<HTMLAudioElement>(null);
     const [waveformUrl, setWaveformUrl] = useState('')
     const [isPlayerLoaded, setIsPlayerLoaded] = useState(false)
+    const [audioUrl, setAudioUrl] = useState('')
 
     const shortcutControls = useMemo(() => createShortcutControls(audioPlayer), [audioPlayer]);
 
@@ -102,9 +104,17 @@ export default function AudioPlayer({ fileId, getAudioPlayer }: { fileId: string
         }
     }
 
+    const fetchAudioUrl = async () => {
+        const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
+        if (res.success && res.signedUrl) {
+            setAudioUrl(res.signedUrl)
+        }
+    }
+
     useEffect(() => {
         if (!fileId) return
         fetchWaveform()
+        fetchAudioUrl()
     }, [fileId])
 
     useEffect(() => {
@@ -219,7 +229,7 @@ export default function AudioPlayer({ fileId, getAudioPlayer }: { fileId: string
             </div>
             <div className='h-[55%] bg-white border border-gray-200 rounded-b-2xl px-3'>
                 <div className='w-full mt-2'>
-                    <audio ref={audioPlayer} className='hidden' src={`/api/editor/get-audio/${fileId}`}></audio>
+                    <audio ref={audioPlayer} className='hidden' src={audioUrl}></audio>
                     <Slider
                         step={0.01}
                         min={0}

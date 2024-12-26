@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { fetchPreDeliveryOrders } from '@/app/actions/om/fetch-pre-delivery-orders'
 import DeliveryPreDeliveryFile from '@/components/admin-components/deliver-pre-delivery-file'
 import ReassignFinalizer from '@/components/admin-components/re-assign-finalizer-dialog'
@@ -61,10 +62,17 @@ export default function PreDeliveryPage() {
     [key: string]: string
   }>({})
 
-  useEffect(() => {
+  const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
+    const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
+    if (res.success && res.signedUrl) {
+      setCurrentlyPlayingFileUrl({ [fileId]: res.signedUrl })
+    }
+  }
+
+  useEffect(() => {
+    setAudioUrl()
   }, [playing])
 
   const getPreDeliveryOrders = async (showLoader = false) => {
@@ -187,8 +195,8 @@ export default function PreDeliveryPage() {
                   {row.original.pwer > HIGH_PWER
                     ? 'HIGH'
                     : row.original.pwer < LOW_PWER
-                    ? 'LOW'
-                    : 'MEDIUM'}
+                      ? 'LOW'
+                      : 'MEDIUM'}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
@@ -304,10 +312,10 @@ export default function PreDeliveryPage() {
                 `/editor/${row.original.fileId}`,
                 '_blank',
                 'toolbar=no,location=no,menubar=no,width=' +
-                  window.screen.width +
-                  ',height=' +
-                  window.screen.height +
-                  ',left=0,top=0'
+                window.screen.width +
+                ',height=' +
+                window.screen.height +
+                ',left=0,top=0'
               )
             }
           >

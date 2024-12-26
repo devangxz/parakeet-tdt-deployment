@@ -21,6 +21,7 @@ const StatusPage = dynamic(() => import('./status'), {
   ssr: false,
   loading: () => <div>Loading...</div>,
 })
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { changeDeliveryDate } from '@/app/actions/om/change-delivery-date'
 import { fetchPendingOrders } from '@/app/actions/om/fetch-pending-orders'
 import { Badge } from '@/components/ui/badge'
@@ -68,10 +69,17 @@ export default function OrdersPage() {
     [key: string]: string
   }>({})
 
-  useEffect(() => {
+  const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
+    const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
+    if (res.success && res.signedUrl) {
+      setCurrentlyPlayingFileUrl({ [fileId]: res.signedUrl })
+    }
+  }
+
+  useEffect(() => {
+    setAudioUrl()
   }, [playing])
 
   const getPendingOrders = async (showLoader = false) => {
@@ -219,8 +227,8 @@ export default function OrdersPage() {
                   {row.original.pwer > HIGH_PWER
                     ? 'HIGH'
                     : row.original.pwer < LOW_PWER
-                    ? 'LOW'
-                    : 'MEDIUM'}
+                      ? 'LOW'
+                      : 'MEDIUM'}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>

@@ -16,6 +16,7 @@ import { getAllFilesAction } from '@/app/actions/all-files'
 import { downloadMp3 } from '@/app/actions/file/download-mp3'
 import { getFolders } from '@/app/actions/folders'
 import { getFolderHierarchy } from '@/app/actions/folders/parent'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { createOrder } from '@/app/actions/order'
 import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
 import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
@@ -117,10 +118,17 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
   const [allFiles, setAllFiles] = useState<AllFile[] | null>(null)
   const [isAllFilesLoading, setIsAllFilesLoading] = useState(true)
 
-  useEffect(() => {
+  const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
+    const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
+    if (res.success && res.signedUrl) {
+      setCurrentlyPlayingFileUrl({ [fileId]: res.signedUrl })
+    }
+  }
+
+  useEffect(() => {
+    setAudioUrl()
   }, [playing])
 
   useEffect(() => {

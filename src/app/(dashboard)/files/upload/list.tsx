@@ -12,6 +12,7 @@ import { copyFile } from '@/app/actions/file/copy'
 import { downloadMp3 } from '@/app/actions/file/download-mp3'
 import { getRefundInvoice } from '@/app/actions/file/refund-invoice'
 import { refetchFiles } from '@/app/actions/files'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { createOrder } from '@/app/actions/order'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
@@ -86,10 +87,17 @@ const FileList = ({
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false)
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>('')
 
-  useEffect(() => {
+  const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
+    const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
+    if (res.success && res.signedUrl) {
+      setCurrentlyPlayingFileUrl({ [fileId]: res.signedUrl })
+    }
+  }
+
+  useEffect(() => {
+    setAudioUrl()
   }, [playing])
 
   const fetchPendingFiles = async (showLoader = false) => {

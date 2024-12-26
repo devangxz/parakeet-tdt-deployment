@@ -10,6 +10,7 @@ import { DataTable } from './components/data-table'
 import { getRefundAmountAction } from '@/app/actions/file/cancel-order'
 import { downloadMp3 } from '@/app/actions/file/download-mp3'
 import { refetchFiles } from '@/app/actions/files'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import DraftTranscriptFileDialog from '@/components/draft-transcript'
 import CanceOrderDialog from '@/components/draft-transcript/cancel-order'
 import RenameFileDialog from '@/components/file-rename-dialog'
@@ -64,10 +65,17 @@ export default function InprogressFilesPage({ files }: ListProps) {
     [key: string]: string
   }>({})
 
-  useEffect(() => {
+  const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
+    const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
+    if (res.success && res.signedUrl) {
+      setCurrentlyPlayingFileUrl({ [fileId]: res.signedUrl })
+    }
+  }
+
+  useEffect(() => {
+    setAudioUrl()
   }, [playing])
 
   const fetchInprogressFiles = async (showLoader = false) => {
@@ -348,25 +356,25 @@ export default function InprogressFilesPage({ files }: ListProps) {
           <div>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-              <Button
-                variant='order'
-                className='not-rounded text-black w-[140px] mr-3'
-                onClick={async () => {
-                  try {
-                    if (selectedFiles.length === 0) {
-                      toast.error('Please select at least one file')
-                      return
+                <Button
+                  variant='order'
+                  className='not-rounded text-black w-[140px] mr-3'
+                  onClick={async () => {
+                    try {
+                      if (selectedFiles.length === 0) {
+                        toast.error('Please select at least one file')
+                        return
+                      }
+                      await navigator.clipboard.writeText(selectedFiles.join(','))
+                      toast.success('File Ids copied to clipboard')
+                    } catch (error) {
+                      toast.error('Failed to copy file Ids')
                     }
-                    await navigator.clipboard.writeText(selectedFiles.join(','))
-                    toast.success('File Ids copied to clipboard')
-                  } catch (error) {
-                    toast.error('Failed to copy file Ids')
-                  }
-                }}
-              >
-                Copy file Ids
-              </Button>
-            )}
+                  }}
+                >
+                  Copy file Ids
+                </Button>
+              )}
           </div>
         </div>
         <DataTable

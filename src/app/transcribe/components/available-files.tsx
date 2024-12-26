@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 
 import { DataTable } from './data-table'
 import { determinePwerLevel } from './utils'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { assignQC } from '@/app/actions/qc/assign'
 import { getAvailableQCFiles } from '@/app/actions/qc/available-files'
 import { Badge } from '@/components/ui/badge'
@@ -45,10 +46,17 @@ export default function AvailableFilesPage({ changeTab }: Props) {
   const pathname = usePathname()
   const isLegalQCPage = pathname === '/transcribe/legal-qc'
 
-  useEffect(() => {
+  const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
+    const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
+    if (res.success && res.signedUrl) {
+      setCurrentlyPlayingFileUrl({ [fileId]: res.signedUrl })
+    }
+  }
+
+  useEffect(() => {
+    setAudioUrl()
   }, [playing])
 
   const fetchAvailableFiles = async (showLoader = false) => {
