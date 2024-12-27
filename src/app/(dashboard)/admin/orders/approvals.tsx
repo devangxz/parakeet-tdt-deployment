@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { fetchApprovalOrders } from '@/app/actions/om/fetch-approval-orders'
 import AcceptRejectApprovalFileDialog from '@/components/admin-components/accept-reject-approval'
 import OpenDiffDialog from '@/components/admin-components/diff-dialog'
@@ -62,10 +63,17 @@ export default function ApprovalPage() {
     [key: string]: string
   }>({})
 
-  useEffect(() => {
+  const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
+    const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
+    if (res.success && res.signedUrl) {
+      setCurrentlyPlayingFileUrl({ [fileId]: res.signedUrl })
+    }
+  }
+
+  useEffect(() => {
+    setAudioUrl()
   }, [playing])
 
   const fetchOrders = async (showLoader = false) => {
@@ -188,8 +196,8 @@ export default function ApprovalPage() {
                   {row.original.pwer > HIGH_PWER
                     ? 'HIGH'
                     : row.original.pwer < LOW_PWER
-                    ? 'LOW'
-                    : 'MEDIUM'}
+                      ? 'LOW'
+                      : 'MEDIUM'}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>

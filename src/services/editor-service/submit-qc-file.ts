@@ -21,73 +21,79 @@ import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 import getCustomerTranscript from '@/utils/getCustomerTranscript'
+import getOrgName from '@/utils/getOrgName'
 import qualityCriteriaPassed from '@/utils/qualityCriteriaPassed'
 
 type OrderWithFileData =
   | (Order & {
-      File: File | null
-    })
+    File: File | null
+  })
   | null
 
 async function completeQCJob(order: Order, transcriberId: number) {
   logger.info(`--> completeQCJob ${transcriberId}`)
-  await prisma.$transaction(async (prisma) => {
-    const orderWithFileData = await prisma.order.findUnique({
-      where: { id: order.id },
-      include: {
-        File: true,
-      },
-    })
 
-    const qcCost = await calculateTranscriberCost(
-      orderWithFileData as OrderWithFileData,
-      transcriberId
-    )
-    await prisma.jobAssignment.updateMany({
-      where: {
-        orderId: order.id,
-        transcriberId,
-        type: JobType.QC,
-        status: JobStatus.ACCEPTED,
-      },
-      data: {
-        status: JobStatus.COMPLETED,
-        earnings: qcCost.cost,
-        completedTs: new Date(),
-      },
-    })
-    await prisma.order.update({
-      where: { id: order.id },
-      data: { status: OrderStatus.QC_COMPLETED },
-    })
-    const user = await prisma.user.findFirst({ where: { id: transcriberId } })
-    const userEmail = user?.email || ''
-
-    if (order.orderType === OrderType.TRANSCRIPTION_FORMATTING) {
-      await assignFileToReviewer(
-        order.id,
-        order.fileId,
-        transcriberId,
-        InputFileType.LLM_OUTPUT,
-        false
-      )
-    }
-
-    logger.info(
-      `sending TRANSCRIBER_SUBMIT mail for submitting QC file ${order.fileId} to ${userEmail} for user ${transcriberId}`
-    )
-
-    const templateData = {
-      file_id: order.fileId,
-      subject: 'Scribie.ai Editor Assignment Submitted',
-    }
-    const ses = getAWSSesInstance()
-    await ses.sendMail(
-      'TRANSCRIBER_SUBMIT',
-      { userEmailId: userEmail },
-      templateData
-    )
+  const orderWithFileData = await prisma.order.findUnique({
+    where: { id: order.id },
+    include: {
+      File: true,
+    },
   })
+
+  const orgName = await getOrgName(order.userId)
+
+  const qcCost = await calculateTranscriberCost(
+    orderWithFileData as OrderWithFileData,
+    transcriberId
+  )
+  await prisma.jobAssignment.updateMany({
+    where: {
+      orderId: order.id,
+      transcriberId,
+      type: JobType.QC,
+      status: JobStatus.ACCEPTED,
+    },
+    data: {
+      status: JobStatus.COMPLETED,
+      earnings: qcCost.cost,
+      completedTs: new Date(),
+    },
+  })
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { status: OrderStatus.QC_COMPLETED },
+  })
+  const user = await prisma.user.findFirst({ where: { id: transcriberId } })
+  const userEmail = user?.email || ''
+
+  if (order.orderType === OrderType.TRANSCRIPTION_FORMATTING) {
+
+    const inputFileType = orgName.toLowerCase() === 'remotelegal' ? InputFileType.LLM_OUTPUT : InputFileType.ASR_OUTPUT
+    const changeOrderStatus = orgName.toLowerCase() === 'remotelegal' ? false : true
+
+    await assignFileToReviewer(
+      order.id,
+      order.fileId,
+      transcriberId,
+      inputFileType,
+      changeOrderStatus
+    )
+  }
+
+  logger.info(
+    `sending TRANSCRIBER_SUBMIT mail for submitting QC file ${order.fileId} to ${userEmail} for user ${transcriberId}`
+  )
+
+  const templateData = {
+    file_id: order.fileId,
+    subject: 'Scribie.ai Editor Assignment Submitted',
+  }
+  const ses = getAWSSesInstance()
+  await ses.sendMail(
+    'TRANSCRIBER_SUBMIT',
+    { userEmailId: userEmail },
+    templateData
+  )
 
   logger.info(`<-- completeQCJob ${transcriberId}`)
 }
@@ -203,12 +209,15 @@ export async function submitQCFile(
     }
 
     await completeQCJob(order, transcriberId)
+    const orgName = await getOrgName(order.userId)
 
     if (order.orderType === OrderType.TRANSCRIPTION_FORMATTING) {
-      await workerQueueService.createJob(WORKER_QUEUE_NAMES.LLM_MARKING, {
-        orderId: order.id,
-        fileId: order.fileId,
-      })
+      if (orgName.toLowerCase() === 'remotelegal') {
+        await workerQueueService.createJob(WORKER_QUEUE_NAMES.LLM_MARKING, {
+          orderId: order.id,
+          fileId: order.fileId,
+        })
+      }
     } else {
       if ((await preDeliverIfConfigured(order, transcriberId)) === false) {
         await deliver(order, transcriberId)

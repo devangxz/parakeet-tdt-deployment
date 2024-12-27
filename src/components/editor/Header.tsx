@@ -20,6 +20,9 @@ import {
   TrackNextIcon,
   TimerIcon,
   MagnifyingGlassIcon,
+  SpaceEvenlyVerticallyIcon,
+  PersonIcon,
+  Pencil2Icon,
 } from '@radix-ui/react-icons'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
@@ -277,8 +280,9 @@ export default function Header({
   })
   const [step, setStep] = useState<string>('')
   const [cfd, setCfd] = useState('')
-  const [downloadableType, setDownloadableType] = useState('marking')
+  const [downloadableType, setDownloadableType] = useState('no-marking')
   const [asrFileUrl, setAsrFileUrl] = useState('')
+  const [qcFileUrl, setQcFileUrl] = useState('')
   const [reReviewComment, setReReviewComment] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
@@ -946,7 +950,75 @@ export default function Header({
     if (open) {
       const asrFileUrl = await getTextFile(orderDetails.fileId, 'ASR')
       setAsrFileUrl(asrFileUrl?.signedUrl || '')
+      const qcFileUrl = await getTextFile(orderDetails.fileId, 'QC')
+      setQcFileUrl(qcFileUrl?.signedUrl || '')
     }
+  }
+
+  const markSection = () => {
+    if (!quillRef?.current) return;
+
+    const quill = quillRef.current.getEditor();
+    const range = quill.getSelection();
+
+    if (!range) {
+      toast.error('Please select the heading to mark.');
+      return;
+    }
+
+    const selectedText = quill.getText(range.index, range.length).trim();
+
+    const validHeadings = ['EXAMINATION', 'PROCEEDINGS', 'EXAMINATION-CONTINUES', 'FURTHER EXAMINATION'];
+
+    if (!validHeadings.includes(selectedText.toUpperCase())) {
+      toast.error('Only Proceedings/Examination can be marked.');
+      return;
+    }
+
+    const nextChar = quill.getText(range.index + range.length, 1);
+    const wrappedText = `[--${selectedText.toUpperCase()}--]${nextChar === '\n' ? '\n' : '\n\n'}`;
+    quill.deleteText(range.index, range.length);
+    quill.insertText(range.index, wrappedText);
+
+    toast.success(`Marked as start of ${selectedText}`);
+  }
+
+  const markExaminee = () => {
+    if (!quillRef?.current) return;
+
+    const quill = quillRef.current.getEditor();
+    const range = quill.getSelection();
+
+    if (!range) {
+      toast.error('Please select the text to mark.');
+      return;
+    }
+
+    const selectedText = quill.getText(range.index, range.length);
+    const wrappedText = `[--EXAMINEE--${selectedText.toUpperCase()}--EXAMINEE--]`;
+
+    quill.deleteText(range.index, range.length);
+    quill.insertText(range.index, wrappedText);
+
+    toast.success('Marked as continuation of examination');
+  }
+
+  const insertSwearInLine = () => {
+    if (!quillRef?.current) return;
+
+    const quill = quillRef.current.getEditor();
+    const range = quill.getSelection();
+
+    if (!range) {
+      toast.error('Please place cursor where you want to insert the text');
+      return;
+    }
+
+    const textToInsert = "WHEREUPON, [--EXAMINEE--<replace_with_examinee_name>--EXAMINEE--] having been called as a witness, being duly sworn by the notary public present, testified as follows:";
+
+    quill.insertText(range.index, textToInsert);
+
+    toast.success('Inserted swear in line text');
   }
 
   return (
@@ -1243,9 +1315,54 @@ export default function Header({
                     />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Insert Timestamps</p>
+                    <p>Find and Replace</p>
                   </TooltipContent>
                 </Tooltip>
+
+                {orderDetails.status === 'REVIEWER_ASSIGNED' &&
+                  orderDetails.orgName.toLowerCase() === 'remotelegal' &&
+                  <>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <PlayerButton
+                          icon={<SpaceEvenlyVerticallyIcon />}
+                          tooltip='Mark section'
+                          onClick={markSection}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Mark section</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <PlayerButton
+                          icon={<PersonIcon />}
+                          tooltip='Mark examinee'
+                          onClick={markExaminee}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Mark examinee</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <PlayerButton
+                          icon={<Pencil2Icon />}
+                          tooltip='Insert swear in line'
+                          onClick={insertSwearInLine}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Insert swear in line</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </>
+                }
+
               </TooltipProvider>
 
             </div>
@@ -1340,9 +1457,14 @@ export default function Header({
                         Formatting Options
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem asChild>
-                      <a href={asrFileUrl} target='_blank'>Download ASR text</a>
-                    </DropdownMenuItem>
+                    {orderDetails.status === 'QC_ASSIGNED' &&
+                      <DropdownMenuItem asChild>
+                        <a href={asrFileUrl} target='_blank'>Download ASR text</a>
+                      </DropdownMenuItem>}
+                    {orderDetails.status === 'REVIEWER_ASSIGNED' &&
+                      <DropdownMenuItem asChild>
+                        <a href={qcFileUrl} target='_blank'>Download QC text</a>
+                      </DropdownMenuItem>}
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <DialogContent>
@@ -1464,32 +1586,34 @@ export default function Header({
                 </Dialog>
               )}
               <div className='flex items-center'>
-                {(step === 'QC' || session?.user?.role === 'OM') && (
-                  <Button
-                    onClick={() => {
-                      capitalizeWord()
-                      handleSave({
-                        getEditorText,
-                        orderDetails,
-                        notes,
-                        cfd,
-                        setButtonLoading,
-                        lines,
-                        playerEvents,
-                      })
-                    }
-                    }
-                    disabled={buttonLoading.save}
-                    className='w-24 mr-2'
-                    variant='outline'
-                  >
-                    {' '}
-                    {buttonLoading.save && (
-                      <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                    )}{' '}
-                    Save
-                  </Button>
-                )}
+                {(orderDetails.status === 'QC_ASSIGNED' ||
+                  orderDetails.status === 'REVIEWER_ASSIGNED' ||
+                  session?.user?.role === 'OM') && (
+                    <Button
+                      onClick={() => {
+                        capitalizeWord()
+                        handleSave({
+                          getEditorText,
+                          orderDetails,
+                          notes,
+                          cfd,
+                          setButtonLoading,
+                          lines,
+                          playerEvents,
+                        })
+                      }
+                      }
+                      disabled={buttonLoading.save}
+                      className='w-24 mr-2'
+                      variant='outline'
+                    >
+                      {' '}
+                      {buttonLoading.save && (
+                        <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                      )}{' '}
+                      Save
+                    </Button>
+                  )}
 
                 {!['CUSTOMER', 'OM', 'ADMIN'].includes(
                   session?.user?.email ?? ''

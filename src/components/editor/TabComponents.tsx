@@ -20,9 +20,10 @@ interface EditorTabComponentProps {
     content: { insert: string }[]
     setContent: (content: { insert: string }[]) => void
     getLines: (lineData: LineData[]) => void
+    setSelectionHandler: () => void
 }
 
-export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, orderDetails, content, setContent, getLines }: EditorTabComponentProps) => (
+export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, orderDetails, content, setContent, getLines, setSelectionHandler }: EditorTabComponentProps) => (
     <TabsContent className='h-full mt-0 overflow-hidden' value='transcribe'>
         <div className='bg-white border border-gray-200 border-t-0 rounded-b-2xl px-5 py-5 h-[99%] relative overflow-hidden'>
             {!transcript && (
@@ -43,6 +44,7 @@ export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuratio
                         content={content}
                         setContent={setContent}
                         getLines={getLines}
+                        setSelectionHandler={setSelectionHandler}
                     />
                 </div>
             )}

@@ -9,6 +9,7 @@ import { DataTable } from './data-table'
 import { unassignmentHandler } from './unassignmentHandler'
 import { determinePwerLevel } from './utils'
 import { getAssignedFiles } from '@/app/actions/cf/assigned-files'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -51,10 +52,17 @@ export default function AssignedFilesPage({ changeTab }: Props) {
   const pathname = usePathname()
   const isLegalPage = pathname === '/transcribe/legal-cf-reviewer'
 
-  useEffect(() => {
+  const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
+    const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
+    if (res.success && res.signedUrl) {
+      setCurrentlyPlayingFileUrl({ [fileId]: res.signedUrl })
+    }
+  }
+
+  useEffect(() => {
+    setAudioUrl()
   }, [playing])
 
   const fetchFiles = async (showLoader = false) => {
@@ -294,10 +302,10 @@ export default function AssignedFilesPage({ changeTab }: Props) {
                     `/editor/${row.original.fileId}`,
                     '_blank',
                     'toolbar=no,location=no,menubar=no,width=' +
-                      window.screen.width +
-                      ',height=' +
-                      window.screen.height +
-                      ',left=0,top=0'
+                    window.screen.width +
+                    ',height=' +
+                    window.screen.height +
+                    ',left=0,top=0'
                   )
                 }}
               >

@@ -1,3 +1,5 @@
+import { FileTag } from "@prisma/client";
+
 import logger from "@/lib/logger";
 import prisma from "@/lib/prisma";
 
@@ -11,6 +13,7 @@ interface OrderDetails {
     status: string;
     instructions: string;
     user_id: number;
+    LLMDone: boolean;
 }
 
 async function getOrderUserDetails(
@@ -27,6 +30,7 @@ async function getOrderUserDetails(
         status: '',
         instructions: '',
         user_id: 0,
+        LLMDone: false,
     };
     try {
         // Get order details
@@ -78,6 +82,16 @@ async function getOrderUserDetails(
             logger.info(`'No organization name'}`);
         }
 
+        const llmFileVersion = await prisma.fileVersion.findFirst({
+            where: {
+                fileId: order?.fileId,
+                tag: FileTag.LLM,
+            },
+            select: {
+                s3VersionId: true,
+            },
+        });
+
         logger.info(`${order?.orderType} ${order?.userId} ${orgName}`);
         logger.info(
             `${order?.fileId} ${order?.File?.filename} ${templateName} ${order?.user.email}`,
@@ -92,7 +106,12 @@ async function getOrderUserDetails(
             status: order?.status ?? '',
             instructions: order?.instructions ?? '',
             user_id: order?.userId ?? 0,
+            LLMDone: false,
         };
+
+        if (llmFileVersion && llmFileVersion.s3VersionId) {
+            resultJson.LLMDone = true;
+        }
     } catch (error) {
         logger.error('Details could not be fetched');
     }
