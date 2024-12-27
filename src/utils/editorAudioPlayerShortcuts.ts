@@ -40,6 +40,7 @@ interface DefaultShortcuts {
     capitalizeFirstLetter: string;
     uppercaseWord: string;
     lowercaseWord: string;
+
     // playFromStartOfNextParagraph: string;
     // playFromStartOfPreviousParagraph: string;
     // moveLeftByACharacter: string;
@@ -77,6 +78,7 @@ interface DefaultShortcuts {
     replaceNextOccurrenceOfString: string;
     replaceAllOccurrencesOfString: string;
     saveChanges: string;
+    joinWithNextParagraph: string;
     // saveALocalCopyOfTheTranscriptInBrowser: string;
     // showChangeSpeakerInitialsDialog: string;
     // automaticallySwapSpeakerInitialsBetweenTwoPartFileDelimiters: string;
@@ -96,7 +98,6 @@ interface DefaultShortcuts {
     // jumpAudioAndCursorToARandomParagraphInCurrentPart: string;
     // jumpAudioAndCursorToARandomParagraphInNextPart: string;
     // toggleTabCompletion: string;
-    // joinWithNextParagraph: string;
     // breakParagraphAndAddTimestampAndSpeakerInitial: string;
     // markTheStartOfASection: string;
     // markExaminee: string;
@@ -133,6 +134,7 @@ export interface ShortcutControls {
     capitalizeFirstLetter: () => void;
     uppercaseWord: () => void;
     lowercaseWord: () => void;
+    joinWithNextParagraph: () => void;
     // playFromStartOfNextParagraph: () => void;
     // playFromStartOfPreviousParagraph: () => void;
     // moveLeftByACharacter: () => void;
@@ -228,6 +230,7 @@ const defaultShortcuts: DefaultShortcuts = {
     decreasePlaybackSpeed: "Control+Alt+ArrowDown",
     // focusOnPlaybackSpeedTextBox: "Control+Alt+S",
     playAudioFromTheStartOfCurrentParagraph: "Control+N",
+    joinWithNextParagraph: "Alt+J",
     // playFromStartOfNextParagraph: "Control+Shift+N",
     // playFromStartOfPreviousParagraph: "Control+Alt+Shift+N",
     // moveLeftByACharacter: "Control+H",
@@ -363,6 +366,11 @@ const useShortcuts = (shortcutControls: ShortcutControls) => {
 
         const unsubscribe = tinykeys(window, Object.entries(shortcuts).reduce((acc, [key, func]) => {
             acc[key] = (event: KeyboardEvent) => {
+                // Ignore shortcuts if the shortcut configuration input is focused
+                if (document.activeElement?.getAttribute('data-shortcut-input') === 'true') {
+                    return;
+                }
+
                 event.preventDefault();
                 func();
             };
