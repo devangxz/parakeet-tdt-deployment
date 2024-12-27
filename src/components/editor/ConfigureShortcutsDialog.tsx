@@ -8,6 +8,7 @@ import { formatShortcutKey, formatAction } from '@/components/editor/ShortcutsRe
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from '@/lib/utils';
 import DefaultShortcuts from '@/utils/editorAudioPlayerShortcuts';
 
 interface ConfigureShortcutsDialogProps {
@@ -23,6 +24,7 @@ interface ConfigureShortcutsDialogProps {
 const ConfigureShortcutsDialog = ({ isConfigureShortcutsModalOpen, setIsConfigureShortcutsModalOpen, shortcuts, updateShortcut }: ConfigureShortcutsDialogProps) => {
     const [selectedAction, setSelectedAction] = useState<keyof DefaultShortcuts | ''>('');
     const [newShortcut, setNewShortcut] = useState<string>('');
+    const [shortcutInputError, setShortcutInputError] = useState<string | null>(null);
 
     const handleConfigureShortcutKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
         e.preventDefault();
@@ -46,7 +48,21 @@ const ConfigureShortcutsDialog = ({ isConfigureShortcutsModalOpen, setIsConfigur
             combination.push(keyMap[key.toLowerCase()] || key);
         }
 
-        setNewShortcut(combination.map(k => k.charAt(0).toUpperCase() + k.slice(1)).join('+'));
+        const shortcut = combination.map(k => k.charAt(0).toUpperCase() + k.slice(1)).join('+');
+
+        // Check if shortcut is already assigned
+        const existingAction = shortcuts.find(item =>
+            item.shortcut === shortcut &&
+            item.key !== selectedAction
+        );
+
+        if (existingAction) {
+            setShortcutInputError(`The shortcut is currently assigned to "${formatAction(existingAction.key)}". Proceeding will reassign it to the new action.`);
+        } else {
+            setShortcutInputError(null);
+        }
+
+        setNewShortcut(shortcut);
     }
 
     const handleConfigureShortcutSave = () => {
@@ -58,19 +74,15 @@ const ConfigureShortcutsDialog = ({ isConfigureShortcutsModalOpen, setIsConfigur
         // Find any existing action using this shortcut
         const existingAction = shortcuts.find(item => item.shortcut === newShortcut);
         if (existingAction) {
-            // Get the current shortcut of the selected action
-            const currentShortcut = shortcuts.find(item => item.key === selectedAction)?.shortcut;
-            if (currentShortcut) {
-                // Swap shortcuts between the two actions
-                updateShortcut(existingAction.key as keyof DefaultShortcuts, currentShortcut);
-                toast.info(`Shortcut "${formatShortcutKey(currentShortcut)}" has been assigned to "${formatAction(existingAction.key)}"`);
-            }
+            // Remove shortcut from the existing action
+            updateShortcut(existingAction.key as keyof DefaultShortcuts, '');
         }
 
         updateShortcut(selectedAction, newShortcut);
         setIsConfigureShortcutsModalOpen(false);
         setSelectedAction('');
         setNewShortcut('');
+        setShortcutInputError(null);
         toast.success(`Shortcut for "${selectedAction}" successfully configured to "${formatShortcutKey(newShortcut)}"`);
     }
 
@@ -97,12 +109,21 @@ const ConfigureShortcutsDialog = ({ isConfigureShortcutsModalOpen, setIsConfigur
                             </SelectGroup>
                         </SelectContent>
                     </Select>
-                    <Input
-                        value={formatShortcutKey(newShortcut)}
-                        onKeyDown={handleConfigureShortcutKeyDown}
-                        type='text'
-                        placeholder='Enter a shortcut'
-                    />
+                    <div className="space-y-2">
+                        <Input
+                            value={formatShortcutKey(newShortcut)}
+                            onKeyDown={handleConfigureShortcutKeyDown}
+                            type='text'
+                            data-shortcut-input="true"
+                            placeholder='Enter a shortcut'
+                            className={cn(
+                                shortcutInputError && "border-destructive focus-visible:ring-destructive"
+                            )}
+                        />
+                        {shortcutInputError && (
+                            <p className="text-sm text-destructive">{shortcutInputError}</p>
+                        )}
+                    </div>
                     <Button onClick={handleConfigureShortcutSave} className="w-full">Save</Button>
                 </div>
             </DialogContent>

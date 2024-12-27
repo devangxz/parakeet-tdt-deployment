@@ -154,7 +154,7 @@ const createShortcutControls = (
   },
   decreasePlaybackSpeed: () => {
     if (audioPlayer.current) {
-      audioPlayer.current.playbackRate -= 0.1
+      audioPlayer.current.playbackRate = Math.max(0.1, audioPlayer.current.playbackRate - 0.1)
     }
   },
 })
@@ -433,7 +433,7 @@ export default function Header({
 
   const fetchAudioUrl = async () => {
     try {
-      const { success, signedUrl } = await getSignedUrlAction(`${orderDetails.fileId}.mp3`, 3600)
+      const { success, signedUrl } = await getSignedUrlAction(`${orderDetails.fileId}.mp3`, 14400) // 4 hours
       if (success && signedUrl) {
         setAudioUrl(signedUrl)
       } else {
@@ -917,12 +917,6 @@ export default function Header({
     )
   }, [audioPlayer, quillRef])
 
-  const handleSpeedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const audio = audioPlayer.current
-    if (!audio) return
-    audio.playbackRate = Number(e.target.value) / 100
-  }
-
   useEffect(() => {
     const audio = audioPlayer.current
     if (!audio) return
@@ -1074,7 +1068,7 @@ export default function Header({
         </div>
       </div>
 
-      <div className='h-1/2 bg-white border border-gray-200 px-3 flex flex-col justify-between rounded-b-2xl'>
+      <div className='h-1/2 bg-white border border-gray-200 px-1 flex flex-col justify-between rounded-b-lg'>
         <audio
           ref={audioPlayer}
           className='hidden'
@@ -1368,23 +1362,16 @@ export default function Header({
             </div>
 
             <div className='flex gap-2'>
-              <div className='flex items-center'>
-                <Label htmlFor="speed">Speed:</Label>
-                <div className="relative ml-2">
-                  <Input
-                    id='speed'
-                    placeholder='Speed'
-                    value={speed}
-                    onChange={handleSpeedChange}
-                    type='number'
-                    className='w-20 h-9 pr-6'
-                  />
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500">%</span>
+              <div className='flex items-center border border-gray-200 rounded-md px-3 py-1 w-32 h-9'>
+                <span>Speed:</span>
+                <div className="ml-2 flex items-center gap-1">
+                  <span className="text-sm font-medium">{speed}</span>
+                  <span className="text-sm text-gray-500">%</span>
                 </div>
               </div>
               <Dialog>
                 <DropdownMenu onOpenChange={handleDropdownMenuOpenChange}>
-                  <DropdownMenuTrigger className='flex border border-gray-200 px-3 rounded-3xl items-center ml-3 h-10 shadow-none hover:bg-accent transition-colors'>
+                  <DropdownMenuTrigger className='flex border border-gray-200 px-3 rounded-3xl items-center h-9 shadow-none hover:bg-accent transition-colors'>
                     <div className='flex items-center justify-center mr-2'>
                       Options
                     </div>
