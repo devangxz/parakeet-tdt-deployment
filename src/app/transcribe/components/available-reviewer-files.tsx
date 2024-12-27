@@ -10,6 +10,7 @@ import { DataTable } from './data-table'
 import { determinePwerLevel } from './utils'
 import { assignFileToReviewer } from '@/app/actions/cf/assign'
 import { getAvailableFiles } from '@/app/actions/cf/available-files'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -46,10 +47,17 @@ export default function AvailableFilesPage({ changeTab }: Props) {
   const pathname = usePathname()
   const isLegalPage = pathname === '/transcribe/legal-cf-reviewer'
 
-  useEffect(() => {
+  const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
+    const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
+    if (res.success && res.signedUrl) {
+      setCurrentlyPlayingFileUrl({ [fileId]: res.signedUrl })
+    }
+  }
+
+  useEffect(() => {
+    setAudioUrl()
   }, [playing])
 
   const fetchAvailableFiles = async (showLoader = false) => {

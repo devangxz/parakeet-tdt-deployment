@@ -15,6 +15,7 @@ import ShareFileDialog from './components/share-file'
 import { orderController } from './controllers'
 import { downloadMp3 } from '@/app/actions/file/download-mp3'
 import { refetchFiles } from '@/app/actions/files'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
 import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
@@ -79,10 +80,17 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
   const [fileIds, setFileIds] = useState<string[]>([])
   const [filenames, setFilenames] = useState<string[]>([])
 
-  useEffect(() => {
+  const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
+    const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
+    if (res.success && res.signedUrl) {
+      setCurrentlyPlayingFileUrl({ [fileId]: res.signedUrl })
+    }
+  }
+
+  useEffect(() => {
+    setAudioUrl()
   }, [playing])
 
   const fetchDeliveredFiles = async (showLoader = false) => {
@@ -95,7 +103,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
     try {
       const updatedFiles = await refetchFiles('delivered')
       const files: File[] = []
-      
+
       if (updatedFiles) {
         for (const file of updatedFiles as any[]) {
           const txtRes = await getFileTxtSignedUrl(`${file.fileId}`)
@@ -114,7 +122,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
           })
         }
       }
-      
+
       setDeliveredFiles(files)
       setError(null)
     } catch (err) {
@@ -247,7 +255,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   filename: '',
                   docType:
                     session?.user?.organizationName.toLowerCase() ===
-                    'remotelegal'
+                      'remotelegal'
                       ? 'CUSTOM_FORMATTING_DOC'
                       : 'TRANSCRIPTION_DOC',
                 },
@@ -344,10 +352,10 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   `/editor/${row.original.id}`,
                   '_blank',
                   'toolbar=no,location=no,menubar=no,width=' +
-                    window.screen.width +
-                    ',height=' +
-                    window.screen.height +
-                    ',left=0,top=0'
+                  window.screen.width +
+                  ',height=' +
+                  window.screen.height +
+                  ',left=0,top=0'
                 )
               }
             >
@@ -462,25 +470,25 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
           <div className='flex items-center'>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-              <Button
-                variant='order'
-                className='not-rounded text-black w-[140px] mr-3'
-                onClick={async () => {
-                  try {
-                    if (selectedFiles.length === 0) {
-                      toast.error('Please select at least one file')
-                      return
+                <Button
+                  variant='order'
+                  className='not-rounded text-black w-[140px] mr-3'
+                  onClick={async () => {
+                    try {
+                      if (selectedFiles.length === 0) {
+                        toast.error('Please select at least one file')
+                        return
+                      }
+                      await navigator.clipboard.writeText(selectedFiles.join(','))
+                      toast.success('File Ids copied to clipboard')
+                    } catch (error) {
+                      toast.error('Failed to copy file Ids')
                     }
-                    await navigator.clipboard.writeText(selectedFiles.join(','))
-                    toast.success('File Ids copied to clipboard')
-                  } catch (error) {
-                    toast.error('Failed to copy file Ids')
-                  }
-                }}
-              >
-                Copy file Ids
-              </Button>
-            )}
+                  }}
+                >
+                  Copy file Ids
+                </Button>
+              )}
             <Button
               variant='order'
               className='format-button text-black w-[140px]'

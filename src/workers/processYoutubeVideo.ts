@@ -19,6 +19,7 @@ interface YouTubeProcessResult {
   error?: string
 }
 
+const YOUTUBE_COOKIES = process.env.YOUTUBE_COOKIES
 const MULTI_PART_UPLOAD_CHUNK_SIZE = 20 * 1024 * 1024
 const MAX_BUFFER_SIZE = MULTI_PART_UPLOAD_CHUNK_SIZE * 5
 const RESUME_THRESHOLD = MULTI_PART_UPLOAD_CHUNK_SIZE * 2
@@ -122,6 +123,10 @@ async function downloadAndStreamToS3(
         'b[height<=480][ext=mp4]/b[ext=mp4]',
         '--no-playlist',
         '--no-warnings',
+        '--add-header',
+        `User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36`,
+        '--add-header',
+        `Cookie:${YOUTUBE_COOKIES}`,
         '-o',
         '-',
         url,
@@ -250,6 +255,34 @@ async function downloadAndStreamToS3(
   }
 }
 
+async function downloadWithRetry(
+  url: string,
+  fileKey: string,
+  fileId: string
+): Promise<number> {
+  let lastError: Error | undefined
+
+  for (let attempt = 1; attempt <= UPLOAD_MAX_RETRIES; attempt++) {
+    try {
+      return await downloadAndStreamToS3(url, fileKey, fileId)
+    } catch (error) {
+      lastError = error as Error
+      logger.error(
+        `[${fileId}] Attempt ${attempt} failed: ${lastError.message}`
+      )
+
+      if (attempt < UPLOAD_MAX_RETRIES) {
+        logger.info(
+          `[${fileId}] Retrying in ${RETRY_DELAY_MS / 1000} seconds...`
+        )
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
+      }
+    }
+  }
+
+  throw lastError
+}
+
 export async function processYoutubeVideo(
   userId: string,
   fileId: string,
@@ -259,7 +292,7 @@ export async function processYoutubeVideo(
   logger.info(`[${fileId}] Starting process for: ${youtubeUrl}`)
 
   try {
-    const fileSize = await downloadAndStreamToS3(youtubeUrl, fileKey, fileId)
+    const fileSize = await downloadWithRetry(youtubeUrl, fileKey, fileId)
 
     logger.info(
       `[${fileId}] Processing completed. Total size: ${(
