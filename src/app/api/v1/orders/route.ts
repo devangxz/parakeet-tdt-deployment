@@ -83,13 +83,13 @@ const payViaCredits = async (
   }
 }
 
-const payViaBraintree = async (
+export async function payViaBraintree(
   invoiceId: string,
   orderType: string,
   userId: number,
   userEmail: string,
   paidBy: number
-) => {
+) {
   const invoice = await prisma.invoice.findUnique({
     where: { invoiceId },
   })
