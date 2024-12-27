@@ -5,12 +5,12 @@ import Quill from 'quill'
 import { toast } from 'sonner'
 
 import axiosInstance from './axios'
-import { downloadBlankDocxAction } from '@/app/actions/editor/download-docx'
 import { getFrequentTermsAction } from '@/app/actions/editor/frequent-terms'
 import { getOrderDetailsAction } from '@/app/actions/editor/order-details'
 import { reportFileAction } from '@/app/actions/editor/report-file'
 import { submitQCAction } from '@/app/actions/editor/submit-qc'
 import { submitReviewAction } from '@/app/actions/editor/submit-review'
+import { uploadDocxAction } from '@/app/actions/editor/upload-docx'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { OrderDetails, UploadFilesType } from '@/app/editor/[fileId]/page'
 import { LineData, updateContent } from '@/components/editor/transcriptUtils'
@@ -256,13 +256,15 @@ const uploadFile = async (
     const formData = new FormData()
     formData.append('file', file)
     try {
-        await axios.post(`/api/editor/upload-docx?fileId=${fileId}`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        })
+        const response = await uploadDocxAction(formData, fileId)
 
         toast.dismiss(toastId)
-        toast.success('File uploaded successfully')
-        setFileToUpload({ renamedFile: null, originalFile: null, isUploaded: true })
+        if (response.success) {
+            toast.success("File uploaded successfully")
+            setFileToUpload({ renamedFile: null, originalFile: null, isUploaded: true })
+        } else {
+            throw new Error(response.message)
+        }
     } catch (uploadError) {
         toast.dismiss(toastId)
         toast.error('Failed to upload file')
