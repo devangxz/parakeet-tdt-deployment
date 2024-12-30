@@ -307,6 +307,7 @@ export default function Header({
       orderDetails.orgName,
       orderDetails.templateName
     )
+    console.log(response)
     if (response.success && response.url) {
       setDocxUrl(response.url)
     }

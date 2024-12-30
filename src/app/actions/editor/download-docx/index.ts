@@ -13,16 +13,16 @@ export async function downloadBlankDocxAction(
     templateName: string
 ) {
     try {
+        logger.info(
+            `--> downloadBlankDocx ${fileId} ${type} ${orgName} ${templateName}`
+        )
+
         if (!fileId || !type || !orgName || !templateName) {
             return {
                 success: false,
                 error: 'Missing required parameters'
             }
         }
-
-        logger.info(
-            `--> downloadBlankDocx ${fileId} ${type} ${orgName} ${templateName}`
-        )
 
         const order = await prisma.order.findUnique({
             where: {
