@@ -9,15 +9,13 @@ import { getFileVersionSignedURLFromS3 } from '@/utils/backend-helper'
 export async function downloadBlankDocxAction(
     fileId: string,
     type: string,
-    orgName: string,
-    templateName: string
 ) {
     try {
         logger.info(
-            `--> downloadBlankDocx ${fileId} ${type} ${orgName} ${templateName}`
+            `--> downloadBlankDocx ${fileId} ${type}`
         )
 
-        if (!fileId || !type || !orgName || !templateName) {
+        if (!fileId || !type) {
             return {
                 success: false,
                 error: 'Missing required parameters'
