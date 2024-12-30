@@ -49,8 +49,6 @@ interface File {
   orderType: string
   orderId: string
   uploadedByUser: User
-  txtSignedUrl: string
-  cfDocxSignedUrl: string
 }
 
 export default function DeliveredFilesPage({ files }: { files: File[] }) {
@@ -63,6 +61,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
     fileId: string
     name: string
     orderId: string
+    orderType: string
   } | null>(null)
   const [playing, setPlaying] = useState<Record<string, boolean>>({})
 
@@ -79,7 +78,10 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
   const [openShareFileDialog, setOpenShareFileDialog] = useState(false)
   const [fileIds, setFileIds] = useState<string[]>([])
   const [filenames, setFilenames] = useState<string[]>([])
-
+  const [signedUrls, setSignedUrls] = useState({
+    txtSignedUrl: '',
+    cfDocxSignedUrl: '',
+  })
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
@@ -106,9 +108,6 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
 
       if (updatedFiles) {
         for (const file of updatedFiles as any[]) {
-          const txtRes = await getFileTxtSignedUrl(`${file.fileId}`)
-          const docxRes = await getFileDocxSignedUrl(`${file.fileId}`, 'CUSTOM_FORMATTING_DOC')
-
           files.push({
             id: file.fileId,
             filename: file.filename,
@@ -117,8 +116,6 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
             orderType: file.Orders[0]?.orderType,
             orderId: file.Orders[0]?.id,
             uploadedByUser: file.uploadedByUser,
-            txtSignedUrl: txtRes.signedUrl || '',
-            cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
           })
         }
       }
@@ -183,6 +180,25 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
       const errorToastId = toast.error(`Error` + err)
       toast.dismiss(errorToastId)
       console.log(err)
+    }
+  }
+
+  const handleCheckAndDownload = async (fileId: string) => {
+    try {
+      setLoadingOrder((prev) => ({ ...prev, [fileId]: true }))
+      const txtRes = await getFileTxtSignedUrl(fileId)
+      const docxRes = await getFileDocxSignedUrl(
+        fileId,
+        'CUSTOM_FORMATTING_DOC'
+      )
+      setSignedUrls({
+        txtSignedUrl: txtRes.signedUrl || '',
+        cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
+      })
+      setLoadingOrder((prev) => ({ ...prev, [fileId]: false }))
+    } catch (error) {
+      toast.error('Error downloading files')
+      setLoadingOrder((prev) => ({ ...prev, [fileId]: false }))
     }
   }
 
@@ -255,7 +271,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   filename: '',
                   docType:
                     session?.user?.organizationName.toLowerCase() ===
-                      'remotelegal'
+                    'remotelegal'
                       ? 'CUSTOM_FORMATTING_DOC'
                       : 'TRANSCRIPTION_DOC',
                 },
@@ -331,7 +347,9 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                 fileId: row?.original?.id,
                 name: row?.original?.filename,
                 orderId: row?.original?.orderId,
+                orderType: row?.original?.orderType,
               })
+              handleCheckAndDownload(row.original.id)
             }}
           >
             Check & Download
@@ -352,10 +370,10 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   `/editor/${row.original.id}`,
                   '_blank',
                   'toolbar=no,location=no,menubar=no,width=' +
-                  window.screen.width +
-                  ',height=' +
-                  window.screen.height +
-                  ',left=0,top=0'
+                    window.screen.width +
+                    ',height=' +
+                    window.screen.height +
+                    ',left=0,top=0'
                 )
               }
             >
@@ -372,6 +390,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   fileId: row.original.id,
                   name: row.original.filename,
                   orderId: row.original.orderId,
+                  orderType: row.original.orderType,
                 })
                 setOpenRenameDialog(true)
               }}
@@ -385,6 +404,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   fileId: row?.original?.id,
                   name: row?.original?.filename,
                   orderId: row?.original?.orderId,
+                  orderType: row?.original?.orderType,
                 })
               }}
             >
@@ -416,6 +436,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   fileId: row?.original?.id,
                   name: row?.original.filename,
                   orderId: row?.original.orderId,
+                  orderType: row?.original.orderType,
                 })
               }}
             >
@@ -470,25 +491,25 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
           <div className='flex items-center'>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-                <Button
-                  variant='order'
-                  className='not-rounded text-black w-[140px] mr-3'
-                  onClick={async () => {
-                    try {
-                      if (selectedFiles.length === 0) {
-                        toast.error('Please select at least one file')
-                        return
-                      }
-                      await navigator.clipboard.writeText(selectedFiles.join(','))
-                      toast.success('File Ids copied to clipboard')
-                    } catch (error) {
-                      toast.error('Failed to copy file Ids')
+              <Button
+                variant='order'
+                className='not-rounded text-black w-[140px] mr-3'
+                onClick={async () => {
+                  try {
+                    if (selectedFiles.length === 0) {
+                      toast.error('Please select at least one file')
+                      return
                     }
-                  }}
-                >
-                  Copy file Ids
-                </Button>
-              )}
+                    await navigator.clipboard.writeText(selectedFiles.join(','))
+                    toast.success('File Ids copied to clipboard')
+                  } catch (error) {
+                    toast.error('Failed to copy file Ids')
+                  }
+                }}
+              >
+                Copy file Ids
+              </Button>
+            )}
             <Button
               variant='order'
               className='format-button text-black w-[140px]'
@@ -535,14 +556,17 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
           columns={columns}
           onSelectedRowsChange={handleSelectedRowsChange}
         />
-        {selectedFile && toggleCheckAndDownload && deliveredFiles?.length && (
+        {selectedFile && toggleCheckAndDownload && (
           <CheckAndDownload
-            selected={selectedFile.fileId || ''}
+            id={selectedFile.fileId || ''}
             orderId={selectedFile.orderId || ''}
-            files={deliveredFiles}
+            orderType={selectedFile.orderType || ''}
+            filename={selectedFile.name || ''}
             toggleCheckAndDownload={toggleCheckAndDownload}
             setToggleCheckAndDownload={setToggleCheckAndDownload}
             session={session as Session}
+            txtSignedUrl={signedUrls.txtSignedUrl || ''}
+            cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
           />
         )}
       </div>
