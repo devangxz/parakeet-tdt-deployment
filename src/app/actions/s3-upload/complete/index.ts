@@ -8,7 +8,9 @@ import { s3Client } from '@/lib/s3Client'
 
 export async function completeMultipartUpload(
   sendBackData: { key: string; uploadId: string },
-  parts: { ETag?: string; PartNumber: number }[]
+  parts: { ETag?: string; PartNumber: number }[],
+  isYouTubeFile?: boolean,
+  fileId?: string
 ) {
   try {
     const sortedParts = parts.sort((a, b) => a.PartNumber - b.PartNumber)
@@ -28,6 +30,13 @@ export async function completeMultipartUpload(
         uploadId: sendBackData.uploadId,
       },
     })
+
+    if (isYouTubeFile) {
+      await prisma.youTubeFile.update({
+        where: { fileId },
+        data: { isImported: true },
+      })
+    }
 
     return { success: true }
   } catch (error) {

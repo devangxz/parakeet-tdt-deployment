@@ -40,6 +40,11 @@ export async function POST() {
           fileKey: true,
           userId: true,
           uploadedBy: true,
+          user: {
+            select: {
+              email: true,
+            },
+          },
         },
       })
 
@@ -50,52 +55,40 @@ export async function POST() {
           youtubeUrl: true,
         },
       })
-      
+
       if (youtubeFile && youtubeFile?.isImported === null) {
-        logger.info(`Checking if file ${file?.fileId} exists in YouTube queue`)
-        const isInYoutubeQueue = await workerQueueService.hasExistingJob(
-          WORKER_QUEUE_NAMES.YOUTUBE_VIDEO_PROCESSING,
-          file?.fileId
+        logger.info(`Sending YouTube file ${file?.fileId} details to support`)
+
+        const awsSes = getAWSSesInstance()
+        await awsSes.sendAlert(
+          `YouTube File Import Required`,
+          `Please import the following YouTube file - File ID: ${file?.fileId}, YouTube URL: ${youtubeFile?.youtubeUrl}, User ID: ${fileRecord?.uploadedBy}, Team User ID: ${fileRecord?.userId}, User Email ID: ${fileRecord?.user?.email}.`,
+          'software'
         )
-        logger.info(`File ${file?.fileId} exists in YouTube queue: ${isInYoutubeQueue}`)
 
-        if (!isInYoutubeQueue) {
-          logger.info(
-            `Adding YouTube file ${file.fileId} to YouTube queue - URL: ${youtubeFile?.youtubeUrl}`
-          )
-
-          await workerQueueService.createJob(
-            WORKER_QUEUE_NAMES.YOUTUBE_VIDEO_PROCESSING,
-            {
-              userId: fileRecord?.uploadedBy,
-              fileId: file?.fileId,
-              youtubeUrl: youtubeFile?.youtubeUrl,
-              fileKey: fileRecord?.fileKey,
-            }
-          )
-
-          logger.info(
-            `Successfully added file ${file?.fileId} to YouTube queue - URL: ${youtubeFile?.youtubeUrl}, userID: ${fileRecord?.uploadedBy}, teamUserID: ${fileRecord?.userId}`
-          )
-        } else {
-          logger.info(`File ${file?.fileId} already in YouTube queue`)
-        }
+        logger.info(
+          `Successfully sent YouTube file ${file?.fileId} details to support - URL: ${youtubeFile?.youtubeUrl}, userID: ${fileRecord?.uploadedBy}, teamUserID: ${fileRecord?.userId}`
+        )
         continue
       }
 
-      if (youtubeFile && youtubeFile?.isImported === false) {
+      if (youtubeFile && youtubeFile?.isImported === true) {
         const fileExists = await fileExistsInS3(`${fileRecord?.fileKey}`)
 
         if (!fileExists) continue
       }
 
       if (!fileRecord?.converted) {
-        logger.info(`Checking if file ${file?.fileId} exists in conversion queue`)
+        logger.info(
+          `Checking if file ${file?.fileId} exists in conversion queue`
+        )
         const isInConversionQueue = await workerQueueService.hasExistingJob(
           WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION,
           file?.fileId
         )
-        logger.info(`File ${file?.fileId} exists in conversion queue: ${isInConversionQueue}`)
+        logger.info(
+          `File ${file?.fileId} exists in conversion queue: ${isInConversionQueue}`
+        )
 
         if (!isInConversionQueue) {
           logger.info(`Adding file ${file?.fileId} to conversion queue`)
@@ -111,17 +104,17 @@ export async function POST() {
 
           if (youtubeFile) {
             logger.info(
-              `Triggered conversion for YouTube file ${file?.fileId} - fileKey: ${fileRecord?.fileKey}, userID: ${fileRecord?.uploadedBy}, teamUserID: ${fileRecord?.userId}`
+              `Triggered conversion for YouTube file ${file?.fileId} - fileKey: ${fileRecord?.fileKey}, userID: ${fileRecord?.uploadedBy}, teamUserID: ${fileRecord?.userId}, userEmailId: ${fileRecord?.user?.email}`
             )
           } else {
             logger.info(
-              `Triggered conversion retry for file ${file?.fileId} - fileKey: ${fileRecord?.fileKey}, userID: ${fileRecord?.uploadedBy}, teamUserID: ${fileRecord?.userId}`
+              `Triggered conversion retry for file ${file?.fileId} - fileKey: ${fileRecord?.fileKey}, userID: ${fileRecord?.uploadedBy}, teamUserID: ${fileRecord?.userId}, userEmailId: ${fileRecord?.user?.email}`
             )
 
             const awsSes = getAWSSesInstance()
             await awsSes.sendAlert(
               `File Conversion Retry Triggered`,
-              `Conversion missing for file ${file?.fileId}, Triggered reconversion. File ID: ${file?.fileId}, File Key: ${fileRecord?.fileKey}, User ID: ${fileRecord?.uploadedBy}, Team User ID: ${fileRecord?.userId}.`,
+              `Conversion missing for file ${file?.fileId}, Triggered reconversion. File ID: ${file?.fileId}, File Key: ${fileRecord?.fileKey}, User ID: ${fileRecord?.uploadedBy}, Team User ID: ${fileRecord?.userId}, User Email ID: ${fileRecord?.user?.email}.`,
               'software'
             )
           }
@@ -138,12 +131,16 @@ export async function POST() {
             `Converted file ${file?.fileId} not found in S3, triggering reconversion`
           )
 
-          logger.info(`Checking if file ${file?.fileId} exists in conversion queue`)
+          logger.info(
+            `Checking if file ${file?.fileId} exists in conversion queue`
+          )
           const isInConversionQueue = await workerQueueService.hasExistingJob(
             WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION,
             file?.fileId
           )
-          logger.info(`File ${file?.fileId} exists in conversion queue: ${isInConversionQueue}`)
+          logger.info(
+            `File ${file?.fileId} exists in conversion queue: ${isInConversionQueue}`
+          )
 
           if (!isInConversionQueue) {
             await workerQueueService.createJob(
@@ -156,13 +153,13 @@ export async function POST() {
             )
 
             logger.info(
-              `Triggered conversion retry for file ${file?.fileId} - fileKey: ${fileRecord?.fileKey}, userID: ${fileRecord?.uploadedBy}, teamUserID: ${fileRecord?.userId}`
+              `Triggered conversion retry for file ${file?.fileId} - fileKey: ${fileRecord?.fileKey}, userID: ${fileRecord?.uploadedBy}, teamUserID: ${fileRecord?.userId}, userEmailId: ${fileRecord?.user?.email}`
             )
 
             const awsSes = getAWSSesInstance()
             await awsSes.sendAlert(
-              `File Conversion Retry Triggered`, 
-              `Conversion missing for file ${file?.fileId}, Triggered reconversion. File ID: ${file?.fileId}, File Key: ${fileRecord?.fileKey}, User ID: ${fileRecord?.uploadedBy}, Team User ID: ${fileRecord?.userId}.`,
+              `File Conversion Retry Triggered`,
+              `Conversion missing for file ${file?.fileId}, Triggered reconversion. File ID: ${file?.fileId}, File Key: ${fileRecord?.fileKey}, User ID: ${fileRecord?.uploadedBy}, Team User ID: ${fileRecord?.userId}, User Email ID: ${fileRecord?.user?.email}.`,
               'software'
             )
           } else {

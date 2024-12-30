@@ -26,6 +26,11 @@ export async function POST() {
         fileKey: true,
         userId: true,
         uploadedBy: true,
+        user: {
+          select: {
+            email: true,
+          },
+        },
       },
     })
 
@@ -51,12 +56,16 @@ export async function POST() {
           continue
         }
 
-        logger.info(`Checking if file ${file?.fileId} exists in conversion queue`)
+        logger.info(
+          `Checking if file ${file?.fileId} exists in conversion queue`
+        )
         const hasExistingJob = await workerQueueService.hasExistingJob(
           WORKER_QUEUE_NAMES.AUDIO_VIDEO_CONVERSION,
           file?.fileId
         )
-        logger.info(`File ${file?.fileId} exists in conversion queue: ${hasExistingJob}`)
+        logger.info(
+          `File ${file?.fileId} exists in conversion queue: ${hasExistingJob}`
+        )
 
         if (hasExistingJob) {
           logger.info(`Skipping file ${file?.fileId} - existing job found`)
@@ -73,19 +82,21 @@ export async function POST() {
         )
 
         logger.info(
-          `Triggered conversion retry for file ${file?.fileId} - fileKey: ${file?.fileKey}, userID: ${file?.uploadedBy}, teamUserID: ${file?.userId}`
+          `Triggered conversion retry for file ${file?.fileId} - fileKey: ${file?.fileKey}, userId: ${file?.uploadedBy}, teamUserId: ${file?.userId}, userEmailId: ${file?.user?.email}`
         )
 
         const awsSes = getAWSSesInstance()
         await awsSes.sendAlert(
           `File Conversion Retry Triggered`,
-          `Conversion missing for file ${file?.fileId}, Triggered reconversion. File ID: ${file?.fileId}, File Key: ${file?.fileKey}, User ID: ${file?.uploadedBy}, Team User ID: ${file?.userId}.`,
+          `Conversion missing for file ${file?.fileId}, Triggered reconversion. File ID: ${file?.fileId}, File Key: ${file?.fileKey}, User ID: ${file?.uploadedBy}, Team User ID: ${file?.userId}, User Email ID: ${file?.user?.email}.`,
           'software'
         )
 
         processedCount++
       } catch (error) {
-        logger.error(`Error processing file ${file?.fileId} - fileKey: ${file?.fileKey}, userID: ${file?.uploadedBy}, teamUserID: ${file?.userId}: ${error}`)
+        logger.error(
+          `Error processing file ${file?.fileId} - fileKey: ${file?.fileKey}, userID: ${file?.uploadedBy}, teamUserID: ${file?.userId}: ${error}`
+        )
         continue
       }
     }
@@ -99,7 +110,7 @@ export async function POST() {
         },
         data: { converted: true },
       })
-      
+
       logger.info(
         `Marked ${fileIdsToMarkConverted.size} files as converted in DB`
       )
