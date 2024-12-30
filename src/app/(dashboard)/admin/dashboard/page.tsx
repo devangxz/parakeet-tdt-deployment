@@ -16,6 +16,7 @@ import EnablePreDelivery from './components/enable-pre-delivery'
 import OrderWatch from './components/order-watch'
 import TransferCredits from './components/transfer-credits'
 import TransferFiles from './components/transfer-files'
+import YouTubeVideoUploader from './components/youtube-video-uploader'
 
 export default function AdminDashboard() {
   const { data: session } = useSession()
@@ -40,6 +41,7 @@ export default function AdminDashboard() {
             <AddMiscEarnings />
             <TransferCredits />
             <OrderWatch />
+            <YouTubeVideoUploader />
           </>
         )}
       </div>

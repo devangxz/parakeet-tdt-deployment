@@ -10,7 +10,7 @@ import FileAndFolderUploader from './components/FileAndFolderUploader'
 import GoogleDriveImporter from './components/GoogleDriveImporter'
 import LinkImporter from './components/LinkImporter'
 import OneDriveImporter from './components/OneDriveImporter'
-// import YouTubeImporter from './components/YouTubeImporter';
+import YouTubeImporter from './components/YouTubeImporter'
 import AllUploads from './list'
 import { Badge } from '@/components/ui/badge'
 import { ORG_REMOTELEGAL } from '@/constants'
@@ -61,11 +61,11 @@ const Dashboard = () => {
           icon: '/assets/images/upload/computer.svg',
           title: 'Upload files via Computer',
         },
-        // {
-        //   id: 'youtube',
-        //   icon: '/assets/images/upload/youtube.svg',
-        //   title: 'Upload files via YouTube'
-        // },
+        {
+          id: 'youtube',
+          icon: '/assets/images/upload/youtube.svg',
+          title: 'Upload files via YouTube',
+        },
         {
           id: 'link',
           icon: '/assets/images/upload/link.svg',
@@ -116,8 +116,8 @@ const Dashboard = () => {
             isRemoteLegal={isRemoteLegal}
           />
         )
-      // case 'youtube':
-      //   return <YouTubeImporter onUploadSuccess={setUploadSuccess} />;
+      case 'youtube':
+        return <YouTubeImporter onUploadSuccess={setUploadSuccess} />
       case 'link':
         return <LinkImporter onUploadSuccess={setUploadSuccess} />
       case 'dropbox':
