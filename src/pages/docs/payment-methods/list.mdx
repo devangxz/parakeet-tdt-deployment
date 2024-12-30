@@ -1,0 +1,47 @@
+# List Payment Methods
+
+Get a list of payment methods for the authenticated user.
+
+## Endpoint
+
+```http
+GET ${baseUrl}/users/payment-methods
+```
+
+## Response
+
+```typescript
+interface PaymentMethodsResponse {
+  success: boolean
+  data: {
+    type: 'PP' | 'CC'
+    token: string
+    last4: string | null
+    ppAccount: string | null
+    userId: string
+    image: string
+    desc: string
+  }[]
+}
+```
+
+## Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/users/payment-methods', {
+  headers: {
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description  |
+| ----------- | ------------ |
+| 200         | Success      |
+| 401         | Unauthorized |
+| 403         | Forbidden    |
+| 500         | Server Error |

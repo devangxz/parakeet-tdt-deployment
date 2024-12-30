@@ -1,0 +1,45 @@
+# Scribie API Reference
+
+Welcome to the Scribie REST API documentation (v1.0.0). Our API provides programmatic access to our transcription service, allowing you to upload files, manage transcriptions, and handle payments seamlessly.
+
+## Overview
+
+The Scribie API is designed to be simple and easy to use, enabling applications to:
+
+- Upload audio/video files for transcription
+- Pay for transcription services
+- Check transcript progress
+- Fetch completed transcripts
+- Manage files and credits
+- Handle user profiles and preferences
+- Manage team access and permissions
+- Process withdrawals and payments
+
+## Getting Started
+
+To get started with the Scribie API:
+
+1. Sign up for a Scribie account at [scribie.ai](https://scribie.ai)
+2. Add a valid payment method to your account
+3. Navigate to your [Dashboard Settings](https://scribie.ai/settings/rest-api)
+4. Under the "REST API" section, click "Generate API Key"
+5. Copy and securely store your API key - you'll need it to authenticate API requests
+6. Add a valid payment method to your account to order files
+7. To add a payment method, navigate to your [Dashboard Settings](https://scribie.ai/settings/payment-methods)
+8. Click on "Add new payment method" and follow the instructions to add a valid payment method
+
+Your API key grants full access to the API and should be kept secure. Do not share it or commit it to version control.
+
+## Authentication
+
+All API requests require authentication using your API key. Include it in the Authorization header:
+
+```
+Authorization: Basic YOUR_API_KEY
+```
+
+All API requests should be made to:
+
+```http copy
+https://scribie.ai/api/v1/
+```

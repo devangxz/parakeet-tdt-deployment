@@ -1,0 +1,74 @@
+# User Credits
+
+Get user credit balance.
+
+## Get Credits
+
+### Endpoint
+
+```http
+GET ${baseUrl}/users/credits
+```
+
+### Response
+
+```typescript
+interface UserCreditsResponse {
+  success: boolean
+  creditsBalance: number
+}
+```
+
+## Add Credits
+
+### Endpoint
+
+```http
+POST ${baseUrl}/users/credits
+```
+
+### Request Body
+
+```typescript
+interface AddCreditsRequest {
+  amount: number
+}
+```
+
+### Response
+
+```typescript
+interface AddCreditsResponse {
+  success: boolean
+  transactionId: string
+  paymentMethod: string
+  cc_last4: string
+}
+```
+
+### Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/users/credits', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    amount: 100,
+  }),
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description          |
+| ----------- | -------------------- |
+| 200         | Success              |
+| 400         | Invalid Request Body |
+| 401         | Unauthorized         |
+| 403         | Forbidden            |
+| 500         | Server Error         |

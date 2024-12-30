@@ -56,6 +56,8 @@ interface CustomFile {
   fileStatus: string
   status: string
   date: Date
+  orderType: string
+  orderId: number
 }
 
 interface AllFile {
@@ -67,8 +69,6 @@ interface AllFile {
   status: string
   orderType: string
   orderId: number
-  txtSignedUrl: string
-  cfDocxSignedUrl: string
 }
 
 interface Folder {
@@ -90,7 +90,6 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
     const ids = queryParams.get('ids')
     fileIds = ids?.split(',') || null
   }
-  const [selected, setSelected] = useState<string>('')
   const [toggleCheckAndDownload, setToggleCheckAndDownload] =
     useState<boolean>(false)
   const [loadingFileOrder, setLoadingFileOrder] = useState<
@@ -102,6 +101,8 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
   const [selectedFile, setSeletedFile] = useState<{
     fileId: string
     name: string
+    orderId: string
+    orderType: string
   } | null>(null)
   const [fileIdsLength, setFileIdsLength] = useState<number | null>(null)
   const [bulkLoading, setBulkLoading] = useState(false)
@@ -117,6 +118,10 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
   const [allFolders, setAllFolders] = useState<Folder[] | null>(null)
   const [allFiles, setAllFiles] = useState<AllFile[] | null>(null)
   const [isAllFilesLoading, setIsAllFilesLoading] = useState(true)
+  const [signedUrls, setSignedUrls] = useState({
+    txtSignedUrl: '',
+    cfDocxSignedUrl: '',
+  })
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -146,20 +151,15 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
       }
       const files = []
       for (const file of response?.data?.filesWithStatus || []) {
-        const txtRes = await getFileTxtSignedUrl(`${file.fileId}`)
-        const docxRes = await getFileDocxSignedUrl(`${file.fileId}`, 'CUSTOM_FORMATTING_DOC')
-
         files.push({
           id: file.fileId,
           name: file.filename,
-          date: file.createdAt.toString(), // Convert Date to string
+          date: file.createdAt.toString(),
           duration: file.duration,
           fileStatus: file?.fileStatus,
           status: file?.status,
-          orderType: file?.orderType,
-          orderId: file?.orderId,
-          txtSignedUrl: txtRes.signedUrl || '',
-          cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
+          orderType: file?.orderType ?? '',
+          orderId: file?.orderId ?? '',
         })
       }
       setAllFiles(files)
@@ -263,6 +263,26 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
     }
   }
 
+  const handleCheckAndDownload = async (fileId: string) => {
+    try {
+      setLoadingFileOrder((prev) => ({ ...prev, [fileId]: true }))
+      const txtRes = await getFileTxtSignedUrl(fileId)
+      const docxRes = await getFileDocxSignedUrl(
+        fileId,
+        'CUSTOM_FORMATTING_DOC'
+      )
+      setSignedUrls({
+        txtSignedUrl: txtRes.signedUrl || '',
+        cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
+      })
+      setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
+      setToggleCheckAndDownload(true)
+    } catch (error) {
+      toast.error('Error downloading files')
+      setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
+    }
+  }
+
   const getStatus = (status: string) => {
     const statuses = {
       NOT_ORDERED: {
@@ -271,31 +291,57 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
             ? 'Format'
             : 'Transcribe',
         text: 'text-black',
-        controller: (fileId: string, orderType: string) =>
-          handleOrderFile(fileId, orderType),
+        controller: (
+          fileId: string,
+          filename: string,
+          orderId: string,
+          orderType: string
+        ) => handleOrderFile(fileId, orderType),
       },
       DELIVERED: {
         label: 'Check & Download',
         text: 'text-black',
-        controller: (fileId: string, orderType: string) => {
-          setSelected(fileId)
-          setToggleCheckAndDownload(true)
+        controller: (
+          fileId: string,
+          filename: string,
+          orderId: string,
+          orderType: string
+        ) => {
+          setSeletedFile({
+            fileId,
+            name: filename,
+            orderId,
+            orderType,
+          })
+          handleCheckAndDownload(fileId)
         },
       },
       REFUNDED: {
         label: 'Refund',
         text: 'text-[#E75839]',
-        controller: (fileId: string, orderType: string) => {
+        controller: (
+          fileId: string,
+          filename: string,
+          orderId: string,
+          orderType: string
+        ) => {
           console.log(fileId, orderType)
         },
       },
       DEFAULT: {
         label: 'Draft Transcript',
         text: 'text-black',
-        controller: (fileId: string, orderType: string, filename: string) => {
+        controller: (
+          fileId: string,
+          filename: string,
+          orderId: string,
+          orderType: string
+        ) => {
           setSeletedFile({
             fileId,
             name: filename,
+            orderId,
+            orderType,
           })
           setDraftTranscriptDialog(true)
         },
@@ -416,8 +462,9 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
                   onClick={() =>
                     getStatus(row.original.status).controller(
                       row.original.id,
-                      session?.user?.orderType as string,
-                      row.original.name
+                      row.original.name,
+                      row.original?.orderId?.toString() ?? '',
+                      row.original?.orderType ?? ''
                     )
                   }
                 >
@@ -455,6 +502,8 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
                       setSeletedFile({
                         fileId: row.original.id,
                         name: row.original.name,
+                        orderId: row.original?.orderId?.toString() ?? '',
+                        orderType: row.original?.orderType ?? '',
                       })
                       setOpenRenameDialog(true)
                     }}
@@ -463,19 +512,21 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
                   </DropdownMenuItem>
                   {getStatus(row.original.status)?.label !==
                     'Draft Transcript' && (
-                      <DropdownMenuItem
-                        className='text-red-500'
-                        onClick={() => {
-                          setSeletedFile({
-                            fileId: row.original.id,
-                            name: row.original.name,
-                          })
-                          setOpenDeleteDialog(true)
-                        }}
-                      >
-                        Delete
-                      </DropdownMenuItem>
-                    )}
+                    <DropdownMenuItem
+                      className='text-red-500'
+                      onClick={() => {
+                        setSeletedFile({
+                          fileId: row.original.id,
+                          name: row.original.name,
+                          orderId: row.original?.orderId?.toString() ?? '',
+                          orderType: row.original?.orderType ?? '',
+                        })
+                        setOpenDeleteDialog(true)
+                      }}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -659,22 +710,17 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
         columns={columns as ColumnDef<CustomFile, unknown>[]}
         onSelectedRowsChange={handleSelectedRowsChange}
       />
-      {selected && toggleCheckAndDownload && allFiles?.length && (
+      {selectedFile && toggleCheckAndDownload && (
         <CheckAndDownload
-          selected={selected}
-          files={allFiles?.map((file) => ({
-            id: file.id,
-            filename: file.name,
-            date: file.date,
-            duration: file.duration,
-            orderType: file.orderType,
-            txtSignedUrl: file.txtSignedUrl,
-            cfDocxSignedUrl: file.cfDocxSignedUrl,
-          }))}
+          id={selectedFile.fileId || ''}
+          orderId={selectedFile.orderId || ''}
+          orderType={selectedFile.orderType || ''}
+          filename={selectedFile.name || ''}
           toggleCheckAndDownload={toggleCheckAndDownload}
           setToggleCheckAndDownload={setToggleCheckAndDownload}
           session={session as Session}
-          orderId=''
+          txtSignedUrl={signedUrls.txtSignedUrl || ''}
+          cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
         />
       )}
       <DraftTranscriptFileDialog

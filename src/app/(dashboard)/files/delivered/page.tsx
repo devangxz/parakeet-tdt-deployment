@@ -2,8 +2,6 @@
 import { getServerSession } from 'next-auth/next'
 
 import List from './list'
-import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
-import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import { getFilesByStatus } from '@/services/file-service/get-files'
 import { User } from '@/types/files'
@@ -16,8 +14,6 @@ interface File {
   orderType: string
   orderId: string
   uploadedByUser: User
-  txtSignedUrl: string
-  cfDocxSignedUrl: string
 }
 
 export default async function DeliveredFilesPage() {
@@ -32,9 +28,6 @@ export default async function DeliveredFilesPage() {
 
   if (response?.success && response.data) {
     for (const file of response.data as any[]) {
-      const txtRes = await getFileTxtSignedUrl(`${file.fileId}`)
-      const docxRes = await getFileDocxSignedUrl(`${file.fileId}`, 'CUSTOM_FORMATTING_DOC')
-
       files.push({
         id: file.fileId,
         filename: file.filename,
@@ -43,8 +36,6 @@ export default async function DeliveredFilesPage() {
         orderType: file.Orders[0]?.orderType,
         orderId: file.Orders[0]?.id,
         uploadedByUser: file.uploadedByUser,
-        txtSignedUrl: txtRes.signedUrl || '',
-        cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
       })
     }
   }

@@ -1,0 +1,90 @@
+# User Preferences
+
+Get or update a user's preferences settings.
+
+## Get Preferences
+
+### Endpoint
+
+```http
+GET ${baseUrl}/users/preferences
+```
+
+### Response
+
+```typescript
+interface UserPreferencesResponse {
+  success: boolean
+  data: {
+    preferences: {
+      id: number
+      transcriptOrder: boolean
+      newsletter: boolean
+      ccStored: boolean
+      transcriptDelivered: boolean
+      transcriptCancelled: boolean
+      transcriptRefund: boolean
+    }
+    recordsPerPage: number
+  }
+}
+```
+
+## Update Preferences
+
+### Endpoint
+
+```http
+PUT ${baseUrl}/users/preferences
+```
+
+### Request Body
+
+```typescript
+interface UpdatePreferencesRequest {
+  preferences: {
+    transcriptOrder: boolean
+    newsletter: boolean
+    ccStored: boolean
+    transcriptDelivered: boolean
+    transcriptCancelled: boolean
+    transcriptRefund: boolean
+  }
+  recordsPerPage: number
+}
+```
+
+### Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/users/preferences', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    recordsPerPage: 20,
+    preferences: {
+      transcriptOrder: true,
+      newsletter: false,
+      ccStored: true,
+      transcriptDelivered: true,
+      transcriptCancelled: true,
+      transcriptRefund: true,
+    },
+  }),
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description          |
+| ----------- | -------------------- |
+| 200         | Success              |
+| 400         | Invalid Request Body |
+| 401         | Unauthorized         |
+| 403         | Forbidden            |
+| 500         | Server Error         |
