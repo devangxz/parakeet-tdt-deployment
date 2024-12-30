@@ -46,7 +46,7 @@ export async function GET(request: Request) {
     const sessionId = generateUniqueId()
     await redis.set(sessionId, JSON.stringify(userInfo), 'EX', 3600)
     return NextResponse.redirect(
-      `${process.env.FRONTEND_URL}/settings/paypal-account?session_id=${sessionId}`
+      `${process.env.NEXTAUTH_URL}/settings/paypal-account?session_id=${sessionId}`
     )
   } catch (error) {
     logger.error(`Error during PayPal callback ${error}`)
