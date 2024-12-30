@@ -61,10 +61,21 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
                                 index: wordIndex,
                                 speaker: '',
                             }
-                        } else {
+                        } else if (ctmsIndex < ctms.length) {
                             wordData.ctms = ctms[ctmsIndex]
-                            wordData.ctms.index = wordIndex
-                            ctmsIndex += 1
+                            if (wordData.ctms) {
+                                wordData.ctms.index = wordIndex
+                                ctmsIndex += 1
+                            }
+                        } else {
+                            wordData.ctms = {
+                                start: 0,
+                                end: 0,
+                                word: words[i],
+                                punct: '',
+                                index: wordIndex,
+                                speaker: '',
+                            }
                         }
                         newCtms_local.push(wordData.ctms)
                         lineWords.push(wordData)
@@ -406,6 +417,26 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
     //     // Select the word
     //     quill.setSelection(wordStart, wordEnd - wordStart);
     // }
+
+    useEffect(() => {
+        const editor = quillRef.current?.getEditor()?.root;
+        if (!editor) return;
+
+        const handleCopy = (e: ClipboardEvent) => {
+            e.preventDefault();
+            console.log('handleCopy');
+            const text = quillRef.current?.getEditor()?.getText() || '';
+            // Replace multiple consecutive line breaks with just two
+            const cleanText = text.replace(/\n{2,}/g, '\n\n');
+            e.clipboardData?.setData('text/plain', cleanText);
+        };
+
+        editor.addEventListener('copy', handleCopy);
+
+        return () => {
+            editor.removeEventListener('copy', handleCopy);
+        };
+    }, []);
 
     return (
         <>

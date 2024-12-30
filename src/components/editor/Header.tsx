@@ -433,7 +433,7 @@ export default function Header({
 
   const fetchAudioUrl = async () => {
     try {
-      const { success, signedUrl } = await getSignedUrlAction(`${orderDetails.fileId}.mp3`, 14400) // 4 hours
+      const { success, signedUrl } = await getSignedUrlAction(`${orderDetails.fileId}.mp3`, Math.max(Number(orderDetails.duration) * 4, 1800)) // 4 times the duration
       if (success && signedUrl) {
         setAudioUrl(signedUrl)
       } else {
