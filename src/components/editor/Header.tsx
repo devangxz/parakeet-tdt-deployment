@@ -304,9 +304,8 @@ export default function Header({
     const response = await downloadBlankDocxAction(
       orderDetails.fileId,
       downloadableType,
-      orderDetails.orgName,
-      orderDetails.templateName
     )
+
     if (response.success && response.url) {
       setDocxUrl(response.url)
     }
