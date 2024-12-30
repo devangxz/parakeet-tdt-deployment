@@ -1,0 +1,99 @@
+# Order Options
+
+Get or update order options.
+
+## Get Options
+
+### Endpoint
+
+```http
+GET ${baseUrl}/orders/options
+```
+
+### Query Parameters
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| orderId   | string | Order ID    |
+
+### Response
+
+```typescript
+interface OrderOptionsResponse {
+  success: boolean
+  data: {
+    speaker_tracking: boolean
+    speaker_initial: number
+    template: number
+    language: string
+    audio_time_coding: boolean
+    rush_order: boolean
+    strict_verbatim: boolean
+    subtitle_file: boolean
+  }
+}
+```
+
+## Update Options
+
+### Endpoint
+
+```http
+PUT ${baseUrl}/orders/options
+```
+
+### Request Body
+
+```typescript
+interface UpdateOrderOptionsRequest {
+  orderId: number
+  speaker_tracking: boolean
+  speaker_initial: number
+  template: number
+  language: string
+  audio_time_coding: boolean
+  rush_order: boolean
+  subtitle_file: boolean
+}
+```
+
+### Example Requests
+
+```typescript
+// Get options
+const getOptions = await fetch('${baseUrl}/orders/options?orderId=123', {
+  headers: {
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+})
+
+// Update options
+const updateOptions = await fetch('${baseUrl}/orders/options', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    orderId: 123,
+    speaker_tracking: true,
+    speaker_initial: 1,
+    template: 1,
+    language: 'en_US',
+    audio_time_coding: true,
+    rush_order: true,
+    subtitle_file: true,
+  }),
+})
+```
+
+## Error Codes
+
+| Status Code | Description     |
+| ----------- | --------------- |
+| 200         | Success         |
+| 400         | Invalid Request |
+| 401         | Unauthorized    |
+| 403         | Forbidden       |
+| 404         | Order Not Found |
+| 500         | Server Error    |

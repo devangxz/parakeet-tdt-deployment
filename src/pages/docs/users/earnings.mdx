@@ -1,0 +1,56 @@
+# Update User
+
+Update an existing user's information.
+
+## Endpoint
+
+```http
+GET ${baseUrl}/users/earnings
+```
+
+## Response
+
+```typescript
+interface UpdateUserResponse {
+  success: boolean
+  data: {
+    TR_LEGACY: number
+    RV_LEGACY: number
+    PR_LEGACY: number
+    QC: number
+    REVIEW: number
+    WITHDRAWAL: number
+    CURRENT_BALANCE: number
+    TOTAL: number
+    CB: number
+    DB: number
+    CREDITED_HOURS: number
+    TODAY_CREDITED_HOURS: number
+    ME: number
+  }
+}
+```
+
+## Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/users/earnings', {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description                   |
+| ----------- | ----------------------------- |
+| 200         | Fetched Earnings Successfully |
+| 400         | Invalid Request Body          |
+| 401         | Unauthorized                  |
+| 403         | Forbidden                     |
+| 500         | Server Error                  |

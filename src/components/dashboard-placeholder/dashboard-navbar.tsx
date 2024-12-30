@@ -1,11 +1,11 @@
 'use client'
-import { Search } from 'lucide-react'
+// import { Search } from 'lucide-react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 
 import Profile from '@/components/navbar/profile'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+// import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 
 function DashboardNavbar() {
@@ -28,7 +28,7 @@ function DashboardNavbar() {
             Scribie
           </span>
         </div>
-        <div className='w-full flex-1 rounded-custom hidden lg:flex pl-[140px]'>
+        {/* <div className='w-full flex-1 rounded-custom hidden lg:flex pl-[140px]'>
           <form>
             <div className='relative'>
               <Search className='absolute left-2.5 top-3 h-4 w-4 text-primary' />
@@ -39,7 +39,7 @@ function DashboardNavbar() {
               />
             </div>
           </form>
-        </div>
+        </div> */}
         <div className='flex gap-5'>
           <Image
             alt='Customer Support'

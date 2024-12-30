@@ -6,33 +6,6 @@ import { getRedirectPathByRole } from '@/utils/roleRedirect'
 import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
-  const requestedUrl = req.nextUrl.pathname
-
-  // Skip middleware for /api/auth* and /api/webhook*
-  if (requestedUrl.startsWith('/api/auth')) {
-    return NextResponse.next()
-  }
-
-  if (requestedUrl.startsWith('/api')) {
-    const apiKey = req.headers.get('x-api-key')
-
-    if (apiKey && apiKey === process.env.SCRIBIE_API_KEY) {
-      return NextResponse.next()
-    }
-
-    // If no API key, check for JWT session using NextAuth
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
-
-    if (!token) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
-    }
-
-    const response = NextResponse.next()
-    response.headers.set('x-user-token', JSON.stringify(token))
-
-    return response
-  }
-
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
 
   if (!token) {
@@ -92,7 +65,6 @@ export const config = {
     '/admin/:path*',
     '/dev/:path*',
     '/transcribe/:path*',
-    '/api/:path*',
     '/editor/:path*',
   ],
 }

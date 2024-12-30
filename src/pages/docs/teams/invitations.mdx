@@ -1,0 +1,115 @@
+# Team Invitations
+
+Manage team invitations.
+
+## List Invitations
+
+### Endpoint
+
+```http
+GET ${baseUrl}/teams/invitations
+```
+
+### Response
+
+```typescript
+interface TeamInvitationsResponse {
+  success: boolean
+  data: {
+    name: string
+    team_id: number
+    status: 'INVITED'
+    admin_name: string
+    admin_email: string
+  }[]
+}
+```
+
+## Accept Invitation
+
+### Endpoint
+
+```http
+PUT ${baseUrl}/teams/accept-join-request
+```
+
+### Request Body
+
+```typescript
+interface AcceptJoinRequestRequest {
+  teamId: number
+}
+```
+
+### Response
+
+```typescript
+interface AcceptJoinRequestResponse {
+  success: boolean
+  message: string
+}
+```
+
+## Decline Invitation
+
+### Endpoint
+
+```http
+PUT ${baseUrl}/teams/decline-join-request
+```
+
+### Request Body
+
+```typescript
+interface DeclineJoinRequestRequest {
+  teamId: number
+}
+```
+
+### Example Requests
+
+```typescript
+// List invitations
+const invitations = await fetch('${baseUrl}/teams/invitations', {
+  headers: {
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+})
+
+// Accept invitation
+const acceptInvite = await fetch('${baseUrl}/teams/accept-join-request', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    teamId: 123,
+  }),
+})
+
+// Decline invitation
+const declineInvite = await fetch('${baseUrl}/teams/decline-join-request', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    teamId: 123,
+  }),
+})
+```
+
+## Error Codes
+
+| Status Code | Description                  |
+| ----------- | ---------------------------- |
+| 200         | Success                      |
+| 201         | Invitation Created           |
+| 400         | Invalid Request              |
+| 401         | Unauthorized                 |
+| 403         | Forbidden                    |
+| 404         | Team or Invitation Not Found |
+| 409         | User Already Invited         |
+| 500         | Server Error                 |
