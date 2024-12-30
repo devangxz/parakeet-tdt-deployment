@@ -108,9 +108,9 @@ function Footer() {
             <div className='flex flex-col ml-5 w-3/12 max-md:ml-0 max-md:w-full'>
               <div className='flex flex-col grow self-stretch text-lg text-white whitespace-nowrap max-md:mt-10'>
                 <div className='font-semibold'>Resources</div>
-                {/* <div className='mt-4 leading-[150%] text-slate-400'>
-                  <Link href='/'>API Reference</Link>
-                </div> */}
+                <div className='mt-4 leading-[150%] text-slate-400'>
+                  <Link href='/docs'>API Reference</Link>
+                </div>
                 <div className='mt-4 leading-[150%] text-slate-400'>
                   <Link href='/faq'>FAQ</Link>
                 </div>
