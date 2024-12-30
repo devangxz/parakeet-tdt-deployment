@@ -21,7 +21,8 @@ export async function createMultipartUpload(
   apiUser?: {
     userId: number
     internalTeamUserId?: number
-  }
+  },
+  isYouTubeFile?: boolean
 ) {
   try {
     let user
@@ -47,7 +48,34 @@ export async function createMultipartUpload(
       }
     }
 
-    const fileName = path.parse(originalName).name
+    let fileName = path.parse(originalName).name
+
+    if (isYouTubeFile) {
+      const youTubefile = await prisma.file.findUnique({
+        where: {
+          fileId: fileId,
+        },
+        select: {
+          filename: true,
+          uploadedBy: true,
+          userId: true,
+        },
+      })
+
+      if (!youTubefile) {
+        return {
+          success: false,
+          message: 'File not found',
+        }
+      }
+
+      fileName = youTubefile.filename
+      user = {
+        userId: youTubefile.uploadedBy,
+        internalTeamUserId: youTubefile.userId,
+      }
+    }
+
     const fileExtension = path.extname(originalName)
     const fileKey =
       fileExtension.toLowerCase() === '.docx'
@@ -60,15 +88,16 @@ export async function createMultipartUpload(
       ContentType: type,
       Metadata: {
         upload_environment: process.env.UPLOAD_ENVIRONMENT || 'STAGING',
-        type:
-          fileExtension.toLowerCase() === '.docx'
-            ? 'DOCX_FILE'
-            : 'ORIGINAL_FILE',
+        type: isYouTubeFile
+          ? 'YOUTUBE_FILE'
+          : fileExtension.toLowerCase() === '.docx'
+          ? 'DOCX_FILE'
+          : 'ORIGINAL_FILE',
         user_id: user.userId?.toString(),
         team_user_id:
           user.internalTeamUserId?.toString() || user.userId?.toString(),
         file_id: fileId,
-        file_name: path.parse(originalName).name,
+        file_name: fileName,
       },
     })
     const data = await s3Client.send(command)
@@ -86,6 +115,13 @@ export async function createMultipartUpload(
             fileSize: size,
           },
         },
+      })
+    }
+
+    if (isYouTubeFile) {
+      await prisma.file.update({
+        where: { fileId },
+        data: { filesize: Math.floor(size ?? 0).toString(), fileKey },
       })
     }
 

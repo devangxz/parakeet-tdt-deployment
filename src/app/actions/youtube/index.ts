@@ -175,7 +175,6 @@ export async function getYoutubeMetadata(url: string, fileId: string) {
     }
 
     const sanitizedTitle = video.snippet.title.replace(/[^\w\s]/gi, '')
-    const fileKey = `${sanitizedTitle}_${fileId}.mp4`
 
     const metadata = {
       duration,
@@ -184,7 +183,6 @@ export async function getYoutubeMetadata(url: string, fileId: string) {
       fileSize: 0,
       fileName: sanitizedTitle,
       fileId,
-      fileKey,
       userId: user?.userId?.toString(),
       teamUserId:
         user?.internalTeamUserId?.toString() || user?.userId?.toString(),
@@ -203,7 +201,10 @@ export async function getYoutubeMetadata(url: string, fileId: string) {
       `YouTube file metadata saved successfully for fileId: ${fileId}, userId: ${user?.userId}, url: ${url}`
     )
 
-    return { success: true, message: 'YouTube video metadata saved successfully' }
+    return {
+      success: true,
+      message: 'YouTube video metadata saved successfully',
+    }
   } catch (error) {
     logger.error(`Failed to get YouTube Metadata: ${error}`)
     return {
@@ -213,5 +214,29 @@ export async function getYoutubeMetadata(url: string, fileId: string) {
           ? error.message
           : 'An error occurred. Please try again after some time.',
     }
+  }
+}
+
+export async function checkYouTubeFile(fileId: string) {
+  try {
+    const youtubeFile = await prisma.youTubeFile.findFirst({
+      where: {
+        fileId: fileId.trim(),
+      },
+    })
+
+    if (!youtubeFile) {
+      return { success: false, message: 'Invalid File ID' }
+    }
+
+    if (youtubeFile.isImported === true) {
+      return { success: false, message: 'File is already uploaded' }
+    }
+
+    if (youtubeFile.isImported === null) {
+      return { success: true, message: 'File is valid and not yet uploaded' }
+    }
+  } catch (error) {
+    return { success: false, message: 'Failed to check file status' }
   }
 }

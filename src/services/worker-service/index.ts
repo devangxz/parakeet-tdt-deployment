@@ -6,7 +6,6 @@ export const WORKER_QUEUE_NAMES = {
   AUDIO_VIDEO_CONVERSION: 'audio_video_conversion',
   AUTOMATIC_SPEECH_RECOGNITION: 'automatic_speech_recognition',
   LLM_MARKING: 'llm_marking',
-  YOUTUBE_VIDEO_PROCESSING: 'youtube_video_processing',
 } as const
 
 export type QueueName =
@@ -24,10 +23,6 @@ const queues: Record<QueueName, Queue> = {
   [WORKER_QUEUE_NAMES.LLM_MARKING]: new Queue(WORKER_QUEUE_NAMES.LLM_MARKING, {
     connection: redis,
   }),
-  [WORKER_QUEUE_NAMES.YOUTUBE_VIDEO_PROCESSING]: new Queue(
-    WORKER_QUEUE_NAMES.YOUTUBE_VIDEO_PROCESSING,
-    { connection: redis }
-  ),
 }
 
 export class WorkerQueueService {

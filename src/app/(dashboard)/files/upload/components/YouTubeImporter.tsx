@@ -90,7 +90,7 @@ const YouTubeImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
           })
 
           toast.error(
-            `Error validating YouTube URL: ${file.url} - ${errorMessage}`
+            `Error validating YouTube URL: ${file.url} - Please try again after some time`
           )
         }
       }
