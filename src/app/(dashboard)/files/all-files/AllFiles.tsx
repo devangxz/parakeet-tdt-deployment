@@ -90,7 +90,6 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
     const ids = queryParams.get('ids')
     fileIds = ids?.split(',') || null
   }
-  const [selected, setSelected] = useState<string>('')
   const [toggleCheckAndDownload, setToggleCheckAndDownload] =
     useState<boolean>(false)
   const [loadingFileOrder, setLoadingFileOrder] = useState<

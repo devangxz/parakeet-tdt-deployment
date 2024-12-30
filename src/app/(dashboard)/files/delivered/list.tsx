@@ -196,6 +196,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
         cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
       })
       setLoadingOrder((prev) => ({ ...prev, [fileId]: false }))
+      setToggleCheckAndDownload(true)
     } catch (error) {
       toast.error('Error downloading files')
       setLoadingOrder((prev) => ({ ...prev, [fileId]: false }))
@@ -342,7 +343,6 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
             variant='order'
             className='format-button'
             onClick={() => {
-              setToggleCheckAndDownload(true)
               setSeletedFile({
                 fileId: row?.original?.id,
                 name: row?.original?.filename,
