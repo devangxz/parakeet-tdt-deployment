@@ -5,7 +5,7 @@ Get the details of an invoice.
 ## Endpoint
 
 ```http
-GET ${baseUrl}/users/invoices/details
+GET ${baseUrl}/invoices/details
 ```
 
 ## Query Parameters
@@ -45,14 +45,11 @@ interface InvoiceDetailsResponse {
 ## Example Request
 
 ```typescript
-const response = await fetch(
-  '${baseUrl}/users/invoices/details?invoiceId=123',
-  {
-    headers: {
-      Authorization: 'Basic YOUR_API_KEY',
-    },
-  }
-)
+const response = await fetch('${baseUrl}/invoices/details?invoiceId=123', {
+  headers: {
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+})
 
 const data = await response.json()
 ```
