@@ -54,8 +54,6 @@ interface File {
   rating: string
   orderType: string
   orderId: number
-  txtSignedUrl: string
-  cfDocxSignedUrl: string
 }
 
 export default function SharedFilesPage({ files }: { files: File[] }) {
@@ -64,6 +62,8 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
   const [selectedFile, setSeletedFile] = useState<{
     fileId: string
     name: string
+    orderId: string
+    orderType: string
   } | null>(null)
   const [sharedFiles, setSharedFiles] = useState<File[] | null>(files)
   const [isLoading, setIsLoading] = useState(false)
@@ -72,6 +72,11 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
     useState<boolean>(false)
 
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [signedUrls, setSignedUrls] = useState({
+    txtSignedUrl: '',
+    cfDocxSignedUrl: '',
+  })
+  const [loadingOrder, setLoadingOrder] = useState<Record<string, boolean>>({})
 
   const fetchSharedFiles = async (showLoader = false) => {
     if (showLoader) {
@@ -83,18 +88,7 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
     try {
       const response = await getFiles()
       if (response.success && 'data' in response) {
-        const files = []
-        for (const file of response.data as any[]) {
-          const txtRes = await getFileTxtSignedUrl(`${file.fileId}`)
-          const docxRes = await getFileDocxSignedUrl(`${file.fileId}`, 'CUSTOM_FORMATTING_DOC')
-
-          files.push({
-            ...file,
-            txtSignedUrl: txtRes.signedUrl || '',
-            cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
-          })
-        }
-        setSharedFiles(files)
+        setSharedFiles((response.data as File[]) ?? [])
         setError(null)
       } else {
         setSharedFiles([])
@@ -112,6 +106,26 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
 
   const handleSelectedRowsChange = (selectedRowsData: File[]) => {
     setSelectedFiles(selectedRowsData.map((file) => file.fileId.toString()))
+  }
+
+  const handleCheckAndDownload = async (fileId: string) => {
+    try {
+      setLoadingOrder((prev) => ({ ...prev, [fileId]: true }))
+      const txtRes = await getFileTxtSignedUrl(fileId)
+      const docxRes = await getFileDocxSignedUrl(
+        fileId,
+        'CUSTOM_FORMATTING_DOC'
+      )
+      setSignedUrls({
+        txtSignedUrl: txtRes.signedUrl || '',
+        cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
+      })
+      setLoadingOrder((prev) => ({ ...prev, [fileId]: false }))
+      setToggleCheckAndDownload(true)
+    } catch (error) {
+      toast.error('Error downloading files')
+      setLoadingOrder((prev) => ({ ...prev, [fileId]: false }))
+    }
   }
 
   if (isLoading) {
@@ -222,19 +236,32 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
       enableHiding: false,
       cell: ({ row }) => (
         <div className='flex items-center'>
-          <Button
-            variant='order'
-            className='format-button w-[140px]'
-            onClick={() => {
-              setSeletedFile({
-                fileId: row.original.fileId,
-                name: row.original.filename,
-              })
-              setToggleCheckAndDownload(true)
-            }}
-          >
-            Check & Download
-          </Button>
+          {loadingOrder[row.original.id] ? (
+            <Button
+              disabled
+              variant='order'
+              className='format-button w-[140px]'
+            >
+              Please wait
+              <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+            </Button>
+          ) : (
+            <Button
+              variant='order'
+              className='format-button w-[140px]'
+              onClick={() => {
+                setSeletedFile({
+                  fileId: row.original.fileId,
+                  name: row.original.filename,
+                  orderId: row.original.orderId.toString(),
+                  orderType: row.original.orderType,
+                })
+                handleCheckAndDownload(row.original.fileId.toString())
+              }}
+            >
+              Check & Download
+            </Button>
+          )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -314,25 +341,25 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
           <div className='flex items-center'>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-                <Button
-                  variant='order'
-                  className='not-rounded text-black w-[140px] mr-3'
-                  onClick={async () => {
-                    try {
-                      if (selectedFiles.length === 0) {
-                        toast.error('Please select at least one file')
-                        return
-                      }
-                      await navigator.clipboard.writeText(selectedFiles.join(','))
-                      toast.success('File Ids copied to clipboard')
-                    } catch (error) {
-                      toast.error('Failed to copy file Ids')
+              <Button
+                variant='order'
+                className='not-rounded text-black w-[140px] mr-3'
+                onClick={async () => {
+                  try {
+                    if (selectedFiles.length === 0) {
+                      toast.error('Please select at least one file')
+                      return
                     }
-                  }}
-                >
-                  Copy file Ids
-                </Button>
-              )}
+                    await navigator.clipboard.writeText(selectedFiles.join(','))
+                    toast.success('File Ids copied to clipboard')
+                  } catch (error) {
+                    toast.error('Failed to copy file Ids')
+                  }
+                }}
+              >
+                Copy file Ids
+              </Button>
+            )}
             <Button
               variant='order'
               className='not-rounded text-black w-[140px]'
@@ -355,22 +382,17 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
         />
       </div>
 
-      {sharedFiles?.length && toggleCheckAndDownload && (
+      {selectedFile && toggleCheckAndDownload && (
         <CheckAndDownload
-          selected={selectedFile?.fileId ?? ''}
-          files={sharedFiles?.map((file) => ({
-            id: file.fileId,
-            filename: file.filename,
-            date: file.deliveredTs,
-            duration: file.duration,
-            orderType: file.orderType,
-            txtSignedUrl: file.txtSignedUrl,
-            cfDocxSignedUrl: file.cfDocxSignedUrl,
-          }))}
+          id={selectedFile?.fileId ?? ''}
+          orderId={selectedFile?.orderId || ''}
+          orderType={selectedFile?.orderType || ''}
+          filename={selectedFile?.name || ''}
           toggleCheckAndDownload={toggleCheckAndDownload}
           setToggleCheckAndDownload={setToggleCheckAndDownload}
           session={session as Session}
-          orderId=''
+          txtSignedUrl={signedUrls.txtSignedUrl || ''}
+          cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
         />
       )}
       <AlertDialog open={openDeleteDialog}>

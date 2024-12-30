@@ -1,6 +1,5 @@
 import { StarFilledIcon, StarIcon } from '@radix-ui/react-icons'
 import { Session } from 'next-auth'
-import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -16,40 +15,34 @@ import {
   DialogHeader,
 } from '@/components/ui/dialog'
 import { FILE_CACHE_URL } from '@/constants'
-interface FileItem {
-  id: string
-  filename: string
-  date: string
-  duration: number
-  orderType: string
-  txtSignedUrl: string
-  cfDocxSignedUrl: string
-}
 interface CheckAndDownloadProps {
-  selected: string
-  files: FileItem[]
+  id: string
+  orderId: string
+  orderType: string
+  filename: string
   toggleCheckAndDownload: boolean
   setToggleCheckAndDownload: (value: boolean) => void
   session: Session
-  orderId: string
+  txtSignedUrl: string
+  cfDocxSignedUrl: string
 }
 
 export function CheckAndDownload({
-  selected,
-  files,
+  id,
+  orderId,
+  orderType,
+  filename,
   toggleCheckAndDownload,
   setToggleCheckAndDownload,
-  orderId,
+  session,
+  txtSignedUrl,
+  cfDocxSignedUrl,
 }: CheckAndDownloadProps) {
-  const { filename, id, orderType, txtSignedUrl, cfDocxSignedUrl } =
-    files &&
-    (files?.find((file: FileItem) => file?.id === selected) as FileItem)
   const storedrating = Number(localStorage.getItem('rating'))
   const [hover, setHover] = useState<null | number>(null)
   const [showSubtitle, setShowSubtitle] = useState<boolean>(false)
   const [rating, setRating] = useState<null | number>(storedrating || null)
   const ratingMessages = ['Poor', 'Bad', 'Okay', 'Good', 'Excellent']
-  const { data: session } = useSession()
   const controller = async (
     payload: {
       fileId: string
@@ -111,14 +104,14 @@ export function CheckAndDownload({
   // Rating
   useEffect(() => {
     async function fetchRating() {
-      const response = await getOrderRating(selected)
+      const response = await getOrderRating(id)
       if (response.success && response.rating) {
         localStorage.setItem('rating', response.rating.toString())
         setRating(response.rating)
       }
     }
     fetchRating()
-  }, [rating, storedrating, selected])
+  }, [rating, storedrating, id])
   return (
     <Dialog
       open={toggleCheckAndDownload}
@@ -156,10 +149,10 @@ export function CheckAndDownload({
                       `/editor/${id}`,
                       '_blank',
                       'toolbar=no,location=no,menubar=no,width=' +
-                      window.screen.width +
-                      ',height=' +
-                      window.screen.height +
-                      ',left=0,top=0'
+                        window.screen.width +
+                        ',height=' +
+                        window.screen.height +
+                        ',left=0,top=0'
                     )
                   }
                 >
@@ -182,7 +175,11 @@ export function CheckAndDownload({
               </p>
               {/* docx  */}
               <div className='max-w-full flex justify-between'>
-                <a target='_blank' href={cfDocxSignedUrl} className='text-primary'>{`${docx?.name}_cf.docx`}</a>
+                <a
+                  target='_blank'
+                  href={cfDocxSignedUrl}
+                  className='text-primary'
+                >{`${docx?.name}_cf.docx`}</a>
                 <div className='flex space-x-2'>
                   {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'>
                     Save to Dropbox
@@ -194,7 +191,11 @@ export function CheckAndDownload({
               </div>
               {/* pdf  */}
               <div className='max-w-full flex justify-between'>
-                <a href={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${session?.user?.token}`} target='_blank' className='text-primary'>{`${pdf?.name}_cf.pdf`}</a>
+                <a
+                  href={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${session?.user?.token}`}
+                  target='_blank'
+                  className='text-primary'
+                >{`${pdf?.name}_cf.pdf`}</a>
                 <div className='flex space-x-2'>
                   {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'>
                     Save to Dropbox
@@ -214,8 +215,11 @@ export function CheckAndDownload({
               </p>
               {/* docx  */}
               <div className='max-w-full flex justify-between'>
-                <a href={`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${session?.user?.token}`}
-                  target='_blank' className='text-primary'>{`${docx?.name}.docx`}</a>
+                <a
+                  href={`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${session?.user?.token}`}
+                  target='_blank'
+                  className='text-primary'
+                >{`${docx?.name}.docx`}</a>
                 <div className='flex space-x-2'>
                   {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem] '>
                   Save to Dropbox
@@ -227,7 +231,11 @@ export function CheckAndDownload({
               </div>
               {/* pdf  */}
               <div className='max-w-full flex justify-between'>
-                <a href={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${session?.user?.token}`} target='_blank' className='text-primary'>{`${pdf?.name}.pdf`}</a>
+                <a
+                  href={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${session?.user?.token}`}
+                  target='_blank'
+                  className='text-primary'
+                >{`${pdf?.name}.pdf`}</a>
                 <div className='flex space-x-2'>
                   {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'>
                   Save to Dropbox
@@ -239,7 +247,11 @@ export function CheckAndDownload({
               </div>
               {/* txt  */}
               <div className='max-w-full flex justify-between'>
-                <a target='_blank' href={txtSignedUrl} className='text-primary'>{`${txtFile?.name}.txt`}</a>
+                <a
+                  target='_blank'
+                  href={txtSignedUrl}
+                  className='text-primary'
+                >{`${txtFile?.name}.txt`}</a>
                 <div className='flex space-x-2'>
                   {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem] '>
                   Save to Dropbox
@@ -257,7 +269,11 @@ export function CheckAndDownload({
               <p className='text-sm font-semibold text-slate-700'>Subtitles</p>
               {/* srt  */}
               <div className='max-w-full flex justify-between'>
-                <a href={`${FILE_CACHE_URL}/get-subtitles/${id}?authToken=${session?.user?.token}&ext=srt`} target='_blank' className='text-primary'>{`${filename}.srt`}</a>
+                <a
+                  href={`${FILE_CACHE_URL}/get-subtitles/${id}?authToken=${session?.user?.token}&ext=srt`}
+                  target='_blank'
+                  className='text-primary'
+                >{`${filename}.srt`}</a>
                 <div className='flex space-x-2'>
                   {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'>
                     Save to Dropbox
@@ -270,7 +286,11 @@ export function CheckAndDownload({
               {/* vtt  */}
 
               <div className='max-w-full flex justify-between'>
-                <a href={`${FILE_CACHE_URL}/get-subtitles/${id}?authToken=${session?.user?.token}&ext=vtt`} target='_blank' className='text-primary'>{`${filename}.vtt`}</a>
+                <a
+                  href={`${FILE_CACHE_URL}/get-subtitles/${id}?authToken=${session?.user?.token}&ext=vtt`}
+                  target='_blank'
+                  className='text-primary'
+                >{`${filename}.vtt`}</a>
                 <div className='flex space-x-2'>
                   {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'>
                     Save to Dropbox
@@ -344,7 +364,7 @@ export function CheckAndDownload({
         <DialogFooter className='sm:justify-start'>
           <SpecialInstructions
             setToggleCheckAndDownload={setToggleCheckAndDownload}
-            fileId={selected}
+            fileId={id}
           />
         </DialogFooter>
       </DialogContent>
