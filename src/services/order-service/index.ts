@@ -257,5 +257,6 @@ export const orderFiles = async (
     inv: invoiceId,
     totalAmount: totalPrice,
     rates,
+    discount: Number(discount),
   }
 }

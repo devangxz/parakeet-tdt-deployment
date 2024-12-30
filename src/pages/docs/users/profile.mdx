@@ -1,0 +1,91 @@
+# User Profile
+
+Get or update a user's profile information.
+
+## Get Profile
+
+### Endpoint
+
+```http
+GET ${baseUrl}/users
+```
+
+### Response
+
+```typescript
+interface UserProfileResponse {
+  success: boolean
+  data: {
+    email: string
+    firstname: string
+    lastname: string
+    address1?: string
+    address2?: string
+    city?: string
+    state?: string
+    country?: string
+    postalCode?: string
+    phoneNumber?: string
+    referralCode: string
+    paypalId?: string
+    secondaryEmail?: string
+    splInstructions?: string
+    industry?: string
+  }
+}
+```
+
+## Update Profile
+
+### Endpoint
+
+```http
+PUT ${baseUrl}/users
+```
+
+### Request Body
+
+```typescript
+interface UpdateProfileRequest {
+  firstname?: string
+  lastname?: string
+  address1?: string
+  address2?: string
+  city?: string
+  state?: string
+  country?: string
+  postalCode?: string
+  phoneNumber?: string
+}
+```
+
+### Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/users', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    firstname: 'John',
+    lastname: 'Doe',
+    address1: '123 Main St',
+    city: 'New York',
+    country: 'USA',
+  }),
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description          |
+| ----------- | -------------------- |
+| 200         | Success              |
+| 400         | Invalid Request Body |
+| 401         | Unauthorized         |
+| 403         | Forbidden            |
+| 500         | Server Error         |

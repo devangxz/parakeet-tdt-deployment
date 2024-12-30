@@ -1,0 +1,46 @@
+# List Orders
+
+Get a list of orders for the authenticated user.
+
+## Endpoint
+
+```http
+GET ${baseUrl}/orders
+```
+
+## Response
+
+```typescript
+interface OrderListResponse {
+  success: boolean
+  data: {
+    orderId: number
+    fileId: string
+    status: string
+    orderType: string
+    createdAt: string
+    deliveryTime: string
+    instructions: string
+  }[]
+}
+```
+
+## Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/orders', {
+  headers: {
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description  |
+| ----------- | ------------ |
+| 200         | Success      |
+| 401         | Unauthorized |
+| 500         | Server Error |

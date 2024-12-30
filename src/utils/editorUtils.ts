@@ -884,7 +884,9 @@ const searchAndSelect = (
     setLastSearchIndex: (index: number) => void,
     toastInstance: { error: (msg: string) => void },
     selection: { index: number; length: number } | null,
-    matchSelection: boolean
+    setSelection: (selection: { index: number; length: number } | null) => void,
+    matchSelection: boolean,
+    searchBackwards: boolean = false
 ) => {
     if (!quill) return
 
@@ -902,20 +904,37 @@ const searchAndSelect = (
     const text = quill.getText(searchRange.start, searchRange.end - searchRange.start)
     const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase()
 
-    let startIndex = lastSearchIndex + 1 - searchRange.start
+    let startIndex = searchBackwards
+        ? lastSearchIndex - 1 - searchRange.start
+        : lastSearchIndex + 1 - searchRange.start
+
     if (startIndex < 0 || startIndex >= text.length) {
-        startIndex = 0
+        startIndex = searchBackwards ? text.length - 1 : 0
     }
 
-    let index = matchCase
-        ? text.indexOf(searchText, startIndex)
-        : text.toLowerCase().indexOf(effectiveSearchText, startIndex)
-
-    // If not found from current position, wrap to start of search range
-    if (index === -1 && startIndex !== 0) {
+    let index = -1
+    if (searchBackwards) {
         index = matchCase
-            ? text.indexOf(searchText, 0)
-            : text.toLowerCase().indexOf(effectiveSearchText, 0)
+            ? text.lastIndexOf(searchText, startIndex)
+            : text.toLowerCase().lastIndexOf(effectiveSearchText, startIndex)
+
+        // If not found searching backwards, wrap to end
+        if (index === -1 && startIndex !== text.length - 1) {
+            index = matchCase
+                ? text.lastIndexOf(searchText, text.length - 1)
+                : text.toLowerCase().lastIndexOf(effectiveSearchText, text.length - 1)
+        }
+    } else {
+        index = matchCase
+            ? text.indexOf(searchText, startIndex)
+            : text.toLowerCase().indexOf(effectiveSearchText, startIndex)
+
+        // If not found searching forwards, wrap to start
+        if (index === -1 && startIndex !== 0) {
+            index = matchCase
+                ? text.indexOf(searchText, 0)
+                : text.toLowerCase().indexOf(effectiveSearchText, 0)
+        }
     }
 
     if (index !== -1) {
@@ -927,6 +946,7 @@ const searchAndSelect = (
         setLastSearchIndex(-1)
         toastInstance.error('Text not found in selected range')
     }
+    setSelection(selection) // setting back the old selection because when a text is found we select that which changes the original selection
 }
 
 const replaceTextHandler = (
@@ -1030,11 +1050,12 @@ const insertTimestampAndSpeakerInitialAtStartOfCurrentLine = (
         }
     }
 
-    quill.insertText(paragraphStart, formattedTime + ' S1: ', 'user');
+    const speakerText = ' S1: ';
+    quill.insertText(paragraphStart, formattedTime + speakerText, { color: '#28a828' });
 
-    if (currentSelection) {
-        quill.setSelection(currentSelection.index + formattedTime.length, currentSelection.length);
-    }
+    // Select just the speaker number for easy editing
+    const speakerNumberStart = paragraphStart + formattedTime.length + 2; // +2 for ' S'
+    quill.setSelection(speakerNumberStart, 1); // Select just the '1' in 'S1'
 };
 
 const insertTimestampBlankAtCursorPosition = (
@@ -1073,7 +1094,7 @@ const insertTimestampBlankAtCursorPosition = (
             .toString()
             .padStart(2, '0')}.${milliseconds}] ____`
 
-    quill.insertText(cursorPosition, formattedTime)
+    quill.insertText(cursorPosition, formattedTime, { color: '#FF0000' })
     quill.setSelection(cursorPosition + formattedTime.length, 0)
 }
 

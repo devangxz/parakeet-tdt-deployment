@@ -1,0 +1,51 @@
+# File Transcripts
+
+Manage transcripts for a file.
+
+## Get Transcripts
+
+### Endpoint
+
+```http
+GET ${baseUrl}/files/get-transcripts
+```
+
+### Query Parameters
+
+| Parameter | Type   | Description                                                          |
+| --------- | ------ | -------------------------------------------------------------------- |
+| fileId    | string | File ID                                                              |
+| type      | string | Type of transcript. Valid values: `docx`, `pdf`, `srt`, `vtt`, `txt` |
+
+### Response
+
+```typescript
+interface FileTranscriptsResponse {
+  success: boolean
+  data: {
+    downloadUrl: string // Signed URL to download the transcript file
+  }
+}
+```
+
+### Example Request
+
+```typescript
+// Get transcripts
+const transcripts = await fetch('${baseUrl}/files/get-transcripts?fileId=abc123&type=docx', {
+  headers: {
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+})
+
+## Error Codes
+
+| Status Code | Description                     |
+| ----------- | ------------------------------- |
+| 200         | Success                         |
+| 400         | Invalid Request                 |
+| 401         | Unauthorized                    |
+| 403         | Forbidden                       |
+| 404         | File Not Found                  |
+| 500         | Server Error                    |
+```

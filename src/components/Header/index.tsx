@@ -1,11 +1,11 @@
 'use client'
-import { Search } from 'lucide-react'
+// import { Search } from 'lucide-react'
 import Image from 'next/image'
 
 import Profile from '@/components/navbar/profile'
 import MobileSidebar from '@/components/Sidebar/mobile-sidebar'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+// import { Input } from '@/components/ui/input'
 import { SidebarItemType } from '@/types/sidebar'
 
 interface SidebarProps {
@@ -15,7 +15,7 @@ interface SidebarProps {
 const Header = ({ sidebarItems }: SidebarProps) => (
   <header className='flex h-14 items-center gap-4 border-b-2 border-customBorder px-4 lg:h-[60px] lg:px-6 justify-between'>
     <MobileSidebar sidebarItems={sidebarItems} />
-    <div className='w-full flex-1 rounded-custom hidden lg:flex'>
+    {/* <div className='w-full flex-1 rounded-custom hidden lg:flex'>
       <form>
         <div className='relative'>
           <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-primary' />
@@ -26,7 +26,7 @@ const Header = ({ sidebarItems }: SidebarProps) => (
           />
         </div>
       </form>
-    </div>
+    </div> */}
     <Image
       alt='Customer Support'
       loading='lazy'

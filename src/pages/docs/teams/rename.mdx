@@ -1,0 +1,54 @@
+# Update Team Name
+
+Update the name of a team.
+
+## Endpoint
+
+```http
+PUT ${baseUrl}/teams/rename
+```
+
+## Request Body
+
+```typescript
+interface RenameTeamRequest {
+  teamId: number
+  newTeamName: string
+}
+```
+
+## Response
+
+```typescript
+interface RenameTeamResponse {
+  success: boolean
+  message: string
+}
+```
+
+## Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/teams/rename', {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    teamId: 123,
+    newTeamName: 'Engineering Team',
+  }),
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description          |
+| ----------- | -------------------- |
+| 201         | Team Created         |
+| 400         | Invalid Request Body |
+| 401         | Unauthorized         |
+| 500         | Server Error         |
