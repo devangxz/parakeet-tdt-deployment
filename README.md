@@ -55,6 +55,14 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
 
+## Rest API Documentation
+
+[API Reference](https://docs.scribie.com/docs)
+
+When you make changes to the API, you need to update the documentation. You can find the documentation in the `src/pages/docs` folder.
+
+For adding new API endpoints, you need to add the new endpoint in the `src/app/api/v1/route.ts` file and then update the documentation in the `src/pages/docs` folder.
+
 ## Database Migrations
 
 > See also:
