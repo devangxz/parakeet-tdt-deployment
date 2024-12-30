@@ -21,6 +21,7 @@ const StatusPage = dynamic(() => import('./status'), {
   ssr: false,
   loading: () => <div>Loading...</div>,
 })
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { changeDeliveryDate } from '@/app/actions/om/change-delivery-date'
 import { fetchPendingOrders } from '@/app/actions/om/fetch-pending-orders'
 import { Badge } from '@/components/ui/badge'
@@ -54,6 +55,7 @@ interface File {
   fileCost: FileCost
   rateBonus: number
   type: string
+  orgName: string
 }
 
 export default function OrdersPage() {
@@ -67,10 +69,17 @@ export default function OrdersPage() {
     [key: string]: string
   }>({})
 
-  useEffect(() => {
+  const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
+    const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
+    if (res.success && res.signedUrl) {
+      setCurrentlyPlayingFileUrl({ [fileId]: res.signedUrl })
+    }
+  }
+
+  useEffect(() => {
+    setAudioUrl()
   }, [playing])
 
   const getPendingOrders = async (showLoader = false) => {
@@ -107,6 +116,7 @@ export default function OrdersPage() {
             fileCost: order.fileCost,
             rateBonus: order.rateBonus,
             type: order.orderType,
+            orgName: order.orgName,
           }
         })
         setPendingOrders(orders ?? [])
@@ -217,8 +227,8 @@ export default function OrdersPage() {
                   {row.original.pwer > HIGH_PWER
                     ? 'HIGH'
                     : row.original.pwer < LOW_PWER
-                    ? 'LOW'
-                    : 'MEDIUM'}
+                      ? 'LOW'
+                      : 'MEDIUM'}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
@@ -266,9 +276,22 @@ export default function OrdersPage() {
                 </TooltipContent>
               </Tooltip>
             )}
+            {row.original.orgName.length > 0 && (
+              <Badge
+                variant='outline'
+                className='font-semibold text-[10px] text-green-600'
+              >
+                {row.original.orgName}
+              </Badge>
+            )}
           </div>
         </div>
       ),
+    },
+    {
+      accessorKey: 'orgName',
+      header: 'Organization',
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
       accessorKey: 'duration',

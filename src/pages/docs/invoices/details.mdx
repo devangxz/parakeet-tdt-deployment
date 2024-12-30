@@ -1,0 +1,64 @@
+# Get Invoice Details
+
+Get the details of an invoice.
+
+## Endpoint
+
+```http
+GET ${baseUrl}/invoices/details
+```
+
+## Query Parameters
+
+| Parameter | Type   | Description |
+| --------- | ------ | ----------- |
+| invoiceId | string | Invoice ID  |
+
+## Response
+
+```typescript
+interface InvoiceDetailsResponse {
+  success: boolean
+  data: {
+    invoice: {
+      invoiceId: string
+      amount: number
+      discount: number
+      fee: number
+      status: string
+      paymentMethod: string
+      transactionId: string
+      creditsUsed: number
+      refundAmount: number
+    }
+    files?: {
+      id: string
+      name: string
+      size: number
+      type: string
+      url: string
+    }[]
+  }[]
+}
+```
+
+## Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/invoices/details?invoiceId=123', {
+  headers: {
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description  |
+| ----------- | ------------ |
+| 200         | Success      |
+| 401         | Unauthorized |
+| 403         | Forbidden    |
+| 500         | Server Error |

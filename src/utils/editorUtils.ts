@@ -10,6 +10,8 @@ import { getOrderDetailsAction } from '@/app/actions/editor/order-details'
 import { reportFileAction } from '@/app/actions/editor/report-file'
 import { submitQCAction } from '@/app/actions/editor/submit-qc'
 import { submitReviewAction } from '@/app/actions/editor/submit-review'
+import { uploadDocxAction } from '@/app/actions/editor/upload-docx'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { OrderDetails, UploadFilesType } from '@/app/editor/[fileId]/page'
 import { LineData, updateContent } from '@/components/editor/transcriptUtils'
 import {
@@ -120,46 +122,6 @@ const updatePlayedPercentage = (
     setPlayedPercentage(Math.min(100, percentagePlayed)) // Ensure percentage does not exceed 100
 }
 
-const downloadBlankDocx = async ({
-    orderDetails,
-    downloadableType,
-    setButtonLoading,
-}: {
-    orderDetails: OrderDetails
-    downloadableType: string
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
-}) => {
-    const toastId = toast.loading('Downloading file...')
-    setButtonLoading((prevButtonLoading) => ({
-        ...prevButtonLoading,
-        download: true,
-    }))
-    try {
-        const response = await axios.get(
-            `/api/editor/download-blank-docx?fileId=${orderDetails.fileId}&type=${downloadableType}&orgName=${orderDetails.orgName}&templateName=${orderDetails.templateName}`,
-            { responseType: 'blob' }
-        )
-        const url = window.URL.createObjectURL(new Blob([response.data]))
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${orderDetails.fileId}${downloadableType === 'marking' || orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === 'PRE_DELIVERED' ? '.docx' : '.txt'}`
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-        toast.dismiss(toastId)
-        const successToastId = toast.success(`File downloaded successfully`)
-        toast.dismiss(successToastId)
-    } catch (error) {
-        toast.dismiss(toastId)
-        toast.error('Error downloading file')
-    } finally {
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            download: false,
-        }))
-    }
-}
-
 const convertSecondsToTimestamp = (seconds: number) => {
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
@@ -170,97 +132,17 @@ const convertSecondsToTimestamp = (seconds: number) => {
         .padStart(4, '0')}`
 }
 
-const downloadEditorDocxFile = async (
-    orderDetails: OrderDetails,
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
-) => {
-    const toastId = toast.loading('Downloading file...')
-    setButtonLoading((prevButtonLoading) => ({
-        ...prevButtonLoading,
-        download: true,
-    }))
-    try {
-        const response = await axiosInstance.get(
-            `${BACKEND_URL}/file-docx-signed-url?fileId=${orderDetails.fileId}&docType=TRANSCRIPTION_DOC`
-        )
-        const url = response?.data?.signedUrl
-        if (url) {
-            window.location.href = url
-        } else {
-            console.error('No URL provided for download.')
-            throw 'No URL provided for download.'
-        }
-        toast.dismiss(toastId)
-        const successToastId = toast.success(`File downloaded successfully`)
-        toast.dismiss(successToastId)
-    } catch (error) {
-        toast.dismiss(toastId)
-        toast.error('Error downloading file')
-    } finally {
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            download: false,
-        }))
-    }
-}
-
-const downloadEditorTextFile = async (
-    orderDetails: OrderDetails,
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
-) => {
-    const toastId = toast.loading('Downloading file...')
-    setButtonLoading((prevButtonLoading) => ({
-        ...prevButtonLoading,
-        download: true,
-    }))
-    try {
-        const response = await axiosInstance.get(
-            `${BACKEND_URL}/download-text-file?fileId=${orderDetails.fileId}`,
-            { responseType: 'blob' }
-        )
-        const url = window.URL.createObjectURL(new Blob([response.data]))
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${orderDetails.fileId}.txt`
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-
-        toast.dismiss(toastId)
-        const successToastId = toast.success(`File downloaded successfully`)
-        toast.dismiss(successToastId)
-    } catch (error) {
-        toast.dismiss(toastId)
-        toast.error('Error downloading file')
-    } finally {
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            download: false,
-        }))
-    }
-}
-
 const downloadMP3 = async (orderDetails: OrderDetails) => {
     const toastId = toast.loading('Downloading MP3...')
     try {
-        const response = await axios.get(
-            `/api/editor/download-mp3?fileId=${orderDetails.fileId}`,
-            { responseType: 'blob' }
-        )
-        if (response.status === 200) {
-            const blob = new Blob([response.data], { type: 'audio/mpeg' })
-            const url = window.URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `${orderDetails.fileId}.mp3`
-            document.body.appendChild(a)
-            a.click()
-            a.remove()
-            window.URL.revokeObjectURL(url)
+        const response = await getSignedUrlAction(`${orderDetails.fileId}.mp3`, 60)
+        if (response.success && response.signedUrl) {
+            window.open(response.signedUrl, '_blank')
+            toast.dismiss(toastId)
+            toast.success(`MP3 downloaded successfully`)
+        } else {
+            throw new Error('No download URL received')
         }
-
-        toast.dismiss(toastId)
-        toast.success(`MP3 downloaded successfully`)
     } catch (error) {
         toast.dismiss(toastId)
         toast.error('Error downloading mp3')
@@ -374,13 +256,15 @@ const uploadFile = async (
     const formData = new FormData()
     formData.append('file', file)
     try {
-        await axios.post(`/api/editor/upload-docx?fileId=${fileId}`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        })
+        const response = await uploadDocxAction(formData, fileId)
 
         toast.dismiss(toastId)
-        toast.success('File uploaded successfully')
-        setFileToUpload({ renamedFile: null, originalFile: null, isUploaded: true })
+        if (response.success) {
+            toast.success("File uploaded successfully")
+            setFileToUpload({ renamedFile: null, originalFile: null, isUploaded: true })
+        } else {
+            throw new Error(response.message)
+        }
     } catch (uploadError) {
         toast.dismiss(toastId)
         toast.error('Failed to upload file')
@@ -663,7 +547,6 @@ const handleSave = async (
         }
 
         //TODO: Implement this
-        console.log(playerEvents)
         // Get last saved index from localStorage
         // const lastSavedIndex = parseInt(localStorage.getItem(`${orderDetails.fileId}_lastEventIndex`) || '-1');
 
@@ -674,7 +557,6 @@ const handleSave = async (
         // localStorage.setItem(`${orderDetails.fileId}_lastEventIndex`, (playerEvents.length - 1).toString());
 
         // Save notes and other data
-        localStorage.setItem(orderDetails.fileId, JSON.stringify({ notes: notes }))
 
         await axiosInstance.post(`${FILE_CACHE_URL}/save-transcript`, {
             fileId: orderDetails.fileId,
@@ -791,6 +673,7 @@ const handleSubmit = async ({
         }
 
         localStorage.removeItem('transcript')
+        localStorage.removeItem(orderDetails.fileId)
         toast.dismiss(toastId)
         const successToastId = toast.success(`Transcription submitted successfully`)
         toast.dismiss(successToastId)
@@ -999,53 +882,71 @@ const searchAndSelect = (
     matchCase: boolean,
     lastSearchIndex: number,
     setLastSearchIndex: (index: number) => void,
-    toastInstance: { error: (msg: string) => void }
+    toastInstance: { error: (msg: string) => void },
+    selection: { index: number; length: number } | null,
+    setSelection: (selection: { index: number; length: number } | null) => void,
+    matchSelection: boolean,
+    searchBackwards: boolean = false
 ) => {
     if (!quill) return
 
-    const text = quill.getText()
-    const currentSelection = quill.getSelection()
-    let startIndex = 0
-
-    const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase()
-
-    // Check if the current selection matches the search text and adjust the start index accordingly
-    if (currentSelection) {
-        const selectionText = text.substr(
-            currentSelection.index,
-            currentSelection.length
-        )
-        if (
-            (matchCase && selectionText === searchText) ||
-            (!matchCase && selectionText.toLowerCase() === effectiveSearchText)
-        ) {
-            startIndex = currentSelection.index + searchText.length
-        } else {
-            startIndex = lastSearchIndex + 1
-        }
+    const searchRange = {
+        start: 0,
+        end: quill.getText().length
     }
 
-    let index = matchCase
-        ? text.indexOf(searchText, startIndex)
-        : text.toLowerCase().indexOf(effectiveSearchText, startIndex)
+    // If there's a selection, limit search to that range
+    if (selection && selection.length > 0 && matchSelection) {
+        searchRange.start = selection.index
+        searchRange.end = selection.index + selection.length
+    }
 
-    // If not found from the current position, start from the beginning
-    if (index === -1 && startIndex !== 0) {
-        startIndex = 0
+    const text = quill.getText(searchRange.start, searchRange.end - searchRange.start)
+    const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase()
+
+    let startIndex = searchBackwards
+        ? lastSearchIndex - 1 - searchRange.start
+        : lastSearchIndex + 1 - searchRange.start
+
+    if (startIndex < 0 || startIndex >= text.length) {
+        startIndex = searchBackwards ? text.length - 1 : 0
+    }
+
+    let index = -1
+    if (searchBackwards) {
+        index = matchCase
+            ? text.lastIndexOf(searchText, startIndex)
+            : text.toLowerCase().lastIndexOf(effectiveSearchText, startIndex)
+
+        // If not found searching backwards, wrap to end
+        if (index === -1 && startIndex !== text.length - 1) {
+            index = matchCase
+                ? text.lastIndexOf(searchText, text.length - 1)
+                : text.toLowerCase().lastIndexOf(effectiveSearchText, text.length - 1)
+        }
+    } else {
         index = matchCase
             ? text.indexOf(searchText, startIndex)
             : text.toLowerCase().indexOf(effectiveSearchText, startIndex)
+
+        // If not found searching forwards, wrap to start
+        if (index === -1 && startIndex !== 0) {
+            index = matchCase
+                ? text.indexOf(searchText, 0)
+                : text.toLowerCase().indexOf(effectiveSearchText, 0)
+        }
     }
 
     if (index !== -1) {
-        // Select the found text
-        quill.setSelection(index, searchText.length)
-        setLastSearchIndex(index)
+        // Adjust index relative to document start
+        const absoluteIndex = index + searchRange.start
+        quill.setSelection(absoluteIndex, searchText.length)
+        setLastSearchIndex(absoluteIndex)
     } else {
-        // If text is not found, reset the search
         setLastSearchIndex(-1)
-        toastInstance.error('Text not found')
+        toastInstance.error('Text not found in selected range')
     }
+    setSelection(selection) // setting back the old selection because when a text is found we select that which changes the original selection
 }
 
 const replaceTextHandler = (
@@ -1054,32 +955,46 @@ const replaceTextHandler = (
     replaceWith: string,
     replaceAll: boolean,
     matchCase: boolean,
-    toastInstance: { error: (msg: string) => void }
+    toastInstance: { error: (msg: string) => void },
+    selection: { index: number; length: number } | null,
+    matchSelection: boolean
 ) => {
     if (!quill) return
 
     let replaced = false
-    const text = quill.getText()
+    const searchRange = {
+        start: 0,
+        end: quill.getText().length
+    }
+
+    // If there's a selection, limit replacements to that range
+    if (selection && selection.length > 0 && matchSelection) {
+        searchRange.start = selection.index
+        searchRange.end = selection.index + selection.length
+    }
+
+    const text = quill.getText(searchRange.start, searchRange.end - searchRange.start)
     const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase()
     const textToSearch = matchCase ? text : text.toLowerCase()
 
     const replace = (index: number) => {
-        quill.deleteText(index, searchText.length)
-        quill.insertText(index, replaceWith)
+        const absoluteIndex = index + searchRange.start
+        quill.deleteText(absoluteIndex, searchText.length)
+        quill.insertText(absoluteIndex, replaceWith)
         replaced = true
     }
 
     if (replaceAll) {
         let startIndex = 0
         let index = textToSearch.indexOf(effectiveSearchText, startIndex)
+
         while (index !== -1) {
             replace(index)
             startIndex = index + replaceWith.length
-            // Update textToSearch to reflect changes made by replacement
-            const updatedText = quill.getText()
-            const updatedTextToSearch = matchCase
-                ? updatedText
-                : updatedText.toLowerCase()
+
+            // Update text after replacement
+            const updatedText = quill.getText(searchRange.start, searchRange.end - searchRange.start)
+            const updatedTextToSearch = matchCase ? updatedText : updatedText.toLowerCase()
             index = updatedTextToSearch.indexOf(effectiveSearchText, startIndex)
         }
     } else {
@@ -1093,7 +1008,7 @@ const replaceTextHandler = (
                 (matchCase && selectedText === searchText) ||
                 (!matchCase && selectedText.toLowerCase() === effectiveSearchText)
             ) {
-                replace(currentSelection.index)
+                replace(currentSelection.index - searchRange.start)
             }
         } else {
             const index = textToSearch.indexOf(effectiveSearchText)
@@ -1104,15 +1019,67 @@ const replaceTextHandler = (
     }
 
     if (!replaced) {
-        toastInstance.error('Text not found')
+        toastInstance.error('Text not found in selected range')
     }
 }
+
+const insertTimestampAndSpeakerInitialAtStartOfCurrentLine = (
+    audioPlayer: HTMLAudioElement | null,
+    quill: Quill | undefined
+) => {
+    if (!audioPlayer || !quill) return;
+
+    const currentTime = audioPlayer.currentTime;
+    const formattedTime = convertSecondsToTimestamp(currentTime);
+    const currentSelection = quill.getSelection();
+
+    let paragraphStart = currentSelection ? currentSelection.index : 0;
+    while (paragraphStart > 0 && quill.getText(paragraphStart - 1, 1) !== '\n') {
+        paragraphStart--;
+    }
+
+    // Check for existing timestamp and speaker pattern at start of line
+    const lineText = quill.getText(paragraphStart, 14); // Get enough text to check pattern
+    const timestampSpeakerPattern = /^\d{1}:\d{2}:\d{2}\.\d{1} S\d+: /;
+
+    if (timestampSpeakerPattern.test(lineText)) {
+        // If pattern exists, delete it before inserting new one
+        const match = lineText.match(timestampSpeakerPattern);
+        if (match) {
+            quill.deleteText(paragraphStart, match[0].length);
+        }
+    }
+
+    const speakerText = ' S1: ';
+    quill.insertText(paragraphStart, formattedTime + speakerText, { color: '#28a828' });
+
+    // Select just the speaker number for easy editing
+    const speakerNumberStart = paragraphStart + formattedTime.length + 2; // +2 for ' S'
+    quill.setSelection(speakerNumberStart, 1); // Select just the '1' in 'S1'
+};
 
 const insertTimestampBlankAtCursorPosition = (
     audioPlayer: HTMLAudioElement | null,
     quill: Quill | undefined
 ) => {
     if (!audioPlayer || !quill) return
+
+    const cursorPosition = quill.getSelection()?.index || 0
+
+    // Check if cursor is at start of paragraph
+    let isStartOfParagraph = true;
+    if (cursorPosition > 0) {
+        const textBeforeCursor = quill.getText(cursorPosition - 1, 1);
+        if (textBeforeCursor !== '\n') {
+            isStartOfParagraph = false;
+        }
+    }
+
+    if (isStartOfParagraph) {
+        // Call the other function instead
+        insertTimestampAndSpeakerInitialAtStartOfCurrentLine(audioPlayer, quill);
+        return;
+    }
 
     const currentTime = audioPlayer.currentTime
 
@@ -1127,10 +1094,7 @@ const insertTimestampBlankAtCursorPosition = (
             .toString()
             .padStart(2, '0')}.${milliseconds}] ____`
 
-    const cursorPosition = quill.getSelection()?.index || 0
-    quill.insertText(cursorPosition, formattedTime)
-    // quill.formatText(cursorPosition, formattedTime.length, { color: 'red' });
-
+    quill.insertText(cursorPosition, formattedTime, { color: '#FF0000' })
     quill.setSelection(cursorPosition + formattedTime.length, 0)
 }
 
@@ -1139,10 +1103,7 @@ export {
     convertBlankToSeconds,
     convertTimestampToSeconds,
     updatePlayedPercentage,
-    downloadBlankDocx,
     convertSecondsToTimestamp,
-    downloadEditorDocxFile,
-    downloadEditorTextFile,
     downloadMP3,
     handleTextFilesUpload,
     uploadTextFile,
@@ -1160,5 +1121,6 @@ export {
     searchAndSelect,
     replaceTextHandler,
     insertTimestampBlankAtCursorPosition,
+    insertTimestampAndSpeakerInitialAtStartOfCurrentLine
 }
 export type { ConvertedASROutput }

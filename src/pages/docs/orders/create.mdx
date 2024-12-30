@@ -1,0 +1,61 @@
+# Create Order
+
+Create a new order.
+
+## Endpoint
+
+```http
+POST ${baseUrl}/orders
+```
+
+## Request Body
+
+```typescript
+interface CreateOrderRequest {
+  fileIds: string[]
+  orderType: 'TRANSCRIPTION' | 'TRANSCRIPTION_FORMATTING'
+}
+```
+
+## Response
+
+```typescript
+interface CreateOrderResponse {
+  success: boolean
+  data: {
+    orderId: string
+    transactionId: string
+    paymentMethod: 'CREDITCARD' | 'PAYPAL'
+    pp_account?: string
+    cc_last4?: string
+  }
+}
+```
+
+## Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/orders', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    fileIds: ['abc123', 'def456'],
+    orderType: 'TRANSCRIPTION',
+  }),
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description                |
+| ----------- | -------------------------- |
+| 201         | Order Created Successfully |
+| 400         | Invalid Request            |
+| 401         | Unauthorized               |
+| 404         | Files Not Found            |
+| 500         | Server Error               |

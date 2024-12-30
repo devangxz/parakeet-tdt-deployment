@@ -1,6 +1,6 @@
 'use client'
 
-//import { diffWords } from 'diff'
+import { Op } from 'quill/core'
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
@@ -8,7 +8,7 @@ import 'react-quill/dist/quill.snow.css'
 import { LineData, CTMSWord, WordData } from './transcriptUtils'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
-import { ConvertedASROutput, convertSecondsToTimestamp, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
+import { ConvertedASROutput, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
 
 // TODO:  Add valid values (start, end, duration, speaker) for the changed words.
 // TODO: Test if a new line is added with TS + speaker name
@@ -21,12 +21,13 @@ interface EditorProps {
     duration: number
     getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void
     orderDetails: OrderDetails
-    content: { insert: string }[]
-    setContent: (content: { insert: string }[]) => void
+    content: Op[]
+    setContent: (content: Op[]) => void
     getLines: (lineData: LineData[]) => void
+    setSelectionHandler: () => void
 }
 
-export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, orderDetails, content, setContent, getLines }: EditorProps) {
+export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, orderDetails, content, setContent, getLines, setSelectionHandler }: EditorProps) {
     const quillRef = useRef<ReactQuill>(null)
     const [lines, setLines] = useState<LineData[]>([])
     const quillModules = {
@@ -48,7 +49,6 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
                 const lineWords: WordData[] = []
                 const words = line.split(/\s+/)
 
-                //let speaker = ''
                 for (let i = 0; i < words.length; i++) {
                     if (words[i] != '') {
                         const wordData: WordData = { word: words[i] }
@@ -61,14 +61,9 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
                                 index: wordIndex,
                                 speaker: '',
                             }
-                            // if (i === 1 && wordData.word) {
-                            //   // Ensure wordData.ctms is defined
-                            //   speaker = wordData.word
-                            // }
                         } else {
                             wordData.ctms = ctms[ctmsIndex]
                             wordData.ctms.index = wordIndex
-                            //wordData.ctms.speaker = speaker
                             ctmsIndex += 1
                         }
                         newCtms_local.push(wordData.ctms)
@@ -98,13 +93,43 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         quill.container.style.fontSize = '16px'
     }, [processTranscript, transcript, ctms])
 
+    const getFormattedContent = (text: string) => {
+        const timestampPattern = /\[\d:\d{2}:\d{2}\.\d\]\s_{4}/g;
+        const speakerPattern = /\d:\d{2}:\d{2}\.\d\s+S\d+:/g;
+        const parts = text.split(/((?:\[\d:\d{2}:\d{2}\.\d\]\s_{4})|(?:\d:\d{2}:\d{2}\.\d\s+S\d+:))/g);
+        const formattedContent = parts.map(part => {
+            if (timestampPattern.test(part)) {
+                return { insert: part, attributes: { color: '#FF0000' } };
+            } else if (speakerPattern.test(part)) {
+                return { insert: part, attributes: { color: '#28a828' } };
+            }
+            return { insert: part };
+        });
+
+        return formattedContent.filter(part => part.insert.trim() !== '');
+    }
+
     const handleContentChange = useCallback(() => {
         const quill = quillRef.current?.getEditor()
         if (!quill) return
-        const text = quill.getText()
-        setContent([{ insert: text }])
-        localStorage.setItem('transcript', JSON.stringify({ [orderDetails.fileId]: text }))
+
+        // Get the contents as a Delta object instead of plain text
+        const delta = quill.getContents()
+        setContent(delta.ops)
+
+        // Store the text content in localStorage
+        localStorage.setItem('transcript', JSON.stringify({
+            [orderDetails.fileId]: quill.getText()
+        }))
     }, [])
+
+    useEffect(() => {
+        if (!content.length) {
+            const formattedContent = getFormattedContent(transcript);
+            setContent(formattedContent);
+        }
+        getLines(lines);
+    }, [lines, content.length, transcript]);
 
     const handleEditorClick = useCallback(() => {
         const quill = quillRef.current?.getEditor()
@@ -158,41 +183,6 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         insertTimestampBlankAtCursorPosition(audioPlayer, quillRef.current?.getEditor());
     }, [audioPlayer]);
 
-    const insertTimestampAndSpeakerInitialAtStartOfCurrentLine = useCallback(() => {
-        if (!audioPlayer || !quillRef.current) return;
-
-        const quill = quillRef.current.getEditor();
-        const currentTime = audioPlayer.currentTime;
-        const formattedTime = convertSecondsToTimestamp(currentTime);
-        const currentSelection = quill.getSelection();
-
-        let paragraphStart = currentSelection ? currentSelection.index : 0;
-        while (paragraphStart > 0 && quill.getText(paragraphStart - 1, 1) !== '\n') {
-            paragraphStart--;
-        }
-
-        // Check for existing timestamp and speaker pattern at start of line
-        const lineText = quill.getText(paragraphStart, 14); // Get enough text to check pattern
-        const timestampSpeakerPattern = /^\d{1}:\d{2}:\d{2}\.\d{1} S\d+: /;
-
-        console.log(lineText)
-        console.log(timestampSpeakerPattern)
-
-        if (timestampSpeakerPattern.test(lineText)) {
-            // If pattern exists, delete it before inserting new one
-            const match = lineText.match(timestampSpeakerPattern);
-            if (match) {
-                quill.deleteText(paragraphStart, match[0].length);
-            }
-        }
-
-        quill.insertText(paragraphStart, formattedTime + ' S1: ', 'user');
-
-        if (currentSelection) {
-            quill.setSelection(currentSelection.index + formattedTime.length, currentSelection.length);
-        }
-    }, [audioPlayer]);
-
     const googleSearchSelectedWord = useCallback(() => {
         if (!quillRef.current) return;
 
@@ -239,19 +229,108 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         }
     }, [quillRef])
 
+    const capitalizeFirstLetter = useCallback(() => {
+        if (!quillRef.current) return;
+        const quill = quillRef.current.getEditor();
+        const selection = quill.getSelection();
+        if (!selection) return;
+
+        const text = quill.getText(selection.index, selection.length);
+        const words = text.split(' ');
+        const capitalizedWords = words.map(word =>
+            word.charAt(0).toUpperCase() + word.slice(1)
+        );
+        quill.deleteText(selection.index, selection.length);
+        quill.insertText(selection.index, capitalizedWords.join(' '));
+    }, [quillRef]);
+
+    const uppercaseWord = useCallback(() => {
+        if (!quillRef.current) return;
+        const quill = quillRef.current.getEditor();
+        const selection = quill.getSelection();
+        if (!selection) return;
+
+        const text = quill.getText(selection.index, selection.length);
+        quill.deleteText(selection.index, selection.length);
+        quill.insertText(selection.index, text.toUpperCase());
+    }, [quillRef]);
+
+    const lowercaseWord = useCallback(() => {
+        if (!quillRef.current) return;
+        const quill = quillRef.current.getEditor();
+        const selection = quill.getSelection();
+        if (!selection) return;
+
+        const text = quill.getText(selection.index, selection.length);
+        quill.deleteText(selection.index, selection.length);
+        quill.insertText(selection.index, text.toLowerCase());
+    }, [quillRef]);
+
+    const joinWithNextParagraph = useCallback(() => {
+        if (!quillRef.current) return;
+        const quill = quillRef.current.getEditor();
+        const selection = quill.getSelection();
+        if (!selection) return;
+
+        // Get the text and find current paragraph
+        const text = quill.getText();
+        const lines = text.split('\n').filter(line => line.trim() !== '');
+
+        // Find current line index
+        let currentLineIndex = 0;
+        let charCount = 0;
+        for (let i = 0; i < lines.length; i++) {
+            charCount += lines[i].length + 1;
+            if (charCount > selection.index) {
+                currentLineIndex = i;
+                break;
+            }
+        }
+
+        const currentPara = lines[currentLineIndex];
+        const nextPara = lines[currentLineIndex + 1];
+        if (!currentPara || !nextPara) return;
+
+        // Find positions
+        const currentParaStart = text.indexOf(currentPara);
+
+        // Get the timestamp and speaker pattern to remove
+        const timestampMatch = nextPara.match(/^\d:\d{2}:\d{2}\.\d\s+S\d+:\s*/);
+        if (!timestampMatch) return;
+
+        // Delete the newlines between paragraphs and the timestamp/speaker
+        quill.deleteText(
+            currentParaStart + currentPara.length,
+            2 + timestampMatch[0].length
+        );
+
+        // Insert a space between paragraphs
+        quill.insertText(currentParaStart + currentPara.length, ' ');
+    }, [quillRef]);
+
     const shortcutControls = useMemo(() => {
         const controls: Partial<ShortcutControls> = {
             playAudioAtCursorPosition: handlePlayAudioAtCursorPositionShortcut,
             insertTimestampBlankAtCursorPosition: insertTimestampBlankAtCursorPositionInstance,
-            insertTimestampAndSpeakerInitialAtStartOfCurrentLine,
+            insertTimestampAndSpeakerInitialAtStartOfCurrentLine: insertTimestampAndSpeakerInitialAtStartOfCurrentLine.bind(null, audioPlayer, quillRef.current?.getEditor()),
             googleSearchSelectedWord,
             defineSelectedWord,
+            capitalizeFirstLetter,
+            joinWithNextParagraph,
+            uppercaseWord,
+            lowercaseWord,
             increaseFontSize: () => adjustFontSize(true),
             decreaseFontSize: () => adjustFontSize(false)
-
         };
         return controls as ShortcutControls;
-    }, [handlePlayAudioAtCursorPositionShortcut, insertTimestampBlankAtCursorPosition, insertTimestampAndSpeakerInitialAtStartOfCurrentLine]);
+    }, [handlePlayAudioAtCursorPositionShortcut,
+        insertTimestampBlankAtCursorPosition,
+        insertTimestampAndSpeakerInitialAtStartOfCurrentLine,
+        capitalizeFirstLetter,
+        uppercaseWord,
+        lowercaseWord,
+        joinWithNextParagraph
+    ]);
 
     useShortcuts(shortcutControls);
 
@@ -277,28 +356,85 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
     }, [handleEditorClick])
 
     useEffect(() => {
-        if (!content.length) {
-            setContent([{ insert: transcript }])
-        }
-        getLines(lines)
-    }, [lines])
-
-    useEffect(() => {
         getQuillRef(quillRef)
     }, [quillRef])
 
+    // const handleContextMenuSelect = useCallback((action: string) => {
+    //     if (!quillRef.current) return;
+    //     const quill = quillRef.current.getEditor();
+    //     const selection = quill.getSelection();
+
+    //     if (!selection) return;
+
+    //     switch (action) {
+    //         case 'google':
+    //             googleSearchSelectedWord();
+    //             break;
+    //         case 'define':
+    //             defineSelectedWord();
+    //             break;
+    //         case 'play-word':
+    //             handleEditorClick();
+    //             break;
+    //     }
+    // }, [googleSearchSelectedWord, defineSelectedWord, handleEditorClick]);
+
+    // const handleContextMenuOpen = () => {
+    //     if (!quillRef.current) return;
+    //     const quill = quillRef.current.getEditor();
+
+    //     // Get the clicked position relative to the editor
+    //     // Get the text position from the coordinates
+    //     const textPosition = quill.getSelection(true);
+    //     if (!textPosition) return;
+
+    //     // Find word boundaries
+    //     const text = quill.getText();
+    //     let wordStart = textPosition.index;
+    //     let wordEnd = textPosition.index;
+
+    //     // Find start of word
+    //     while (wordStart > 0 && !/\s/.test(text[wordStart - 1])) {
+    //         wordStart--;
+    //     }
+
+    //     // Find end of word
+    //     while (wordEnd < text.length && !/\s/.test(text[wordEnd])) {
+    //         wordEnd++;
+    //     }
+
+    //     // Select the word
+    //     quill.setSelection(wordStart, wordEnd - wordStart);
+    // }
+
     return (
         <>
+            {/* <ContextMenu>
+                <ContextMenuTrigger className="w-full h-full" onContextMenu={handleContextMenuOpen}> */}
             <ReactQuill
                 ref={quillRef}
                 theme='snow'
                 modules={quillModules}
                 value={{ ops: content }}
                 onChange={handleContentChange}
-                formats={['size']}
+                formats={['size', 'background', 'font', 'color']}
                 className='h-full'
-                readOnly={(orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === "REVIEWER_ASSIGNED")}
+                readOnly={(orderDetails.status === 'FINALIZER_ASSIGNED')}
+                onChangeSelection={setSelectionHandler}
             />
+            {/* </ContextMenuTrigger>
+                <ContextMenuContent>
+                    <ContextMenuItem onSelect={() => handleContextMenuSelect('play-word')}>
+                        Play Word
+                    </ContextMenuItem>
+                    <ContextMenuItem onSelect={() => handleContextMenuSelect('google')}>
+                        Google Search
+                    </ContextMenuItem>
+                    <ContextMenuItem onSelect={() => handleContextMenuSelect('define')}>
+                        Define Word
+                    </ContextMenuItem>
+                </ContextMenuContent>
+            </ContextMenu> */}
 
         </>
 

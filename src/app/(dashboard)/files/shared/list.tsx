@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
@@ -8,6 +9,8 @@ import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
 import { CheckAndDownload } from '../delivered/components/check-download'
+import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
+import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
 import { getFiles } from '@/app/actions/share-file/get-files'
 import { removeSharedFiles } from '@/app/actions/share-file/remove'
 import {
@@ -59,6 +62,8 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
   const [selectedFile, setSeletedFile] = useState<{
     fileId: string
     name: string
+    orderId: string
+    orderType: string
   } | null>(null)
   const [sharedFiles, setSharedFiles] = useState<File[] | null>(files)
   const [isLoading, setIsLoading] = useState(false)
@@ -67,6 +72,11 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
     useState<boolean>(false)
 
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [signedUrls, setSignedUrls] = useState({
+    txtSignedUrl: '',
+    cfDocxSignedUrl: '',
+  })
+  const [loadingOrder, setLoadingOrder] = useState<Record<string, boolean>>({})
 
   const fetchSharedFiles = async (showLoader = false) => {
     if (showLoader) {
@@ -78,7 +88,7 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
     try {
       const response = await getFiles()
       if (response.success && 'data' in response) {
-        setSharedFiles(response.data ?? [])
+        setSharedFiles((response.data as File[]) ?? [])
         setError(null)
       } else {
         setSharedFiles([])
@@ -96,6 +106,26 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
 
   const handleSelectedRowsChange = (selectedRowsData: File[]) => {
     setSelectedFiles(selectedRowsData.map((file) => file.fileId.toString()))
+  }
+
+  const handleCheckAndDownload = async (fileId: string) => {
+    try {
+      setLoadingOrder((prev) => ({ ...prev, [fileId]: true }))
+      const txtRes = await getFileTxtSignedUrl(fileId)
+      const docxRes = await getFileDocxSignedUrl(
+        fileId,
+        'CUSTOM_FORMATTING_DOC'
+      )
+      setSignedUrls({
+        txtSignedUrl: txtRes.signedUrl || '',
+        cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
+      })
+      setLoadingOrder((prev) => ({ ...prev, [fileId]: false }))
+      setToggleCheckAndDownload(true)
+    } catch (error) {
+      toast.error('Error downloading files')
+      setLoadingOrder((prev) => ({ ...prev, [fileId]: false }))
+    }
   }
 
   if (isLoading) {
@@ -206,19 +236,32 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
       enableHiding: false,
       cell: ({ row }) => (
         <div className='flex items-center'>
-          <Button
-            variant='order'
-            className='format-button w-[140px]'
-            onClick={() => {
-              setSeletedFile({
-                fileId: row.original.fileId,
-                name: row.original.filename,
-              })
-              setToggleCheckAndDownload(true)
-            }}
-          >
-            Check & Download
-          </Button>
+          {loadingOrder[row.original.id] ? (
+            <Button
+              disabled
+              variant='order'
+              className='format-button w-[140px]'
+            >
+              Please wait
+              <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+            </Button>
+          ) : (
+            <Button
+              variant='order'
+              className='format-button w-[140px]'
+              onClick={() => {
+                setSeletedFile({
+                  fileId: row.original.fileId,
+                  name: row.original.filename,
+                  orderId: row.original.orderId.toString(),
+                  orderType: row.original.orderType,
+                })
+                handleCheckAndDownload(row.original.fileId.toString())
+              }}
+            >
+              Check & Download
+            </Button>
+          )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -339,20 +382,17 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
         />
       </div>
 
-      {sharedFiles?.length && toggleCheckAndDownload && (
+      {selectedFile && toggleCheckAndDownload && (
         <CheckAndDownload
-          selected={selectedFile?.fileId ?? ''}
-          files={sharedFiles?.map((file) => ({
-            id: file.fileId,
-            filename: file.filename,
-            date: file.deliveredTs,
-            duration: file.duration,
-            orderType: file.orderType,
-          }))}
+          id={selectedFile?.fileId ?? ''}
+          orderId={selectedFile?.orderId || ''}
+          orderType={selectedFile?.orderType || ''}
+          filename={selectedFile?.name || ''}
           toggleCheckAndDownload={toggleCheckAndDownload}
           setToggleCheckAndDownload={setToggleCheckAndDownload}
           session={session as Session}
-          orderId=''
+          txtSignedUrl={signedUrls.txtSignedUrl || ''}
+          cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
         />
       )}
       <AlertDialog open={openDeleteDialog}>

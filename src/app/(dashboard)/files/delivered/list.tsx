@@ -15,6 +15,9 @@ import ShareFileDialog from './components/share-file'
 import { orderController } from './controllers'
 import { downloadMp3 } from '@/app/actions/file/download-mp3'
 import { refetchFiles } from '@/app/actions/files'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
+import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
+import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
 import RenameFileDialog from '@/components/file-rename-dialog'
@@ -58,6 +61,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
     fileId: string
     name: string
     orderId: string
+    orderType: string
   } | null>(null)
   const [playing, setPlaying] = useState<Record<string, boolean>>({})
 
@@ -74,11 +78,21 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
   const [openShareFileDialog, setOpenShareFileDialog] = useState(false)
   const [fileIds, setFileIds] = useState<string[]>([])
   const [filenames, setFilenames] = useState<string[]>([])
-
-  useEffect(() => {
+  const [signedUrls, setSignedUrls] = useState({
+    txtSignedUrl: '',
+    cfDocxSignedUrl: '',
+  })
+  const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
+    const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
+    if (res.success && res.signedUrl) {
+      setCurrentlyPlayingFileUrl({ [fileId]: res.signedUrl })
+    }
+  }
+
+  useEffect(() => {
+    setAudioUrl()
   }, [playing])
 
   const fetchDeliveredFiles = async (showLoader = false) => {
@@ -90,16 +104,22 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
 
     try {
       const updatedFiles = await refetchFiles('delivered')
-      const files =
-        updatedFiles?.map((file: any) => ({
-          id: file.fileId,
-          filename: file.filename,
-          date: file.Orders[0]?.deliveredTs,
-          duration: Number(file.duration),
-          orderType: file.Orders[0]?.orderType,
-          orderId: file.Orders[0]?.id,
-          uploadedByUser: file.uploadedByUser,
-        })) || []
+      const files: File[] = []
+
+      if (updatedFiles) {
+        for (const file of updatedFiles as any[]) {
+          files.push({
+            id: file.fileId,
+            filename: file.filename,
+            date: file.Orders[0]?.deliveredTs,
+            duration: Number(file.duration),
+            orderType: file.Orders[0]?.orderType,
+            orderId: file.Orders[0]?.id,
+            uploadedByUser: file.uploadedByUser,
+          })
+        }
+      }
+
       setDeliveredFiles(files)
       setError(null)
     } catch (err) {
@@ -160,6 +180,26 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
       const errorToastId = toast.error(`Error` + err)
       toast.dismiss(errorToastId)
       console.log(err)
+    }
+  }
+
+  const handleCheckAndDownload = async (fileId: string) => {
+    try {
+      setLoadingOrder((prev) => ({ ...prev, [fileId]: true }))
+      const txtRes = await getFileTxtSignedUrl(fileId)
+      const docxRes = await getFileDocxSignedUrl(
+        fileId,
+        'CUSTOM_FORMATTING_DOC'
+      )
+      setSignedUrls({
+        txtSignedUrl: txtRes.signedUrl || '',
+        cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
+      })
+      setLoadingOrder((prev) => ({ ...prev, [fileId]: false }))
+      setToggleCheckAndDownload(true)
+    } catch (error) {
+      toast.error('Error downloading files')
+      setLoadingOrder((prev) => ({ ...prev, [fileId]: false }))
     }
   }
 
@@ -303,12 +343,13 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
             variant='order'
             className='format-button'
             onClick={() => {
-              setToggleCheckAndDownload(true)
               setSeletedFile({
                 fileId: row?.original?.id,
                 name: row?.original?.filename,
                 orderId: row?.original?.orderId,
+                orderType: row?.original?.orderType,
               })
+              handleCheckAndDownload(row.original.id)
             }}
           >
             Check & Download
@@ -349,6 +390,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   fileId: row.original.id,
                   name: row.original.filename,
                   orderId: row.original.orderId,
+                  orderType: row.original.orderType,
                 })
                 setOpenRenameDialog(true)
               }}
@@ -362,6 +404,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   fileId: row?.original?.id,
                   name: row?.original?.filename,
                   orderId: row?.original?.orderId,
+                  orderType: row?.original?.orderType,
                 })
               }}
             >
@@ -393,6 +436,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   fileId: row?.original?.id,
                   name: row?.original.filename,
                   orderId: row?.original.orderId,
+                  orderType: row?.original.orderType,
                 })
               }}
             >
@@ -512,14 +556,17 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
           columns={columns}
           onSelectedRowsChange={handleSelectedRowsChange}
         />
-        {selectedFile && toggleCheckAndDownload && deliveredFiles?.length && (
+        {selectedFile && toggleCheckAndDownload && (
           <CheckAndDownload
-            selected={selectedFile.fileId || ''}
+            id={selectedFile.fileId || ''}
             orderId={selectedFile.orderId || ''}
-            files={deliveredFiles}
+            orderType={selectedFile.orderType || ''}
+            filename={selectedFile.name || ''}
             toggleCheckAndDownload={toggleCheckAndDownload}
             setToggleCheckAndDownload={setToggleCheckAndDownload}
             session={session as Session}
+            txtSignedUrl={signedUrls.txtSignedUrl || ''}
+            cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
           />
         )}
       </div>

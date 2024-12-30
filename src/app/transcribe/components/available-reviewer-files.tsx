@@ -10,6 +10,7 @@ import { DataTable } from './data-table'
 import { determinePwerLevel } from './utils'
 import { assignFileToReviewer } from '@/app/actions/cf/assign'
 import { getAvailableFiles } from '@/app/actions/cf/available-files'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -25,6 +26,7 @@ import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
 interface File extends BaseTranscriberFile {
   cf_cost: number
   cf_rate: number
+  orgName: string
 }
 
 interface Props {
@@ -45,10 +47,17 @@ export default function AvailableFilesPage({ changeTab }: Props) {
   const pathname = usePathname()
   const isLegalPage = pathname === '/transcribe/legal-cf-reviewer'
 
-  useEffect(() => {
+  const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
-    setCurrentlyPlayingFileUrl({ [fileId]: `/api/editor/get-audio/${fileId}` })
+    const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
+    if (res.success && res.signedUrl) {
+      setCurrentlyPlayingFileUrl({ [fileId]: res.signedUrl })
+    }
+  }
+
+  useEffect(() => {
+    setAudioUrl()
   }, [playing])
 
   const fetchAvailableFiles = async (showLoader = false) => {
@@ -94,6 +103,7 @@ export default function AvailableFilesPage({ changeTab }: Props) {
             diff,
             rate: order.cf_rate,
             instructions: order.instructions,
+            orgName: order.orgName,
           }
         })
         setAvailableFiles((orders as any) ?? [])
@@ -217,6 +227,14 @@ export default function AvailableFilesPage({ changeTab }: Props) {
                   <p>Priority File</p>
                 </TooltipContent>
               </Tooltip>
+            )}
+            {row.original.orgName.length > 0 && (
+              <Badge
+                variant='outline'
+                className='font-semibold text-[10px] text-green-600'
+              >
+                {row.original.orgName}
+              </Badge>
             )}
           </div>
         </div>

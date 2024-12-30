@@ -8,6 +8,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
+import getOrgName from '@/utils/getOrgName'
 
 export async function getAssignedQCFiles(type?: string | null) {
   try {
@@ -85,8 +86,10 @@ export async function getAssignedQCFiles(type?: string | null) {
         file.order,
         transcriberId
       )
+      const orgName = await getOrgName(file.order.userId)
       file.order.qc_cost = transcriberCost.cost
       file.order.rate = transcriberCost.rate
+      file.order.orgName = orgName
     }
 
     logger.info(

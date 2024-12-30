@@ -1,9 +1,10 @@
 'use client'
 
-import { ReloadIcon } from '@radix-ui/react-icons'
+import { Cross1Icon, ReloadIcon } from '@radix-ui/react-icons'
 import { Change, diffWords } from 'diff'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { Op } from 'quill/core'
 import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
@@ -63,6 +64,7 @@ export type OrderDetails = {
   userId: string
   remainingTime: string
   duration: string
+  LLMDone: boolean
 }
 
 export type UploadFilesType = {
@@ -85,6 +87,7 @@ function EditorPage() {
     userId: '',
     remainingTime: '',
     duration: '',
+    LLMDone: false,
   })
   const [cfd, setCfd] = useState('')
   const [notes, setNotes] = useState('')
@@ -122,19 +125,33 @@ function EditorPage() {
   const [audioDuration, setAudioDuration] = useState(1)
   const [quillRef, setQuillRef] = useState<React.RefObject<ReactQuill>>()
 
-  const [content, setContent] = useState<{ insert: string }[]>([])
+  const [content, setContent] = useState<Op[]>([])
   const [lines, setLines] = useState<LineData[]>([])
   const [findText, setFindText] = useState('')
   const [replaceText, setReplaceText] = useState('')
   const [matchCase, setMatchCase] = useState(false)
   const [lastSearchIndex, setLastSearchIndex] = useState<number>(-1)
   const [findAndReplaceOpen, setFindAndReplaceOpen] = useState(false)
+  const [matchCount, setMatchCount] = useState(0)
+  const [matchSelection, setMatchSelection] = useState(false)
   const findInputRef = useRef<HTMLInputElement>(null)
+  const [selection, setSelection] = useState<{
+    index: number
+    length: number
+  } | null>(null)
   interface PlayerEvent {
     t: number
     s: number
   }
 
+  const setSelectionHandler = () => {
+    const quill = quillRef?.current?.getEditor()
+    if (!quill) return
+    const range = quill.getSelection()
+    if (range) {
+      setSelection({ index: range.index, length: range.length })
+    }
+  }
   const [playerEvents, setPlayerEvents] = useState<PlayerEvent[]>([])
 
   const isActive = usePreventMultipleTabs((params?.fileId as string) || '')
@@ -148,9 +165,28 @@ function EditorPage() {
     [quillRef]
   )
 
+  const countMatches = (searchText: string) => {
+    if (!quillRef?.current || !searchText) return 0
+    const quill = quillRef.current.getEditor()
+    let text = quill.getText()
+    if (selection && selection.length > 0 && matchSelection) {
+      text = text.slice(selection.index, selection.index + selection.length)
+    }
+
+    if (matchCase) {
+      return (text.match(new RegExp(searchText, 'g')) || []).length
+    } else {
+      return (text.match(new RegExp(searchText, 'gi')) || []).length
+    }
+  }
+
   const replaceTextInstance = (
     findText: string,
     replaceText: string,
+    selection: {
+      index: number
+      length: number
+    } | null,
     replaceAll = false
   ) => {
     if (!quillRef?.current) return
@@ -161,11 +197,16 @@ function EditorPage() {
       replaceText,
       replaceAll,
       matchCase,
-      toast
+      toast,
+      selection,
+      matchSelection
     )
   }
 
-  const searchAndSelectInstance = (searchText: string) => {
+  const searchAndSelectInstance = (searchText: string, selection: {
+    index: number
+    length: number
+  } | null) => {
     if (!quillRef?.current) return
     const quill = quillRef.current.getEditor()
     searchAndSelect(
@@ -174,12 +215,36 @@ function EditorPage() {
       matchCase,
       lastSearchIndex,
       setLastSearchIndex,
-      toast
+      toast,
+      selection,
+      setSelection,
+      matchSelection
+    )
+  }
+
+  const searchAndSelectReverseInstance = (searchText: string, selection: {
+    index: number
+    length: number
+  } | null) => {
+    if (!quillRef?.current) return
+    const quill = quillRef.current.getEditor()
+    searchAndSelect(
+      quill,
+      searchText,
+      matchCase,
+      lastSearchIndex,
+      setLastSearchIndex,
+      toast,
+      selection,
+      setSelection,
+      matchSelection,
+      true
     )
   }
 
   const toggleFindAndReplace = () => {
     setFindAndReplaceOpen(!findAndReplaceOpen)
+    setSelectionHandler()
     setTimeout(() => {
       if (findInputRef.current) {
         findInputRef.current.focus()
@@ -193,33 +258,33 @@ function EditorPage() {
         if (!findAndReplaceOpen) {
           toggleFindAndReplace()
         } else if (findText) {
-          searchAndSelectInstance(findText)
+          searchAndSelectInstance(findText, selection)
         }
       },
       findThePreviousOccurrenceOfString: () => {
         if (!findAndReplaceOpen) {
           toggleFindAndReplace()
         } else if (findText) {
-          searchAndSelectInstance(findText)
+          searchAndSelectInstance(findText, selection)
         }
       },
       replaceNextOccurrenceOfString: () => {
         if (!findAndReplaceOpen) {
           toggleFindAndReplace()
         } else if (findText && replaceText) {
-          replaceTextInstance(findText, replaceText)
+          replaceTextInstance(findText, replaceText, selection)
         }
       },
       replaceAllOccurrencesOfString: () => {
         if (!findAndReplaceOpen) {
           toggleFindAndReplace()
         } else if (findText && replaceText) {
-          replaceTextInstance(findText, replaceText, true)
+          replaceTextInstance(findText, replaceText, selection, true)
         }
       },
       repeatLastFind: () => {
         if (findText) {
-          searchAndSelectInstance(findText)
+          searchAndSelectInstance(findText, selection)
         }
       },
 
@@ -284,16 +349,13 @@ function EditorPage() {
       setCtms,
       setPlayerEvents,
     })
-
-    const file = localStorage.getItem(orderDetails?.fileId as string)
-    if (file) {
-      setNotes(JSON.parse(file).notes)
-    }
   }, [])
 
   const handleTabChange = () => {
-    //TODO: Fix this
-    const diff = diffWords(transcript, content[0].insert)
+    const contentText = content.map(op =>
+      typeof op.insert === 'string' ? op.insert : ''
+    ).join('')
+    const diff = diffWords(transcript, contentText)
     setDiff(diff)
   }
 
@@ -367,6 +429,11 @@ function EditorPage() {
     if (step !== 'QC' && orderDetails.orderId) {
       getEditorModeOptions()
     }
+
+    const file = localStorage.getItem(orderDetails?.fileId as string)
+    if (file) {
+      setNotes(JSON.parse(file).notes)
+    }
   }, [orderDetails])
 
   useEffect(() => {
@@ -428,11 +495,14 @@ function EditorPage() {
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value
     setNotes(text)
+
+    localStorage.setItem(orderDetails.fileId, JSON.stringify({ notes: text }))
   }
 
   const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value
     setFindText(text)
+    setMatchCount(countMatches(text))
   }
 
   const handleReplaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -441,21 +511,31 @@ function EditorPage() {
   }
 
   const findHandler = () => {
-    searchAndSelectInstance(findText)
+    searchAndSelectInstance(findText, selection)
+  }
+
+  const findPreviousHandler = () => {
+    searchAndSelectReverseInstance(findText, selection)
   }
 
   const replaceOneHandler = () => {
-    replaceTextInstance(findText, replaceText)
+    replaceTextInstance(findText, replaceText, selection)
+    setMatchCount(countMatches(findText))
   }
 
   const replaceAllHandler = () => {
-    replaceTextInstance(findText, replaceText, true)
+    replaceTextInstance(findText, replaceText, selection, true)
+    setMatchCount(countMatches(findText))
   }
+
+  useEffect(() => {
+    setMatchCount(countMatches(findText))
+  }, [matchSelection, matchCase])
 
   return (
     <div className='bg-[#F7F5FF] h-screen flex flex-col overflow-hidden'>
-      <div className='mx-2'>
-        <div className='flex justify-between bg-white rounded-t-2xl'>
+      <div className="mx-2 mt-2">
+        <div className='flex justify-between bg-white rounded-t-lg'>
           <p className='font-semibold px-2'>{orderDetails.filename}</p>
           {session?.user?.role !== 'CUSTOMER' && (
             <span
@@ -510,7 +590,7 @@ function EditorPage() {
                       defaultValue='transcribe'
                       className='h-full'
                     >
-                      <div className='flex bg-white border border-gray-200 rounded-t-2xl px-4 text-md font-medium h-12'>
+                      <div className='flex bg-white border border-gray-200 rounded-t-lg text-md font-medium h-12'>
                         <TabsList>
                           <TabsTrigger className='text-base' value='transcribe'>
                             Transcribe
@@ -534,6 +614,7 @@ function EditorPage() {
                         audioPlayer={audioPlayer}
                         audioDuration={audioDuration}
                         getQuillRef={getQuillRef}
+                        setSelectionHandler={setSelectionHandler}
                       />
 
                       <DiffTabComponent diff={diff} />
@@ -561,66 +642,96 @@ function EditorPage() {
                   )}
                 </div>
                 <div className='w-1/5'>
-                  <div className='fixed w-[19%] h-[84%] bg-white ml-2 overflow-auto rounded-lg overflow-y-hidden border'>
-                    <div className='flex flex-col h-full'>
-                      <div className={`transition-all duration-300 ease-in-out ${findAndReplaceOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}>
-                        <div className={`transition-all duration-300 ease-in-out transform ${findAndReplaceOpen ? 'translate-y-0' : '-translate-y-4'}`}>
-                          <div className='flex bg-white border-b border-gray-200 text-md font-medium h-12'>
-                            <div className='flex items-center px-4 text-base'>Find & Replace</div>
+                  <div className={`fixed w-[19%] ${findAndReplaceOpen ? 'h-[83%]' : 'h-[84%]'} flex flex-col ${findAndReplaceOpen ? 'gap-2' : ''} ml-2`}>
+                    <div
+                      className={`bg-white rounded-lg border overflow-hidden transition-all duration-200 ease-in-out ${findAndReplaceOpen ? 'opacity-100 translate-y-0 h-[49%]' : 'opacity-0 -translate-y-4 pointer-events-none h-0 m-0'}`}>
+                      <div className='px-4 py-3 font-medium text-base border-b flex justify-between items-center'>
+                        <span>Find & Replace</span>
+                        <button
+                          onClick={() => setFindAndReplaceOpen(false)}
+                          className="p-1 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                        >
+                          <Cross1Icon className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className='px-4 py-8 space-y-4'>
+                        <div className="relative">
+                          <Input
+                            placeholder='Find...'
+                            value={findText}
+                            onChange={handleFindChange}
+                            ref={findInputRef}
+                          />
+                          {findText && (
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                              {matchCount} matches
+                            </span>
+                          )}
+                        </div>
+                        <Input
+                          placeholder='Replace with...'
+                          value={replaceText}
+                          onChange={handleReplaceChange}
+                        />
+                        <div className='flex gap-4'>
+                          <Label className='flex items-center space-x-2'>
+                            <Checkbox
+                              checked={matchCase}
+                              onCheckedChange={(checked) => setMatchCase(checked === true)}
+                            />
+                            <span>Match case</span>
+                          </Label>
+                          <Label className='flex items-center space-x-2'>
+                            <Checkbox
+                              checked={matchSelection}
+                              onCheckedChange={(checked) => setMatchSelection(checked === true)}
+                            />
+                            <span>Selection</span>
+                          </Label>
+                        </div>
+                        <div className="flex flex-col w-full gap-2">
+                          <div className='inline-flex w-full rounded-md' role="group">
+                            <button
+                              onClick={findPreviousHandler}
+                              className="flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-l-3xl rounded-r-none border-r-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                            >
+                              Previous
+                            </button>
+                            <button
+                              onClick={() => {
+                                findHandler();
+                              }}
+                              className="flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-r-3xl rounded-l-none border-l border-white/20 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                            >
+                              Next
+                            </button>
                           </div>
-                          <div className='space-y-4 p-4'>
-                            <Input
-                              placeholder='Find...'
-                              value={findText}
-                              onChange={handleFindChange}
-                              ref={findInputRef}
-                            />
-                            <Input
-                              placeholder='Replace with...'
-                              value={replaceText}
-                              onChange={handleReplaceChange}
-                            />
-                            <Label className='flex items-center space-x-2 mb-4'>
-                              <Checkbox
-                                checked={matchCase}
-                                onCheckedChange={(checked) => setMatchCase(checked === true)}
-                              />
-                              <span>Match case</span>
-                            </Label>
-                            <div className='inline-flex w-full rounded-md' role="group">
-                              <button 
-                                onClick={findHandler}
-                                className="inline-flex items-center justify-center whitespace-nowrap rounded-l-md rounded-r-none border-r-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
-                              >
-                                Find
-                              </button>
-                              <button 
-                                onClick={replaceOneHandler}
-                                className="inline-flex items-center justify-center whitespace-nowrap rounded-none border-r-0 border-l border-white/20 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
-                              >
-                                Replace
-                              </button>
-                              <button 
-                                onClick={replaceAllHandler}
-                                className="inline-flex items-center justify-center whitespace-nowrap rounded-r-md rounded-l-none border-l border-white/20 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
-                              >
-                                Replace All
-                              </button>
-                            </div>
+                          <div className='inline-flex w-full rounded-md' role="group">
+                            <button
+                              onClick={replaceOneHandler}
+                              className="flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-l-3xl rounded-r-none border-r-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                            >
+                              Replace
+                            </button>
+                            <button
+                              onClick={replaceAllHandler}
+                              className="flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-r-3xl rounded-l-none border-l border-white/20 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                            >
+                              Replace All
+                            </button>
                           </div>
                         </div>
                       </div>
+                    </div>
 
-                      <div className='flex-1 flex flex-col transition-all duration-300 ease-in-out'>
-                        <div className='flex bg-white border-b border-gray-200 text-md font-medium h-12'>
-                          <div className='flex items-center px-4 text-base'>Notes</div>
-                        </div>
+                    <div className={`bg-white rounded-lg border overflow-hidden transition-all duration-200 ease-in-out ${findAndReplaceOpen ? 'h-[49%]' : 'h-[98%]'}`}>
+                      <div className='px-4 font-medium h-12 text-base border-b flex items-center'>
+                        Notes
+                      </div>
+                      <div className='pt-4 pb-6 px-1 h-[calc(100%-48px)]'>
                         <Textarea
                           placeholder='Start typing...'
-                          className={`resize-none w-full border-none outline-none focus:outline-none focus-visible:ring-0 shadow-none p-4 transition-all duration-300 ease-in-out ${findAndReplaceOpen
-                              ? 'h-[calc(100vh-650px)]'
-                              : 'h-[calc(100vh-250px)]'
-                            }`}
+                          className='resize-none h-full w-full border-none outline-none focus:outline-none focus-visible:ring-0 shadow-none mb-2'
                           value={notes}
                           onChange={handleNotesChange}
                         />

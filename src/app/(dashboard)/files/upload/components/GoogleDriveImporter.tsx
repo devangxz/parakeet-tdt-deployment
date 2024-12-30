@@ -43,7 +43,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
     isUploading,
     setIsUploading,
   } = useUpload()
-  const { isGoogleDriveServiceReady } = useImportService()
+  const { isGoogleDriveServiceReady, googleDriveInitError } = useImportService()
   const [isPickerLoading, setIsPickerLoading] = useState(false)
 
   const initializeMultiPartUpload = async (
@@ -601,16 +601,17 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             className='mt-4 px-5 py-2 bg-[#00ac47] rounded-[32px] text-white font-medium border border-[#00ac47] hover:bg-[#009940] transition-colors'
           >
             <div className='flex items-center justify-center'>
-              {(!isGoogleDriveServiceReady || isPickerLoading) && (
+              {isPickerLoading && (
                 <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
               )}
-              <span>
-                {!isGoogleDriveServiceReady
-                  ? 'Initializing...'
-                  : 'Select from Google Drive'}
-              </span>
+              <span>Select from Google Drive</span>
             </div>
           </button>
+          {googleDriveInitError && (
+            <p className='text-xs text-red-500'>
+              Failed to connect to Google Drive. Please try again later.
+            </p>
+          )}
         </div>
       </div>
     </div>

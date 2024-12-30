@@ -1,0 +1,47 @@
+# Delete File
+
+Delete a file from the system.
+
+## Endpoint
+
+```http
+DELETE ${baseUrl}/files
+```
+
+## Query Parameters
+
+| Parameter | Type   | Description              |
+| --------- | ------ | ------------------------ |
+| fileId    | string | The ID of file to delete |
+
+## Response
+
+```typescript
+interface DeleteFileResponse {
+  success: boolean
+  message: string
+}
+```
+
+## Example Request
+
+```typescript
+const response = await fetch('${baseUrl}/files?fileId=abc123', {
+  method: 'DELETE',
+  headers: {
+    Authorization: 'Basic YOUR_API_KEY',
+  },
+})
+
+const data = await response.json()
+```
+
+## Error Codes
+
+| Status Code | Description               |
+| ----------- | ------------------------- |
+| 200         | File Deleted Successfully |
+| 401         | Unauthorized              |
+| 403         | Forbidden                 |
+| 404         | File Not Found            |
+| 500         | Server Error              |

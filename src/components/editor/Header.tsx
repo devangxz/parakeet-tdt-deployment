@@ -20,6 +20,9 @@ import {
   TrackNextIcon,
   TimerIcon,
   MagnifyingGlassIcon,
+  SpaceEvenlyVerticallyIcon,
+  PersonIcon,
+  Pencil2Icon,
 } from '@radix-ui/react-icons'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
@@ -63,12 +66,15 @@ import {
   SelectValue,
 } from '../ui/select'
 import { Textarea } from '../ui/textarea'
+import { downloadBlankDocxAction } from '@/app/actions/editor/download-docx'
 import { getFormattingOptionsAction } from '@/app/actions/editor/get-formatting-options'
 import { getSpeakerNamesAction } from '@/app/actions/editor/get-speaker-names'
 import { requestReReviewAction } from '@/app/actions/editor/re-review'
 import { requestExtensionAction } from '@/app/actions/editor/request-extension'
 import { setFormattingOptionsAction } from '@/app/actions/editor/set-formatting-options'
 import { updateSpeakerNameAction } from '@/app/actions/editor/update-speaker-name'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
+import { getTextFile } from '@/app/actions/get-text-file'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import {
   TooltipProvider,
@@ -87,7 +93,6 @@ import DefaultShortcuts, {
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   adjustTimestamps,
-  downloadBlankDocx,
   downloadMP3,
   getFrequentTermsHandler,
   handleSave,
@@ -149,7 +154,7 @@ const createShortcutControls = (
   },
   decreasePlaybackSpeed: () => {
     if (audioPlayer.current) {
-      audioPlayer.current.playbackRate -= 0.1
+      audioPlayer.current.playbackRate = Math.max(0.1, audioPlayer.current.playbackRate - 0.1)
     }
   },
 })
@@ -275,8 +280,14 @@ export default function Header({
   })
   const [step, setStep] = useState<string>('')
   const [cfd, setCfd] = useState('')
-  const [downloadableType, setDownloadableType] = useState('marking')
+  const [downloadableType, setDownloadableType] = useState('no-marking')
+  const [asrFileUrl, setAsrFileUrl] = useState('')
+  const [qcFileUrl, setQcFileUrl] = useState('')
   const [reReviewComment, setReReviewComment] = useState('')
+  const [audioUrl, setAudioUrl] = useState('')
+  const [videoUrl, setVideoUrl] = useState('')
+  const [docxUrl, setDocxUrl] = useState('')
+  const [speed, setSpeed] = useState(100)
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -286,6 +297,17 @@ export default function Header({
       setSelection({ index: range.index, length: range.length })
     } else {
       setSelection(null)
+    }
+  }
+
+  const getDocxUrl = async () => {
+    const response = await downloadBlankDocxAction(
+      orderDetails.fileId,
+      downloadableType,
+    )
+
+    if (response.success && response.url) {
+      setDocxUrl(response.url)
     }
   }
 
@@ -310,6 +332,10 @@ export default function Header({
       } else {
         currentStep = 'QC'
       }
+    }
+
+    if (orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === 'PRE_DELIVERED') {
+      getDocxUrl()
     }
 
     setStep(currentStep)
@@ -404,9 +430,23 @@ export default function Header({
     }
   }
 
+  const fetchAudioUrl = async () => {
+    try {
+      const { success, signedUrl } = await getSignedUrlAction(`${orderDetails.fileId}.mp3`, 14400) // 4 hours
+      if (success && signedUrl) {
+        setAudioUrl(signedUrl)
+      } else {
+        throw new Error('Failed to fetch audio file')
+      }
+    } catch (error) {
+      toast.error('Failed to fetch audio file')
+    }
+  }
+
   useEffect(() => {
     if (!orderDetails.fileId) return
     fetchWaveform()
+    fetchAudioUrl()
   }, [orderDetails.fileId])
 
   useEffect(() => {
@@ -414,6 +454,7 @@ export default function Header({
     if (!audio) return
     const handleLoadedMetadata = () => {
       setAudioDuration(audio.duration)
+      setSpeed(audio.playbackRate * 100)
       if (getAudioPlayer) getAudioPlayer(audio)
     }
     audio.addEventListener('loadedmetadata', handleLoadedMetadata)
@@ -583,8 +624,21 @@ export default function Header({
     }
   }, [audioPlayer, videoRef, videoPlayerOpen])
 
-  const toggleVideo = () => {
-    setVideoPlayerOpen(!videoPlayerOpen)
+  const toggleVideo = async () => {
+    try {
+      if (!videoUrl) {
+        const { success, signedUrl } = await getSignedUrlAction(`${orderDetails.fileId}.mp4`, 3600)
+        if (success && signedUrl) {
+          setVideoUrl(signedUrl)
+        } else {
+          throw new Error('Failed to fetch video file')
+        }
+
+      }
+      setVideoPlayerOpen(!videoPlayerOpen)
+    } catch (error) {
+      toast.error('Failed to fetch video file')
+    }
   }
 
   const handleAutoCapitalize = useCallback(
@@ -862,6 +916,104 @@ export default function Header({
     )
   }, [audioPlayer, quillRef])
 
+  useEffect(() => {
+    const audio = audioPlayer.current
+    if (!audio) return
+
+    const handleRateChange = () => {
+      setSpeed(Math.round(audio.playbackRate * 100))
+    }
+
+    audio.addEventListener('ratechange', handleRateChange)
+
+    return () => {
+      audio.removeEventListener('ratechange', handleRateChange)
+    }
+  }, [audioPlayer])
+
+  const capitalizeWord = () => {
+    if (quillRef?.current) {
+      const quill = quillRef.current.getEditor();
+      const text = quill.getText();
+      const modifiedText = text.replace(/\.\s+([a-z])/g, (match, letter) => `. ${letter.toUpperCase()}`);
+      quill.setText(modifiedText);
+    }
+  }
+  const handleDropdownMenuOpenChange = async (open: boolean) => {
+    if (open) {
+      const asrFileUrl = await getTextFile(orderDetails.fileId, 'ASR')
+      setAsrFileUrl(asrFileUrl?.signedUrl || '')
+      const qcFileUrl = await getTextFile(orderDetails.fileId, 'QC')
+      setQcFileUrl(qcFileUrl?.signedUrl || '')
+    }
+  }
+
+  const markSection = () => {
+    if (!quillRef?.current) return;
+
+    const quill = quillRef.current.getEditor();
+    const range = quill.getSelection();
+
+    if (!range) {
+      toast.error('Please select the heading to mark.');
+      return;
+    }
+
+    const selectedText = quill.getText(range.index, range.length).trim();
+
+    const validHeadings = ['EXAMINATION', 'PROCEEDINGS', 'EXAMINATION-CONTINUES', 'FURTHER EXAMINATION'];
+
+    if (!validHeadings.includes(selectedText.toUpperCase())) {
+      toast.error('Only Proceedings/Examination can be marked.');
+      return;
+    }
+
+    const nextChar = quill.getText(range.index + range.length, 1);
+    const wrappedText = `[--${selectedText.toUpperCase()}--]${nextChar === '\n' ? '\n' : '\n\n'}`;
+    quill.deleteText(range.index, range.length);
+    quill.insertText(range.index, wrappedText);
+
+    toast.success(`Marked as start of ${selectedText}`);
+  }
+
+  const markExaminee = () => {
+    if (!quillRef?.current) return;
+
+    const quill = quillRef.current.getEditor();
+    const range = quill.getSelection();
+
+    if (!range) {
+      toast.error('Please select the text to mark.');
+      return;
+    }
+
+    const selectedText = quill.getText(range.index, range.length);
+    const wrappedText = `[--EXAMINEE--${selectedText.toUpperCase()}--EXAMINEE--]`;
+
+    quill.deleteText(range.index, range.length);
+    quill.insertText(range.index, wrappedText);
+
+    toast.success('Marked as continuation of examination');
+  }
+
+  const insertSwearInLine = () => {
+    if (!quillRef?.current) return;
+
+    const quill = quillRef.current.getEditor();
+    const range = quill.getSelection();
+
+    if (!range) {
+      toast.error('Please place cursor where you want to insert the text');
+      return;
+    }
+
+    const textToInsert = "WHEREUPON, [--EXAMINEE--<replace_with_examinee_name>--EXAMINEE--] having been called as a witness, being duly sworn by the notary public present, testified as follows:";
+
+    quill.insertText(range.index, textToInsert);
+
+    toast.success('Inserted swear in line text');
+  }
+
   return (
     <div className='min-h-24 relative mx-2'>
       {!isPlayerLoaded && (
@@ -915,11 +1067,11 @@ export default function Header({
         </div>
       </div>
 
-      <div className='h-1/2 bg-white border border-gray-200 px-3 flex flex-col justify-between rounded-b-2xl'>
+      <div className='h-1/2 bg-white border border-gray-200 px-1 flex flex-col justify-between rounded-b-lg'>
         <audio
           ref={audioPlayer}
           className='hidden'
-          src={`/api/editor/get-audio/${orderDetails.fileId}`}
+          src={`${audioUrl}`}
         ></audio>
 
         <div className='flex items-center h-full'>
@@ -1156,17 +1308,69 @@ export default function Header({
                     />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Insert Timestamps</p>
+                    <p>Find and Replace</p>
                   </TooltipContent>
                 </Tooltip>
+
+                {orderDetails.status === 'REVIEWER_ASSIGNED' &&
+                  orderDetails.orgName.toLowerCase() === 'remotelegal' &&
+                  <>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <PlayerButton
+                          icon={<SpaceEvenlyVerticallyIcon />}
+                          tooltip='Mark section'
+                          onClick={markSection}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Mark section</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <PlayerButton
+                          icon={<PersonIcon />}
+                          tooltip='Mark examinee'
+                          onClick={markExaminee}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Mark examinee</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <PlayerButton
+                          icon={<Pencil2Icon />}
+                          tooltip='Insert swear in line'
+                          onClick={insertSwearInLine}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Insert swear in line</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </>
+                }
+
               </TooltipProvider>
-              
+
             </div>
 
             <div className='flex gap-2'>
+              <div className='flex items-center border border-gray-200 rounded-md px-3 py-1 w-32 h-9'>
+                <span>Speed:</span>
+                <div className="ml-2 flex items-center gap-1">
+                  <span className="text-sm font-medium">{speed}</span>
+                  <span className="text-sm text-gray-500">%</span>
+                </div>
+              </div>
               <Dialog>
-                <DropdownMenu>
-                  <DropdownMenuTrigger className='flex border border-gray-200 px-3 rounded-3xl items-center ml-3 h-10 shadow-none hover:bg-accent transition-colors'>
+                <DropdownMenu onOpenChange={handleDropdownMenuOpenChange}>
+                  <DropdownMenuTrigger className='flex border border-gray-200 px-3 rounded-3xl items-center h-9 shadow-none hover:bg-accent transition-colors'>
                     <div className='flex items-center justify-center mr-2'>
                       Options
                     </div>
@@ -1239,9 +1443,14 @@ export default function Header({
                         Formatting Options
                       </DropdownMenuItem>
                     )}
-                    <DialogTrigger asChild>
-                      {/* <DropdownMenuItem>Change Editor Mode</DropdownMenuItem> */}
-                    </DialogTrigger>
+                    {orderDetails.status === 'QC_ASSIGNED' &&
+                      <DropdownMenuItem asChild>
+                        <a href={asrFileUrl} target='_blank'>Download ASR text</a>
+                      </DropdownMenuItem>}
+                    {orderDetails.status === 'REVIEWER_ASSIGNED' &&
+                      <DropdownMenuItem asChild>
+                        <a href={qcFileUrl} target='_blank'>Download QC text</a>
+                      </DropdownMenuItem>}
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <DialogContent>
@@ -1282,22 +1491,15 @@ export default function Header({
                       {orderDetails.status === 'FINALIZER_ASSIGNED' ||
                         orderDetails.status === 'PRE_DELIVERED' ? (
                         <Button
-                          onClick={() =>
-                            downloadBlankDocx({
-                              orderDetails,
-                              downloadableType: 'markings',
-                              setButtonLoading,
-                            })
-                          }
+                          variant="outline"
+                          asChild
                         >
-                          Download DOCX
+                          <a href={docxUrl} target='_blank'>Download DOCX</a>
                         </Button>
                       ) : (
                         <DownloadDocxDialog
                           orderDetails={orderDetails}
                           downloadableType={downloadableType}
-                          setButtonLoading={setButtonLoading}
-                          buttonLoading={buttonLoading}
                           setDownloadableType={setDownloadableType}
                         />
                       )}
@@ -1370,30 +1572,34 @@ export default function Header({
                 </Dialog>
               )}
               <div className='flex items-center'>
-                {(step === 'QC' || session?.user?.role === 'OM') && (
-                  <Button
-                    onClick={() =>
-                      handleSave({
-                        getEditorText,
-                        orderDetails,
-                        notes,
-                        cfd,
-                        setButtonLoading,
-                        lines,
-                        playerEvents,
-                      })
-                    }
-                    disabled={buttonLoading.save}
-                    className='w-24 mr-2'
-                    variant='outline'
-                  >
-                    {' '}
-                    {buttonLoading.save && (
-                      <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                    )}{' '}
-                    Save
-                  </Button>
-                )}
+                {(orderDetails.status === 'QC_ASSIGNED' ||
+                  orderDetails.status === 'REVIEWER_ASSIGNED' ||
+                  session?.user?.role === 'OM') && (
+                    <Button
+                      onClick={() => {
+                        capitalizeWord()
+                        handleSave({
+                          getEditorText,
+                          orderDetails,
+                          notes,
+                          cfd,
+                          setButtonLoading,
+                          lines,
+                          playerEvents,
+                        })
+                      }
+                      }
+                      disabled={buttonLoading.save}
+                      className='w-24 mr-2'
+                      variant='outline'
+                    >
+                      {' '}
+                      {buttonLoading.save && (
+                        <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                      )}{' '}
+                      Save
+                    </Button>
+                  )}
 
                 {!['CUSTOMER', 'OM', 'ADMIN'].includes(
                   session?.user?.email ?? ''
@@ -1639,7 +1845,7 @@ export default function Header({
         <div className='relative w-full h-full'>
           <video
             ref={videoRef}
-            src={`/api/editor/get-video/${orderDetails.fileId}`}
+            src={`${videoUrl}`}
             className='w-full h-full'
             controls={false}
             onMouseDown={handleDragChange}

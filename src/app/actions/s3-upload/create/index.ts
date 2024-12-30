@@ -17,27 +17,65 @@ export async function createMultipartUpload(
   fileId: string,
   size: number,
   source: string,
-  sourceId: string | null
+  sourceId: string | null,
+  apiUser?: {
+    userId: number
+    internalTeamUserId?: number
+  },
+  isYouTubeFile?: boolean
 ) {
   try {
-    const session = await getServerSession(authOptions)
-    const user = session?.user
+    let user
 
-    if (!user) {
-      return {
-        success: false,
-        message: 'User not found',
+    if (apiUser) {
+      user = apiUser
+    } else {
+      const session = await getServerSession(authOptions)
+      user = session?.user
+
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+        }
+      }
+
+      if (!requireCustomer(user)) {
+        return {
+          success: false,
+          message: 'Action is not allowed',
+        }
       }
     }
 
-    if (!requireCustomer(user)) {
-      return {
-        success: false,
-        message: 'Action is not allowed',
+    let fileName = path.parse(originalName).name
+
+    if (isYouTubeFile) {
+      const youTubefile = await prisma.file.findUnique({
+        where: {
+          fileId: fileId,
+        },
+        select: {
+          filename: true,
+          uploadedBy: true,
+          userId: true,
+        },
+      })
+
+      if (!youTubefile) {
+        return {
+          success: false,
+          message: 'File not found',
+        }
+      }
+
+      fileName = youTubefile.filename
+      user = {
+        userId: youTubefile.uploadedBy,
+        internalTeamUserId: youTubefile.userId,
       }
     }
 
-    const fileName = path.parse(originalName).name
     const fileExtension = path.extname(originalName)
     const fileKey =
       fileExtension.toLowerCase() === '.docx'
@@ -50,29 +88,42 @@ export async function createMultipartUpload(
       ContentType: type,
       Metadata: {
         upload_environment: process.env.UPLOAD_ENVIRONMENT || 'STAGING',
-        type: fileExtension.toLowerCase() === '.docx' ? 'DOCX_FILE' : 'ORIGINAL_FILE',
+        type: isYouTubeFile
+          ? 'YOUTUBE_FILE'
+          : fileExtension.toLowerCase() === '.docx'
+          ? 'DOCX_FILE'
+          : 'ORIGINAL_FILE',
         user_id: user.userId?.toString(),
         team_user_id:
           user.internalTeamUserId?.toString() || user.userId?.toString(),
         file_id: fileId,
-        file_name: path.parse(originalName).name,
+        file_name: fileName,
       },
     })
     const data = await s3Client.send(command)
 
-    await prisma.uploadSession.create({
-      data: {
-        uploadId: data.UploadId!,
-        key: data.Key!,
-        userId: user.userId,
-        sourceInfo: {
-          sourceType: source,
-          sourceId: sourceId || null,
-          fileName: originalName,
-          fileSize: size,
+    if (!apiUser) {
+      await prisma.uploadSession.create({
+        data: {
+          uploadId: data.UploadId!,
+          key: data.Key!,
+          userId: user.userId,
+          sourceInfo: {
+            sourceType: source,
+            sourceId: sourceId || null,
+            fileName: originalName,
+            fileSize: size,
+          },
         },
-      },
-    })
+      })
+    }
+
+    if (isYouTubeFile) {
+      await prisma.file.update({
+        where: { fileId },
+        data: { filesize: Math.floor(size ?? 0).toString(), fileKey },
+      })
+    }
 
     return {
       success: true,
