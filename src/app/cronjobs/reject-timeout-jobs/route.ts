@@ -12,6 +12,7 @@ export async function POST() {
     const assignedFiles = await prisma.jobAssignment.findMany({
       where: {
         status: JobStatus.ACCEPTED,
+        type: JobType.QC
       },
       include: {
         order: {
