@@ -1,8 +1,25 @@
 # Use an official Node.js runtime as the base image
 FROM node:18-bullseye
 
-# Install FFmpeg and FFprobe
-RUN apt-get update && apt-get install -y ffmpeg
+# Install necessary dependencies
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    build-essential \
+    cmake \
+    git \
+    libpng-dev \
+    libsndfile-dev \
+    libgd-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Clone and build waveformgen
+RUN git clone https://github.com/cappelnord/waveformgen.git /tmp/waveformgen && \
+    mkdir /tmp/waveformgen/build && \
+    cd /tmp/waveformgen/build && \
+    cmake .. && \
+    make && \
+    make install && \
+    rm -rf /tmp/waveformgen
 
 # Set the working directory in the container
 WORKDIR /app

@@ -1,368 +1,387 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import {
-    ArrowBigDownDash,
-    ArrowBigUpDash,
-    FastForward,
-    Pause,
-    Play,
-    Rewind,
-    Volume1,
-    Volume2,
+  ArrowBigDownDash,
+  ArrowBigUpDash,
+  FastForward,
+  Pause,
+  Play,
+  Rewind,
+  Volume1,
+  Volume2,
 } from 'lucide-react'
 import Image from 'next/image'
 import Slider from 'rc-slider'
 import { useEffect, useRef, useState, useMemo } from 'react'
-import { toast } from 'sonner'
 
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import {
-    TooltipProvider,
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
+  TooltipProvider,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from '@/components/ui/tooltip'
-import 'rc-slider/assets/index.css';
-import { FILE_CACHE_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
-import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
+import 'rc-slider/assets/index.css'
+import {
+  ShortcutControls,
+  useShortcuts,
+} from '@/utils/editorAudioPlayerShortcuts'
 
 type PlayerButtonProps = {
-    icon: React.ReactNode
-    tooltip: string
-    onClick?: () => void
+  icon: React.ReactNode
+  tooltip: string
+  onClick?: () => void
 }
 
 function PlayerButton({ icon, tooltip, onClick }: PlayerButtonProps) {
-    return (
-        <button
-            aria-label={tooltip}
-            onClick={onClick}
-            className='w-10 h-10 rounded-full bg-[#EEE9FF] flex items-center justify-center mx-1'
-        >
-            {icon}
-        </button>
-    )
+  return (
+    <button
+      aria-label={tooltip}
+      onClick={onClick}
+      className='w-10 h-10 rounded-full bg-[#EEE9FF] flex items-center justify-center mx-1'
+    >
+      {icon}
+    </button>
+  )
 }
 
-const createShortcutControls = (audioPlayer: React.RefObject<HTMLAudioElement>): Partial<ShortcutControls> => ({
-    togglePlay: () => {
-        if (!audioPlayer.current) return;
-        audioPlayer.current.paused ? audioPlayer.current.play() : audioPlayer.current.pause();
-    },
-    pause: () => {
-        audioPlayer.current?.pause();
-    },
-    skipAudio: (seconds: number) => {
-        if (audioPlayer.current) {
-            audioPlayer.current.currentTime += seconds;
-        }
-    },
-    increaseVolume: () => {
-        if (audioPlayer.current) {
-            audioPlayer.current.volume = Math.min(1, audioPlayer.current.volume + 0.1);
-        }
-    },
-    decreaseVolume: () => {
-        if (audioPlayer.current) {
-            audioPlayer.current.volume = Math.max(0, audioPlayer.current.volume - 0.1);
-        }
-    },
-    increasePlaybackSpeed: () => {
-        if (audioPlayer.current) {
-            audioPlayer.current.playbackRate += 0.1;
-        }
-    },
-    decreasePlaybackSpeed: () => {
-        if (audioPlayer.current) {
-            audioPlayer.current.playbackRate -= 0.1;
-        }
-    },
-});
+const createShortcutControls = (
+  audioPlayer: React.RefObject<HTMLAudioElement>
+): Partial<ShortcutControls> => ({
+  togglePlay: () => {
+    if (!audioPlayer.current) return
+    audioPlayer.current.paused
+      ? audioPlayer.current.play()
+      : audioPlayer.current.pause()
+  },
+  pause: () => {
+    audioPlayer.current?.pause()
+  },
+  skipAudio: (seconds: number) => {
+    if (audioPlayer.current) {
+      audioPlayer.current.currentTime += seconds
+    }
+  },
+  increaseVolume: () => {
+    if (audioPlayer.current) {
+      audioPlayer.current.volume = Math.min(1, audioPlayer.current.volume + 0.1)
+    }
+  },
+  decreaseVolume: () => {
+    if (audioPlayer.current) {
+      audioPlayer.current.volume = Math.max(0, audioPlayer.current.volume - 0.1)
+    }
+  },
+  increasePlaybackSpeed: () => {
+    if (audioPlayer.current) {
+      audioPlayer.current.playbackRate += 0.1
+    }
+  },
+  decreasePlaybackSpeed: () => {
+    if (audioPlayer.current) {
+      audioPlayer.current.playbackRate -= 0.1
+    }
+  },
+})
 
-export default function AudioPlayer({ fileId, getAudioPlayer }: { fileId: string, getAudioPlayer?: (audioPlayer: HTMLAudioElement | null) => void }) {
-    const [currentValue, setCurrentValue] = useState(0)
-    const [currentTime, setCurrentTime] = useState('00:00')
-    const [audioDuration, setAudioDuration] = useState(0)
-    const audioPlayer = useRef<HTMLAudioElement>(null);
-    const [waveformUrl, setWaveformUrl] = useState('')
-    const [isPlayerLoaded, setIsPlayerLoaded] = useState(false)
-    const [audioUrl, setAudioUrl] = useState('')
+export default function AudioPlayer({
+  fileId,
+  getAudioPlayer,
+}: {
+  fileId: string
+  getAudioPlayer?: (audioPlayer: HTMLAudioElement | null) => void
+}) {
+  const [currentValue, setCurrentValue] = useState(0)
+  const [currentTime, setCurrentTime] = useState('00:00')
+  const [audioDuration, setAudioDuration] = useState(0)
+  const audioPlayer = useRef<HTMLAudioElement>(null)
+  const [waveformUrl, setWaveformUrl] = useState('')
+  const [isPlayerLoaded, setIsPlayerLoaded] = useState(false)
+  const [audioUrl, setAudioUrl] = useState('')
 
-    const shortcutControls = useMemo(() => createShortcutControls(audioPlayer), [audioPlayer]);
+  const shortcutControls = useMemo(
+    () => createShortcutControls(audioPlayer),
+    [audioPlayer]
+  )
 
-    useShortcuts(shortcutControls as ShortcutControls);
+  useShortcuts(shortcutControls as ShortcutControls)
 
-    const fetchWaveform = async () => {
-        try {
-            const res = await axiosInstance.get(`${FILE_CACHE_URL}/get-waveform/${fileId}`, { responseType: 'blob' })
-            const waveformUrl = URL.createObjectURL(res.data)
-            setWaveformUrl(waveformUrl)
-            setIsPlayerLoaded(true)
-        } catch (error) {
-            toast.error('Failed to load waveform.')
-        }
+  const fetchWaveform = async () => {
+    const res = await getSignedUrlAction(`${fileId}_wf.png`, 300)
+    if (res.success && res.signedUrl) {
+      setWaveformUrl(res.signedUrl)
+    }
+    setIsPlayerLoaded(true)
+  }
+
+  const fetchAudioUrl = async () => {
+    const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
+    if (res.success && res.signedUrl) {
+      setAudioUrl(res.signedUrl)
+    }
+  }
+
+  useEffect(() => {
+    if (!fileId) return
+    fetchWaveform()
+    fetchAudioUrl()
+  }, [fileId])
+
+  useEffect(() => {
+    const audio = audioPlayer.current
+    if (!audio) return
+    const handleLoadedMetadata = () => {
+      setAudioDuration(audio.duration)
+      if (getAudioPlayer) getAudioPlayer(audio)
+    }
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata)
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+    }
+  }, [audioPlayer, getAudioPlayer])
+
+  const seekTo = (value: number) => {
+    if (!audioPlayer.current) return
+    const duration = audioPlayer.current.duration
+    if (duration) {
+      const time = (value / 100) * duration
+      audioPlayer.current.currentTime = time
+    }
+  }
+
+  const formatTime = (seconds: number | undefined): string => {
+    if (!seconds) return '00:00'
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const remainingSeconds = Math.floor(seconds % 60)
+
+    const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes
+    const formattedSeconds =
+      remainingSeconds < 10 ? `0${remainingSeconds}` : remainingSeconds
+
+    if (hours > 0) {
+      return `${hours}:${formattedMinutes}:${formattedSeconds}`
+    } else {
+      return `${formattedMinutes}:${formattedSeconds}`
+    }
+  }
+
+  useEffect(() => {
+    const audio = audioPlayer.current
+    if (!audio) return
+
+    const handleTimeUpdate = () => {
+      const currentTime = formatTime(audio.currentTime)
+      setCurrentTime(currentTime)
+      const playedPercentage = (audio.currentTime / audio.duration) * 100
+      setCurrentValue(playedPercentage)
     }
 
-    const fetchAudioUrl = async () => {
-        const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
-        if (res.success && res.signedUrl) {
-            setAudioUrl(res.signedUrl)
-        }
+    audio.addEventListener('timeupdate', handleTimeUpdate)
+
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate)
     }
+  }, [])
 
-    useEffect(() => {
-        if (!fileId) return
-        fetchWaveform()
-        fetchAudioUrl()
-    }, [fileId])
+  const handleMouseMoveOnWaveform = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const percentage = (x / rect.width) * 100
+    if (audioPlayer.current?.duration) {
+      const time = (percentage / 100) * audioPlayer.current.duration
+      const timeString = formatTime(time)
 
-    useEffect(() => {
-        const audio = audioPlayer.current;
-        if (!audio) return;
-        const handleLoadedMetadata = () => {
-            setAudioDuration(audio.duration);
-            if (getAudioPlayer) getAudioPlayer(audio);
-        };
-        audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-
-        return () => {
-            audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-        };
-    }, [audioPlayer, getAudioPlayer]);
-
-    const seekTo = (value: number) => {
-        if (!audioPlayer.current) return;
-        const duration = audioPlayer.current.duration;
-        if (duration) {
-            const time = (value / 100) * duration;
-            audioPlayer.current.currentTime = time;
-        }
+      const tooltip = document.getElementById('time-tooltip')
+      if (tooltip) {
+        tooltip.style.display = 'block'
+        tooltip.style.left = `${e.clientX}px`
+        tooltip.style.top = `${e.clientY - 25}px`
+        tooltip.textContent = timeString
+      }
     }
+  }
 
-    const formatTime = (seconds: number | undefined): string => {
-        if (!seconds) return '00:00'
-        const hours = Math.floor(seconds / 3600)
-        const minutes = Math.floor((seconds % 3600) / 60)
-        const remainingSeconds = Math.floor(seconds % 60)
-
-        const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes
-        const formattedSeconds =
-            remainingSeconds < 10 ? `0${remainingSeconds}` : remainingSeconds
-
-        if (hours > 0) {
-            return `${hours}:${formattedMinutes}:${formattedSeconds}`
-        } else {
-            return `${formattedMinutes}:${formattedSeconds}`
-        }
-    }
-
-    useEffect(() => {
-        const audio = audioPlayer.current;
-        if (!audio) return;
-
-        const handleTimeUpdate = () => {
-            const currentTime = formatTime(audio.currentTime)
-            setCurrentTime(currentTime)
-            const playedPercentage = (audio.currentTime / audio.duration) * 100
-            setCurrentValue(playedPercentage)
-        };
-
-        audio.addEventListener('timeupdate', handleTimeUpdate);
-
-        return () => {
-            audio.removeEventListener('timeupdate', handleTimeUpdate);
-        };
-    }, []);
-
-    const handleMouseMoveOnWaveform = (e: React.MouseEvent<HTMLDivElement>) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const percentage = (x / rect.width) * 100;
-        if (audioPlayer.current?.duration) {
-            const time = (percentage / 100) * audioPlayer.current.duration;
-            const timeString = formatTime(time);
-
-            const tooltip = document.getElementById('time-tooltip');
+  return (
+    <div className='mb-3 h-1/3 relative overflow-hidden'>
+      {!isPlayerLoaded && (
+        <div className='absolute inset-0 w-full h-full bg-white z-50 flex justify-center items-center rounded-2xl'>
+          <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+          <span>Loading...</span>
+        </div>
+      )}
+      <div className='h-[45%] bg-white rounded-t-2xl border border-gray-200 border-b-0 overflow-hidden'>
+        <div
+          id='waveform'
+          className='relative h-full'
+          onMouseMove={handleMouseMoveOnWaveform}
+          onMouseLeave={() => {
+            const tooltip = document.getElementById('time-tooltip')
             if (tooltip) {
-                tooltip.style.display = 'block';
-                tooltip.style.left = `${e.clientX}px`;
-                tooltip.style.top = `${e.clientY - 25}px`;
-                tooltip.textContent = timeString;
+              tooltip.style.display = 'none'
             }
-        }
-    }
+          }}
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect()
+            const x = e.clientX - rect.left
+            const percentage = (x / rect.width) * 100
+            seekTo(percentage)
+          }}
+        >
+          <div
+            id='time-tooltip'
+            className='fixed hidden z-50 bg-primary text-white px-2 py-1 rounded text-sm pointer-events-none'
+            style={{ transform: 'translate(-50%, -100%)' }}
+          />
+          <Image
+            src={waveformUrl}
+            alt='waveform'
+            layout='fill'
+            objectFit='contain'
+            onError={() =>
+              setWaveformUrl('/assets/images/fallback-waveform.png')
+            }
+            unoptimized={true}
+          />
+        </div>
+      </div>
+      <div className='h-[55%] bg-white border border-gray-200 rounded-b-2xl px-3'>
+        <div className='w-full mt-2'>
+          <audio ref={audioPlayer} className='hidden' src={audioUrl}></audio>
+          <Slider
+            step={0.01}
+            min={0}
+            max={100}
+            value={currentValue}
+            onChange={(value) => {
+              setCurrentValue(value as number)
+              seekTo(Number(value))
+            }}
+            styles={{
+              rail: { height: '7px' },
+              track: { backgroundColor: '#6442ED', height: '7px' },
+              handle: { display: 'none' },
+            }}
+          />
+        </div>
 
-    return (
-        <div className='mb-3 h-1/3 relative overflow-hidden'>
-            {!isPlayerLoaded && (
-                <div className='absolute inset-0 w-full h-full bg-white z-50 flex justify-center items-center rounded-2xl'>
-                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                    <span>Loading...</span>
-                </div>
-            )}
-            <div className='h-[45%] bg-white rounded-t-2xl border border-gray-200 border-b-0 overflow-hidden'>
-                <div
-                    id='waveform'
-                    className='relative h-full'
-                    onMouseMove={handleMouseMoveOnWaveform}
-                    onMouseLeave={() => {
-                        const tooltip = document.getElementById('time-tooltip');
-                        if (tooltip) {
-                            tooltip.style.display = 'none';
-                        }
-                    }}
-                    onClick={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const x = e.clientX - rect.left;
-                        const percentage = (x / rect.width) * 100;
-                        seekTo(percentage);
-                    }}
-                >
-                    <div
-                        id="time-tooltip"
-                        className="fixed hidden z-50 bg-primary text-white px-2 py-1 rounded text-sm pointer-events-none"
-                        style={{ transform: 'translate(-50%, -100%)' }}
-                    />
-                    <Image src={waveformUrl} alt='waveform' layout='fill' objectFit='contain' />
-                </div>
-            </div>
-            <div className='h-[55%] bg-white border border-gray-200 rounded-b-2xl px-3'>
-                <div className='w-full mt-2'>
-                    <audio ref={audioPlayer} className='hidden' src={audioUrl}></audio>
-                    <Slider
-                        step={0.01}
-                        min={0}
-                        max={100}
-                        value={currentValue}
-                        onChange={(value) => {
-                            setCurrentValue(value as number)
-                            seekTo(Number(value))
-                        }}
-                        styles={{
-                            rail: { height: '7px' },
-                            track: { backgroundColor: '#6442ED', height: '7px' },
-                            handle: { display: 'none' },
-                        }}
-                    />
-                </div>
+        <div className='flex justify-between items-center mb-2 mt-3'>
+          <span className='text-[#8C8C8C] text-sm w-[100px]'>
+            {currentTime}
+          </span>
+          <div className='flex items-center'>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <PlayerButton
+                    icon={<Rewind />}
+                    tooltip=''
+                    onClick={() => shortcutControls.skipAudio?.(-10)}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Go back 10 seconds</p>
+                </TooltipContent>
+              </Tooltip>
 
-                <div className='flex justify-between items-center mb-2 mt-3'>
-                    <span className='text-[#8C8C8C] text-sm w-[100px]'>
-                        {currentTime}
-                    </span>
-                    <div className='flex items-center'>
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <PlayerButton
-                                        icon={<Rewind />}
-                                        tooltip=''
-                                        onClick={() => shortcutControls.skipAudio?.(-10)}
-                                    />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Go back 10 seconds</p>
-                                </TooltipContent>
-                            </Tooltip>
+              <Tooltip>
+                <TooltipTrigger>
+                  <PlayerButton
+                    icon={<Play />}
+                    tooltip='Play'
+                    onClick={shortcutControls.togglePlay}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Play</p>
+                </TooltipContent>
+              </Tooltip>
 
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <PlayerButton
-                                        icon={<Play />}
-                                        tooltip='Play'
-                                        onClick={shortcutControls.togglePlay}
-                                    />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Play</p>
-                                </TooltipContent>
-                            </Tooltip>
+              <Tooltip>
+                <TooltipTrigger>
+                  <PlayerButton
+                    icon={<Pause />}
+                    tooltip='Pause'
+                    onClick={shortcutControls.pause}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Pause</p>
+                </TooltipContent>
+              </Tooltip>
 
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <PlayerButton
-                                        icon={<Pause />}
-                                        tooltip='Pause'
-                                        onClick={shortcutControls.pause}
-                                    />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Pause</p>
-                                </TooltipContent>
-                            </Tooltip>
+              <Tooltip>
+                <TooltipTrigger>
+                  <PlayerButton
+                    icon={<FastForward />}
+                    tooltip='Go forward 10 seconds'
+                    onClick={() => shortcutControls.skipAudio?.(10)}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Go forward 10 seconds</p>
+                </TooltipContent>
+              </Tooltip>
 
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <PlayerButton
-                                        icon={<FastForward />}
-                                        tooltip='Go forward 10 seconds'
-                                        onClick={() => shortcutControls.skipAudio?.(10)}
-                                    />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Go forward 10 seconds</p>
-                                </TooltipContent>
-                            </Tooltip>
+              <Tooltip>
+                <TooltipTrigger>
+                  <PlayerButton
+                    icon={<ArrowBigUpDash />}
+                    tooltip='Fast forward'
+                    onClick={shortcutControls.increasePlaybackSpeed}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Increase playback speed</p>
+                </TooltipContent>
+              </Tooltip>
 
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <PlayerButton
-                                        icon={<ArrowBigUpDash />}
-                                        tooltip='Fast forward'
-                                        onClick={shortcutControls.increasePlaybackSpeed}
-                                    />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Increase playback speed</p>
-                                </TooltipContent>
-                            </Tooltip>
+              <Tooltip>
+                <TooltipTrigger>
+                  <PlayerButton
+                    icon={<ArrowBigDownDash />}
+                    tooltip='Rewind'
+                    onClick={shortcutControls.decreasePlaybackSpeed}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Decrease playback speed</p>
+                </TooltipContent>
+              </Tooltip>
 
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <PlayerButton
-                                        icon={<ArrowBigDownDash />}
-                                        tooltip='Rewind'
-                                        onClick={shortcutControls.decreasePlaybackSpeed}
-                                    />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Decrease playback speed</p>
-                                </TooltipContent>
-                            </Tooltip>
+              <Tooltip>
+                <TooltipTrigger>
+                  <PlayerButton
+                    icon={<Volume2 />}
+                    tooltip='Increase volume'
+                    onClick={shortcutControls.increaseVolume}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Increase volume</p>
+                </TooltipContent>
+              </Tooltip>
 
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <PlayerButton
-                                        icon={<Volume2 />}
-                                        tooltip='Increase volume'
-                                        onClick={shortcutControls.increaseVolume}
-                                    />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Increase volume</p>
-                                </TooltipContent>
-                            </Tooltip>
-
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <PlayerButton
-                                        icon={<Volume1 />}
-                                        tooltip='Decrease volume'
-                                        onClick={shortcutControls.decreaseVolume}
-                                    />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Decrease volume</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    </div>
-                    <span className='text-[#8C8C8C] text-sm w-[100px] text-right'>
-                        {formatTime(audioDuration)}
-                    </span>
-                </div>
-            </div>
-        </div >
-    )
+              <Tooltip>
+                <TooltipTrigger>
+                  <PlayerButton
+                    icon={<Volume1 />}
+                    tooltip='Decrease volume'
+                    onClick={shortcutControls.decreaseVolume}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Decrease volume</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <span className='text-[#8C8C8C] text-sm w-[100px] text-right'>
+            {formatTime(audioDuration)}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
 }
