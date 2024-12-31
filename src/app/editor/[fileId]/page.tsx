@@ -479,7 +479,9 @@ function EditorPage() {
       }
     }
 
-    updateRemainingTime()
+    if (orderDetails.status === 'QC_ASSIGNED') {
+      updateRemainingTime()
+    }
 
     return () => {
       if (timer) {
@@ -537,7 +539,7 @@ function EditorPage() {
       <div className="mx-2 mt-2">
         <div className='flex justify-between bg-white rounded-t-lg'>
           <p className='font-semibold px-2'>{orderDetails.filename}</p>
-          {session?.user?.role !== 'CUSTOMER' && (
+          {orderDetails.status === 'QC_ASSIGNED' && (
             <span
               className={`text-red-600 ${orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
                 } mr-2`}
