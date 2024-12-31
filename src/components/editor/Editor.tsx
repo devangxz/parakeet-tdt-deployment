@@ -106,13 +106,10 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
 
     const getFormattedContent = (text: string) => {
         const timestampPattern = /\[\d:\d{2}:\d{2}\.\d\]\s_{4}/g;
-        const speakerPattern = /\d:\d{2}:\d{2}\.\d\s+S\d+:/g;
         const parts = text.split(/((?:\[\d:\d{2}:\d{2}\.\d\]\s_{4})|(?:\d:\d{2}:\d{2}\.\d\s+S\d+:))/g);
         const formattedContent = parts.map(part => {
             if (timestampPattern.test(part)) {
                 return { insert: part, attributes: { color: '#FF0000' } };
-            } else if (speakerPattern.test(part)) {
-                return { insert: part, attributes: { color: '#28a828' } };
             }
             return { insert: part };
         });
@@ -424,10 +421,16 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
 
         const handleCopy = (e: ClipboardEvent) => {
             e.preventDefault();
-            console.log('handleCopy');
-            const text = quillRef.current?.getEditor()?.getText() || '';
-            // Replace multiple consecutive line breaks with just two
-            const cleanText = text.replace(/\n{2,}/g, '\n\n');
+            const quill = quillRef.current?.getEditor();
+            if (!quill) return;
+
+            const selection = quill.getSelection();
+            if (!selection) return;
+
+            // Get only the selected text
+            const selectedText = quill.getText(selection.index, selection.length);
+            // Clean up multiple line breaks
+            const cleanText = selectedText.replace(/\n{2,}/g, '\n\n');
             e.clipboardData?.setData('text/plain', cleanText);
         };
 
