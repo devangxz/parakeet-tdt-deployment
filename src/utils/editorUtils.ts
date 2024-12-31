@@ -876,6 +876,11 @@ const playCurrentParagraphTimestamp = (
     }
 }
 
+export interface CustomerQuillSelection {
+    index: number;
+    length: number;
+}
+
 const searchAndSelect = (
     quill: Quill,
     searchText: string,
@@ -886,9 +891,10 @@ const searchAndSelect = (
     selection: { index: number; length: number } | null,
     setSelection: (selection: { index: number; length: number } | null) => void,
     matchSelection: boolean,
-    searchBackwards: boolean = false
+    searchBackwards: boolean = false,
+    setSearchHighlight: (highlight: CustomerQuillSelection | null) => void
 ) => {
-    if (!quill) return
+    if (!quill || !searchText) return
 
     const searchRange = {
         start: 0,
@@ -899,6 +905,13 @@ const searchAndSelect = (
     if (selection && selection.length > 0 && matchSelection) {
         searchRange.start = selection.index
         searchRange.end = selection.index + selection.length
+
+        // Clear the previous highlight if it exists and is valid
+        if (lastSearchIndex >= 0 && lastSearchIndex < quill.getText().length) {
+            quill.formatText(selection.index, selection.length, {
+                background: '#D9D9D9'
+            })
+        }
     }
 
     const text = quill.getText(searchRange.start, searchRange.end - searchRange.start)
@@ -940,13 +953,33 @@ const searchAndSelect = (
     if (index !== -1) {
         // Adjust index relative to document start
         const absoluteIndex = index + searchRange.start
-        quill.setSelection(absoluteIndex, searchText.length)
+
+        // Apply new highlight
+        quill.formatText(absoluteIndex, searchText.length, {
+            'background': '#b3d4fc'
+        })
+
+        // Store the current search highlight
+        setSearchHighlight({ index: absoluteIndex, length: searchText.length })
+
+        // Scroll the highlighted text into view
+        const bounds = quill.getBounds(absoluteIndex)
+        const editorElement = quill.root
+        const scrollingContainer = editorElement.closest('.ql-editor')
+        if (scrollingContainer && bounds) {
+            const containerRect = scrollingContainer.getBoundingClientRect()
+            const scrollTop = bounds.top + scrollingContainer.scrollTop - containerRect.height / 2
+            scrollingContainer.scrollTop = scrollTop
+        }
+
         setLastSearchIndex(absoluteIndex)
     } else {
         setLastSearchIndex(-1)
+        setSearchHighlight(null)
         toastInstance.error('Text not found in selected range')
     }
-    setSelection(selection) // setting back the old selection because when a text is found we select that which changes the original selection
+
+    setSelection(selection)
 }
 
 const replaceTextHandler = (
