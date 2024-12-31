@@ -453,7 +453,6 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
                 onChange={handleContentChange}
                 formats={['size', 'background', 'font', 'color']}
                 className='h-full'
-                readOnly={(orderDetails.status === 'FINALIZER_ASSIGNED')}
                 onChangeSelection={setSelectionHandler}
             />
             {/* </ContextMenuTrigger>
