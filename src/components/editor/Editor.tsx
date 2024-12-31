@@ -61,10 +61,21 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
                                 index: wordIndex,
                                 speaker: '',
                             }
-                        } else {
+                        } else if (ctmsIndex < ctms.length) {
                             wordData.ctms = ctms[ctmsIndex]
-                            wordData.ctms.index = wordIndex
-                            ctmsIndex += 1
+                            if (wordData.ctms) {
+                                wordData.ctms.index = wordIndex
+                                ctmsIndex += 1
+                            }
+                        } else {
+                            wordData.ctms = {
+                                start: 0,
+                                end: 0,
+                                word: words[i],
+                                punct: '',
+                                index: wordIndex,
+                                speaker: '',
+                            }
                         }
                         newCtms_local.push(wordData.ctms)
                         lineWords.push(wordData)
@@ -95,13 +106,10 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
 
     const getFormattedContent = (text: string) => {
         const timestampPattern = /\[\d:\d{2}:\d{2}\.\d\]\s_{4}/g;
-        const speakerPattern = /\d:\d{2}:\d{2}\.\d\s+S\d+:/g;
         const parts = text.split(/((?:\[\d:\d{2}:\d{2}\.\d\]\s_{4})|(?:\d:\d{2}:\d{2}\.\d\s+S\d+:))/g);
         const formattedContent = parts.map(part => {
             if (timestampPattern.test(part)) {
                 return { insert: part, attributes: { color: '#FF0000' } };
-            } else if (speakerPattern.test(part)) {
-                return { insert: part, attributes: { color: '#28a828' } };
             }
             return { insert: part };
         });
@@ -407,6 +415,32 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
     //     quill.setSelection(wordStart, wordEnd - wordStart);
     // }
 
+    useEffect(() => {
+        const editor = quillRef.current?.getEditor()?.root;
+        if (!editor) return;
+
+        const handleCopy = (e: ClipboardEvent) => {
+            e.preventDefault();
+            const quill = quillRef.current?.getEditor();
+            if (!quill) return;
+
+            const selection = quill.getSelection();
+            if (!selection) return;
+
+            // Get only the selected text
+            const selectedText = quill.getText(selection.index, selection.length);
+            // Clean up multiple line breaks
+            const cleanText = selectedText.replace(/\n{2,}/g, '\n\n');
+            e.clipboardData?.setData('text/plain', cleanText);
+        };
+
+        editor.addEventListener('copy', handleCopy);
+
+        return () => {
+            editor.removeEventListener('copy', handleCopy);
+        };
+    }, []);
+
     return (
         <>
             {/* <ContextMenu>
@@ -419,7 +453,6 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
                 onChange={handleContentChange}
                 formats={['size', 'background', 'font', 'color']}
                 className='h-full'
-                readOnly={(orderDetails.status === 'FINALIZER_ASSIGNED')}
                 onChangeSelection={setSelectionHandler}
             />
             {/* </ContextMenuTrigger>
