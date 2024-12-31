@@ -66,7 +66,6 @@ import {
   SelectValue,
 } from '../ui/select'
 import { Textarea } from '../ui/textarea'
-import { downloadBlankDocxAction } from '@/app/actions/editor/download-docx'
 import { getFormattingOptionsAction } from '@/app/actions/editor/get-formatting-options'
 import { getSpeakerNamesAction } from '@/app/actions/editor/get-speaker-names'
 import { requestReReviewAction } from '@/app/actions/editor/re-review'
@@ -286,7 +285,6 @@ export default function Header({
   const [reReviewComment, setReReviewComment] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
-  const [docxUrl, setDocxUrl] = useState('')
   const [speed, setSpeed] = useState(100)
 
   const setSelectionHandler = () => {
@@ -297,17 +295,6 @@ export default function Header({
       setSelection({ index: range.index, length: range.length })
     } else {
       setSelection(null)
-    }
-  }
-
-  const getDocxUrl = async () => {
-    const response = await downloadBlankDocxAction(
-      orderDetails.fileId,
-      downloadableType,
-    )
-
-    if (response.success && response.url) {
-      setDocxUrl(response.url)
     }
   }
 
@@ -332,10 +319,6 @@ export default function Header({
       } else {
         currentStep = 'QC'
       }
-    }
-
-    if (orderDetails.status === 'FINALIZER_ASSIGNED' || orderDetails.status === 'PRE_DELIVERED') {
-      getDocxUrl()
     }
 
     setStep(currentStep)
@@ -433,7 +416,7 @@ export default function Header({
 
   const fetchAudioUrl = async () => {
     try {
-      const { success, signedUrl } = await getSignedUrlAction(`${orderDetails.fileId}.mp3`, 14400) // 4 hours
+      const { success, signedUrl } = await getSignedUrlAction(`${orderDetails.fileId}.mp3`, Math.max(Number(orderDetails.duration) * 4, 1800)) // 4 times the duration
       if (success && signedUrl) {
         setAudioUrl(signedUrl)
       } else {
@@ -1313,8 +1296,7 @@ export default function Header({
                   </TooltipContent>
                 </Tooltip>
 
-                {orderDetails.status === 'REVIEWER_ASSIGNED' &&
-                  orderDetails.orgName.toLowerCase() === 'remotelegal' &&
+                {orderDetails.orgName.toLowerCase() === 'remotelegal' &&
                   <>
                     <Tooltip>
                       <TooltipTrigger>
@@ -1448,7 +1430,7 @@ export default function Header({
                       <DropdownMenuItem asChild>
                         <a href={asrFileUrl} target='_blank'>Download ASR text</a>
                       </DropdownMenuItem>}
-                    {orderDetails.status === 'REVIEWER_ASSIGNED' &&
+                    {orderDetails.status === 'REVIEWER_ASSIGNED' || orderDetails.status === 'FINALIZER_ASSIGNED' &&
                       <DropdownMenuItem asChild>
                         <a href={qcFileUrl} target='_blank'>Download QC text</a>
                       </DropdownMenuItem>}
@@ -1489,22 +1471,11 @@ export default function Header({
                 <>
                   {editorMode === 'Manual' && (
                     <>
-                      {orderDetails.status === 'FINALIZER_ASSIGNED' ||
-                        orderDetails.status === 'PRE_DELIVERED' ? (
-                        <Button
-                          variant="outline"
-                          asChild
-                        >
-                          <a href={docxUrl} target='_blank'>Download DOCX</a>
-                        </Button>
-                      ) : (
-                        <DownloadDocxDialog
-                          orderDetails={orderDetails}
-                          downloadableType={downloadableType}
-                          setDownloadableType={setDownloadableType}
-                        />
-                      )}
-
+                      <DownloadDocxDialog
+                        orderDetails={orderDetails}
+                        downloadableType={downloadableType}
+                        setDownloadableType={setDownloadableType}
+                      />
                       <UploadDocxDialog
                         orderDetails={orderDetails}
                         setButtonLoading={setButtonLoading}
@@ -1573,34 +1544,31 @@ export default function Header({
                 </Dialog>
               )}
               <div className='flex items-center'>
-                {(orderDetails.status === 'QC_ASSIGNED' ||
-                  orderDetails.status === 'REVIEWER_ASSIGNED' ||
-                  session?.user?.role === 'OM') && (
-                    <Button
-                      onClick={() => {
-                        capitalizeWord()
-                        handleSave({
-                          getEditorText,
-                          orderDetails,
-                          notes,
-                          cfd,
-                          setButtonLoading,
-                          lines,
-                          playerEvents,
-                        })
-                      }
-                      }
-                      disabled={buttonLoading.save}
-                      className='w-24 mr-2'
-                      variant='outline'
-                    >
-                      {' '}
-                      {buttonLoading.save && (
-                        <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                      )}{' '}
-                      Save
-                    </Button>
-                  )}
+
+                <Button
+                  onClick={() => {
+                    capitalizeWord()
+                    handleSave({
+                      getEditorText,
+                      orderDetails,
+                      notes,
+                      cfd,
+                      setButtonLoading,
+                      lines,
+                      playerEvents,
+                    })
+                  }
+                  }
+                  disabled={buttonLoading.save}
+                  className='w-24 mr-2'
+                  variant='outline'
+                >
+                  {' '}
+                  {buttonLoading.save && (
+                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                  )}{' '}
+                  Save
+                </Button>
 
                 {!['CUSTOMER', 'OM', 'ADMIN'].includes(
                   session?.user?.email ?? ''

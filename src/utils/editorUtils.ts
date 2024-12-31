@@ -1051,7 +1051,7 @@ const insertTimestampAndSpeakerInitialAtStartOfCurrentLine = (
     }
 
     const speakerText = ' S1: ';
-    quill.insertText(paragraphStart, formattedTime + speakerText, { color: '#28a828' });
+    quill.insertText(paragraphStart, formattedTime + speakerText);
 
     // Select just the speaker number for easy editing
     const speakerNumberStart = paragraphStart + formattedTime.length + 2; // +2 for ' S'
