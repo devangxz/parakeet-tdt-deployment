@@ -8,21 +8,11 @@ import {
   PauseIcon,
   DoubleArrowUpIcon,
   DoubleArrowDownIcon,
-  ClockIcon,
-  ZoomInIcon,
-  ZoomOutIcon,
-  ThickArrowLeftIcon,
-  ThickArrowRightIcon,
-  TextAlignLeftIcon,
   SpeakerQuietIcon,
   SpeakerLoudIcon,
   TrackPreviousIcon,
   TrackNextIcon,
-  TimerIcon,
-  MagnifyingGlassIcon,
-  SpaceEvenlyVerticallyIcon,
-  PersonIcon,
-  Pencil2Icon,
+  DropdownMenuIcon,
 } from '@radix-ui/react-icons'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
@@ -33,8 +23,10 @@ import { toast } from 'sonner'
 import ConfigureShortcutsDialog from './ConfigureShortcutsDialog'
 import DownloadDocxDialog from './DownloadDocxDialog'
 import FrequentTermsDialog from './FrequentTermsDialog'
+import PlayerButton from './PlayerButton'
 import ReportDialog from './ReportDialog'
 import ShortcutsReferenceDialog from './ShortcutsReferenceDialog'
+import Toolbar from './Toolbar'
 import { LineData } from './transcriptUtils'
 import UploadDocxDialog from './UploadDocxDialog'
 import { Button } from '../ui/button'
@@ -100,24 +92,6 @@ import {
   playCurrentParagraphTimestamp,
   regenDocx,
 } from '@/utils/editorUtils'
-
-type PlayerButtonProps = {
-  icon: React.ReactNode
-  tooltip: string
-  onClick?: () => void
-}
-
-function PlayerButton({ icon, tooltip, onClick }: PlayerButtonProps) {
-  return (
-    <button
-      aria-label={tooltip}
-      onClick={onClick}
-      className='w-8 h-8 bg-[#EEE9FF] flex items-center justify-center rounded p-1 mx-[2px]'
-    >
-      {icon}
-    </button>
-  )
-}
 
 const createShortcutControls = (
   audioPlayer: React.RefObject<HTMLAudioElement>
@@ -286,6 +260,12 @@ export default function Header({
   const [audioUrl, setAudioUrl] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
   const [speed, setSpeed] = useState(100)
+  const [isToolbarDropdownOpen, setIsToolbarDropdownOpen] = useState(false)
+
+  // Add this function to handle dropdown toggle
+  const handleToolbarDropdownToggle = () => {
+    setIsToolbarDropdownOpen(!isToolbarDropdownOpen)
+  }
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -1166,180 +1146,60 @@ export default function Header({
                 </Tooltip>
 
                 <div className='h-full w-[2px] bg-gray-800 mx-3'></div>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <PlayerButton
-                      icon={<ThickArrowRightIcon />}
-                      onClick={playNextBlankInstance()}
-                      tooltip='Play next blank'
+
+                <div className='block min-[1450px]:hidden relative'>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <PlayerButton
+                        icon={<DropdownMenuIcon />}
+                        tooltip='Toggle more options'
+                        onClick={handleToolbarDropdownToggle}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Toggle more options</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  {isToolbarDropdownOpen && <div className='absolute top-[35px] -right-[380px] z-10 bg-white rounded-lg shadow-lg border border-gray-200 w-fit p-2'>
+                    <Toolbar
+                      orderDetails={orderDetails}
+                      setSelectionHandler={setSelectionHandler}
+                      playNextBlankInstance={playNextBlankInstance}
+                      playPreviousBlankInstance={playPreviousBlankInstance}
+                      playCurrentParagraphInstance={playCurrentParagraphInstance}
+                      insertTimestampBlankAtCursorPositionInstance={insertTimestampBlankAtCursorPositionInstance}
+                      toggleFindAndReplace={toggleFindAndReplace}
+                      markSection={markSection}
+                      markExaminee={markExaminee}
+                      insertSwearInLine={insertSwearInLine}
+                      adjustTimestampsBy={adjustTimestampsBy}
+                      setAdjustTimestampsBy={setAdjustTimestampsBy}
+                      handleAdjustTimestamps={handleAdjustTimestamps}
+                      increaseFontSize={increaseFontSize}
+                      decreaseFontSize={decreaseFontSize}
                     />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Play next blank</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger>
-                    <PlayerButton
-                      icon={<ThickArrowLeftIcon />}
-                      onClick={playPreviousBlankInstance()}
-                      tooltip='Play previous blank'
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Play previous blank</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger>
-                    <PlayerButton
-                      icon={<TextAlignLeftIcon />}
-                      tooltip='Play audio from the start of current paragraph'
-                      onClick={playCurrentParagraphInstance()}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Play audio from the start of current paragraph</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <PlayerButton
-                          icon={<TimerIcon />}
-                          onClick={setSelectionHandler}
-                          tooltip='Adjust timestamps'
-                        />
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Adjust Timestamps</DialogTitle>
-                          <DialogDescription>
-                            Please enter the seconds to adjust the timetamps by
-                          </DialogDescription>
-                        </DialogHeader>
-                        <Input
-                          type='number'
-                          placeholder='Enter seconds'
-                          value={adjustTimestampsBy}
-                          onChange={(e) =>
-                            setAdjustTimestampsBy(e.target.value)
-                          }
-                        />
-                        <DialogClose asChild>
-                          <Button onClick={handleAdjustTimestamps}>
-                            Adjust
-                          </Button>
-                        </DialogClose>
-                      </DialogContent>
-                    </Dialog>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Adjust timestamps</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger>
-                    <PlayerButton
-                      icon={<ZoomInIcon />}
-                      tooltip='Increase font size'
-                      onClick={increaseFontSize}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Increase font size</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger>
-                    <PlayerButton
-                      icon={<ZoomOutIcon />}
-                      tooltip='Decrease font size'
-                      onClick={decreaseFontSize}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Decrease font size</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger>
-                    <PlayerButton
-                      icon={<ClockIcon />}
-                      tooltip='Insert timestamps'
-                      onClick={insertTimestampBlankAtCursorPositionInstance}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Insert Timestamps</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger>
-                    <PlayerButton
-                      icon={<MagnifyingGlassIcon />}
-                      tooltip='Find and replace'
-                      onClick={toggleFindAndReplace}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Find and Replace</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                {orderDetails.orgName.toLowerCase() === 'remotelegal' &&
-                  <>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <PlayerButton
-                          icon={<SpaceEvenlyVerticallyIcon />}
-                          tooltip='Mark section'
-                          onClick={markSection}
-                        />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Mark section</p>
-                      </TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <PlayerButton
-                          icon={<PersonIcon />}
-                          tooltip='Mark examinee'
-                          onClick={markExaminee}
-                        />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Mark examinee</p>
-                      </TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <PlayerButton
-                          icon={<Pencil2Icon />}
-                          tooltip='Insert swear in line'
-                          onClick={insertSwearInLine}
-                        />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Insert swear in line</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </>
-                }
-
+                  </div>}
+                </div>
               </TooltipProvider>
-
+              <div className='hidden min-[1450px]:block'>
+                <Toolbar
+                  orderDetails={orderDetails}
+                  setSelectionHandler={setSelectionHandler}
+                  playNextBlankInstance={playNextBlankInstance}
+                  playPreviousBlankInstance={playPreviousBlankInstance}
+                  playCurrentParagraphInstance={playCurrentParagraphInstance}
+                  insertTimestampBlankAtCursorPositionInstance={insertTimestampBlankAtCursorPositionInstance}
+                  toggleFindAndReplace={toggleFindAndReplace}
+                  markSection={markSection}
+                  markExaminee={markExaminee}
+                  insertSwearInLine={insertSwearInLine}
+                  adjustTimestampsBy={adjustTimestampsBy}
+                  setAdjustTimestampsBy={setAdjustTimestampsBy}
+                  handleAdjustTimestamps={handleAdjustTimestamps}
+                  increaseFontSize={increaseFontSize}
+                  decreaseFontSize={decreaseFontSize}
+                />
+              </div>
             </div>
 
             <div className='flex gap-2'>

@@ -8,7 +8,7 @@ import 'react-quill/dist/quill.snow.css'
 import { LineData, CTMSWord, WordData } from './transcriptUtils'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
-import { ConvertedASROutput, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
+import { ConvertedASROutput, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
 
 // TODO:  Add valid values (start, end, duration, speaker) for the changed words.
 // TODO: Test if a new line is added with TS + speaker name
@@ -25,9 +25,11 @@ interface EditorProps {
     setContent: (content: Op[]) => void
     getLines: (lineData: LineData[]) => void
     setSelectionHandler: () => void
+    selection: CustomerQuillSelection | null
+    searchHighlight: CustomerQuillSelection | null
 }
 
-export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, orderDetails, content, setContent, getLines, setSelectionHandler }: EditorProps) {
+export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, orderDetails, content, setContent, getLines, setSelectionHandler, selection, searchHighlight }: EditorProps) {
     const quillRef = useRef<ReactQuill>(null)
     const [lines, setLines] = useState<LineData[]>([])
     const quillModules = {
@@ -441,6 +443,33 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         };
     }, []);
 
+    const handleBlur = () => {
+        const quill = quillRef.current?.getEditor()
+        if (!quill || !selection) return
+
+        // Apply blue background to selected text
+        quill.formatText(selection.index, selection.length, {
+            background: '#D9D9D9'
+        })
+    }
+
+    const handleFocus = () => {
+        const quill = quillRef.current?.getEditor()
+        if (!quill || !selection) return
+
+        // Remove blue background from selected text
+        quill.formatText(selection.index, selection.length, {
+            background: null
+        })
+
+        // Remove search highlight if exists
+        if (searchHighlight) {
+            quill.formatText(searchHighlight.index, searchHighlight.length, {
+                background: null
+            })
+        }
+    }
+
     return (
         <>
             {/* <ContextMenu>
@@ -454,6 +483,8 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
                 formats={['size', 'background', 'font', 'color']}
                 className='h-full'
                 onChangeSelection={setSelectionHandler}
+                onBlur={handleBlur}
+                onFocus={handleFocus}
             />
             {/* </ContextMenuTrigger>
                 <ContextMenuContent>

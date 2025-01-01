@@ -36,8 +36,6 @@ const DownloadDocxDialog = ({ orderDetails, downloadableType, setDownloadableTyp
         }
     }, [])
 
-    console.log(docxUrl)
-
     return <Dialog>
         <DialogTrigger>
             <Button onClick={() => getDocxUrl()} variant="outline">Download File</Button>
