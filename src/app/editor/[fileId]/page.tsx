@@ -50,6 +50,7 @@ import {
   searchAndSelect,
   replaceTextHandler,
   CustomerQuillSelection,
+  capitalizeWord,
 } from '@/utils/editorUtils'
 
 export type OrderDetails = {
@@ -291,7 +292,8 @@ function EditorPage() {
         }
       },
 
-      saveChanges: () =>
+      saveChanges: () => {
+        capitalizeWord(quillRef)
         handleSave({
           getEditorText,
           orderDetails,
@@ -300,7 +302,9 @@ function EditorPage() {
           setButtonLoading,
           lines,
           playerEvents,
-        }),
+        })
+      }
+
     }
     return controls as ShortcutControls
   }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, findText, replaceText, matchCase, lastSearchIndex])

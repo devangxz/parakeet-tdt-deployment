@@ -218,9 +218,8 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
                         return (
                           <div
                             key={key}
-                            className={`grid grid-cols-2 p-2 mt-2 ${
-                              index % 2 === 0 ? 'bg-gray-100' : 'bg-white'
-                            }`}
+                            className={`grid grid-cols-2 p-2 mt-2 ${index % 2 === 0 ? 'bg-gray-100' : 'bg-white'
+                              }`}
                           >
                             <span className='font-semibold'>
                               {fieldLabels[key]}
@@ -234,14 +233,14 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
                               </p>
                               {orderInformation.type ===
                                 'TRANSCRIPTION_FORMATTING' && (
-                                <p className='mt-1'>
-                                  Review cost: <br /> $
-                                  {orderInformation.fileCost.customFormatCost}
-                                  /ah ($
-                                  {orderInformation.fileCost.customFormatRate}
-                                  /ah + ${orderInformation.rateBonus}/ah)
-                                </p>
-                              )}
+                                  <p className='mt-1'>
+                                    Review cost: <br /> $
+                                    {orderInformation.fileCost.customFormatCost}
+                                    /ah ($
+                                    {orderInformation.fileCost.customFormatRate}
+                                    /ah + ${orderInformation.rateBonus}/ah)
+                                  </p>
+                                )}
                             </span>
                           </div>
                         )
@@ -249,9 +248,8 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
                       return (
                         <div
                           key={key}
-                          className={`grid grid-cols-2 p-2 mt-2 ${
-                            index % 2 === 0 ? 'bg-gray-100' : 'bg-white'
-                          }`}
+                          className={`grid grid-cols-2 p-2 mt-2 ${index % 2 === 0 ? 'bg-gray-100' : 'bg-white'
+                            }`}
                         >
                           <span className='font-semibold'>
                             {fieldLabels[key]}
@@ -308,7 +306,7 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
                 className='not-rounded'
                 onClick={() =>
                   window.open(
-                    `/editor/${orderInformation?.orderId}`,
+                    `/editor/${orderInformation?.fileId}`,
                     '_blank',
                     'noopener,noreferrer'
                   )

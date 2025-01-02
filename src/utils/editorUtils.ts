@@ -2,6 +2,7 @@
 import axios from 'axios'
 import { Session } from 'next-auth'
 import Quill from 'quill'
+import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
 import axiosInstance from './axios'
@@ -586,6 +587,29 @@ const handleSave = async (
     }
 }
 
+const capitalizeWord = (quillRef: React.RefObject<ReactQuill> | undefined) => {
+    if (quillRef?.current) {
+        const quill = quillRef.current.getEditor();
+        const text = quill.getText();
+
+        // Find all matches using regex
+        const regex = /\.\s+([a-z])/g;
+        let match;
+
+        while ((match = regex.exec(text)) !== null) {
+            const index = match.index + 2; // +2 to account for the period and space
+            const length = 1; // length of the character to capitalize
+
+            // Get the character to capitalize
+            const char = match[1].toUpperCase();
+
+            // Use Quill's deleteText and insertText methods
+            quill.deleteText(index, length);
+            quill.insertText(index, char);
+        }
+    }
+}
+
 type HandleSubmitParams = {
     orderDetails: OrderDetails
     step: string
@@ -1154,6 +1178,7 @@ export {
     searchAndSelect,
     replaceTextHandler,
     insertTimestampBlankAtCursorPosition,
-    insertTimestampAndSpeakerInitialAtStartOfCurrentLine
+    insertTimestampAndSpeakerInitialAtStartOfCurrentLine,
+    capitalizeWord
 }
 export type { ConvertedASROutput }

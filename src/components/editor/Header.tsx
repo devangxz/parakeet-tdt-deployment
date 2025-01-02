@@ -84,6 +84,7 @@ import DefaultShortcuts, {
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   adjustTimestamps,
+  capitalizeWord,
   downloadMP3,
   getFrequentTermsHandler,
   handleSave,
@@ -895,14 +896,6 @@ export default function Header({
     }
   }, [audioPlayer])
 
-  const capitalizeWord = () => {
-    if (quillRef?.current) {
-      const quill = quillRef.current.getEditor();
-      const text = quill.getText();
-      const modifiedText = text.replace(/\.\s+([a-z])/g, (match, letter) => `. ${letter.toUpperCase()}`);
-      quill.setText(modifiedText);
-    }
-  }
   const handleDropdownMenuOpenChange = async (open: boolean) => {
     if (open) {
       const asrFileUrl = await getTextFile(orderDetails.fileId, 'ASR')
@@ -1407,7 +1400,7 @@ export default function Header({
 
                 <Button
                   onClick={() => {
-                    capitalizeWord()
+                    capitalizeWord(quillRef)
                     handleSave({
                       getEditorText,
                       orderDetails,
