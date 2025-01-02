@@ -1290,7 +1290,7 @@ export default function Header({
                       <DropdownMenuItem asChild>
                         <a href={asrFileUrl} target='_blank'>Download ASR text</a>
                       </DropdownMenuItem>}
-                    {orderDetails.status === 'REVIEWER_ASSIGNED' || orderDetails.status === 'FINALIZER_ASSIGNED' &&
+                    {(orderDetails.status === 'REVIEWER_ASSIGNED' || orderDetails.status === 'FINALIZER_ASSIGNED') &&
                       <DropdownMenuItem asChild>
                         <a href={qcFileUrl} target='_blank'>Download QC text</a>
                       </DropdownMenuItem>}
