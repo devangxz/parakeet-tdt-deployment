@@ -623,24 +623,25 @@ model SharedFile {
 }
 
 model UploadSession {
-  id          Int       @id @default(autoincrement())
-  uploadId    String    @unique @map("upload_id")
-  key         String
-  userId      Int       @map("user_id") 
-  sourceInfo  Json      @map("source_info")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  user        User      @relation(fields: [userId], references: [id])
+  id         Int      @id @default(autoincrement())
+  uploadId   String   @unique @map("upload_id")
+  key        String
+  userId     Int      @map("user_id")
+  sourceInfo Json     @map("source_info")
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@map("scb_upload_sessions")
 }
 
 model ApiKey {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @unique @map("user_id")
-  apiKey    String   @unique @map("api_key")
-  webhook   String?
-  createdAt DateTime @default(now()) @map("created_at")
+  id             Int      @id @default(autoincrement())
+  userId         Int      @unique @map("user_id")
+  apiKey         String   @unique @map("api_key")
+  webhook        String?
+  internalApiKey String?  @map("internal_api_key")
+  createdAt      DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id])
 
@@ -653,7 +654,7 @@ model YouTubeFile {
   id         Int      @id @default(autoincrement())
   fileId     String   @unique @map("file_id")
   youtubeUrl String   @map("youtube_url")
-  isImported Boolean?  @default(false) @map("is_imported")
+  isImported Boolean? @default(false) @map("is_imported")
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@index([fileId])
