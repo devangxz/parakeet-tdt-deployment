@@ -381,15 +381,16 @@ export default function Header({
 
   const fetchWaveform = async () => {
     try {
-      const res = await axiosInstance.get(
-        `${FILE_CACHE_URL}/get-waveform/${orderDetails.fileId}`,
-        { responseType: 'blob' }
-      )
-      const waveformUrl = URL.createObjectURL(res.data)
-      setWaveformUrl(waveformUrl)
-      setIsPlayerLoaded(true)
+      const res = await getSignedUrlAction(`${orderDetails.fileId}_wf.png`, 300)
+      if (res.success && res.signedUrl) {
+        setWaveformUrl(res.signedUrl)
+      } else {
+        throw new Error('Failed to load waveform')
+      }
     } catch (error) {
-      toast.error('Failed to load waveform.')
+      setWaveformUrl('/assets/images/fallback-waveform.png')
+    } finally {
+      setIsPlayerLoaded(true)
     }
   }
 
@@ -1003,7 +1004,7 @@ export default function Header({
             seekTo(percentage)
           }}
           style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)), url(${waveformUrl})`,
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)), url(${waveformUrl}), url('/assets/images/fallback-waveform.png')`,
             backgroundSize: '100% 200%', // Double the height
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center top', // Position at top
