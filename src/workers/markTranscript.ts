@@ -1,10 +1,7 @@
-import { JobStatus, JobType, OrderStatus } from "@prisma/client";
-import axios from "axios";
 import OpenAI from 'openai';
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 import config from '../../config.json';
-import { FILE_CACHE_URL } from "../constants";
 import logger from "../lib/logger";
 import prisma from "../lib/prisma";
 import { redis } from "../lib/redis";
@@ -246,13 +243,14 @@ async function getFormattedTranscript(fullTranscript: string, fileId: string) {
 
 async function formatTranscript(
     fileId: string,
-): Promise<{ LLMTimeTaken: number }> {
+): Promise<{ LLMTimeTaken: number, transcript: string }> {
     logger.info(`--> formatTranscript ${fileId}`);
     let llmTimeTaken = 0;
+    let transcript = '';
     try {
         const transcriptFileName = `${fileId}.txt`;
         const data = (await downloadFromS3(transcriptFileName)).toString();
-        let transcript = data;
+        transcript = data;
 
         if (!transcript) {
             throw new Error('Transcript not found');
@@ -266,56 +264,23 @@ async function formatTranscript(
         transcript = "[--PROCEEDINGS--]\n\n" + transcript.replaceAll('. ', '.  ').replaceAll('? ', '? ').replaceAll(': ', ': '); //using a regex here removes the line breaks
         const endTime = Date.now();
         llmTimeTaken = (endTime - startTime) / 1000;
-
-        const order = await prisma.order.findUnique({
-            where: {
-                fileId,
-            },
-            include: {
-                user: true
-            }
-        })
-
-        if (!order) {
-            throw new Error(`Order not found for order`)
-        }
-
-        const assignment = await prisma.jobAssignment.findFirst({
-            where: {
-                orderId: order.id,
-                type: JobType.REVIEW,
-                status: JobStatus.ACCEPTED,
-            },
-        })
-
-        if (!assignment) {
-            throw new Error(`Assignment not found for file ${order.fileId} type REVIEW status ACCEPTED`)
-        }
-
-        const reviewerId = assignment.transcriberId
-
-        await axios.post(`${FILE_CACHE_URL}/save-transcript`, {
-            fileId: fileId,
-            transcript: transcript,
-            isCF: true,
-            userId: reviewerId,
-        }, {
-            headers: {
-                'x-api-key': process.env.SCRIBIE_API_KEY
-            }
-        });
-
         logger.info(`<-- formatTranscript ${fileId}`);
+
+        return {
+            LLMTimeTaken: llmTimeTaken,
+            transcript: transcript,
+        }
     } catch (error) {
         logger.error(`Error formatting transcript ${fileId} ${(error as Error).toString()}`);
     }
 
     return {
         LLMTimeTaken: llmTimeTaken,
-    };
+        transcript: transcript,
+    }
 }
 
-export async function markTranscript(orderId: number, fileId: string) {
+export async function markTranscript(orderId: number, fileId: string): Promise<{ transcript: string, LLMTimeTaken: number, fileId: string } | undefined> {
     try {
         const order = await prisma.order.findUnique({
             where: {
@@ -335,25 +300,11 @@ export async function markTranscript(orderId: number, fileId: string) {
         logger.info(`--> OrderTranscriptionCFFlow:format ${order.fileId}`);
         const details = await formatTranscript(order.fileId);
 
-        const currentReviewAssignment = await prisma.jobAssignment.findFirst({
-            where: {
-                orderId: order.id,
-                type: JobType.REVIEW,
-                status: JobStatus.ACCEPTED,
-            },
-        });
-
-        await prisma.order.update({
-            where: {
-                id: order.id,
-            },
-            data: {
-                LLMTimeTaken: details.LLMTimeTaken,
-                status: currentReviewAssignment
-                    ? OrderStatus.REVIEWER_ASSIGNED
-                    : OrderStatus.FORMATTED,
-            }
-        });
+        return {
+            transcript: details.transcript,
+            LLMTimeTaken: details.LLMTimeTaken,
+            fileId
+        }
     } catch (error) {
         const allRetryCounts = JSON.parse(await redis.get('LLM_RETRY_COUNT') || '{}')
 
