@@ -9,7 +9,7 @@ import { TabsContent } from "./Tabs";
 import { Textarea } from "../ui/textarea";
 import { OrderDetails } from "@/app/editor/[fileId]/page";
 import { LineData } from "@/components/editor/transcriptUtils";
-import { ConvertedASROutput } from "@/utils/editorUtils";
+import { ConvertedASROutput, CustomerQuillSelection } from "@/utils/editorUtils";
 
 interface EditorTabComponentProps {
     transcript: string
@@ -22,9 +22,11 @@ interface EditorTabComponentProps {
     setContent: (content: Op[]) => void
     getLines: (lineData: LineData[]) => void
     setSelectionHandler: () => void
+    selection: CustomerQuillSelection | null
+    searchHighlight: CustomerQuillSelection | null
 }
 
-export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, orderDetails, content, setContent, getLines, setSelectionHandler }: EditorTabComponentProps) => (
+export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, orderDetails, content, setContent, getLines, setSelectionHandler, selection, searchHighlight }: EditorTabComponentProps) => (
     <TabsContent className='h-full mt-0 overflow-hidden' value='transcribe'>
         <div className='bg-white border border-gray-200 border-t-0 rounded-b-lg px-1 py-2 h-[99%] relative overflow-hidden'>
             {!transcript && (
@@ -46,6 +48,8 @@ export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuratio
                         setContent={setContent}
                         getLines={getLines}
                         setSelectionHandler={setSelectionHandler}
+                        selection={selection}
+                        searchHighlight={searchHighlight}
                     />
                 </div>
             )}
