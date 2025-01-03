@@ -257,6 +257,7 @@ export default function Header({
   const [downloadableType, setDownloadableType] = useState('no-marking')
   const [asrFileUrl, setAsrFileUrl] = useState('')
   const [qcFileUrl, setQcFileUrl] = useState('')
+  const [LLMFileUrl, setLLMFileUrl] = useState('')
   const [reReviewComment, setReReviewComment] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
@@ -938,6 +939,8 @@ export default function Header({
       setAsrFileUrl(asrFileUrl?.signedUrl || '')
       const qcFileUrl = await getTextFile(orderDetails.fileId, 'QC')
       setQcFileUrl(qcFileUrl?.signedUrl || '')
+      const LLMFileUrl = await getTextFile(orderDetails.fileId, 'LLM')
+      setLLMFileUrl(LLMFileUrl?.signedUrl || '')
     }
   }
 
@@ -1322,6 +1325,10 @@ export default function Header({
                     {(orderDetails.status === 'REVIEWER_ASSIGNED' || orderDetails.status === 'FINALIZER_ASSIGNED') &&
                       <DropdownMenuItem asChild>
                         <a href={qcFileUrl} target='_blank'>Download QC text</a>
+                      </DropdownMenuItem>}
+                    {(orderDetails.status === 'REVIEWER_ASSIGNED' || orderDetails.status === 'FINALIZER_ASSIGNED') &&
+                      <DropdownMenuItem asChild>
+                        <a href={LLMFileUrl} target='_blank'>Download LLM text</a>
                       </DropdownMenuItem>}
                   </DropdownMenuContent>
                 </DropdownMenu>
