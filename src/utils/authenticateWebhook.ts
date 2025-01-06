@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyJwt } from '@/lib/jwt'
 import { rateLimiter } from '@/lib/rateLimiter'
 
-export type WebhookType = 'CONVERSION-WORKER' | 'LAMBDA-METADATA-EXTRACTOR' | 'YOUTUBE-WORKER'
+export type WebhookType = 'CONVERSION-WORKER' | 'LAMBDA-METADATA-EXTRACTOR' | 'YOUTUBE-WORKER' | 'ASR-WORKER' | 'LLM-WORKER'
 
 interface RateLimitConfig {
     interval: number;
@@ -16,7 +16,7 @@ const DEFAULT_RATE_LIMIT: RateLimitConfig = {
 }
 
 async function authenticateWebhook(
-    req: NextRequest, 
+    req: NextRequest,
     webhookType: WebhookType,
     customRateLimit?: RateLimitConfig
 ) {
