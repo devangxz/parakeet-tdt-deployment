@@ -11,7 +11,7 @@ export async function getTextFile(fileId: string, type: string) {
         const fileVersion = await prisma.fileVersion.findFirst({
             where: {
                 fileId,
-                tag: type === 'QC' ? FileTag.QC_DELIVERED : FileTag.AUTO,
+                tag: type === 'QC' ? FileTag.QC_DELIVERED : type === 'LLM' ? FileTag.LLM : FileTag.AUTO,
             },
             orderBy: {
                 updatedAt: 'desc',
