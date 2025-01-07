@@ -51,10 +51,7 @@ export async function POST(req: NextRequest) {
     const asrResult = await req.json()
     const { fileId, transcript, ctms, words, ASRElapsedTime } = asrResult
 
-    logger.info(`${fileId}, ${transcript}, ${ctms}, ${words}, ${ASRElapsedTime}`)
-
     try {
-        console.log(fileId)
         const order = await prisma.order.findUnique({
             where: { fileId }
         })
