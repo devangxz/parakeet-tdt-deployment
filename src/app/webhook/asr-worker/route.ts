@@ -43,7 +43,10 @@ function isPwerAboveThreshold(pwer: number): {
 export async function POST(req: NextRequest) {
     // Authenticate webhook and check rate limit
     const authResult = await authenticateWebhook(req, 'ASR-WORKER')
-    if (authResult.error) return authResult.error
+    if (authResult.error) {
+        logger.error(`authentication error in ASR worker: ${authResult.error}`)
+        return authResult.error
+    }
 
     const asrResult = await req.json()
     const { fileId, transcript, ctms, words, ASRElapsedTime } = asrResult
