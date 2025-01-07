@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     // Authenticate webhook and check rate limit
     const authResult = await authenticateWebhook(req, 'ASR-WORKER')
     if (authResult.error) {
-        logger.error(`authentication error in ASR worker: ${authResult.error}`)
+        logger.error(`authentication error in ASR worker: ${JSON.stringify(authResult.error)}`)
         return authResult.error
     }
 
