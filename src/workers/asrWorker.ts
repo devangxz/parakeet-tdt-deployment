@@ -12,7 +12,7 @@ const ASR_CALLBACK_URL = `${process.env.NEXT_PUBLIC_SITE_URL}/webhook/asr-worker
 const createWorker = (queueName: QueueName, processFunction: (job: Job) => Promise<unknown>) => new Worker(queueName, async (job) => {
     try {
         const result = await processFunction(job);
-
+        logger.info(JSON.stringify(result));
         if (result) {
             const token = signJwtAccessToken({ type: 'ASR-WORKER' }, { expiresIn: '2h' });
             await axios.post(ASR_CALLBACK_URL, result, {
