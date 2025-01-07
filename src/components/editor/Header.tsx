@@ -835,10 +835,17 @@ export default function Header({
 
   const revertTranscript = async () => {
     const toastId = toast.loading('Reverting transcript...')
+    let type = 'QC'
+    if (orderDetails.status === 'REVIEWER_ASSIGNED') {
+      type = 'CF_REV'
+    } else if (orderDetails.status === 'FINALIZER_ASSIGNED') {
+      type = 'CF_FINALIZER'
+    }
+
     try {
       await axiosInstance.post(`${FILE_CACHE_URL}/revert-transcript`, {
         fileId: orderDetails.fileId,
-        type: 'QC',
+        type
       })
       toast.success('Transcript reverted successfully')
       localStorage.removeItem('transcript')
