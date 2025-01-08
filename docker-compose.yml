@@ -17,3 +17,11 @@ services:
     command: redis-server
     ports:
       - '6379:6379'
+  conversion-worker:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      depends_on:
+        - redis      
+      environment:
+        REDIS_HOST: redis

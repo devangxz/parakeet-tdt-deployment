@@ -1,11 +1,10 @@
 'use client'
 
 import { Op } from 'quill/core'
-import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useRef, useEffect, useCallback, useMemo } from 'react'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 
-import { LineData, CTMSWord, WordData } from './transcriptUtils'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 import { ConvertedASROutput, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
@@ -23,88 +22,31 @@ interface EditorProps {
     orderDetails: OrderDetails
     content: Op[]
     setContent: (content: Op[]) => void
-    getLines: (lineData: LineData[]) => void
     setSelectionHandler: () => void
     selection: CustomerQuillSelection | null
     searchHighlight: CustomerQuillSelection | null
 }
 
-export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, orderDetails, content, setContent, getLines, setSelectionHandler, selection, searchHighlight }: EditorProps) {
+export default function Editor({ transcript, ctms, audioPlayer, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight }: EditorProps) {
     const quillRef = useRef<ReactQuill>(null)
-    const [lines, setLines] = useState<LineData[]>([])
     const quillModules = {
         toolbar: false,
     }
 
-    //let ctms: CTMSWord[] = []
-
-    const processTranscript = useCallback(
-        (transcript: string, ctms: CTMSWord[]) => {
-            const textLines = transcript.split('\n')
-            const newLines: LineData[] = []
-            let ctmsIndex = 0
-            let wordIndex = 0
-
-            const newCtms_local: CTMSWord[] = []
-            textLines.forEach((line) => {
-                const lineContent: { insert: string }[] = []
-                const lineWords: WordData[] = []
-                const words = line.split(/\s+/)
-
-                for (let i = 0; i < words.length; i++) {
-                    if (words[i] != '') {
-                        const wordData: WordData = { word: words[i] }
-                        if (i < 2) {
-                            wordData.ctms = {
-                                start: 0,
-                                end: 0,
-                                word: words[i],
-                                punct: '',
-                                index: wordIndex,
-                                speaker: '',
-                            }
-                        } else if (ctmsIndex < ctms.length) {
-                            wordData.ctms = ctms[ctmsIndex]
-                            if (wordData.ctms) {
-                                wordData.ctms.index = wordIndex
-                                ctmsIndex += 1
-                            }
-                        } else {
-                            wordData.ctms = {
-                                start: 0,
-                                end: 0,
-                                word: words[i],
-                                punct: '',
-                                index: wordIndex,
-                                speaker: '',
-                            }
-                        }
-                        newCtms_local.push(wordData.ctms)
-                        lineWords.push(wordData)
-                        lineContent.push({ insert: words[i] })
-                        if (i < words.length - 1) {
-                            lineContent.push({ insert: ' ' })
-                        }
-                        wordIndex++
-                    }
-                }
-
-                lineContent.push({ insert: '\n' })
-                newLines.push({ content: lineContent, words: lineWords })
-            })
-
-            setLines(newLines)
-            return newCtms_local
-        },
-        []
-    )
+    const getWordIndexFromCursor = (text: string, cursorPosition: number) => {
+        // Get text up to cursor
+        const textUpToCursor = text.slice(0, cursorPosition)
+        // Remove timestamps and speaker tracking (format: 0:00:00.0 S1:)
+        const cleanText = textUpToCursor.replace(/\d:\d{2}:\d{2}\.\d\s+S\d+:\s*/g, '')
+        // Split into words and count them
+        return cleanText.split(/\s+/).filter(word => word.trim() !== '').length
+    }
 
     const initEditor = useCallback(async () => {
-        processTranscript(transcript, ctms)
         const quill = quillRef.current?.getEditor()
         if (!quill) return
         quill.container.style.fontSize = '16px'
-    }, [processTranscript, transcript, ctms])
+    }, [])
 
     const getFormattedContent = (text: string) => {
         const timestampPattern = /\[\d:\d{2}:\d{2}\.\d\]\s_{4}/g;
@@ -138,8 +80,7 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
             const formattedContent = getFormattedContent(transcript);
             setContent(formattedContent);
         }
-        getLines(lines);
-    }, [lines, content.length, transcript]);
+    }, [content.length, transcript]);
 
     const handleEditorClick = useCallback(() => {
         const quill = quillRef.current?.getEditor()
@@ -148,21 +89,18 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         const clickPosition = quill.getSelection()?.index
         if (clickPosition === undefined) return
 
-        let currentPosition = 0
-        for (const line of lines) {
-            for (const wordData of line.words) {
-                const wordEnd = currentPosition + wordData.word.length
-                if (clickPosition >= currentPosition && clickPosition < wordEnd) {
-                    if (wordData.ctms && audioPlayer) {
-                        audioPlayer.currentTime = wordData.ctms.start;
-                    }
-                    return
-                }
-                currentPosition = wordEnd + 1 // +1 for the space
-            }
-            currentPosition++ // +1 for the newline
+        const text = quill.getText()
+        const wordIndex = getWordIndexFromCursor(text, clickPosition)
+        
+        if (wordIndex >= 0 && wordIndex < ctms.length && audioPlayer) {
+            const timestamp = ctms[wordIndex].start
+            console.log('Playing word:', ctms[wordIndex].word, 'at timestamp:', timestamp)
+            audioPlayer.currentTime = timestamp
+            audioPlayer.play()
+        } else {
+            console.log('Skipping playback - conditions not met')
         }
-    }, [lines, duration, audioPlayer])
+    }, [ctms, audioPlayer])
 
     const handlePlayAudioAtCursorPositionShortcut = useCallback(() => {
         const quill = quillRef.current?.getEditor();

@@ -474,6 +474,7 @@ const fetchFileDetails = async ({
         setPlayerEvents([]) // TODO: Implement player events
         return orderRes.orderDetails
     } catch (error) {
+        console.log(error)
         if (
             error instanceof Error &&
             'response' in error &&
@@ -531,7 +532,7 @@ const handleSave = async (
             .split('\n')
             .filter((paragraph) => paragraph.trim() !== '')
         const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/
-        const updatedCtms = updateContent(transcript, lines)
+        //const updatedCtms = updateContent(transcript, lines)
         for (const paragraph of paragraphs) {
             if (
                 !paragraphRegex.test(paragraph) &&
@@ -563,7 +564,7 @@ const handleSave = async (
             fileId: orderDetails.fileId,
             transcript,
             cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
-            ctms: updatedCtms,
+            //ctms: updatedCtms,
             orderId: orderDetails.orderId,
             // playerEvents: newEvents // Send only new events
         })

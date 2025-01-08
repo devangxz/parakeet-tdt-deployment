@@ -246,15 +246,15 @@ function EditorPage() {
     )
   }
 
-  const toggleFindAndReplace = () => {
-    setFindAndReplaceOpen(!findAndReplaceOpen)
+  const toggleFindAndReplace = useCallback(() => {
+    setFindAndReplaceOpen(prev => !prev)
     setSelectionHandler()
     setTimeout(() => {
       if (findInputRef.current) {
         findInputRef.current.focus()
       }
     }, 50)
-  }
+  }, [setSelectionHandler])
 
   const shortcutControls = useMemo(() => {
     const controls: Partial<ShortcutControls> = {
@@ -366,9 +366,9 @@ function EditorPage() {
     setDiff(diff)
   }
 
-  const getAudioPlayer = (audioPlayer: HTMLAudioElement | null) => {
+  const getAudioPlayer = useCallback((audioPlayer: HTMLAudioElement | null) => {
     setAudioPlayer(audioPlayer)
-  }
+  }, [])
 
   const [audioPlayed, setAudioPlayed] = useState(new Set<number>())
   const [playedPercentage, setPlayedPercentage] = useState(0)
@@ -418,6 +418,10 @@ function EditorPage() {
 
   const getPlayedPercentage = () => playedPercentage
 
+  const getEditorMode = useCallback((editorMode: string) => {
+    setEditorMode(editorMode)
+  }, [])
+
   const getEditorModeOptions = async () => {
     try {
       // const response = await axiosInstance.get(`${BACKEND_URL}/get-options/${orderDetails.orderId}`);
@@ -427,10 +431,6 @@ function EditorPage() {
       toast.error('Error fetching editor mode options')
     }
   } //Setting the editor mode to manual for now at cf step
-
-  const getEditorMode = (editorMode: string) => {
-    setEditorMode(editorMode)
-  }
 
   useEffect(() => {
     if (step !== 'QC' && orderDetails.orderId) {

@@ -16,7 +16,7 @@ import {
 } from '@radix-ui/react-icons'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
+import { useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
@@ -168,7 +168,7 @@ interface NewPlayerProps {
   toggleFindAndReplace: () => void
 }
 
-export default function Header({
+export default memo(function Header({
   getAudioPlayer,
   quillRef,
   editorModeOptions,
@@ -374,7 +374,19 @@ export default function Header({
   const decreaseFontSize = () => adjustFontSize(false)
 
   const shortcutControls = useMemo(
-    () => createShortcutControls(audioPlayer),
+    () => ({
+      ...createShortcutControls(audioPlayer),
+      togglePlay: () => {
+        if (!audioPlayer.current) return
+        if (audioPlayer.current.paused) {
+          audioPlayer.current.play().catch(error => {
+            console.error('Play error:', error)
+          })
+        } else {
+          audioPlayer.current.pause()
+        }
+      },
+    }),
     [audioPlayer]
   )
 
@@ -397,13 +409,19 @@ export default function Header({
 
   const fetchAudioUrl = async () => {
     try {
-      const { success, signedUrl } = await getSignedUrlAction(`${orderDetails.fileId}.mp3`, Math.max(Number(orderDetails.duration) * 4, 1800)) // 4 times the duration
+      console.log('Fetching audio URL for fileId:', orderDetails.fileId)
+      const { success, signedUrl } = await getSignedUrlAction(
+        `${orderDetails.fileId}.mp3`, 
+        Math.max(Number(orderDetails.duration) * 4, 1800)
+      )
       if (success && signedUrl) {
+        console.log('Got signed URL:', signedUrl)
         setAudioUrl(signedUrl)
       } else {
         throw new Error('Failed to fetch audio file')
       }
     } catch (error) {
+      console.error('Error fetching audio:', error)
       toast.error('Failed to fetch audio file')
     }
   }
@@ -416,18 +434,53 @@ export default function Header({
 
   useEffect(() => {
     const audio = audioPlayer.current
-    if (!audio) return
-    const handleLoadedMetadata = () => {
-      setAudioDuration(audio.duration)
-      setSpeed(audio.playbackRate * 100)
-      if (getAudioPlayer) getAudioPlayer(audio)
+    if (!audio || !audioUrl) return
+
+    // Initialize audio and pass to parent immediately
+    if (!audio.src || audio.src !== audioUrl) {
+        audio.src = audioUrl
     }
+    
+    // Always pass the audio player reference to parent
+    if (getAudioPlayer) {
+        getAudioPlayer(audio)
+    }
+        
+    const handleLoadStart = () => {
+        // Audio loading started
+    }
+
+    const handleCanPlayThrough = () => {
+        // Only set player loaded on initial load
+        if (!audio.currentTime) {
+            setIsPlayerLoaded(true)
+        }
+    }
+
+    const handleLoadedMetadata = () => {
+        if (!audioDuration) {
+            setAudioDuration(audio.duration)
+            setSpeed(audio.playbackRate * 100)
+        }
+    }
+
+    const handleError = (e: ErrorEvent) => {
+        console.error('Audio loading error:', e)
+        setIsPlayerLoaded(false)
+    }
+
+    audio.addEventListener('loadstart', handleLoadStart)
+    audio.addEventListener('canplaythrough', handleCanPlayThrough)
     audio.addEventListener('loadedmetadata', handleLoadedMetadata)
+    audio.addEventListener('error', handleError)
 
     return () => {
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+        audio.removeEventListener('loadstart', handleLoadStart)
+        audio.removeEventListener('canplaythrough', handleCanPlayThrough)
+        audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+        audio.removeEventListener('error', handleError)
     }
-  }, [audioPlayer, getAudioPlayer])
+  }, [audioUrl, getAudioPlayer])
 
   const seekTo = (value: number) => {
     if (!audioPlayer.current) return
@@ -561,31 +614,36 @@ export default function Header({
       if (!audioPlayer || !audioPlayer.current || !videoRef.current) return
       const player = audioPlayer.current
       videoRef.current.volume = 0
-      player.onplay = () => videoRef.current?.play()
-      player.onpause = () => videoRef.current?.pause()
-      player.onseeked = () => {
-        if (!videoRef.current) return
-
-        videoRef.current.currentTime = player.currentTime
-      }
-      player.onseeking = () => {
+      
+      const handleAudioPlay = () => videoRef.current?.play()
+      const handleAudioPause = () => videoRef.current?.pause()
+      
+      player.addEventListener('play', handleAudioPlay)
+      player.addEventListener('pause', handleAudioPause)
+      
+      player.addEventListener('seeking', () => {
         if (videoRef.current) videoRef.current.currentTime = player.currentTime
+      })
+
+      return () => {
+        player.removeEventListener('play', handleAudioPlay)
+        player.removeEventListener('pause', handleAudioPause)
       }
     }
 
-    syncVideoWithAudio()
-    const interval = setInterval(() => {
-      if (!audioPlayer || !audioPlayer.current || !videoRef.current) return
-      if (
-        videoRef.current &&
-        audioPlayer.current.currentTime !== videoRef.current.currentTime
-      ) {
-        videoRef.current.currentTime = audioPlayer.current.currentTime
-      }
-    }, 1000)
+    if (videoPlayerOpen) {
+      const cleanup = syncVideoWithAudio()
+      const interval = setInterval(() => {
+        if (!audioPlayer || !audioPlayer.current || !videoRef.current) return
+        if (videoRef.current.currentTime !== audioPlayer.current.currentTime) {
+          videoRef.current.currentTime = audioPlayer.current.currentTime
+        }
+      }, 1000)
 
-    return () => {
-      clearInterval(interval)
+      return () => {
+        cleanup?.()
+        clearInterval(interval)
+      }
     }
   }, [audioPlayer, videoRef, videoPlayerOpen])
 
@@ -1025,10 +1083,11 @@ export default function Header({
       </div>
 
       <div className='h-1/2 bg-white border border-gray-200 px-1 flex flex-col justify-between rounded-b-lg'>
-        <audio
-          ref={audioPlayer}
-          className='hidden'
-          src={`${audioUrl}`}
+        <audio 
+          ref={audioPlayer} 
+          className='hidden' 
+          src={audioUrl}
+          preload="auto"
         ></audio>
 
         <div className='flex items-center h-full'>
@@ -1698,4 +1757,4 @@ export default function Header({
       />
     </div>
   )
-}
+})
