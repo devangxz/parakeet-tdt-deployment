@@ -506,6 +506,9 @@ export default function EarningsPage() {
                     <TableRow>
                       <TableCell colSpan={1}>Total Amount</TableCell>
                       <TableCell colSpan={1}></TableCell>
+                      <TableCell colSpan={1}></TableCell>
+                      <TableCell colSpan={1}></TableCell>
+                      <TableCell colSpan={1}></TableCell>
                       <TableCell colSpan={1}>${totalBonusAmount}</TableCell>
                     </TableRow>
                   </TableFooter>
