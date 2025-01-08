@@ -19,6 +19,7 @@ import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
+import { getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 import getCustomerTranscript from '@/utils/getCustomerTranscript'
 import getOrgName from '@/utils/getOrgName'
@@ -26,8 +27,8 @@ import qualityCriteriaPassed from '@/utils/qualityCriteriaPassed'
 
 type OrderWithFileData =
   | (Order & {
-    File: File | null
-  })
+      File: File | null
+    })
   | null
 
 async function completeQCJob(order: Order, transcriberId: number) {
@@ -41,6 +42,7 @@ async function completeQCJob(order: Order, transcriberId: number) {
   })
 
   const orgName = await getOrgName(order.userId)
+  const isTestCustomer = await getTestCustomer(order.userId)
 
   const qcCost = await calculateTranscriberCost(
     orderWithFileData as OrderWithFileData,
@@ -55,7 +57,7 @@ async function completeQCJob(order: Order, transcriberId: number) {
     },
     data: {
       status: JobStatus.COMPLETED,
-      earnings: qcCost.cost,
+      earnings: isTestCustomer ? 0 : qcCost.cost,
       completedTs: new Date(),
     },
   })
@@ -67,9 +69,12 @@ async function completeQCJob(order: Order, transcriberId: number) {
   const userEmail = user?.email || ''
 
   if (order.orderType === OrderType.TRANSCRIPTION_FORMATTING) {
-
-    const inputFileType = orgName.toLowerCase() === 'remotelegal' ? InputFileType.LLM_OUTPUT : InputFileType.ASR_OUTPUT
-    const changeOrderStatus = orgName.toLowerCase() === 'remotelegal' ? false : true
+    const inputFileType =
+      orgName.toLowerCase() === 'remotelegal'
+        ? InputFileType.LLM_OUTPUT
+        : InputFileType.ASR_OUTPUT
+    const changeOrderStatus =
+      orgName.toLowerCase() === 'remotelegal' ? false : true
 
     await assignFileToReviewer(
       order.id,
@@ -169,6 +174,7 @@ export async function submitQCFile(
     )
 
     const testResult = await qualityCriteriaPassed(order.fileId)
+    const isTestCustomer = await getTestCustomer(order.userId)
 
     if (!testResult.result) {
       logger.info(`Quality Criteria failed ${order.fileId}`)
@@ -197,7 +203,7 @@ export async function submitQCFile(
           },
           data: {
             status: JobStatus.SUBMITTED_FOR_APPROVAL,
-            earnings: qcCost.cost,
+            earnings: isTestCustomer ? 0 : qcCost.cost,
             completedTs: new Date(),
           },
         })

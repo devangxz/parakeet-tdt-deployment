@@ -10,6 +10,7 @@ import {
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { sendTemplateMail } from '@/lib/ses'
+import { getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 
 export async function submitFinalize(transcriberId: number, order: Order) {
@@ -55,6 +56,8 @@ export async function submitFinalize(transcriberId: number, order: Order) {
       )
     }
 
+    const isTestCustomer = await getTestCustomer(order.userId)
+
     await prisma.$transaction(async (prisma) => {
       const orderFile = await prisma.order.findUnique({
         where: { id: order.id },
@@ -72,7 +75,7 @@ export async function submitFinalize(transcriberId: number, order: Order) {
         },
         data: {
           status: JobStatus.COMPLETED,
-          earnings: cf_cost.cost,
+          earnings: isTestCustomer ? 0 : cf_cost.cost,
           completedTs: new Date(),
         },
       })

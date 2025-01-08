@@ -1,6 +1,5 @@
 'use server'
 
-import { BonusType } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
@@ -23,7 +22,9 @@ export async function getTranscriberBonusDetails() {
     const bonusDetails = await prisma.bonus.findMany({
       where: {
         userId: transcriberId,
-        type: BonusType.DAILY,
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     })
 
