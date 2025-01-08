@@ -498,12 +498,14 @@ model FileAccent {
 }
 
 model Bonus {
-  id        Int       @id @default(autoincrement())
-  userId    Int       @map("user_id")
-  amount    Float     @default(0)
-  type      BonusType @default(DAILY)
-  fileIds   String?   @map("file_ids")
-  createdAt DateTime  @default(now()) @map("created_at")
+  id        Int         @id @default(autoincrement())
+  userId    Int         @map("user_id")
+  amount    Float       @default(0)
+  type      BonusType   @default(DAILY)
+  fileIds   String?     @map("file_ids")
+  duration  Int?        @map("duration")
+  stage     BonusStage?
+  createdAt DateTime    @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id])
 
@@ -884,6 +886,11 @@ enum BonusType {
   DAILY
   MONTHLY
   FILE
+}
+
+enum BonusStage {
+  QC
+  FINALIZE
 }
 
 enum FileTag {

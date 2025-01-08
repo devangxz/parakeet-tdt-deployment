@@ -42,6 +42,8 @@ interface Bonus {
   type: string
   fileIds?: string | null
   createdAt: string
+  duration?: number
+  stage?: string
 }
 
 interface MiscEarnings {
@@ -408,7 +410,7 @@ export default function EarningsPage() {
             />
             <div className='flex justify-between items-center mt-3 text-md'>
               <div className='flex'>
-                <p>Daily bonus</p>
+                <p>Bonus</p>
                 <p
                   className='text-indigo-600 ml-2 cursor-pointer'
                   onClick={handleBonusDetails}
@@ -469,6 +471,11 @@ export default function EarningsPage() {
                       <TableHead className='text-center'>Date</TableHead>
                       <TableHead className='text-center'>File</TableHead>
                       <TableHead className='text-center'>Amount</TableHead>
+                      <TableHead className='text-center'>Stage</TableHead>
+                      <TableHead className='text-center'>
+                        Duration (hours)
+                      </TableHead>
+                      <TableHead className='text-center'>Type</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -482,6 +489,15 @@ export default function EarningsPage() {
                         </TableCell>
                         <TableCell className='font-medium'>
                           ${bonus.amount}
+                        </TableCell>
+                        <TableCell className='font-medium'>
+                          {bonus.stage ? bonus.stage : '-'}
+                        </TableCell>
+                        <TableCell className='font-medium'>
+                          {bonus.duration ? bonus.duration : '-'}
+                        </TableCell>
+                        <TableCell className='font-medium'>
+                          {bonus.type}
                         </TableCell>
                       </TableRow>
                     ))}
