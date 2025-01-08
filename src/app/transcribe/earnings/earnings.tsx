@@ -470,12 +470,12 @@ export default function EarningsPage() {
                     <TableRow>
                       <TableHead className='text-center'>Date</TableHead>
                       <TableHead className='text-center'>File</TableHead>
-                      <TableHead className='text-center'>Amount</TableHead>
                       <TableHead className='text-center'>Stage</TableHead>
                       <TableHead className='text-center'>
                         Duration (hours)
                       </TableHead>
                       <TableHead className='text-center'>Type</TableHead>
+                      <TableHead className='text-center'>Amount</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -488,9 +488,6 @@ export default function EarningsPage() {
                           {bonus.fileIds ? bonus.fileIds : '-'}
                         </TableCell>
                         <TableCell className='font-medium'>
-                          ${bonus.amount}
-                        </TableCell>
-                        <TableCell className='font-medium'>
                           {bonus.stage ? bonus.stage : '-'}
                         </TableCell>
                         <TableCell className='font-medium'>
@@ -498,6 +495,9 @@ export default function EarningsPage() {
                         </TableCell>
                         <TableCell className='font-medium'>
                           {bonus.type}
+                        </TableCell>
+                        <TableCell className='font-medium'>
+                          ${bonus.amount}
                         </TableCell>
                       </TableRow>
                     ))}
