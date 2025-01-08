@@ -65,6 +65,60 @@ export async function updateCustomFormattingReview({
   }
 }
 
+export async function updateACRReview({
+  userEmail,
+  flag,
+}: UpdateVerifierParams) {
+  if (!isValidEmail(userEmail)) {
+    logger.error(`Invalid email: ${userEmail}`)
+    return { success: false, s: 'Invalid email' }
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      email: userEmail,
+    },
+  })
+
+  if (!user) {
+    logger.error(`User not found with email ${userEmail}`)
+    return { success: false, s: 'User not found' }
+  }
+
+  if (user.role !== Role.QC && user.role !== Role.REVIEWER) {
+    logger.error(`User is not a QC: ${userEmail}`)
+    return { success: false, s: 'User is not a QC' }
+  }
+
+  try {
+    await prisma.verifier.upsert({
+      where: { userId: user.id },
+      update: { acrReviewEnabled: flag },
+      create: {
+        userId: user.id,
+        acrReviewEnabled: flag,
+      },
+    })
+
+    logger.info(
+      `successfully ${flag ? 'enabled' : 'disabled'} ACR review for ${
+        user.email
+      }`
+    )
+
+    return {
+      success: true,
+      s: `Successfully ${flag ? 'enabled' : 'disabled'} ACR review`,
+    }
+  } catch (error) {
+    logger.error('Error updating ACR review:', error)
+    return {
+      success: false,
+      s: 'Failed to update ACR review status',
+    }
+  }
+}
+
 export async function updatePreDelivery({
   userEmail,
   flag,

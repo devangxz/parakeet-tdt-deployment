@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 import getOrgName from '@/utils/getOrgName'
 
@@ -87,9 +88,11 @@ export async function getAssignedQCFiles(type?: string | null) {
         transcriberId
       )
       const orgName = await getOrgName(file.order.userId)
+      const isTestCustomer = await getTestCustomer(file.order.userId)
       file.order.qc_cost = transcriberCost.cost
       file.order.rate = transcriberCost.rate
       file.order.orgName = orgName
+      file.order.isTestCustomer = isTestCustomer
     }
 
     logger.info(

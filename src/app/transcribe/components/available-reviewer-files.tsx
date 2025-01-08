@@ -27,6 +27,7 @@ interface File extends BaseTranscriberFile {
   cf_cost: number
   cf_rate: number
   orgName: string
+  testFile: boolean
 }
 
 interface Props {
@@ -104,6 +105,7 @@ export default function AvailableFilesPage({ changeTab }: Props) {
             rate: order.cf_rate,
             instructions: order.instructions,
             orgName: order.orgName,
+            testFile: order.isTestCustomer,
           }
         })
         setAvailableFiles((orders as any) ?? [])
@@ -234,6 +236,14 @@ export default function AvailableFilesPage({ changeTab }: Props) {
                 className='font-semibold text-[10px] text-green-600'
               >
                 {row.original.orgName}
+              </Badge>
+            )}
+            {row.original.testFile && (
+              <Badge
+                variant='outline'
+                className='font-semibold text-[10px] text-green-600'
+              >
+                Test File
               </Badge>
             )}
           </div>

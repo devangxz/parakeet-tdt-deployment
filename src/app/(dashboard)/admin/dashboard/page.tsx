@@ -6,12 +6,15 @@ import AccountSuspension from './components/account-suspension'
 import AddCredits from './components/add-credits'
 import AddLegalQC from './components/add-legal-qc'
 import AddMiscEarnings from './components/add-misc-earnings'
+import AddTestCustomer from './components/add-test-customer'
 import ChangePaypalEmail from './components/change-paypal-email'
 import Coupon from './components/coupon'
 import CustomPlan from './components/custom-plan'
 import DisableQC from './components/disable-qc'
+import EnableACRReview from './components/enable-acr-review'
 import EnableCustomFormattingBonus from './components/enable-custom-format-bonus'
 import EnableCustomFormattingReview from './components/enable-custom-format-review'
+import EnableCustomers from './components/enable-customers'
 import EnablePreDelivery from './components/enable-pre-delivery'
 import OrderWatch from './components/order-watch'
 import TransferCredits from './components/transfer-credits'
@@ -38,6 +41,9 @@ export default function AdminDashboard() {
             <EnableCustomFormattingReview />
             <EnablePreDelivery />
             <EnableCustomFormattingBonus />
+            <EnableACRReview />
+            <AddTestCustomer />
+            <EnableCustomers />
             <AddMiscEarnings />
             <TransferCredits />
             <OrderWatch />
