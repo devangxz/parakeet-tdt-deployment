@@ -7,9 +7,10 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
-import { isTranscriberICQC } from '@/utils/backend-helper'
+import { isTranscriberICQC, getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 import getOrgName from '@/utils/getOrgName'
+
 export async function getAvailableFiles(type: string) {
   const session = await getServerSession(authOptions)
   const user = session?.user
@@ -33,6 +34,17 @@ export async function getAvailableFiles(type: string) {
         },
       },
     })
+
+    const verifier = await prisma.verifier.findUnique({
+      where: {
+        userId: userId,
+      },
+    })
+
+    const enabledCustomers =
+      verifier?.enabledCustomers
+        ?.split(',')
+        .map((customer) => customer.toLowerCase()) || []
 
     if (type === 'legal') {
       const legalUserIds = userRates
@@ -68,10 +80,20 @@ export async function getAvailableFiles(type: string) {
     for (const file of cfFiles as any) {
       const transcriberCost = await calculateTranscriberCost(file, userId)
       const orgName = await getOrgName(file.userId)
+      const isTestCustomer = await getTestCustomer(file.userId)
       file.cf_cost = transcriberCost.cost
       file.cf_rate = transcriberCost.rate
       file.orgName = orgName
+      file.isTestCustomer = isTestCustomer
     }
+
+    cfFiles = cfFiles.filter((file: any) => {
+      if (!file.orgName) return true
+      if (file.orgName.toLowerCase() === 'acr') {
+        return verifier?.acrReviewEnabled && enabledCustomers.includes('acr')
+      }
+      return enabledCustomers.includes(file.orgName.toLowerCase())
+    })
 
     const isTranscriberICQCResult = await isTranscriberICQC(userId)
 
