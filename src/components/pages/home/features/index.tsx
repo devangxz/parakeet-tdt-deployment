@@ -63,21 +63,21 @@ const Features = () => {
   const avatars = [
     {
       id: 1,
-      image: '/assets/images/home/avatars/avatar1.jpg',
+      image: '/assets/images/home/avatars/avatar1.webp',
       alt: 'Katherine Volk',
       fallbackColor: 'bg-violet-500',
       initials: 'KV',
     },
     {
       id: 2,
-      image: '/assets/images/home/avatars/avatar2.jpg',
+      image: '/assets/images/home/avatars/avatar2.webp',
       alt: 'John Hampton',
       fallbackColor: 'bg-blue-500',
       initials: 'JH',
     },
     {
       id: 3,
-      image: '/assets/images/home/avatars/avatar3.jpg',
+      image: '/assets/images/home/avatars/avatar3.webp',
       alt: 'Elli Wynter',
       fallbackColor: 'bg-emerald-500',
       initials: 'EW',
@@ -125,11 +125,14 @@ const Features = () => {
                             <Image
                               src={user.image}
                               alt={user.alt}
-                              fill
-                              className='object-cover'
+                              width={40}
+                              height={40}
+                              className='object-cover w-full h-full'
                               sizes='(max-width: 768px) 32px, 40px'
-                              quality={95}
+                              quality={80}
                               loading='lazy'
+                              placeholder='blur'
+                              blurDataURL='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx0fHRsdHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/2wBDAR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k='
                               onError={(e) => {
                                 const parent = (e.target as HTMLElement)
                                   .parentElement
@@ -148,7 +151,21 @@ const Features = () => {
                       users
                     </p>
                   </div>
+                </div>
+
+                <div className='flex items-center justify-between border-t border-gray-100 pt-4'>
                   <div className='flex items-center gap-2'>
+                    <div className='relative flex h-2 w-2 sm:h-3 sm:w-3'>
+                      <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75' />
+                      <span className='relative inline-flex rounded-full h-2 w-2 sm:h-3 sm:w-3 bg-green-500' />
+                    </div>
+                    <span className='text-xs sm:text-sm text-gray-700'>
+                      <span className='font-semibold text-gray-900'>24/7</span>{' '}
+                      live support available
+                    </span>
+                  </div>
+
+                  <div className='flex items-center gap-1'>
                     <div className='flex'>
                       {[...Array(5)].map((_, i) => (
                         <Star
@@ -161,17 +178,6 @@ const Features = () => {
                       4.9/5
                     </span>
                   </div>
-                </div>
-
-                <div className='flex items-center gap-3 border-t border-gray-100 pt-4'>
-                  <div className='relative flex h-2 w-2 sm:h-3 sm:w-3'>
-                    <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75' />
-                    <span className='relative inline-flex rounded-full h-2 w-2 sm:h-3 sm:w-3 bg-green-500' />
-                  </div>
-                  <span className='text-xs sm:text-sm text-gray-700'>
-                    <span className='font-semibold text-gray-900'>24/7</span>{' '}
-                    live support available
-                  </span>
                 </div>
               </div>
             </div>

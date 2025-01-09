@@ -14,12 +14,32 @@ interface CompanyLogoProps {
 }
 
 const companies: Company[] = [
-  { name: 'Cambridge', image: '/assets/images/home/cambridge.png', width: 180 },
-  { name: 'Creu', image: '/assets/images/creu.jpeg', width: 100 },
-  { name: 'Chicago', image: '/assets/images/home/chicago.png', width: 180 },
-  { name: 'Cintron', image: '/assets/images/cintron.png', width: 160 },
-  { name: 'ProTrainings', image: '/assets/images/home/xpro.png', width: 160 },
-  { name: 'BeAmazed', image: '/assets/images/beamazed.png', width: 170 },
+  {
+    name: 'Cambridge',
+    image: '/assets/images/home/partners/cambridge.webp',
+    width: 180,
+  },
+  { name: 'Creu', image: '/assets/images/home/partners/creu.webp', width: 100 },
+  {
+    name: 'Chicago',
+    image: '/assets/images/home/partners/chicago.webp',
+    width: 180,
+  },
+  {
+    name: 'Cintron',
+    image: '/assets/images/home/partners/cintron.webp',
+    width: 160,
+  },
+  {
+    name: 'ProTrainings',
+    image: '/assets/images/home/partners/pro-trainings.webp',
+    width: 160,
+  },
+  {
+    name: 'BeAmazed',
+    image: '/assets/images/home/partners/beamazed.webp',
+    width: 170,
+  },
 ]
 
 const CompanyLogo = ({ company }: CompanyLogoProps) => (
@@ -28,10 +48,14 @@ const CompanyLogo = ({ company }: CompanyLogoProps) => (
       <Image
         src={company.image}
         alt={`${company.name} logo`}
-        className='object-contain max-w-full max-h-full'
-        fill
+        width={company.width}
+        height={Math.round(company.width * 0.6)}
+        className='object-contain w-auto h-auto max-w-full max-h-full'
         priority={true}
-        style={{ objectFit: 'contain' }}
+        quality={75}
+        sizes='(max-width: 768px) 144px, 192px'
+        placeholder='blur'
+        blurDataURL='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx0fHRsdHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/2wBDAR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k='
       />
     </div>
   </div>
