@@ -103,6 +103,7 @@ model Customer {
   customPlan                     Boolean  @default(false) @map("custom_plan")
   delWatch                       Float    @default(0) @map("del_watch")
   isPreDeliveryEligible          Boolean  @default(false) @map("is_pre_delivery_eligible")
+  isTestCustomer                 Boolean  @default(false) @map("is_test_customer")
   createdAt                      DateTime @default(now()) @map("created_at")
   updatedAt                      DateTime @default(now()) @map("updated_at")
 
@@ -401,8 +402,10 @@ model Verifier {
   superQc          Boolean? @default(false) @map("super_qc")
   watchlist        Boolean? @default(false)
   legalEnabled     Boolean? @default(false) @map("legal_enabled")
+  enabledCustomers String?  @default("REMOTELEGAL") @map("enabled_customers")
   cfReviewEnabled  Boolean? @default(false) @map("cf_review_enabled")
   cfBonusEnabled   Boolean? @default(false) @map("cf_bonus_enabled")
+  acrReviewEnabled Boolean? @default(false) @map("acr_review_enabled")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @default(now()) @map("updated_at")
 
@@ -495,12 +498,14 @@ model FileAccent {
 }
 
 model Bonus {
-  id        Int       @id @default(autoincrement())
-  userId    Int       @map("user_id")
-  amount    Float     @default(0)
-  type      BonusType @default(DAILY)
-  fileIds   String?   @map("file_ids")
-  createdAt DateTime  @default(now()) @map("created_at")
+  id        Int         @id @default(autoincrement())
+  userId    Int         @map("user_id")
+  amount    Float       @default(0)
+  type      BonusType   @default(DAILY)
+  fileIds   String?     @map("file_ids")
+  duration  Int?        @map("duration")
+  stage     BonusStage?
+  createdAt DateTime    @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id])
 
@@ -623,24 +628,25 @@ model SharedFile {
 }
 
 model UploadSession {
-  id          Int       @id @default(autoincrement())
-  uploadId    String    @unique @map("upload_id")
-  key         String
-  userId      Int       @map("user_id") 
-  sourceInfo  Json      @map("source_info")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  user        User      @relation(fields: [userId], references: [id])
+  id         Int      @id @default(autoincrement())
+  uploadId   String   @unique @map("upload_id")
+  key        String
+  userId     Int      @map("user_id")
+  sourceInfo Json     @map("source_info")
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@map("scb_upload_sessions")
 }
 
 model ApiKey {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @unique @map("user_id")
-  apiKey    String   @unique @map("api_key")
-  webhook   String?
-  createdAt DateTime @default(now()) @map("created_at")
+  id             Int      @id @default(autoincrement())
+  userId         Int      @unique @map("user_id")
+  apiKey         String   @unique @map("api_key")
+  webhook        String?
+  internalApiKey String?  @map("internal_api_key")
+  createdAt      DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id])
 
@@ -653,7 +659,7 @@ model YouTubeFile {
   id         Int      @id @default(autoincrement())
   fileId     String   @unique @map("file_id")
   youtubeUrl String   @map("youtube_url")
-  isImported Boolean?  @default(false) @map("is_imported")
+  isImported Boolean? @default(false) @map("is_imported")
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@index([fileId])
@@ -880,6 +886,11 @@ enum BonusType {
   DAILY
   MONTHLY
   FILE
+}
+
+enum BonusStage {
+  QC
+  FINALIZE
 }
 
 enum FileTag {

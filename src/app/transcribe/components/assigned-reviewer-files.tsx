@@ -32,6 +32,7 @@ interface File extends BaseTranscriberFile {
   cf_cost: number
   cf_rate: number
   orgName: string
+  testFile: boolean
 }
 
 interface Props {
@@ -109,6 +110,7 @@ export default function AssignedFilesPage({ changeTab }: Props) {
             rate: assignment.order.cf_rate,
             instructions: assignment.order.instructions,
             orgName: assignment.order.orgName,
+            testFile: assignment.order.isTestCustomer,
           }
         })
         setAssginedFiles((orders as any) ?? [])
@@ -241,6 +243,14 @@ export default function AssignedFilesPage({ changeTab }: Props) {
                 {row.original.orgName}
               </Badge>
             )}
+            {row.original.testFile && (
+              <Badge
+                variant='outline'
+                className='font-semibold text-[10px] text-green-600'
+              >
+                Test File
+              </Badge>
+            )}
           </div>
         </div>
       ),
@@ -302,10 +312,10 @@ export default function AssignedFilesPage({ changeTab }: Props) {
                     `/editor/${row.original.fileId}`,
                     '_blank',
                     'toolbar=no,location=no,menubar=no,width=' +
-                    window.screen.width +
-                    ',height=' +
-                    window.screen.height +
-                    ',left=0,top=0'
+                      window.screen.width +
+                      ',height=' +
+                      window.screen.height +
+                      ',left=0,top=0'
                   )
                 }}
               >

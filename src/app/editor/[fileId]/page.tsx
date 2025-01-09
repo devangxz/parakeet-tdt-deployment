@@ -49,6 +49,8 @@ import {
   handleSubmit,
   searchAndSelect,
   replaceTextHandler,
+  CustomerQuillSelection,
+  capitalizeWord,
 } from '@/utils/editorUtils'
 
 export type OrderDetails = {
@@ -135,10 +137,8 @@ function EditorPage() {
   const [matchCount, setMatchCount] = useState(0)
   const [matchSelection, setMatchSelection] = useState(false)
   const findInputRef = useRef<HTMLInputElement>(null)
-  const [selection, setSelection] = useState<{
-    index: number
-    length: number
-  } | null>(null)
+  const [selection, setSelection] = useState<CustomerQuillSelection | null>(null)
+  const [searchHighlight, setSearchHighlight] = useState<{ index: number; length: number } | null>(null);
   interface PlayerEvent {
     t: number
     s: number
@@ -152,6 +152,7 @@ function EditorPage() {
       setSelection({ index: range.index, length: range.length })
     }
   }
+
   const [playerEvents, setPlayerEvents] = useState<PlayerEvent[]>([])
 
   const isActive = usePreventMultipleTabs((params?.fileId as string) || '')
@@ -218,7 +219,9 @@ function EditorPage() {
       toast,
       selection,
       setSelection,
-      matchSelection
+      matchSelection,
+      false,
+      setSearchHighlight
     )
   }
 
@@ -238,7 +241,8 @@ function EditorPage() {
       selection,
       setSelection,
       matchSelection,
-      true
+      true,
+      setSearchHighlight
     )
   }
 
@@ -288,7 +292,8 @@ function EditorPage() {
         }
       },
 
-      saveChanges: () =>
+      saveChanges: () => {
+        capitalizeWord(quillRef)
         handleSave({
           getEditorText,
           orderDetails,
@@ -297,7 +302,9 @@ function EditorPage() {
           setButtonLoading,
           lines,
           playerEvents,
-        }),
+        })
+      }
+
     }
     return controls as ShortcutControls
   }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, findText, replaceText, matchCase, lastSearchIndex])
@@ -617,6 +624,8 @@ function EditorPage() {
                         audioDuration={audioDuration}
                         getQuillRef={getQuillRef}
                         setSelectionHandler={setSelectionHandler}
+                        selection={selection}
+                        searchHighlight={searchHighlight}
                       />
 
                       <DiffTabComponent diff={diff} />

@@ -1,4 +1,4 @@
-import { JobStatus, JobType, BonusType } from '@prisma/client'
+import { JobStatus, JobType, BonusType, BonusStage } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
 import logger from '@/lib/logger'
@@ -14,13 +14,20 @@ interface TranscriberData {
   cfBonusEnabled?: boolean
 }
 
-const addBonus = async (userId: number, amount: number, fileIds: string) => {
+const addBonus = async (
+  userId: number,
+  amount: number,
+  fileIds: string,
+  duration: number
+) => {
   const result = await prisma.bonus.create({
     data: {
       userId: userId,
       amount: amount,
       fileIds: fileIds,
       type: BonusType.DAILY,
+      stage: BonusStage.FINALIZE,
+      duration: duration,
     },
   })
   return result
@@ -132,7 +139,12 @@ export async function POST() {
 
       const totalHours = (user.totalHoursWorked / 3600).toFixed(2)
       const amount = parseFloat(totalHours) >= 3 ? 10 : 5
-      await addBonus(user.transcriberId, amount, user.fileIds.join(','))
+      await addBonus(
+        user.transcriberId,
+        amount,
+        user.fileIds.join(','),
+        Number(totalHours)
+      )
 
       const today = new Date()
       const today_date = `${
