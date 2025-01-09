@@ -41,7 +41,7 @@ import {
   useShortcuts,
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
-  ConvertedASROutput,
+  CTMType,
   updatePlayedPercentage,
   regenDocx,
   fetchFileDetails,
@@ -108,7 +108,7 @@ function EditorPage() {
   const { data: session } = useSession()
   const [diff, setDiff] = useState<Change[]>([])
   const [transcript, setTranscript] = useState('')
-  const [ctms, setCtms] = useState<ConvertedASROutput[]>([])
+  const [ctms, setCtms] = useState<CTMType[]>([])
   const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null)
   const [step, setStep] = useState<string>('')
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false)

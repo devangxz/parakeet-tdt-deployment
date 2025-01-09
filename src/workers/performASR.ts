@@ -8,7 +8,7 @@ import logger from "../lib/logger";
 import prisma from "../lib/prisma";
 import { redis } from '../lib/redis'
 import { getSignedURLFromS3 } from "../utils/backend-helper";
-import getFormattedTranscript, { convertASRArray } from "../utils/getFormattedTranscript";
+import { getFormattedTranscript, getCTMs } from "../utils/transcript";
 
 function calculatePWER(words: Word[]): number {
     logger.info('--> ASRAssemblyAI:calculatePWER');
@@ -38,8 +38,8 @@ async function transcribe(fileURL: string, fileId: string) {
         throw new Error('Transcription failed');
     }
 
-    const ctms = convertASRArray(transcriptData.words);
-    const transcript = getFormattedTranscript(transcriptData.words);
+    const ctms = getCTMs(transcriptData.words);
+    const transcript = getFormattedTranscript(ctms);
     logger.info(`<-- ASRAssemblyAI:transcribe ${fileId}`);
     return { transcript, ctms, words: transcriptData.words };
 }

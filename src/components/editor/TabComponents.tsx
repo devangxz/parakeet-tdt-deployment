@@ -9,11 +9,11 @@ import { TabsContent } from "./Tabs";
 import { Textarea } from "../ui/textarea";
 import { OrderDetails } from "@/app/editor/[fileId]/page";
 import { LineData } from "@/components/editor/transcriptUtils";
-import { ConvertedASROutput, CustomerQuillSelection } from "@/utils/editorUtils";
+import { CTMType, CustomerQuillSelection } from "@/utils/editorUtils";
 
 interface EditorTabComponentProps {
     transcript: string
-    ctms: ConvertedASROutput[]
+    ctms: CTMType[]
     audioPlayer: HTMLAudioElement | null
     audioDuration: number
     getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void

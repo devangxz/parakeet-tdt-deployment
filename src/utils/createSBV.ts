@@ -1,4 +1,4 @@
-import { secondsToTs } from "./getFormattedTranscript";
+import { secondsToTs } from "./secondsToTs";
 import { CTMSWord } from "@/components/editor/transcriptUtils";
 
 interface CTMSWordWithCase extends CTMSWord {

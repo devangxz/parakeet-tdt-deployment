@@ -6,6 +6,8 @@ import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
 import axiosInstance from './axios'
+import { CTMType } from './getFormattedTranscript'
+import { secondsToTs } from './secondsToTs'
 import { getFrequentTermsAction } from '@/app/actions/editor/frequent-terms'
 import { getOrderDetailsAction } from '@/app/actions/editor/order-details'
 import { reportFileAction } from '@/app/actions/editor/report-file'
@@ -85,21 +87,6 @@ function convertTimestampToSeconds(timestamp: string) {
     return totalSeconds
 }
 
-type ConvertedASROutput = {
-    start: number
-    duration: number
-    end: number
-    word: string
-    conf: number
-    chars: string
-    punct: string
-    source: string
-    turn_prob: number
-    index: number
-    speaker: string
-    turn?: number
-}
-
 const updatePlayedPercentage = (
     audioPlayer: HTMLAudioElement | null,
     audioPlayed: Set<number>,
@@ -124,13 +111,7 @@ const updatePlayedPercentage = (
 }
 
 const convertSecondsToTimestamp = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    const secondsLeft = seconds % 60
-
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${secondsLeft
-        .toFixed(1)
-        .padStart(4, '0')}`
+    return secondsToTs(seconds, true, 1)
 }
 
 const downloadMP3 = async (orderDetails: OrderDetails) => {
@@ -408,7 +389,7 @@ type FetchFileDetailsParams = {
     setCfd: React.Dispatch<React.SetStateAction<string>>
     setStep: React.Dispatch<React.SetStateAction<string>>
     setTranscript: React.Dispatch<React.SetStateAction<string>>
-    setCtms: React.Dispatch<React.SetStateAction<ConvertedASROutput[]>>
+    setCtms: React.Dispatch<React.SetStateAction<CTMType[]>>
     setPlayerEvents: React.Dispatch<React.SetStateAction<PlayerEvent[]>>
 }
 
@@ -1182,4 +1163,4 @@ export {
     insertTimestampAndSpeakerInitialAtStartOfCurrentLine,
     capitalizeWord
 }
-export type { ConvertedASROutput }
+export type { CTMType }

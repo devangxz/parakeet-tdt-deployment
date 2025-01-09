@@ -1,13 +1,16 @@
 'use client'
 
+import { diffWords } from 'diff'
+import debounce from 'lodash/debounce'
 import { Op } from 'quill/core'
-import React, { useRef, useEffect, useCallback, useMemo } from 'react'
+import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
-import { ConvertedASROutput, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
+import { CTMType, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
+import { createAlignments, getFormattedTranscript, AlignmentType } from '@/utils/transcript'
 
 // TODO:  Add valid values (start, end, duration, speaker) for the changed words.
 // TODO: Test if a new line is added with TS + speaker name
@@ -15,7 +18,7 @@ import { ConvertedASROutput, CustomerQuillSelection, insertTimestampAndSpeakerIn
 // TODO: Problem with updates near punctuation marks
 interface EditorProps {
     transcript: string
-    ctms: ConvertedASROutput[]
+    ctms: CTMType[]
     audioPlayer: HTMLAudioElement | null
     duration: number
     getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void
@@ -27,8 +30,120 @@ interface EditorProps {
     searchHighlight: CustomerQuillSelection | null
 }
 
-export default function Editor({ transcript, ctms, audioPlayer, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight }: EditorProps) {
+export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight }: EditorProps) {
+    const ctms = initialCtms; // Make CTMs constant
     const quillRef = useRef<ReactQuill>(null)
+    const [alignments, setAlignments] = useState<AlignmentType[]>([])
+
+    // Core alignment update logic
+    const processAlignmentUpdate = useCallback((newText: string, currentAlignments: AlignmentType[]) => {
+        if (currentAlignments.length === 0) return;
+
+        // Convert alignments to text for diffing
+        const oldText = currentAlignments.map(a => a.word).join(' ');
+        
+        // Get word-level diffs
+        const diffs = diffWords(oldText, newText, {
+            ignoreCase: false,
+        });
+        
+        // Create new alignments array
+        const newAlignments: AlignmentType[] = [];
+        let alignmentIndex = 0;
+        let lastRemovedAlignment: AlignmentType | null = null;
+        
+        diffs.forEach((part) => {
+            console.log(part);
+            if (part.removed) {
+                // Store removed word info for potential replacement
+                const removedWords = part.value.trim()
+                    .split(/\s+/)
+                    .filter(w => w.length > 0);
+                if (removedWords.length === 1) {
+                    lastRemovedAlignment = currentAlignments[alignmentIndex];
+                    console.log(lastRemovedAlignment)
+                }
+                alignmentIndex += removedWords.length;
+            } else if (part.added) {
+                // Add new words
+                const newWords = part.value.trim().split(/\s+/).filter(w => w.length > 0);
+                
+                // Check if this is a direct word replacement
+                const isReplacement = lastRemovedAlignment && 
+                    newWords.length === 1;
+                
+                if (isReplacement) {
+                    // Use timing from the removed word
+                    newAlignments.push({
+                        word: newWords[0],
+                        type: 'edit',
+                        start: lastRemovedAlignment!.start,
+                        end: lastRemovedAlignment!.end,
+                        conf: 1.0,
+                        punct: newWords[0],
+                        source: 'user',
+                        speaker: lastRemovedAlignment!.speaker,
+                        turn: lastRemovedAlignment!.turn
+                    });
+                } else {
+                    // Handle as new insertion
+                    const prevAlignment = alignmentIndex > 0 ? currentAlignments[alignmentIndex - 1] : null;
+                    const nextAlignment = currentAlignments[alignmentIndex] || currentAlignments[currentAlignments.length - 1];
+                    
+                    newWords.forEach((word, idx) => {
+                        // Interpolate timing with 10ms gaps
+                        let start, end;
+                        if (!prevAlignment) {
+                            // At the start - use next word timing minus gap
+                            start = nextAlignment.start - ((newWords.length - idx) * 0.01);
+                            end = start + 0.01;
+                        } else if (!nextAlignment) {
+                            // At the end - use previous word timing plus gap
+                            start = prevAlignment.end + (idx * 0.01);
+                            end = start + 0.01;
+                        } else {
+                            // In between words - interpolate with gaps
+                            const timeGap = nextAlignment.start - prevAlignment.end;
+                            const wordDuration = timeGap / (newWords.length + 1);
+                            start = prevAlignment.end + (wordDuration * (idx + 1));
+                            end = start + 0.01;
+                        }
+
+                        newAlignments.push({
+                            word,
+                            type: 'edit',
+                            start,
+                            end,
+                            conf: 1.0,
+                            punct: word,
+                            source: 'user',
+                            speaker: nextAlignment.speaker,
+                            turn: nextAlignment.turn
+                        });
+                    });
+                }
+                lastRemovedAlignment = null;
+            } else {
+                // Keep unchanged words
+                const unchangedWords = part.value.trim().split(/\s+/).filter(w => w.length > 0);
+                unchangedWords.forEach(() => {
+                    newAlignments.push(currentAlignments[alignmentIndex]);
+                    alignmentIndex++;
+                });
+            }
+        });
+        
+        console.log('Alignments updated:', newAlignments);
+        setAlignments(newAlignments);
+    }, []); // No dependencies needed
+
+    // Debounced version for text changes
+    const updateAlignments = useCallback(
+        debounce((newText: string) => {
+            processAlignmentUpdate(newText, alignments);
+        }, 500),
+        [alignments, processAlignmentUpdate]
+    );
     const quillModules = {
         toolbar: false,
     }
@@ -36,10 +151,8 @@ export default function Editor({ transcript, ctms, audioPlayer, getQuillRef, ord
     const getWordIndexFromCursor = (text: string, cursorPosition: number) => {
         // Get text up to cursor
         const textUpToCursor = text.slice(0, cursorPosition)
-        // Remove timestamps and speaker tracking (format: 0:00:00.0 S1:)
-        const cleanText = textUpToCursor.replace(/\d:\d{2}:\d{2}\.\d\s+S\d+:\s*/g, '')
         // Split into words and count them
-        return cleanText.split(/\s+/).filter(word => word.trim() !== '').length
+        return textUpToCursor.split(/\s+/).filter(word => word.trim() !== '').length - 1
     }
 
     const initEditor = useCallback(async () => {
@@ -65,15 +178,16 @@ export default function Editor({ transcript, ctms, audioPlayer, getQuillRef, ord
         const quill = quillRef.current?.getEditor()
         if (!quill) return
 
-        // Get the contents as a Delta object instead of plain text
+        // Get the contents as a Delta object
         const delta = quill.getContents()
         setContent(delta.ops)
 
         // Store the text content in localStorage
+        const newText = quill.getText();
         localStorage.setItem('transcript', JSON.stringify({
-            [orderDetails.fileId]: quill.getText()
+            [orderDetails.fileId]: newText
         }))
-    }, [])
+    }, [orderDetails.fileId])
 
     useEffect(() => {
         if (!content.length) {
@@ -92,15 +206,15 @@ export default function Editor({ transcript, ctms, audioPlayer, getQuillRef, ord
         const text = quill.getText()
         const wordIndex = getWordIndexFromCursor(text, clickPosition)
         
-        if (wordIndex >= 0 && wordIndex < ctms.length && audioPlayer) {
-            const timestamp = ctms[wordIndex].start
-            console.log('Playing word:', ctms[wordIndex].word, 'at timestamp:', timestamp)
-            audioPlayer.currentTime = timestamp
+        if (wordIndex >= 0 && wordIndex < alignments.length && audioPlayer) {
+            const alignment = alignments[wordIndex]
+            console.log('Playing word:', alignment.word, 'at timestamp:', alignment.start)
+            audioPlayer.currentTime = alignment.start
             audioPlayer.play()
         } else {
             console.log('Skipping playback - conditions not met')
         }
-    }, [ctms, audioPlayer])
+    }, [alignments, audioPlayer])
 
     const handlePlayAudioAtCursorPositionShortcut = useCallback(() => {
         const quill = quillRef.current?.getEditor();
@@ -283,8 +397,41 @@ export default function Editor({ transcript, ctms, audioPlayer, getQuillRef, ord
     useShortcuts(shortcutControls);
 
     useEffect(() => {
+        const quill = quillRef.current?.getEditor()
+        if (!quill) return
+
+        const handleTextChange = debounce((delta, oldDelta, source) => {
+            if (source !== 'user') return; // Only handle user changes
+            const newText = quill.getText();
+            updateAlignments(newText);
+        }, 500);
+
+        quill.on('text-change', handleTextChange);
+
+        return () => {
+            quill.off('text-change', handleTextChange);
+            handleTextChange.cancel(); // Cancel any pending debounced calls
+        }
+    }, [updateAlignments]);
+
+    useEffect(() => {
         initEditor()
     }, [initEditor])
+
+    // Create initial alignments once when component loads
+    useEffect(() => {
+        if (ctms.length > 0) {
+            const originalTranscript = getFormattedTranscript(ctms);
+            const newAlignments = createAlignments(originalTranscript, ctms);
+            setAlignments(newAlignments);
+            
+            console.log('Initial Alignments:', newAlignments);
+
+            if(transcript) {
+              processAlignmentUpdate(transcript, newAlignments)
+            }
+        }
+    }, []) // Empty dependency array since ctms is constant
 
     useEffect(() => {
         const quill = quillRef.current?.getEditor()
