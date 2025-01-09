@@ -29,7 +29,7 @@ const services = [
       'Our transcribers are not only experts in transcription but are also specially trained in legal terminology & documentation standards. Custom legal formatting options meet the specific requirements of legal documents, ensuring they are court-ready. We have been able to help court reporters and court reporting firms with deposition and courtroom transcription services. Our team maintains strict confidentiality and security protocols for all legal documents.',
     price: '$0.80',
     originalPrice: '$1.40',
-    image: '/assets/images/legal.jpg',
+    image: '/assets/images/home/transcription-categories/legal.webp',
     features: [
       'Legal Terminology Expert',
       'Court Documentation Ready',
@@ -51,7 +51,7 @@ const services = [
       'Our transcription services are tailored for the academic sector, focusing on lectures and seminars, research interviews, focus groups, educational videos and podcasts, and classroom recordings. Each transcription is crafted with essential elements of academic content, ensuring accurate technical terminology, proper citations, and clear speaker identification throughout the document. We deliver high-quality transcripts that meet rigorous academic standards.',
     price: '$0.80',
     originalPrice: '$1.40',
-    image: '/assets/images/academic.jpeg',
+    image: '/assets/images/home/transcription-categories/academic.webp',
     features: [
       'Research Interviews',
       'Lecture & Seminar',
@@ -73,7 +73,7 @@ const services = [
       'Attention Video Producers: Elevate Your Earnings Potential! Integrate transcripts with your video offerings to enhance accessibility and viewer engagement. Our comprehensive transcription services handle all the details, ensuring your content reaches a broader audience and opens up new revenue streams. With our expert transcription team, you can focus on creating amazing content while we handle the text.',
     price: '$0.80',
     originalPrice: '$1.40',
-    image: '/assets/images/video-3.jpeg',
+    image: '/assets/images/home/transcription-categories/video.webp',
     features: [
       'Video Subtitles',
       'Enhanced Accessibility',
@@ -95,7 +95,7 @@ const services = [
       'Transform your sermons into written form and make them accessible to a wider audience with professional sermon transcription services. Preserve the wisdom of your sermons for future generations and allow your message to reach more people. Our expert transcriptionists ensure accurate, word-for-word transcripts that capture every spiritual insight and biblical reference. Share your message with confidence and inspire your congregation today.',
     price: '$0.80',
     originalPrice: '$1.40',
-    image: '/assets/images/sermon-1.jpeg',
+    image: '/assets/images/home/transcription-categories/sermon.webp',
     features: [
       'Scripture References',
       'Speaker Attribution',
@@ -117,7 +117,7 @@ const services = [
       "Promote Your Podcast With Transcripts. Improve your reach and give your audience a better listening experience with accurate, professional transcriptions. Our expert team ensures every word is captured perfectly, making your content more accessible and SEO-friendly. Transform your audio content into valuable written assets that expand your podcast's impact and drive meaningful audience engagement.",
     price: '$0.80',
     originalPrice: '$1.40',
-    image: '/assets/images/podcast-1.jpeg',
+    image: '/assets/images/home/transcription-categories/podcast.webp',
     features: [
       'Multiple Speakers',
       'Show Notes',
@@ -139,7 +139,7 @@ const services = [
       'Unlock the full potential of your marketing campaigns with our transcription services for focus groups and market research interviews. Elevate your strategy and reach new heights. Our skilled transcriptionists deliver accurate, detailed transcripts of your marketing sessions, focus groups and interviews, ensuring you capture every valuable insight and customer feedback. Get clear, organized transcripts ready for immediate analysis and action.',
     price: '$0.80',
     originalPrice: '$1.40',
-    image: '/assets/images/video-3.jpeg',
+    image: '/assets/images/home/transcription-categories/marketing.webp',
     features: [
       'Focus Group Transcripts',
       'Market Research Data',
@@ -161,7 +161,7 @@ const services = [
       'Discover unparalleled accuracy with our audio transcription services, where expert transcribers bring precision to every word. From podcasts to interviews, our team ensures your content is transcribed with the utmost care and attention to detail. Experience transcription that understands your needs, making every audio minute count. Let our professional team deliver exceptional quality for all your transcription requirements.',
     price: '$0.80',
     originalPrice: '$1.40',
-    image: '/assets/images/podcast-1.jpeg',
+    image: '/assets/images/home/transcription-categories/audio.webp',
     features: [
       'Unparalleled Accuracy',
       'Expert Transcribers',
@@ -345,11 +345,18 @@ const TranscriptionCategories = () => {
                 <Image
                   src={activeService.image}
                   alt={activeService.title}
-                  fill
-                  className='object-cover object-center'
+                  width={750}
+                  height={600}
+                  className='object-cover object-center w-full h-full'
                   sizes='(max-width: 768px) 100vw, 40vw'
-                  quality={95}
-                  loading="lazy"
+                  quality={80}
+                  loading='lazy'
+                  placeholder='blur'
+                  blurDataURL='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx0fHRsdHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/2wBDAR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k='
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                  }}
                 />
                 <div className='absolute inset-0 bg-gradient-to-tr from-primary/10 to-transparent' />
               </div>
