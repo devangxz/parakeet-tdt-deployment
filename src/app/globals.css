@@ -8,48 +8,63 @@ html {
 
 @layer base {
   :root {
+    --primary: 263 75.6% 58%;
+    --primary-foreground: 0 0% 100%;
+
     --background: 0 0% 100%;
-    --foreground: 224 71.4% 4.1%;
+    --foreground: 263 50% 15%;
+
     --card: 0 0% 100%;
-    --card-foreground: 224 71.4% 4.1%;
+    --card-foreground: 263 50% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71.4% 4.1%;
-    --primary: 251.93 82.61% 59.41%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 220 14.3% 95.9%;
-    --secondary-foreground: 220.9 39.3% 11%;
-    --muted: 220 84.3% 95.9%;
-    --muted-foreground: 220 8.9% 46.1%;
-    --accent: 220 14.3% 95.9%;
-    --accent-foreground: 220.9 39.3% 11%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 220 13% 91%;
-    --input: 220 13% 60%;
-    --ring: 251.93 82.61% 59.41%;
+    --popover-foreground: 263 50% 15%;
+
+    --secondary: 263 89% 98%;
+    --secondary-foreground: 263 70% 35%;
+
+    --muted: 263 40% 96%;
+    --muted-foreground: 263 30% 45%;
+
+    --accent: 273 65% 95%;
+    --accent-foreground: 273 60% 30%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 263 30% 91%;
+    --input: 263 30% 91%;
+    --ring: 263 75.6% 58%;
+
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 224 71.4% 4.1%;
-    --foreground: 210 20% 98%;
-    --card: 224 71.4% 4.1%;
-    --card-foreground: 210 20% 98%;
-    --popover: 224 71.4% 4.1%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 263.4 70% 50.4%;
-    --primary-foreground: 210 20% 98%;
-    --secondary: 215 27.9% 16.9%;
-    --secondary-foreground: 210 20% 98%;
-    --muted: 215 27.9% 16.9%;
-    --muted-foreground: 217.9 10.6% 64.9%;
-    --accent: 215 27.9% 16.9%;
-    --accent-foreground: 210 20% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 20% 98%;
-    --border: 215 27.9% 16.9%;
-    --input: 215 27.9% 16.9%;
-    --ring: 263.4 70% 50.4%;
+    --primary: 263 75.6% 58%;
+    --primary-foreground: 0 0% 100%;
+
+    --background: 263 60% 4%;
+    --foreground: 263 10% 95%;
+
+    --card: 263 60% 4%;
+    --card-foreground: 263 10% 95%;
+    --popover: 263 60% 4%;
+    --popover-foreground: 263 10% 95%;
+
+    --secondary: 263 70% 20%;
+    --secondary-foreground: 263 90% 95%;
+
+    --muted: 263 35% 15%;
+    --muted-foreground: 263 20% 70%;
+
+    --accent: 263 35% 15%;
+    --accent-foreground: 263 10% 95%;
+
+    --destructive: 0 65% 30%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 263 35% 15%;
+    --input: 263 35% 15%;
+    --ring: 263 75.6% 58%;
   }
 
   * {
@@ -70,9 +85,27 @@ html {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  @keyframes marquee {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  .animate-marquee {
+    display: flex;
+    animation: marquee 30s linear infinite;
+    width: max-content;
+  }
+
+  .animate-marquee:hover {
+    animation-play-state: paused;
+  }
 }
 
-/* Rest of your styles remain the same... */
 .ql-container {
   border: none !important;
 }
@@ -187,9 +220,15 @@ html {
 }
 
 @keyframes fade {
-  0% { opacity: 0; }
-  50% { opacity: 1; }
-  100% { opacity: 0; }
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 .animate-fade {
