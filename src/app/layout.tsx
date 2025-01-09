@@ -1,6 +1,6 @@
 import { Metadata } from 'next'
 import './globals.css'
-import { Inter } from 'next/font/google'
+import { Plus_Jakarta_Sans } from 'next/font/google'
 import { Toaster } from 'sonner'
 
 import AuthProvider from './context/AuthProvider'
@@ -10,7 +10,11 @@ import UploadProgress from '@/app/(dashboard)/files/upload/components/UploadProg
 import { ThemeProvider } from '@/components/theme-provider'
 import { cn } from '@/lib/utils'
 
-const inter = Inter({ subsets: ['latin'] })
+const plusJakarta = Plus_Jakarta_Sans({ 
+  subsets: ['latin'],
+  variable: '--font-plus-jakarta',
+  weight: ['400', '500', '600', '700']
+})
 
 export const metadata: Metadata = {
   title: 'Scribie - Industry-Leading Transcription Services | Audio & Video to Text',
@@ -28,8 +32,8 @@ export default function RootLayout({
   params: { locale: string }
 }>) {
   return (
-    <html lang={locale} className={inter.className}>
-      <body className={cn(`bg-background`)}>
+    <html lang={locale} className={cn(plusJakarta.variable, plusJakarta.className)}>
+      <body className={cn(`bg-background min-h-screen font-sans antialiased`)}>
         <AuthProvider>
           <UploadProvider>
             <ImportServiceProvider>
