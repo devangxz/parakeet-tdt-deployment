@@ -1017,6 +1017,24 @@ export default function Header({
     toast.success('Inserted swear in line text');
   }
 
+  const insertInterpreterSwearInLine = () => {
+    if (!quillRef?.current) return;
+
+    const quill = quillRef.current.getEditor();
+    const range = quill.getSelection();
+
+    if (!range) {
+      toast.error('Please place cursor where you want to insert the text');
+      return;
+    }
+
+    const textToInsert = "WHEREUPON, [--INTERPRETER--<replace_with_interpreter_name>--INTERPRETER--] the interpreter was duly sworn.";
+
+    quill.insertText(range.index, textToInsert);
+
+    toast.success('Inserted swear in line text');
+  }
+
   return (
     <div className='min-h-24 relative mx-2'>
       {!isPlayerLoaded && (
@@ -1217,6 +1235,7 @@ export default function Header({
                       handleAdjustTimestamps={handleAdjustTimestamps}
                       increaseFontSize={increaseFontSize}
                       decreaseFontSize={decreaseFontSize}
+                      insertInterpreterSwearInLine={insertInterpreterSwearInLine}
                     />
                   </div>}
                 </div>
@@ -1238,6 +1257,7 @@ export default function Header({
                   handleAdjustTimestamps={handleAdjustTimestamps}
                   increaseFontSize={increaseFontSize}
                   decreaseFontSize={decreaseFontSize}
+                  insertInterpreterSwearInLine={insertInterpreterSwearInLine}
                 />
               </div>
             </div>

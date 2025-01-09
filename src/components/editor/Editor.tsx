@@ -522,7 +522,7 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
 
         // Apply gray background only to current line
         quill.formatText(lineStart, lineEnd - lineStart + 1, {
-            background: '#f3f3f3'
+            background: '#EDEDED'
         });
     }, [searchHighlight]);
 
