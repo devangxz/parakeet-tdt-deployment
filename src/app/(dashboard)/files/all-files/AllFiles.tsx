@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import { FileWarning, FolderClosed, X } from 'lucide-react'
+import { FileWarning, FolderClosed, FolderPlusIcon, X } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Session } from 'next-auth'
@@ -15,15 +15,19 @@ import { CheckAndDownload } from '../delivered/components/check-download'
 import { getAllFilesAction } from '@/app/actions/all-files'
 import { downloadMp3 } from '@/app/actions/file/download-mp3'
 import { getFolders } from '@/app/actions/folders'
+import { deleteFolderAction } from '@/app/actions/folders/delete'
 import { getFolderHierarchy } from '@/app/actions/folders/parent'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { createOrder } from '@/app/actions/order'
 import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
 import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
+import CreateFolderModal from '@/components/create-folder-modal'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
 import DraftTranscriptFileDialog from '@/components/draft-transcript'
 import RenameFileDialog from '@/components/file-rename-dialog'
+import MoveFileModal from '@/components/move-file-modal'
+import RenameFolderModal from '@/components/rename-folder-modal'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -58,6 +62,7 @@ interface CustomFile {
   date: Date
   orderType: string
   orderId: number
+  folderId: number | null
 }
 
 interface AllFile {
@@ -69,6 +74,7 @@ interface AllFile {
   status: string
   orderType: string
   orderId: number
+  folderId: number | null
 }
 
 interface Folder {
@@ -123,6 +129,14 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
     cfDocxSignedUrl: '',
   })
 
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false)
+  const [selectedFolder, setSelectedFolder] = useState({
+    id: 0,
+    name: '',
+  })
+  const [isMoveFileDialogOpen, setIsMoveFileDialogOpen] = useState(false)
+  const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false)
+
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
@@ -160,6 +174,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
           status: file?.status,
           orderType: file?.orderType ?? '',
           orderId: file?.orderId ?? '',
+          folderId: file.parentId,
         })
       }
       setAllFiles(files)
@@ -172,7 +187,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
 
   const fetchAllFolders = async () => {
     try {
-      const folders = await getFolders(folderId ?? '')
+      const folders = await getFolders(folderId || 'null')
       if (!folders?.success) {
         throw new Error(folders?.message)
       }
@@ -181,6 +196,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
           ...folder,
           createdAt: folder.createdAt.toString(),
           updatedAt: folder.updatedAt.toString(),
+          date: folder.createdAt.toString(),
         })) ?? []
       setAllFolders(formattedFolders)
     } catch (err) {
@@ -222,6 +238,24 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
 
   const handleSelectedRowsChange = (selectedRowsData: CustomFile[]) => {
     setSelectedFiles(selectedRowsData)
+  }
+
+  const handleDeleteFolder = async (folderId: number) => {
+    const toastId = toast.loading('Deleting folder...')
+    const res = await deleteFolderAction(folderId)
+    if (res.success && allFolders) {
+      toast.success('Folder deleted successfully')
+      const newFolders = allFolders.filter(folder => folder.id !== folderId)
+      setAllFolders(newFolders)
+      toast.dismiss(toastId)
+    } else {
+      toast.dismiss(toastId)
+      if (res.message === 'Folder is not empty') {
+        toast.error('Folder is not empty')
+      } else {
+        toast.error('Failed to delete folder')
+      }
+    }
   }
 
   if (isPageLoading) {
@@ -430,7 +464,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
         <div className='font-medium'>
           {row.getValue('duration')
             ? formatDuration(row.getValue('duration'))
-            : ''}
+            : '-'}
         </div>
       ),
     },
@@ -441,7 +475,38 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
       cell: ({ row }) => (
         <div>
           {'parentId' in row.original && 'id' in row.original ? (
-            <></>
+            <div className='flex items-center'>
+              <Button
+                variant='order'
+                className="format-button w-[140px]"
+                onClick={() => {
+                  setSelectedFolder({
+                    id: Number(row.original.id),
+                    name: row.original.name
+                  })
+                  setIsRenameDialogOpen(true)
+                }}
+              >
+                Rename folder
+              </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant='order'
+                    className='h-9 w-8 p-0 format-icon-button'
+                  >
+                    <span className='sr-only'>Open menu</span>
+                    <ChevronDownIcon className='h-4 w-4' />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align='end'>
+                  <DropdownMenuItem className='text-red-500' onClick={() => handleDeleteFolder(Number(row.original.id))}>
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ) : (
             <div className='flex items-center'>
               {loadingFileOrder[row.original.id] ? (
@@ -510,23 +575,36 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
                   >
                     Rename
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setSeletedFile({
+                        fileId: row.original.id,
+                        name: row.original.name,
+                        orderId: row.original?.orderId?.toString() ?? '',
+                        orderType: row.original?.orderType ?? '',
+                      })
+                      setIsMoveFileDialogOpen(true)
+                    }}
+                  >
+                    Move File
+                  </DropdownMenuItem>
                   {getStatus(row.original.status)?.label !==
                     'Draft Transcript' && (
-                    <DropdownMenuItem
-                      className='text-red-500'
-                      onClick={() => {
-                        setSeletedFile({
-                          fileId: row.original.id,
-                          name: row.original.name,
-                          orderId: row.original?.orderId?.toString() ?? '',
-                          orderType: row.original?.orderType ?? '',
-                        })
-                        setOpenDeleteDialog(true)
-                      }}
-                    >
-                      Delete
-                    </DropdownMenuItem>
-                  )}
+                      <DropdownMenuItem
+                        className='text-red-500'
+                        onClick={() => {
+                          setSeletedFile({
+                            fileId: row.original.id,
+                            name: row.original.name,
+                            orderId: row.original?.orderId?.toString() ?? '',
+                            orderType: row.original?.orderType ?? '',
+                          })
+                          setOpenDeleteDialog(true)
+                        }}
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -699,7 +777,13 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
           ))}
         </BreadcrumbList>
       </Breadcrumb>
-      <br />
+      {/* <br /> */}
+      <div className='my-2'>
+        <Button onClick={() => setIsCreateFolderDialogOpen(true)} variant="outline" className='not-rounded gap-2'>
+          Create folder
+          <FolderPlusIcon size={18} />
+        </Button>
+      </div>
       <DataTable
         data={
           [
@@ -753,6 +837,27 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
             .map((file) => file.id) || []
         }
         refetch={fetchAllFiles}
+      />
+
+      <RenameFolderModal
+        selectedFolder={selectedFolder}
+        isRenameDialogOpen={isRenameDialogOpen}
+        setIsRenameDialogOpen={setIsRenameDialogOpen}
+        refetch={fetchAllFolders}
+      />
+      <MoveFileModal
+        selectedFile={selectedFile}
+        isMoveFileDialogOpen={isMoveFileDialogOpen}
+        setIsMoveFileDialogOpen={setIsMoveFileDialogOpen}
+        folderId={folderId}
+        refetch={fetchAllFiles}
+      />
+
+      <CreateFolderModal
+        isCreateFolderDialogOpen={isCreateFolderDialogOpen}
+        setIsCreateFolderDialogOpen={setIsCreateFolderDialogOpen}
+        folderId={folderId}
+        refetch={fetchAllFolders}
       />
     </div>
   )

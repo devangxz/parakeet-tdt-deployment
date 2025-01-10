@@ -14,6 +14,7 @@ interface File {
   orderType: string
   orderId: string
   uploadedByUser: User
+  folderId: number | null
 }
 
 export default async function DeliveredFilesPage() {
@@ -36,6 +37,7 @@ export default async function DeliveredFilesPage() {
         orderType: file.Orders[0]?.orderType,
         orderId: file.Orders[0]?.id,
         uploadedByUser: file.uploadedByUser,
+        folderId: file.parentId,
       })
     }
   }

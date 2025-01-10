@@ -198,7 +198,7 @@ export async function getAllFiles(
     } = {
       userId: Number(userId),
       deletedAt: null,
-      parentId: parentId ? Number(parentId) : undefined,
+      parentId: parentId ? Number(parentId) : null,
     }
 
     if (fileIds !== 'null' && Array.isArray(fileIds?.toString().split(','))) {
@@ -278,9 +278,8 @@ export async function getSharedFiles(userId: number) {
       duration: sf.file.duration,
       fromUserId: sf.fromUserId,
       email: sf.fromUser.email,
-      fullname: `${sf.fromUser.firstname || ''} ${
-        sf.fromUser.lastname || ''
-      }`.trim(),
+      fullname: `${sf.fromUser.firstname || ''} ${sf.fromUser.lastname || ''
+        }`.trim(),
       status: sf.file.Orders[0]?.status ?? '',
       deliveredTs: sf.file.Orders[0]?.deliveredTs.toString() ?? '',
       rating: sf.file.Orders[0]?.rating ?? '',

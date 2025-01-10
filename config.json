@@ -355,6 +355,9 @@
       "video/mxf",
       "application/mxf",
       "video/x-mxf"
+    ],
+    ".zip": [
+      "application/zip"
     ]
   },
   "multi_part_upload_chunk_size": 20971520,
