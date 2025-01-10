@@ -1,6 +1,5 @@
 'use client'
 
-import { diffWords } from 'diff'
 import debounce from 'lodash/debounce'
 import { Op } from 'quill/core'
 import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react'
@@ -11,6 +10,7 @@ import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 import { CTMType, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
 import { createAlignments, getFormattedTranscript, AlignmentType } from '@/utils/transcript'
+import { diff_match_patch, DIFF_DELETE, DIFF_INSERT } from '@/utils/transcript/diff_match_patch';
 
 // TODO:  Add valid values (start, end, duration, speaker) for the changed words.
 // TODO: Test if a new line is added with TS + speaker name
@@ -36,15 +36,28 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     const [alignments, setAlignments] = useState<AlignmentType[]>([])
 
     // Core alignment update logic
+    const isPunctuation = (word: string): boolean => {
+        return /^[.,!?;:]$/.test(word);
+    };
+
     const processAlignmentUpdate = useCallback((newText: string, currentAlignments: AlignmentType[]) => {
         if (currentAlignments.length === 0) return;
 
         // Convert alignments to text for diffing
         const oldText = currentAlignments.map(a => a.word).join(' ');
         
-        // Get word-level diffs
-        const diffs = diffWords(oldText, newText, {
-            ignoreCase: false,
+        // Use diff_match_patch in word mode
+        const dmp = new diff_match_patch();
+        const rawDiffs = dmp.diff_wordMode(oldText, newText);
+        
+        // Convert dmp output to match { removed, added, value }
+        const diffs = rawDiffs.map(([op, text]) => {
+            if (op === DIFF_DELETE) {
+                return { removed: true, value: text };
+            } else if (op === DIFF_INSERT) {
+                return { added: true, value: text };
+            }
+            return { value: text };
         });
         
         // Create new alignments array
@@ -61,7 +74,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                     .filter(w => w.length > 0);
                 if (removedWords.length === 1) {
                     lastRemovedAlignment = currentAlignments[alignmentIndex];
-                    console.log(lastRemovedAlignment)
                 }
                 alignmentIndex += removedWords.length;
             } else if (part.added) {
@@ -91,35 +103,52 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                     const nextAlignment = currentAlignments[alignmentIndex] || currentAlignments[currentAlignments.length - 1];
                     
                     newWords.forEach((word, idx) => {
-                        // Interpolate timing with 10ms gaps
-                        let start, end;
-                        if (!prevAlignment) {
-                            // At the start - use next word timing minus gap
-                            start = nextAlignment.start - ((newWords.length - idx) * 0.01);
-                            end = start + 0.01;
-                        } else if (!nextAlignment) {
-                            // At the end - use previous word timing plus gap
-                            start = prevAlignment.end + (idx * 0.01);
-                            end = start + 0.01;
+                        if (isPunctuation(word)) {
+                            // For punctuation, create meta alignment with same start/end time
+                            const start = prevAlignment ? prevAlignment.end : (nextAlignment ? nextAlignment.start : 0);
+                            
+                            newAlignments.push({
+                                word,
+                                type: 'meta', // Set type as meta for punctuation
+                                start: start,
+                                end: start, // Same as start for punctuation
+                                conf: 1.0,
+                                punct: word,
+                                source: 'user',
+                                speaker: nextAlignment.speaker,
+                                turn: nextAlignment.turn
+                            });
                         } else {
-                            // In between words - interpolate with gaps
-                            const timeGap = nextAlignment.start - prevAlignment.end;
-                            const wordDuration = timeGap / (newWords.length + 1);
-                            start = prevAlignment.end + (wordDuration * (idx + 1));
-                            end = start + 0.01;
-                        }
+                            // Regular word - interpolate timing with 10ms gaps
+                            let start, end;
+                            if (!prevAlignment) {
+                                // At the start - use next word timing minus gap
+                                start = nextAlignment.start - ((newWords.length - idx) * 0.01);
+                                end = start + 0.01;
+                            } else if (!nextAlignment) {
+                                // At the end - use previous word timing plus gap
+                                start = prevAlignment.end + (idx * 0.01);
+                                end = start + 0.01;
+                            } else {
+                                // In between words - interpolate with gaps
+                                const timeGap = nextAlignment.start - prevAlignment.end;
+                                const wordDuration = timeGap / (newWords.length + 1);
+                                start = prevAlignment.end + (wordDuration * (idx + 1));
+                                end = start + 0.01;
+                            }
 
-                        newAlignments.push({
-                            word,
-                            type: 'edit',
-                            start,
-                            end,
-                            conf: 1.0,
-                            punct: word,
-                            source: 'user',
-                            speaker: nextAlignment.speaker,
-                            turn: nextAlignment.turn
-                        });
+                            newAlignments.push({
+                                word,
+                                type: 'edit',
+                                start,
+                                end,
+                                conf: 1.0,
+                                punct: word,
+                                source: 'user',
+                                speaker: nextAlignment.speaker,
+                                turn: nextAlignment.turn
+                            });
+                        }
                     });
                 }
                 lastRemovedAlignment = null;
