@@ -70,16 +70,16 @@ export default function EnableACRReview() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Enable ACR Finalize</CardTitle>
+          <CardTitle>Enable ACR Finalizer</CardTitle>
           <CardDescription>
-            Please enter the user email address to enable ACR finalize. After
-            enabling only the transcribers will see ACR finalize files.
+            Please enter the user email address to enable ACR finalizer. After
+            enabling only the transcribers will see ACR finalizer files.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className='grid gap-6'>
             <div className='grid gap-3'>
-              <Label htmlFor='custom-email'>TranscriberEmail</Label>
+              <Label htmlFor='custom-email'>Transcriber Email</Label>
               <Input
                 id='custom-email'
                 type='email'
