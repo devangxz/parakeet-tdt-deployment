@@ -10,7 +10,7 @@ export async function saveDefaultOptions(options: Record<string, unknown>) {
   try {
     const session = await getServerSession(authOptions)
     const user = session?.user
-    const userId = user?.userId
+    const userId = user?.internalTeamUserId || user?.userId
 
     if (!userId) {
       return {

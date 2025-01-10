@@ -424,7 +424,10 @@ export const getRefundAmount = async (fileId: string) => {
       return false
     }
 
-    const chargeRate = (invoice.discount / invoice.amount).toFixed(2)
+    const chargeRate =
+      invoice.discount === 0
+        ? '1'
+        : (invoice.discount / invoice.amount).toFixed(2)
     const refundAmount = (invoiceFile.price * parseFloat(chargeRate)).toFixed(2)
 
     return refundAmount

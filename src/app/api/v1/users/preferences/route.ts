@@ -21,16 +21,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
+    const userId = user?.internalTeamUserId || user?.userId
+
     const preferences = customerRoles.includes(user.role)
       ? await prisma.customerNotifyPrefs.findUnique({
-          where: { userId: user.userId },
+          where: { userId: userId },
         })
       : await prisma.transcriberNotifyPrefs.findUnique({
-          where: { userId: user.userId },
+          where: { userId: userId },
         })
 
     const userSettings = await prisma.user.findUnique({
-      where: { id: user.userId },
+      where: { id: userId },
       select: { recordsPerPage: true },
     })
 
@@ -56,37 +58,33 @@ export async function PUT(req: NextRequest) {
         { status: 401 }
       )
     }
+    const userId = user?.internalTeamUserId || user?.userId
 
-    const { preferences, recordsPerPage } = await req.json()
+    const data = await req.json()
 
-    if (!preferences || typeof preferences !== 'object') {
-      return NextResponse.json(
-        { message: 'Preferences are required' },
-        { status: 400 }
-      )
-    }
+    const updateUser = prisma.user.update({
+      where: { id: userId },
+      data: { recordsPerPage: Number(data.recordsPerPage) },
+    })
+
+    delete data.recordsPerPage
 
     const payload = {
-      ...preferences,
-      userId: user.userId,
+      ...data,
+      userId: userId,
     }
 
     const updateNotifyPrefs = customerRoles.includes(user.role)
       ? prisma.customerNotifyPrefs.upsert({
-          where: { userId: user.userId },
+          where: { userId: userId },
           update: payload,
           create: payload,
         })
       : prisma.transcriberNotifyPrefs.upsert({
-          where: { userId: user.userId },
+          where: { userId: userId },
           update: payload,
           create: payload,
         })
-
-    const updateUser = prisma.user.update({
-      where: { id: user.userId },
-      data: { recordsPerPage },
-    })
 
     await prisma.$transaction([updateNotifyPrefs, updateUser])
 

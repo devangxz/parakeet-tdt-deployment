@@ -7,22 +7,45 @@ import { deleteFile } from '@/services/file-service/delete-file'
 export async function DELETE(req: NextRequest) {
   try {
     const user = await authenticateRequest(req)
+    const userId = user?.internalTeamUserId || user?.userId
+
     if (!user) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    const { searchParams } = new URL(req.url)
-    const fileId = searchParams.get('fileId')
+    const { fileIds } = await req.json()
 
-    if (!fileId) {
+    if (!fileIds) {
       return NextResponse.json(
-        { message: 'File ID is required' },
+        { message: 'File IDs is required' },
         { status: 400 }
       )
     }
 
-    await deleteFile({ userId: user.userId, fileId })
-    logger.info(`File with ID ${fileId} deleted successfully`)
+    const fileIdArray = fileIds.split(',').map((id: string) => id.trim())
+
+    if (fileIdArray.length === 0) {
+      return NextResponse.json(
+        { message: 'No valid file IDs provided' },
+        { status: 400 }
+      )
+    }
+
+    const results = await Promise.allSettled(
+      fileIdArray.map((fileId: string) =>
+        deleteFile({ userId: userId as number, fileId })
+      )
+    )
+
+    const failedFiles = results
+      .filter((result) => result.status === 'rejected')
+      .map((_, index) => fileIdArray[index])
+
+    if (failedFiles.length > 0) {
+      logger.warn(`Failed to delete files with IDs: ${failedFiles.join(', ')}`)
+    }
+
+    logger.info(`Files deleted successfully: ${fileIdArray.join(', ')}`)
 
     return NextResponse.json({
       success: true,

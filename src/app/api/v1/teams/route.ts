@@ -22,6 +22,10 @@ export async function GET(req: NextRequest) {
     if (!user) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
+    const userId = user?.userId
+
+    const { searchParams } = new URL(req.url)
+    const sendInvitation = searchParams.get('sendInvitation')
 
     const teams = await prisma.teamMember.findMany({
       where: {
@@ -45,11 +49,46 @@ export async function GET(req: NextRequest) {
       },
     })
 
+    const invitations = await prisma.teamMember.findMany({
+      where: {
+        userId,
+        status: 'INVITED',
+      },
+      include: {
+        team: {
+          include: {
+            members: {
+              where: {
+                role: 'SUPER_ADMIN',
+              },
+              include: {
+                user: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    const teamInvitationWithAdminDetails = invitations.map((invitation) => {
+      const admin = invitation.team.members[0]
+      return {
+        name: invitation.team.name,
+        group_id: invitation.team.id,
+        status: 'INVITED',
+        admin_name: `${admin.user.firstname} ${admin.user.lastname}`,
+        admin_email: admin.user.email,
+      }
+    })
+
     logger.info(`Found ${teams.length} teams for user ${user.userId}`)
 
     return NextResponse.json({
       success: true,
       data: teams,
+      ...(sendInvitation === 'true' && {
+        invitations: teamInvitationWithAdminDetails,
+      }),
     })
   } catch (error) {
     logger.error(`Failed to get teams, ${error}`)
