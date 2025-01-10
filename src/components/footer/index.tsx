@@ -1,195 +1,236 @@
+'use client'
+
+import {
+  MapPin,
+  Phone,
+  ExternalLink,
+  Linkedin,
+  Twitter,
+  Facebook,
+} from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 
-function Footer() {
-  return (
-    <div className='flex justify-center items-center px-7 xl:px-[10%] self-stretch w-full bg-indigo-900'>
-      <div className='flex flex-col my-8'>
-        <div className='flex flex-col lg:flex-row gap-x-[6rem] gap-y-[20px] md:gap-y-[40px] md:mt-10 max-md:max-w-full'>
-          <div>
-            <Link href='/' className='w-[20%]'>
-              <div className='flex gap-[10px] my-auto'>
-                <Image
-                  loading='lazy'
-                  src='/assets/images/logo-white-variant.svg'
-                  className='aspect-rectangle'
-                  alt='Scribie'
-                  width={36}
-                  height={36}
-                />
-                <span className='text-white font-bold text-3xl'>scribie</span>
-              </div>
-            </Link>
-            <div className='flex gap-5 justify-between mt-5 max-md:flex-wrap max-md:max-w-full'>
-              <div className='flex flex-col text-sm text-white'>
-                <div className='text-lg font-semibold'>
-                  <Link href='/'>Contact us</Link>
-                </div>
-                <div className='flex gap-2.5 justify-between mt-4 leading-6 whitespace-nowrap'>
-                  <Image
-                    loading='lazy'
-                    src='/assets/images/home/location.svg'
-                    className='my-auto w-4 aspect-square'
-                    alt='44 Tehama St, San Francisco'
-                    width={16}
-                    height={16}
-                  />
-                  <div className='grow text-slate-400'>
-                    44 Tehama St, San Francisco
-                  </div>
-                </div>
-                <div className='flex gap-2.5 justify-between mt-4 leading-6'>
-                  <Image
-                    loading='lazy'
-                    src='/assets/images/home/call.svg'
-                    className='my-auto w-4 aspect-square text-white'
-                    alt='+1 (866) 941 - 4131'
-                    width={16}
-                    height={16}
-                  />
-                  <div className='flex-auto text-slate-400'>
-                    +1 (866) 941 - 4131
-                  </div>
-                </div>
-                {/* <div className='hidden md:flex gap-2.5 justify-between mt-4 leading-6'>
-                  <Image
-                    loading='lazy'
-                    src='/assets/images/home/chat.svg'
-                    className='my-auto w-4 aspect-square'
-                    alt='+1 (866) 941 - 4131'
-                    width={16}
-                    height={16}
-                  />
-                  <div className='flex-auto text-slate-400'>Live Chat</div>
-                </div> */}
-              </div>
-            </div>
-          </div>
-          <div className='grid grid-cols-2 md:flex max-md:flex-col max-md:gap-0 w-[80%]'>
-            <div className='flex flex-col w-3/12 max-md:ml-0 max-md:w-full'>
-              <div className='flex flex-col grow self-stretch whitespace-nowrap max-md:mt-10'>
-                <div className='text-lg font-semibold text-white'>Company</div>
-                <div className='mt-4 text-lg leading-6 text-slate-400'>
-                  <Link href='/about-us'>About Us</Link>
-                </div>
-                {/* <div className='flex mt-4 w-fit gap-4'>
-                  <div className='grow text-lg leading-6 text-slate-400'>
-                    <Link href='/'>Careers</Link>
-                  </div>
-                  <div className='px-2 py-1 my-auto text-[.5rem] font-semibold text-indigo-900 bg-teal-400 rounded-r-xl rounded-t-xl aspect-[3.44]'>
-                    <Link href='/'>We’re hiring</Link>
-                  </div>
-                </div> */}
-                <div className='mt-4 text-lg leading-6 text-slate-400'>
-                  <Link href='/'>Blog</Link>
-                </div>
-                <div className='mt-4 text-lg leading-6 text-slate-400'>
-                  <Link href='/get-quote'>Get a Quote</Link>
-                </div>
-              </div>
-            </div>
-            <div className='flex flex-col ml-5 w-3/12 max-md:ml-0 max-md:w-full'>
-              <div className='flex flex-col grow self-stretch text-lg text-white whitespace-nowrap max-md:mt-10'>
-                <div className='font-semibold'>Account</div>
-                {/* <div className='mt-4 leading-[150%] text-slate-400'>
-                  <Link href='/register'>Register</Link>
-                </div> */}
-                <div className='mt-4 leading-[150%] text-slate-400'>
-                  <Link href='/signin'>Log In</Link>
-                </div>
-                <div className='mt-4 leading-[150%] text-slate-400'>
-                  <Link href='/files/all-files'>Files</Link>
-                </div>
-                {/* <div className='mt-4 leading-[150%] text-slate-400'>
-                  <Link href='/settings/personal-info'>Settings</Link>
-                </div> */}
-              </div>
-            </div>
-            <div className='flex flex-col ml-5 w-3/12 max-md:ml-0 max-md:w-full'>
-              <div className='flex flex-col grow self-stretch text-lg text-white whitespace-nowrap max-md:mt-10'>
-                <div className='font-semibold'>Resources</div>
-                <div className='mt-4 leading-[150%] text-slate-400'>
-                  <Link href='/docs'>API Reference</Link>
-                </div>
-                <div className='mt-4 leading-[150%] text-slate-400'>
-                  <Link href='/faq'>FAQ</Link>
-                </div>
-                <div className='mt-4 leading-[150%] text-slate-400'>
-                  <Link href='/contact'>Support</Link>
-                </div>
-              </div>
-            </div>
-            <div className='flex flex-col ml-5 w-3/12 max-md:ml-0 max-md:w-full'>
-              <div className='flex flex-col text-lg text-white max-md:mt-10'>
-                <div className='font-semibold'>Comparison</div>
-                <div className='mt-4 whitespace-nowrap leading-[150%] text-slate-400'>
-                  <Link href='https://scribie.com/blog/2019/06/rev-scribie-comparison/'>
-                    Compare with Rev
-                  </Link>
-                </div>
-                <div className='mt-4 leading-6 text-slate-400'>
-                  <Link href='https://scribie.com/blog/2019/09/scribie-gotranscript-business-transcription/'>
-                    Compare with GoTranscript
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className='shrink-0 md:mt-10 h-0.5 bg-white-[20%] max-md:max-w-full' />
+const companyLinks = [
+  { href: '/about-us', label: 'About Us' },
+  { href: 'https://scribie.com/blog/', label: 'Blog' },
+  { href: '/get-quote', label: 'Get a Quote' },
+  { href: '/privacy-policy', label: 'Privacy & Policy' },
+  { href: '/terms', label: 'Terms' },
+]
 
-        <div className='shrink-0 mt-10 h-0.5 bg-slate-500 opacity-5 max-md:max-w-full' />
+const accountLinks = [
+  { href: '/signin', label: 'Log In' },
+  { href: '/files/all-files', label: 'Files' },
+]
 
-        <div className='flex justify-between items-center mt-4 gap-x-8'>
-          <div className='text-sm leading-6 text-slate-400 whitespace-nowrap'>
-            <Link href='/privacy-policy'>Privacy & Policy</Link> /{' '}
-            <Link href='/terms'>Terms</Link>
-          </div>
-          <div className='flex gap-5 justify-between self-end max-w-full w-[120px]'>
-            <Link href='https://twitter.com/scribie_com?ref_src=twsrc%5Egoogle%7Ctwcamp%5Eserp%7Ctwgr%5Eauthor'>
+const resourceLinks = [
+  { href: '/docs', label: 'API Reference' },
+  { href: '/faq', label: 'FAQs' },
+  { href: '/contact', label: 'Support' },
+]
+
+const comparisonLinks = [
+  {
+    href: 'https://scribie.com/blog/2019/06/rev-scribie-comparison/',
+    label: 'With Rev',
+  },
+  {
+    href: 'https://scribie.com/blog/2019/09/scribie-gotranscript-business-transcription/',
+    label: 'With GoTranscript',
+  },
+]
+
+const Footer = () => (
+  <footer className='relative pt-16 pb-14 bg-gradient-to-br from-indigo-900 to-indigo-950'>
+    <div className='absolute inset-0'>
+      <div className='absolute inset-0 bg-[linear-gradient(to_right,#c7d2fe_1px,transparent_1px),linear-gradient(to_bottom,#c7d2fe_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_110%)] opacity-[0.1]' />
+    </div>
+
+    <div className='relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
+      <div className='pb-6 grid grid-cols-1 lg:grid-cols-12 gap-12'>
+        <div className='relative -top-1.5 lg:col-span-4'>
+          <div className='flex items-center mb-[11px] -ml-1'>
+            <div className='flex-shrink-0'>
               <Image
-                alt='Twitter'
-                loading='lazy'
-                src='/assets/images/home/X.svg'
-                className='flex-1 shrink-0 w-full aspect-square'
-                width={24}
-                height={24}
+                className='h-12 w-12'
+                src='/assets/images/logo.svg'
+                alt='scribie.ai'
+                width={48}
+                height={48}
+                loading="lazy"
+              />
+            </div>
+            <h3 className='text-3xl font-semibold text-primary-foreground ml-3'>
+              scribie.ai
+            </h3>
+          </div>
+
+          <p className='text-primary-foreground/90 text-base mb-6'>
+            Empowering businesses with AI-powered transcription services since
+            2008.
+          </p>
+
+          <div className='space-y-4 mb-4'>
+            <div className='flex items-center gap-3 text-indigo-100'>
+              <div className='p-2 bg-indigo-900/50 rounded-lg'>
+                <MapPin size={18} className='text-indigo-300' />
+              </div>
+              <span className='text-base'>44 Tehama St, San Francisco</span>
+            </div>
+            <div className='flex items-center gap-3 text-indigo-100'>
+              <div className='p-2 bg-indigo-900/50 rounded-lg'>
+                <Phone size={18} className='text-indigo-300' />
+              </div>
+              <span className='text-base'>+1 (866) 941 - 4131</span>
+            </div>
+          </div>
+
+          <div className='flex gap-3'>
+            <Link
+              href='https://twitter.com/scribie_com'
+              target='_blank'
+              rel='noopener noreferrer'
+              className='w-10 h-10 bg-indigo-900/50 hover:bg-white rounded-lg flex items-center justify-center transition-all duration-300 group'
+            >
+              <Twitter
+                size={18}
+                className='text-indigo-200 group-hover:text-indigo-600'
               />
             </Link>
-            <Link href='https://www.linkedin.com/company/scribie'>
-              <Image
-                alt='Linkedin'
-                loading='lazy'
-                src='./assets/images/home/linkedin.svg'
-                className='flex-1 shrink-0 w-full aspect-square'
-                width={24}
-                height={24}
+            <Link
+              href='https://www.linkedin.com/company/scribie'
+              target='_blank'
+              rel='noopener noreferrer'
+              className='w-10 h-10 bg-indigo-900/50 hover:bg-white rounded-lg flex items-center justify-center transition-all duration-300 group'
+            >
+              <Linkedin
+                size={18}
+                className='text-indigo-200 group-hover:text-indigo-600'
               />
             </Link>
-            <Link href='https://www.facebook.com/scribie.transcription/'>
-              <Image
-                alt='Facebook'
-                loading='lazy'
-                src='./assets/images/home/facebook.svg'
-                className='flex-1 shrink-0 w-full aspect-square'
-                width={24}
-                height={24}
+            <Link
+              href='https://www.facebook.com/scribie.transcription'
+              target='_blank'
+              rel='noopener noreferrer'
+              className='w-10 h-10 bg-indigo-900/50 hover:bg-white rounded-lg flex items-center justify-center transition-all duration-300 group'
+            >
+              <Facebook
+                size={18}
+                className='text-indigo-200 group-hover:text-indigo-600'
               />
             </Link>
           </div>
         </div>
-        <div className='self-center mt-10 text-sm leading-6 text-center text-white max-w-full md:max-w-[75%]'>
-          © scribie. 2008-{new Date().getFullYear()} Scribie Technologies, Inc.
-          All rights reserved.
-          <br />
+
+        <div className='lg:col-span-8'>
+          <div className='grid grid-cols-2 sm:grid-cols-4 gap-8'>
+            <div>
+              <h3 className='text-lg font-semibold text-primary-foreground mb-6'>
+                Company
+              </h3>
+              <ul className='space-y-4'>
+                {companyLinks.map((link) => (
+                  <li key={link.label}>
+                    <Link
+                      href={link.href}
+                      className='text-indigo-100 hover:text-primary-foreground transition-all duration-300 flex items-center gap-2 group text-base'
+                    >
+                      <span>{link.label}</span>
+                      <ExternalLink
+                        size={14}
+                        className='opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300'
+                      />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <h3 className='text-lg font-semibold text-primary-foreground mb-6'>
+                Account
+              </h3>
+              <ul className='space-y-4'>
+                {accountLinks.map((link) => (
+                  <li key={link.label}>
+                    <Link
+                      href={link.href}
+                      className='text-indigo-100 hover:text-primary-foreground transition-all duration-300 flex items-center gap-2 group text-base'
+                    >
+                      <span>{link.label}</span>
+                      <ExternalLink
+                        size={14}
+                        className='opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300'
+                      />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <h3 className='text-lg font-semibold text-primary-foreground mb-6'>
+                Resources
+              </h3>
+              <ul className='space-y-4'>
+                {resourceLinks.map((link) => (
+                  <li key={link.label}>
+                    <Link
+                      href={link.href}
+                      className='text-indigo-100 hover:text-primary-foreground transition-all duration-300 flex items-center gap-2 group text-base'
+                    >
+                      <span>{link.label}</span>
+                      <ExternalLink
+                        size={14}
+                        className='opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300'
+                      />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <h3 className='text-lg font-semibold text-primary-foreground mb-6'>
+                Comparison
+              </h3>
+              <ul className='space-y-4'>
+                {comparisonLinks.map((link) => (
+                  <li key={link.label}>
+                    <Link
+                      href={link.href}
+                      className='text-indigo-100 hover:text-primary-foreground transition-all duration-300 flex items-center gap-2 group text-base'
+                    >
+                      <span>{link.label}</span>
+                      <ExternalLink
+                        size={14}
+                        className='opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300'
+                      />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className='border-t pt-6 border-indigo-800/50'>
+        <div className='text-sm text-indigo-300 max-w-3xl mx-auto text-center'>
           When you visit or interact with our sites, services or tools, we or
           our authorised service providers may use cookies for storing
           information to help provide you with a better, faster and safer
           experience and for marketing purposes.
         </div>
+
+        <div className='mt-6 text-indigo-300 text-sm text-center'>
+          © scribie. 2008-{new Date().getFullYear()} Scribie Technologies, Inc.
+          All rights reserved.
+        </div>
       </div>
     </div>
-  )
-}
+  </footer>
+)
 
 export default Footer

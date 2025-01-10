@@ -114,6 +114,7 @@
     "react-quill": "^2.0.0",
     "react-simple-star-rating": "^5.1.7",
     "react-smooth-corners": "^1.0.4",
+    "sharp": "^0.33.5",
     "simple-spellchecker": "^1.0.2",
     "sonner": "^1.4.41",
     "swagger-ui": "^5.17.14",
