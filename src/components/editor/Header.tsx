@@ -257,6 +257,7 @@ export default function Header({
   const [downloadableType, setDownloadableType] = useState('no-marking')
   const [asrFileUrl, setAsrFileUrl] = useState('')
   const [qcFileUrl, setQcFileUrl] = useState('')
+  const [LLMFileUrl, setLLMFileUrl] = useState('')
   const [reReviewComment, setReReviewComment] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
@@ -716,44 +717,80 @@ export default function Header({
     setRevertTranscriptOpen(!revertTranscriptOpen)
   }
 
+  function checkSpeakerOrder(speakers: Record<string, string>): boolean {
+    const expectedOrder = Object.keys(speakers).sort((a, b) => {
+      const numA = parseInt(a.replace('S', ''));
+      const numB = parseInt(b.replace('S', ''));
+      return numA - numB;
+    });
+
+    return Object.keys(speakers).every((key, index) => key === expectedOrder[index]);
+  }
+
   const toggleSpeakerName = async () => {
-    // Extract unique speakers from the transcript
     try {
-      if (quillRef && quillRef.current && !speakerName) {
+      if (quillRef && quillRef.current) { // Removed !speakerName condition to re-fetch every time
         const quill = quillRef.current.getEditor()
         const text = quill.getText()
         const speakerRegex = /\d{1,2}:\d{2}:\d{2}\.\d\s+(S\d+):/g
-        const speakers = new Set<string>()
+        const speakerOrder: string[] = []
         let match
 
+        // Collect speakers in order of appearance
         while ((match = speakerRegex.exec(text)) !== null) {
-          speakers.add(match[1])
+          const speaker = match[1]
+          if (!speakerOrder.includes(speaker)) {
+            speakerOrder.push(speaker)
+          }
         }
 
         const response = await getSpeakerNamesAction(orderDetails.fileId)
         const speakerNamesList = response.data
-        // Update the speakerName state
         const newSpeakerNames: Record<string, string> = {}
-        const maxSpeakers = Math.max(speakers.size, speakerNamesList.length)
 
-        for (let i = 0; i < maxSpeakers; i++) {
-          const speaker = Array.from(speakers)[i] || `S${i + 1}`
-          if (
+        // Map speaker names based on order of appearance
+        speakerOrder.forEach((speaker) => {
+          const speakerNumber = parseInt(speaker.replace('S', '')) - 1
+          // Preserve existing speaker names if they exist
+          if (speakerName && speakerName[speaker]) {
+            newSpeakerNames[speaker] = speakerName[speaker]
+          } else if (
             speakerNamesList &&
-            speakerNamesList[i] &&
-            (speakerNamesList[i].fn || speakerNamesList[i].ln)
+            speakerNamesList[speakerNumber] &&
+            (speakerNamesList[speakerNumber].fn || speakerNamesList[speakerNumber].ln)
           ) {
-            const { fn, ln } = speakerNamesList[i]
+            const { fn, ln } = speakerNamesList[speakerNumber]
             newSpeakerNames[speaker] = `${fn} ${ln}`.trim()
           } else {
-            newSpeakerNames[speaker] = `Speaker ${i + 1}`
+            newSpeakerNames[speaker] = `Speaker ${speakerNumber + 1}`
+          }
+        })
+
+        // Add any remaining speakers from the API that weren't in the transcript
+        const maxSpeakerNumber = Math.max(
+          ...speakerOrder.map(s => parseInt(s.replace('S', ''))),
+          speakerNamesList.length
+        )
+
+        for (let i = 1; i <= maxSpeakerNumber; i++) {
+          const speaker = `S${i}`
+          if (!newSpeakerNames[speaker]) {
+            if (speakerName && speakerName[speaker]) {
+              newSpeakerNames[speaker] = speakerName[speaker]
+            } else if (
+              speakerNamesList &&
+              speakerNamesList[i - 1] &&
+              (speakerNamesList[i - 1].fn || speakerNamesList[i - 1].ln)
+            ) {
+              const { fn, ln } = speakerNamesList[i - 1]
+              newSpeakerNames[speaker] = `${fn} ${ln}`.trim()
+            } else {
+              newSpeakerNames[speaker] = `Speaker ${i}`
+            }
           }
         }
 
-        setSpeakerName((prevState) => ({
-          ...prevState,
-          ...newSpeakerNames,
-        }))
+        setSpeakerName(newSpeakerNames) // Replace instead of merge with previous state
       }
       setIsSpeakerNameModalOpen(!isSpeakerNameModalOpen)
     } catch (error) {
@@ -798,10 +835,17 @@ export default function Header({
 
   const revertTranscript = async () => {
     const toastId = toast.loading('Reverting transcript...')
+    let type = 'QC'
+    if (orderDetails.status === 'REVIEWER_ASSIGNED') {
+      type = 'CF_REV'
+    } else if (orderDetails.status === 'FINALIZER_ASSIGNED') {
+      type = 'CF_FINALIZER'
+    }
+
     try {
       await axiosInstance.post(`${FILE_CACHE_URL}/revert-transcript`, {
         fileId: orderDetails.fileId,
-        type: 'QC',
+        type
       })
       toast.success('Transcript reverted successfully')
       localStorage.removeItem('transcript')
@@ -902,6 +946,8 @@ export default function Header({
       setAsrFileUrl(asrFileUrl?.signedUrl || '')
       const qcFileUrl = await getTextFile(orderDetails.fileId, 'QC')
       setQcFileUrl(qcFileUrl?.signedUrl || '')
+      const LLMFileUrl = await getTextFile(orderDetails.fileId, 'LLM')
+      setLLMFileUrl(LLMFileUrl?.signedUrl || '')
     }
   }
 
@@ -965,6 +1011,24 @@ export default function Header({
     }
 
     const textToInsert = "WHEREUPON, [--EXAMINEE--<replace_with_examinee_name>--EXAMINEE--] having been called as a witness, being duly sworn by the notary public present, testified as follows:";
+
+    quill.insertText(range.index, textToInsert);
+
+    toast.success('Inserted swear in line text');
+  }
+
+  const insertInterpreterSwearInLine = () => {
+    if (!quillRef?.current) return;
+
+    const quill = quillRef.current.getEditor();
+    const range = quill.getSelection();
+
+    if (!range) {
+      toast.error('Please place cursor where you want to insert the text');
+      return;
+    }
+
+    const textToInsert = "WHEREUPON, [--INTERPRETER--<replace_with_interpreter_name>--INTERPRETER--] the interpreter was duly sworn.";
 
     quill.insertText(range.index, textToInsert);
 
@@ -1171,6 +1235,7 @@ export default function Header({
                       handleAdjustTimestamps={handleAdjustTimestamps}
                       increaseFontSize={increaseFontSize}
                       decreaseFontSize={decreaseFontSize}
+                      insertInterpreterSwearInLine={insertInterpreterSwearInLine}
                     />
                   </div>}
                 </div>
@@ -1192,6 +1257,7 @@ export default function Header({
                   handleAdjustTimestamps={handleAdjustTimestamps}
                   increaseFontSize={increaseFontSize}
                   decreaseFontSize={decreaseFontSize}
+                  insertInterpreterSwearInLine={insertInterpreterSwearInLine}
                 />
               </div>
             </div>
@@ -1286,6 +1352,10 @@ export default function Header({
                     {(orderDetails.status === 'REVIEWER_ASSIGNED' || orderDetails.status === 'FINALIZER_ASSIGNED') &&
                       <DropdownMenuItem asChild>
                         <a href={qcFileUrl} target='_blank'>Download QC text</a>
+                      </DropdownMenuItem>}
+                    {(orderDetails.status === 'REVIEWER_ASSIGNED' || orderDetails.status === 'FINALIZER_ASSIGNED') &&
+                      <DropdownMenuItem asChild>
+                        <a href={LLMFileUrl} target='_blank'>Download LLM text</a>
                       </DropdownMenuItem>}
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -1465,6 +1535,15 @@ export default function Header({
             </DialogDescription>
           </DialogHeader>
 
+          {speakerName && !checkSpeakerOrder(speakerName) && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-yellow-800 text-sm">
+                Warning: Speaker labels in the transcript are not in sequential order.
+                This may cause confusion. Please ensure the transcript follows the correct order before proceeding (S1, S2, S3...).
+              </p>
+            </div>
+          )}
+
           <div className='space-y-4'>
             {speakerName &&
               Object.entries(speakerName).map(([key, value], index) => (
@@ -1474,6 +1553,7 @@ export default function Header({
                 >
                   <Label htmlFor={key}>{key}:</Label>
                   <Input
+                    disabled={!checkSpeakerOrder(speakerName)}
                     id={key}
                     value={value}
                     onChange={(e) => handleSpeakerNameChange(e, key)}
@@ -1525,7 +1605,7 @@ export default function Header({
             <DialogClose asChild>
               <Button variant='outline'>Close</Button>
             </DialogClose>
-            <Button onClick={updateSpeakerName}>Update</Button>
+            <Button disabled={!checkSpeakerOrder(speakerName || {})} onClick={updateSpeakerName}>Update</Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -1,4 +1,4 @@
-import { ClockIcon, MagnifyingGlassIcon, Pencil2Icon, PersonIcon, SpaceEvenlyVerticallyIcon, TextAlignLeftIcon, ThickArrowLeftIcon, ThickArrowRightIcon, TimerIcon, ZoomInIcon, ZoomOutIcon } from "@radix-ui/react-icons";
+import { ClockIcon, MagnifyingGlassIcon, Pencil1Icon, Pencil2Icon, PersonIcon, SpaceEvenlyVerticallyIcon, TextAlignLeftIcon, ThickArrowLeftIcon, ThickArrowRightIcon, TimerIcon, ZoomInIcon, ZoomOutIcon } from "@radix-ui/react-icons";
 
 import PlayerButton from "./PlayerButton";
 import { Button } from "../ui/button";
@@ -23,6 +23,7 @@ interface ToolbarProps {
     handleAdjustTimestamps: () => void
     increaseFontSize: () => void
     decreaseFontSize: () => void
+    insertInterpreterSwearInLine: () => void
 }
 
 export default function Toolbar({
@@ -41,6 +42,7 @@ export default function Toolbar({
     handleAdjustTimestamps,
     increaseFontSize,
     decreaseFontSize,
+    insertInterpreterSwearInLine,
 }: ToolbarProps) {
     return <TooltipProvider>
         <Tooltip>
@@ -206,6 +208,19 @@ export default function Toolbar({
                             icon={<Pencil2Icon />}
                             tooltip='Insert swear in line'
                             onClick={insertSwearInLine}
+                        />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Insert swear in line</p>
+                    </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                    <TooltipTrigger>
+                        <PlayerButton
+                            icon={<Pencil1Icon />}
+                            tooltip='Insert interpreter swear in line'
+                            onClick={insertInterpreterSwearInLine}
                         />
                     </TooltipTrigger>
                     <TooltipContent>

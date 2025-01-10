@@ -1,27 +1,11 @@
-import { OrderStatus, ReportMode, ReportOption } from ".prisma/client";
 import { AssemblyAI, Word } from "assemblyai";
-import axios from "axios";
 
 import config from "../../config.json";
-import { FILE_CACHE_URL } from "../constants";
 import logger from "../lib/logger";
 import prisma from "../lib/prisma";
 import { redis } from '../lib/redis'
 import { getSignedURLFromS3 } from "../utils/backend-helper";
-import getFormattedTranscript, { convertASRArray } from "../utils/getFormattedTranscript";
-
-function calculatePWER(words: Word[]): number {
-    logger.info('--> ASRAssemblyAI:calculatePWER');
-    const threshold = config.asr.low_confidence_threshold;
-    const lowConfidenceWords = words.filter(
-        (word: Word) => word.confidence < threshold,
-    );
-
-    const pwer = lowConfidenceWords.length / words.length;
-    const roundedPWER = parseFloat(pwer.toFixed(2));
-    logger.info(`<-- ASRAssemblyAI:calculatePWER ${roundedPWER}`);
-    return roundedPWER;
-}
+import getFormattedTranscript, { convertASRArray, ConvertedASROutput } from "../utils/getFormattedTranscript";
 
 async function transcribe(fileURL: string, fileId: string) {
     const client = new AssemblyAI({
@@ -44,25 +28,13 @@ async function transcribe(fileURL: string, fileId: string) {
     return { transcript, ctms, words: transcriptData.words };
 }
 
-function isPwerAboveThreshold(pwer: number): {
-    result: boolean;
-    details: string;
-} {
-    logger.info(`--> isPwerAboveThreshold - ${pwer}`);
-    let qcPassed = false;
-    let details = '';
-    if (pwer > config.asr.pwer_threshold) {
-        qcPassed = true;
-        details = `PWER ${pwer} > ASR PWER THRESHOLD ${config.asr.pwer_threshold}`;
-    } else {
-        qcPassed = false;
-        details = `PWER ${pwer} < ASR PWER THRESHOLD ${config.asr.pwer_threshold}`;
-    }
-    logger.info(`<-- isPwerAboveThreshold - ${qcPassed} ${details}`);
-    return { result: qcPassed, details: details };
-}
-
-export async function performASR(fileId: string): Promise<void> {
+export async function performASR(fileId: string): Promise<{
+    transcript: string;
+    ctms: ConvertedASROutput[];
+    words: Word[];
+    ASRElapsedTime: number;
+    fileId: string;
+} | undefined> {
     try {
         const transcriptFileName = `${fileId}.txt`;
 
@@ -89,46 +61,14 @@ export async function performASR(fileId: string): Promise<void> {
 
         logger.info(`ASRElapsedTime ${ASRElapsedTime}`);
 
-        await axios.post(`${FILE_CACHE_URL}/save-transcript`, {
-            fileId: fileId,
-            transcript: transcript,
-            ctms: ctms,
-            userId: order.userId,
-        }, {
-            headers: {
-                'x-api-key': process.env.SCRIBIE_API_KEY
-            }
-        });
-
-        // 2. Calculate PWER
-        const pwer = calculatePWER(words);
-
-        logger.info(`<-- transcribe ${fileId}`);
-
-        const testResult = isPwerAboveThreshold(pwer);
-        if (testResult.result === true) {
-            logger.info('Pwer > Threshold');
-            await prisma.order.update({
-                where: { fileId },
-                data: {
-                    ASRTimeTaken: ASRElapsedTime,
-                    pwer: pwer,
-                    reportMode: ReportMode.AUTO,
-                    reportOption: ReportOption.AUTO_PWER_ABOVE_THRESHOLD,
-                    reportComment: testResult.details,
-                    status: OrderStatus.SUBMITTED_FOR_SCREENING,
-                }
-            });
-        } else {
-            await prisma.order.update({
-                where: { fileId },
-                data: {
-                    ASRTimeTaken: ASRElapsedTime,
-                    pwer: pwer,
-                    status: OrderStatus.TRANSCRIBED,
-                }
-            });
+        return {
+            transcript,
+            ctms,
+            words,
+            ASRElapsedTime,
+            fileId,
         }
+
     } catch (error) {
         const allRetryCounts = JSON.parse(await redis.get('ASR_RETRY_COUNT') || '{}')
 

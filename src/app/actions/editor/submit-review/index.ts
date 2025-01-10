@@ -1,15 +1,17 @@
 'use server'
 
 import { OrderStatus } from '@prisma/client'
+import axios from 'axios'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
+import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { submitFinalize } from '@/services/editor-service/submit-finalize-file'
 import submitReview from '@/services/editor-service/submit-review-file'
 
-export async function submitReviewAction(orderId: number, fileId: string) {
+export async function submitReviewAction(orderId: number, fileId: string, transcript: string) {
   logger.info('--> submitFinalize')
 
   try {
@@ -35,6 +37,20 @@ export async function submitReviewAction(orderId: number, fileId: string) {
         error: 'Order not found',
       }
     }
+
+    await axios.post(
+      `${FILE_CACHE_URL}/save-transcript`,
+      {
+        fileId: order.fileId,
+        transcript: transcript,
+        userId: transcriberId,
+      },
+      {
+        headers: {
+          'x-api-key': process.env.SCRIBIE_API_KEY,
+        },
+      }
+    )
 
     if (order.status === OrderStatus.REVIEWER_ASSIGNED) {
       const { success, message } = await submitReview(transcriberId, order)
