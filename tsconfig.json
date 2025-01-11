@@ -34,7 +34,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "types/next-auth.d.ts",
-    "./.next/types/**/*.ts"
+    "./.next/types/**/*.ts",
+    "src/utils/transcript/diff_match_patch.js"
   ],
   "exclude": [
     "node_modules"
