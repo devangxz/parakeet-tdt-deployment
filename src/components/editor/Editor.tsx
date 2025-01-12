@@ -461,44 +461,51 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             // Track changed region
             let retainChars = 0;
             let changeLength = 0;
-            
+
+            console.log('Delta ops:', delta.ops.map(op => {
+                if (op.retain) return `retain: ${op.retain}`;
+                if (op.delete) return `delete: ${op.delete}`;
+                if (op.insert) return `insert: ${op.insert}`;
+            }).join(', '));
+
             delta.ops.forEach((op: DeltaOperation) => {
                 if (op.retain) {
                     retainChars += op.retain;
                 }
+                if (op.delete) {
+                    changeLength -= op.delete;
+                }
                 if (op.insert) {
                     changeLength += op.insert.length;
                 }
-                if (op.delete) {
-                    changeLength += op.delete;
-                }
             });
 
-            console.log('Delta:', delta);
-            
-            if (minChangedOffset === null || retainChars < minChangedOffset) {
-                setMinChangedOffset(retainChars);
-            }
-            const endPos = retainChars + changeLength;
-            if (maxChangedOffset === null || endPos > maxChangedOffset) {
-                setMaxChangedOffset(endPos);
-            }
+            const newMinOffset = retainChars;
+            const newMaxOffset = changeLength < 0 
+                ? retainChars + Math.abs(changeLength)
+                : retainChars + changeLength;
+
+            console.log('Retain chars:', retainChars, 'Change length:', changeLength);
+            console.log('Setting offsets - Min:', newMinOffset, 'Max:', newMaxOffset);
+
+            setMinChangedOffset(newMinOffset);
+            setMaxChangedOffset(newMaxOffset);
 
             if (typingTimer) clearTimeout(typingTimer);
             setTypingTimer(
                 setTimeout(() => {
                     console.log('No new keystrokes for 1s, performing partial alignment update...');
 
-                    if (minChangedOffset === null || maxChangedOffset === null) return;
+                    if (newMinOffset === null || newMaxOffset === null) return;
 
                     const rawText = quill.getText();
                     const normalizedText = rawText.replace(/\n+/g, ' ');
                     const newWords = normalizedText.split(/\s+/).filter(Boolean);
                     
-                    let startIndex = characterIndexToWordIndex(normalizedText, minChangedOffset) - 2;
+                    let startIndex = characterIndexToWordIndex(normalizedText, newMinOffset) - 2;
                     if (startIndex < 0) startIndex = 0;
                     
-                    let endIndex = characterIndexToWordIndex(normalizedText, maxChangedOffset) + 2;
+                    let endIndex = characterIndexToWordIndex(normalizedText, newMaxOffset) + 2;
                     if (endIndex >= newWords.length) {
                         endIndex = newWords.length - 1;
                     }
@@ -508,7 +515,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                     const oldEndIndex = findMatchingBoundary(
                         newWords.slice(startIndex, endIndex + 1),
                         alignments,
-                        endIndex + 1
+                        endIndex
                     );
                                             
                     const changedWords = newWords.slice(startIndex, endIndex + 1).join(' ');
