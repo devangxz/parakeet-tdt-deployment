@@ -82,7 +82,8 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         let lastRemovedAlignment: AlignmentType | null = null;
         
         diffs.forEach((part) => {
-            console.log(part);
+            console.log("Diff part:", part);
+            
             if (part.type === 'removed') {
                 // Store removed word info for potential replacement
                 const removedWords = part.value.trim()
@@ -434,21 +435,20 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         alignments: AlignmentType[],
         endIdx: number
     ): number => {
+        // Search backwards from end to find last matching occurrence
         const lastTwoNew = newWords.slice(-2).join(' ');
-        console.log('Last two new words:', lastTwoNew);
 
-        while (endIdx < alignments.length - 1) {
-            const lastTwoOld = alignments.slice(endIdx-1, endIdx+1)
+        let searchIdx = Math.min(alignments.length - 1, endIdx + 1);
+        while (searchIdx > 1) {
+            const lastTwoOld = alignments.slice(searchIdx - 1, searchIdx + 1)
                 .map(a => a.word)
                 .join(' ');
-            console.log('Comparing last two old words:', lastTwoOld, 'with last two new words:', lastTwoNew);
             if (lastTwoOld === lastTwoNew) break;
-            endIdx++;
+            searchIdx--;
         }
-        console.log('Matching boundary found at index:', endIdx);
-        return endIdx;
-    };    
-
+        return searchIdx;
+    };
+        
     useEffect(() => {
         const quill = quillRef.current?.getEditor()
         if (!quill) return
@@ -503,10 +503,12 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                         endIndex = newWords.length - 1;
                     }
 
+                    // Start search near end position to find correct word boundary
+                    // when buffer words appear multiple times in text
                     const oldEndIndex = findMatchingBoundary(
                         newWords.slice(startIndex, endIndex + 1),
                         alignments,
-                        startIndex
+                        endIndex + 1
                     );
                                             
                     const changedWords = newWords.slice(startIndex, endIndex + 1).join(' ');
