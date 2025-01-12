@@ -8,7 +8,7 @@ import 'react-quill/dist/quill.snow.css'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 import { CTMType, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
-import { createAlignments, getFormattedTranscript, AlignmentType } from '@/utils/transcript'
+import { createAlignments, getFormattedTranscript, updatePartialAlignment, AlignmentType } from '@/utils/transcript'
 import { diff_match_patch, DIFF_DELETE, DIFF_INSERT } from '@/utils/transcript/diff_match_patch';
 
 // TODO:  Add valid values (start, end, duration, speaker) for the changed words.
@@ -48,8 +48,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     const [typingTimer, setTypingTimer] = useState<NodeJS.Timeout | null>(null)
 
     // Keep track of earliest & latest changed offset across the entire typing burst
-    const [minChangedOffset, setMinChangedOffset] = useState<number | null>(null)
-    const [maxChangedOffset, setMaxChangedOffset] = useState<number | null>(null)
 
     // Core alignment update logic
     const isPunctuation = (word: string): boolean => {
@@ -430,25 +428,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
 
     useShortcuts(shortcutControls);
 
-    const findMatchingBoundary = (
-        newWords: string[],
-        alignments: AlignmentType[],
-        endIdx: number
-    ): number => {
-        // Search backwards from end to find last matching occurrence
-        const lastTwoNew = newWords.slice(-2).join(' ');
-
-        let searchIdx = Math.min(alignments.length - 1, endIdx + 1);
-        while (searchIdx > 1) {
-            const lastTwoOld = alignments.slice(searchIdx - 1, searchIdx + 1)
-                .map(a => a.word)
-                .join(' ');
-            if (lastTwoOld === lastTwoNew) break;
-            searchIdx--;
-        }
-        return searchIdx;
-    };
-        
     useEffect(() => {
         const quill = quillRef.current?.getEditor()
         if (!quill) return
@@ -480,62 +459,33 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                 }
             });
 
-            const newMinOffset = retainChars;
-            const newMaxOffset = changeLength < 0 
+            const minOffset = retainChars;
+            const maxOffset = changeLength < 0 
                 ? retainChars + Math.abs(changeLength)
                 : retainChars + changeLength;
 
             console.log('Retain chars:', retainChars, 'Change length:', changeLength);
-            console.log('Setting offsets - Min:', newMinOffset, 'Max:', newMaxOffset);
-
-            setMinChangedOffset(newMinOffset);
-            setMaxChangedOffset(newMaxOffset);
+            console.log('Change region - Min:', minOffset, 'Max:', maxOffset);
 
             if (typingTimer) clearTimeout(typingTimer);
             setTypingTimer(
                 setTimeout(() => {
                     console.log('No new keystrokes for 1s, performing partial alignment update...');
-
-                    if (newMinOffset === null || newMaxOffset === null) return;
-
                     const rawText = quill.getText();
                     const normalizedText = rawText.replace(/\n+/g, ' ');
-                    const newWords = normalizedText.split(/\s+/).filter(Boolean);
                     
-                    let startIndex = characterIndexToWordIndex(normalizedText, newMinOffset) - 2;
-                    if (startIndex < 0) startIndex = 0;
-                    
-                    let endIndex = characterIndexToWordIndex(normalizedText, newMaxOffset) + 2;
-                    if (endIndex >= newWords.length) {
-                        endIndex = newWords.length - 1;
-                    }
-
-                    // Start search near end position to find correct word boundary
-                    // when buffer words appear multiple times in text
-                    const oldEndIndex = findMatchingBoundary(
-                        newWords.slice(startIndex, endIndex + 1),
+                    const newAlignments = updatePartialAlignment(
+                        normalizedText,
+                        minOffset,
+                        maxOffset,
                         alignments,
-                        endIndex
+                        processAlignmentUpdate,
+                        characterIndexToWordIndex
                     );
-                                            
-                    const changedWords = newWords.slice(startIndex, endIndex + 1).join(' ');
-                    const affectedAlignments = alignments.slice(startIndex, oldEndIndex + 1);
-                
-                    console.log('Changed Words:', changedWords);
-                    console.log('Affected Alignments:', affectedAlignments.map(a => a.word).join(' '));
-                
-                    const updatedSlice = processAlignmentUpdate(changedWords, affectedAlignments);
-                    const newAlignments = [
-                        ...alignments.slice(0, startIndex),
-                        ...updatedSlice,
-                        ...alignments.slice(oldEndIndex + 1)
-                    ];
-                
+                    
                     setAlignments(newAlignments);
                     console.log('Alignments updated:', newAlignments);
 
-                    setMinChangedOffset(null);
-                    setMaxChangedOffset(null);
                 }, 1000)
             );
         };
@@ -550,8 +500,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         }
     }, [
         alignments,
-        maxChangedOffset,
-        minChangedOffset,
         typingTimer
     ])
 
