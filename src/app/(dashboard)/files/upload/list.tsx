@@ -53,6 +53,7 @@ interface File {
   status: string
   uploadedByUser: User
   isRefunded: boolean
+  folderId: number | null
 }
 
 const FileList = ({
@@ -118,6 +119,7 @@ const FileList = ({
         fileStatus: file?.fileStatus,
         status: file?.status,
         uploadedByUser: file.uploadedByUser,
+        folderId: file.parentId,
         isRefunded: file.Orders[0]?.status === 'REFUNDED',
       }))
       setPendingFiles(files ?? [])
@@ -466,6 +468,13 @@ const FileList = ({
               Copy File
             </DropdownMenuItem>
             <DropdownMenuItem
+              onClick={() => {
+                goToFolder(row.original.folderId)
+              }}
+            >
+              Go to folder
+            </DropdownMenuItem>
+            <DropdownMenuItem
               className='text-red-500'
               onClick={() => {
                 setSeletedFile({
@@ -504,6 +513,14 @@ const FileList = ({
     } catch (error) {
       toast.error('Failed to download MP3')
       setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
+    }
+  }
+
+  const goToFolder = (folderId: number | null) => {
+    if (folderId) {
+      router.push(`/files/all-files?folderId=${folderId}`)
+    } else {
+      router.push(`/files/all-files`)
     }
   }
 

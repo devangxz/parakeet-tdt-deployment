@@ -2,6 +2,7 @@
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
+import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -36,6 +37,7 @@ import getInitials from '@/utils/getInitials'
 
 interface ExtendedFile extends File {
   uploadedByUser: User
+  folderId: number | null
 }
 
 interface ListProps {
@@ -64,6 +66,7 @@ export default function InprogressFilesPage({ files }: ListProps) {
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
+  const router = useRouter()
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -94,6 +97,7 @@ export default function InprogressFilesPage({ files }: ListProps) {
           date: file.Orders[0]?.orderTs,
           duration: file.duration,
           uploadedByUser: file.uploadedByUser,
+          folderId: file.parentId,
         }))
         .sort((a: ExtendedFile, b: ExtendedFile) => {
           if (a.date && b.date) {
@@ -245,6 +249,14 @@ export default function InprogressFilesPage({ files }: ListProps) {
     })
   }
 
+  const goToFolder = (folderId: number | null) => {
+    if (folderId) {
+      router.push(`/files/all-files?folderId=${folderId}`)
+    } else {
+      router.push(`/files/all-files`)
+    }
+  }
+
   columns.push({
     id: 'actions',
     header: 'Actions',
@@ -295,6 +307,13 @@ export default function InprogressFilesPage({ files }: ListProps) {
               }}
             >
               Rename
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                goToFolder(row.original.folderId)
+              }}
+            >
+              Go to folder
             </DropdownMenuItem>
             <DropdownMenuItem
               className='text-red-500'

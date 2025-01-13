@@ -12,6 +12,7 @@ interface File {
   date: string
   duration: number
   uploadedByUser: User
+  folderId: number | null
 }
 
 export default async function InprogressFilesPage() {
@@ -31,6 +32,7 @@ export default async function InprogressFilesPage() {
       date: file.Orders[0]?.orderTs,
       duration: Number(file.duration),
       uploadedByUser: file.uploadedByUser,
+      folderId: file.parentId,
     }))
   }
 

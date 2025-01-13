@@ -2,11 +2,14 @@
 
 import { UploadIcon } from '@radix-ui/react-icons'
 import axios from 'axios'
+import JSZip from 'jszip'
 import { FileUp } from 'lucide-react'
 import React, { ChangeEvent, useRef } from 'react'
 import Dropzone from 'react-dropzone'
 import { toast } from 'sonner'
 
+import { processFilesAndFolders } from '@/app/actions/folders/create'
+import { deleteMultipleFoldersAction } from '@/app/actions/folders/delete-multiple'
 import { checkUploadSession } from '@/app/actions/s3-upload/check-session'
 import { completeMultipartUpload } from '@/app/actions/s3-upload/complete'
 import { createMultipartUpload } from '@/app/actions/s3-upload/create'
@@ -24,6 +27,10 @@ import {
   FileWithId,
   CustomInputAttributes,
   UploaderProps,
+  TreeNode,
+  FolderStructure,
+  ExtendedFile,
+  ProcessedFileWithPath,
 } from '@/types/upload'
 import { generateUniqueId } from '@/utils/generateUniqueId'
 import { handleRetryableError } from '@/utils/uploadUtils'
@@ -106,7 +113,11 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
               file.fileId,
               file.size,
               'local',
-              null
+              null,
+              undefined,
+              false,
+              file.parentId,
+              file.fullPath
             )
             if (!createRes.uploadId || !createRes.key) {
               throw new Error('Missing uploadId or key in response')
@@ -249,6 +260,21 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
     }
   }
 
+  function processFolderStructure(
+    node: TreeNode,
+    currentPath: string = '',
+  ): FolderStructure {
+    const folderPath = currentPath ? `${currentPath}/${node.name}` : node.name;
+
+    return {
+      name: node.name,
+      parentPath: currentPath,
+      children: node.children.map(child =>
+        processFolderStructure(child, folderPath)
+      )
+    };
+  }
+
   const handleFileOrFolderUpload = async (files: File[]) => {
     if (isUploading) {
       toast.error(
@@ -257,44 +283,198 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
       return
     }
 
-    const filesUnderSizeLimit = files.filter((file) => {
-      if (file.size > MAX_FILE_SIZE) {
-        toast.error(
-          `File "${file.name}" was rejected due to exceeding 10GB size limit.`
-        )
-        return false
+    let isZipUpload = false
+
+    const makeTree = (files: ExtendedFile[]): TreeNode => {
+      const filesArray = Array.from(files);
+
+      const createChild = (name: string, userId?: string, fileId?: string): TreeNode => ({
+        name,
+        userId,
+        children: [],
+        ...(fileId && { fileId }) // Only add fileId if defined
+      });
+
+      const addPath = (file: ExtendedFile, tree: TreeNode): void => {
+        if (file.name.endsWith('.DS_Store')) return;
+
+        const path = file.fullPath;
+        if (!path) return;
+        const parts = path.split('/');
+
+        // Initialize tree if empty
+        if (!tree.name) {
+          Object.assign(tree, createChild(parts[0]));
+        }
+
+        parts.shift();
+
+        // Build tree structure
+        parts.reduce((current, part) => {
+          const existingChild = current.children.find(child => child.name === part);
+
+          if (existingChild) return existingChild;
+
+          const newChild = createChild(
+            part,
+          );
+          current.children.push(newChild);
+          return newChild;
+        }, tree);
+      };
+
+      const tree: TreeNode = {} as TreeNode;
+      filesArray.forEach(file => addPath(file, tree));
+      return tree;
+    };
+    //parentId
+    //fullPath
+    let processedFiles: ExtendedFile[] = files as ExtendedFile[]
+    const zipFile = files.find(file => file.name.endsWith('.zip'))
+
+    if (zipFile) {
+      try {
+        isZipUpload = true
+        const zip = new JSZip()
+        const contents = await zip.loadAsync(zipFile)
+
+        const extractedFilePromises = Object.keys(contents.files)
+          .filter(filename => {
+            const isSystemFile = filename.includes('.DS_Store') ||
+              filename.includes('__MACOSX') ||
+              filename.startsWith('.')
+            const hasExtension = filename.includes('.')
+            return !isSystemFile && hasExtension
+          })
+          .map(async (filename) => {
+            const entry = contents.files[filename]
+            if (!entry.dir) {
+              const blob = await entry.async('blob')
+              return new File([blob], filename.split('/').slice(-1)[0], {
+                type: blob.type || 'application/octet-stream',
+                lastModified: entry.date.getTime()
+              }) as File & { fullPath?: string }
+            }
+            return null
+          })
+
+        const extractedFiles = (await Promise.all(extractedFilePromises))
+          .filter((file): file is File => file !== null)
+          .map(file => {
+            const originalFile = contents.files[Object.keys(contents.files).find(key =>
+              key.endsWith(file.name)
+            ) || '']
+              ; (file as File & { fullPath: string }).fullPath = originalFile?.name || file.name
+            return file
+          })
+
+        // Replace the files array with extracted files
+        processedFiles = extractedFiles
+
+        if (processedFiles.length === 0) {
+          toast.error('No valid files found in the zip archive')
+          return
+        }
+      } catch (error) {
+        console.error(`Error processing zip file ${zipFile.name}:`, error)
+        toast.error(`Failed to process zip file ${zipFile.name}`)
+        return
       }
-      return true
-    })
-    if (filesUnderSizeLimit.length === 0) {
-      if (files.length > 1) {
-        toast.error(
-          'No valid files selected. Please select supported audio or video files under 10GB in size'
-        )
-      }
-      return
     }
 
-    let filesToUpload: FileWithId[] = []
+    const fileTree = makeTree(processedFiles)
 
-    if (fileInputRef.current) fileInputRef.current.value = ''
-    if (folderInputRef.current) folderInputRef.current.value = ''
+    const folderStructure = processFolderStructure(fileTree);
 
-    setUploadingFiles([])
-    setIsUploading(true)
+    // Prepare files with their paths
+    const filesWithPaths: ProcessedFileWithPath[] = processedFiles.map(file => ({
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      fullPath: file.fullPath || '',
+      parentPath: file.fullPath?.split('/').slice(0, -1).join('/') || '',
+      lastModified: file.lastModified,
+      file: file // Keep the original File object
+    }));
 
+    let filesUnderSizeLimit;
     try {
+      if (isZipUpload) {
+        const filesForServer = filesWithPaths.map(file => ({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          fullPath: file.fullPath,
+          parentPath: file.parentPath,
+          lastModified: file.lastModified
+          // Exclude the actual File object
+        }));
+
+        const res = await processFilesAndFolders({
+          folderStructure,
+          files: filesForServer
+        });
+
+        if (!res.success || !res.files) {
+          throw new Error(res.message)
+        }
+
+        filesUnderSizeLimit = res.files.map(processedFile => {
+          const originalFileData = filesWithPaths.find(f => f.name === processedFile.name);
+          if (!originalFileData) {
+            throw new Error(`Could not find original file for ${processedFile.name}`);
+          }
+
+          return {
+            ...processedFile,
+            file: originalFileData.file,
+          };
+        }).filter(file => {
+          if (file.size > MAX_FILE_SIZE) {
+            toast.error(`File "${file.name}" was rejected due to exceeding 10GB size limit.`);
+            return false;
+          }
+          return true;
+        });
+      } else {
+        // Handle non-zip uploads as before
+        filesUnderSizeLimit = processedFiles.filter((file) => {
+          if (file.size > MAX_FILE_SIZE) {
+            toast.error(`File "${file.name}" was rejected due to exceeding 10GB size limit.`);
+            return false;
+          }
+          return true;
+        });
+      }
+
+      if (filesUnderSizeLimit.length === 0) {
+        if (files.length > 1) {
+          toast.error(
+            'No valid files selected. Please select supported audio or video files under 10GB in size'
+          )
+        }
+        return
+      }
+
+      let filesToUpload: FileWithId[] = []
+
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      if (folderInputRef.current) folderInputRef.current.value = ''
+
+      setUploadingFiles([])
+      setIsUploading(true)
+
       if (isRemoteLegal) {
-        const remoteLegalFiles = filesUnderSizeLimit.filter((file) => {
+        const remoteLegalFiles = filesUnderSizeLimit as File[]
+        const remoteLegalFolderFiles = remoteLegalFiles.filter((file) => {
           const pathSegments = file.webkitRelativePath.split('/')
           return (
             pathSegments.length > 1 &&
-            pathSegments[1].toLowerCase() ===
-              ORG_REMOTELEGAL_FOLDER.toLowerCase()
+            pathSegments[1].toLowerCase() === ORG_REMOTELEGAL_FOLDER.toLowerCase()
           )
         })
 
-        if (remoteLegalFiles.length === 0) {
+        if (remoteLegalFolderFiles.length === 0) {
           setIsUploading(false)
           toast.error("No 'Scribie' folder found or the folder is empty.")
           return
@@ -335,10 +515,13 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
           },
         ]
       } else {
-        const allowedFiles = filesUnderSizeLimit.filter(validateFileType)
-        const rejectedFiles = filesUnderSizeLimit.filter(
-          (file) => !validateFileType(file)
-        )
+        const allowedFiles = filesUnderSizeLimit.filter((file) =>
+          validateFileType('file' in file ? file.file : file)
+        );
+
+        const rejectedFiles = filesUnderSizeLimit.filter((file) =>
+          !validateFileType('file' in file ? file.file : file)
+        );
 
         if (rejectedFiles.length > 0) {
           rejectedFiles.forEach((file) => {
@@ -356,10 +539,12 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
           name: file.name,
           size: file.size,
           type: file.type,
+          parentId: 'parentId' in file ? file.parentId : undefined,
+          fullPath: 'fullPath' in file ? file.fullPath : undefined,
           fileId: generateUniqueId(),
-          file: file,
+          file: 'file' in file ? file.file : file,
           isRLDocx: false,
-        }))
+        }));
       }
 
       setUploadingFiles(
@@ -386,7 +571,13 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
         }
       }
     } catch (error) {
+
       toast.error('Upload failed')
+      if (filesUnderSizeLimit && filesUnderSizeLimit.length > 0 && isZipUpload) {
+        const files = filesUnderSizeLimit as { parentId: number }[]
+        const folderIds = files.map((file) => file.parentId)
+        deleteMultipleFoldersAction(folderIds)
+      }
       setIsUploading(false)
     } finally {
       setIsUploading(false)
@@ -437,9 +628,8 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
                   <h4>Upload {!isRemoteLegal && 'Files or'} Folders</h4>
                 </div>
                 <div className='text-xs self-stretch mt-4 leading-5 text-center max-md:mr-1 max-md:max-w-full'>
-                  {`Drag & drop ${
-                    !isRemoteLegal ? 'files or' : ''
-                  } folders here or use the options below.`}
+                  {`Drag & drop ${!isRemoteLegal ? 'files or' : ''
+                    } folders here or use the options below.`}
                 </div>
                 <div className='flex gap-4 mt-4 font-semibold text-indigo-600'>
                   {!isRemoteLegal && (
