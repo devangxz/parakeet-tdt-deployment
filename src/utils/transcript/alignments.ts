@@ -1,15 +1,17 @@
 import { CTMType, AlignmentType } from '../types/transcript'
 import { diff_match_patch, DIFF_DELETE, DIFF_INSERT } from '@/utils/transcript/diff_match_patch';
 
-export function processAlignmentUpdate(newText: string, currentAlignments: AlignmentType[]): AlignmentType[] {
+export function updateAlignments(newText: string, currentAlignments: AlignmentType[]): AlignmentType[] {
     if (currentAlignments.length === 0) return [];
 
     // Convert alignments to text for diffing
     const oldText = currentAlignments.map(a => a.word).join(' ');
+
+    const cleanText = (text: string) => text.replace(/\s*\n+\s*/g, ' ').trim();
     
     // Use diff_match_patch in word mode
     const dmp = new diff_match_patch();
-    const rawDiffs = dmp.diff_wordMode(oldText, newText);
+    const rawDiffs = dmp.diff_wordMode(cleanText(oldText), cleanText(newText));
     
     // Convert dmp output to match { type, value }
     const diffs = rawDiffs.map(([op, text]) => {
@@ -31,8 +33,6 @@ export function processAlignmentUpdate(newText: string, currentAlignments: Align
     };
     
     diffs.forEach((part) => {
-        console.log("Diff part:", part);
-        
         if (part.type === 'removed') {
             // Store removed word info for potential replacement
             const removedWords = part.value.trim()
@@ -136,41 +136,53 @@ export function findMatchingBoundary(
 ): number {
     // Search backwards from end to find last matching occurrence
     const lastTwoNew = newWords.slice(-2).join(' ');
+    console.log('Finding boundary match for:', lastTwoNew);
 
     let searchIdx = Math.min(alignments.length - 1, endIdx + 1);
+    console.log('Starting search at index:', searchIdx);
+
     while (searchIdx > 1) {
         const lastTwoOld = alignments.slice(searchIdx - 1, searchIdx + 1)
             .map(a => a.word)
             .join(' ');
-        if (lastTwoOld === lastTwoNew) break;
+        console.log('Comparing with:', lastTwoOld, 'at index:', searchIdx);
+        
+        if (lastTwoOld === lastTwoNew) {
+            console.log('Found matching boundary at index:', searchIdx);
+            break;
+        }
         searchIdx--;
     }
+
+    console.log('Final boundary index:', searchIdx);
     return searchIdx;
 }
 
 export function updatePartialAlignment(
-    normalizedText: string,
+    text: string,
     minOffset: number,
     maxOffset: number,
     alignments: AlignmentType[],
-    processAlignmentUpdate: (newText: string, currentAlignments: AlignmentType[]) => AlignmentType[],
+    updateAlignments: (newText: string, currentAlignments: AlignmentType[]) => AlignmentType[],
     characterIndexToWordIndex: (text: string, charIndex: number) => number
 ): AlignmentType[] {
-    const newWords = normalizedText.split(/\s+/).filter(Boolean);
+    const newWords = text.split(/\s+/).filter(Boolean);
                     
-    let startIndex = characterIndexToWordIndex(normalizedText, minOffset) - 2;
-    if (startIndex < 0) startIndex = 0;
+    let startIndex = characterIndexToWordIndex(text, minOffset) - 2;
+    if (startIndex < 0) startIndex = 0;    
+    console.log('start index:', startIndex);
     
-    let endIndex = characterIndexToWordIndex(normalizedText, maxOffset) + 2;
+    let endIndex = characterIndexToWordIndex(text, maxOffset) + 2;
     if (endIndex >= newWords.length) {
         endIndex = newWords.length - 1;
     }
+    console.log("end index:", endIndex)
 
     // Start search near end position to find correct word boundary
     const oldEndIndex = findMatchingBoundary(
         newWords.slice(startIndex, endIndex + 1),
         alignments,
-        endIndex
+        endIndex + 2
     );
                         
     const changedWords = newWords.slice(startIndex, endIndex + 1).join(' ');
@@ -179,7 +191,7 @@ export function updatePartialAlignment(
     console.log('Changed Words:', changedWords);
     console.log('Affected Alignments:', affectedAlignments.map(a => a.word).join(' '));
 
-    const updatedSlice = processAlignmentUpdate(changedWords, affectedAlignments);
+    const updatedSlice = updateAlignments(changedWords, affectedAlignments);
     
     return [
         ...alignments.slice(0, startIndex),

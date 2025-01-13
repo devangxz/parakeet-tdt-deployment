@@ -1,6 +1,6 @@
 'use client'
 
-import { Op } from 'quill/core'
+import { Delta, Op } from 'quill/core'
 import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
@@ -8,7 +8,7 @@ import 'react-quill/dist/quill.snow.css'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 import { CTMType, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
-import { createAlignments, getFormattedTranscript, updatePartialAlignment, processAlignmentUpdate, AlignmentType } from '@/utils/transcript'
+import { createAlignments, getFormattedTranscript, updatePartialAlignment, updateAlignments, AlignmentType } from '@/utils/transcript'
 
 // TODO:  Add valid values (start, end, duration, speaker) for the changed words.
 // TODO: Test if a new line is added with TS + speaker name
@@ -27,18 +27,6 @@ interface EditorProps {
     selection: CustomerQuillSelection | null
     searchHighlight: CustomerQuillSelection | null
 }
-
-interface DeltaOperation {
-  insert?: string;  // Removed object type since we only handle text
-  delete?: number;
-  retain?: number;
-}
-
-interface Delta {
-  ops: DeltaOperation[];
-}
-
-type Sources = 'user' | 'api' | 'silent';
 
 export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight }: EditorProps) {
     const ctms = initialCtms; // Make CTMs constant
@@ -300,47 +288,16 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         const quill = quillRef.current?.getEditor()
         if (!quill) return
 
-        const handleTextChange = (delta: Delta, oldDelta: Delta, source: Sources) => {
+        const handleTextChange = (delta: Delta, oldDelta: Delta, source: string) => {
             if (source !== 'user') return;
-            const quill = quillRef.current?.getEditor();
-            if (!quill) return;
-
-            // Track changed region
-            let retainChars = 0;
-            let changeLength = 0;
-
-            delta.ops.forEach((op: DeltaOperation) => {
-                if (op.retain) {
-                    retainChars += op.retain;
-                }
-                if (op.delete) {
-                    changeLength -= op.delete;
-                }
-                if (op.insert) {
-                    changeLength += op.insert.length;
-                }
-            });
-
-            const minOffset = retainChars;
-            const maxOffset = changeLength < 0 
-                ? retainChars + Math.abs(changeLength)
-                : retainChars + changeLength;
 
             if (typingTimer) clearTimeout(typingTimer);
             setTypingTimer(
                 setTimeout(() => {
-                    console.log(`No new keystrokes for 1s, performing partial alignment update. Min Offset: ${minOffset}, Max Offset: ${maxOffset}`);
-                    const rawText = quill.getText();
-                    const normalizedText = rawText.replace(/\n+/g, ' ');
-                    
-                    const newAlignments = updatePartialAlignment(
-                        normalizedText,
-                        minOffset,
-                        maxOffset,
-                        alignments,
-                        processAlignmentUpdate,
-                        characterIndexToWordIndex
-                    );
+                    console.log(`No new keystrokes for 1s, performing partial alignment update...`);
+
+                    const rawText = quill.getText();                    
+                    const newAlignments = updateAlignments(rawText, alignments);
                     
                     setAlignments(newAlignments);
                     console.log('Alignments updated:', newAlignments);
@@ -377,7 +334,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
 
             if(transcript) {
                 // Process any differences between original and current transcript
-                const updatedAlignments = processAlignmentUpdate(transcript, newAlignments);
+                const updatedAlignments = updateAlignments(transcript, newAlignments);
                 setAlignments(updatedAlignments); // Set the processed alignments
                 console.log('Alignments updated:', updatedAlignments);
             }

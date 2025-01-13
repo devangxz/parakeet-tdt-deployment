@@ -11,6 +11,8 @@ declare module '@/utils/transcript/diff_match_patch' {
 
     diff_main(text1: string, text2: string, opt_checklines?: boolean, opt_deadline?: number): Array<[number, string]>;
     diff_wordMode(text1: string, text2: string): Array<[number, string]>;
+    diff_cleanupEfficiency(diffs: Array<[number, string]>): void;
+    diff_cleanupSemantic(diffs: Array<[number, string]>): void;
   }
 
   export default diff_match_patch;

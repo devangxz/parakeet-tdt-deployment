@@ -1,4 +1,4 @@
-import { updatePartialAlignment, processAlignmentUpdate } from '../alignments'
+import { updatePartialAlignment, updateAlignments } from '../alignments'
 import { AlignmentType } from '@/utils/types/transcript'
 
 // Mock function
@@ -27,7 +27,7 @@ describe('updatePartialAlignment - Realignment Scenarios', () => {
             minOffset,
             maxOffset,
             alignments,
-            processAlignmentUpdate,
+            updateAlignments,
             mockCharToWordIndex
         );
 
@@ -56,7 +56,7 @@ describe('updatePartialAlignment - Realignment Scenarios', () => {
             minOffset,
             maxOffset,
             alignments,
-            processAlignmentUpdate,
+            updateAlignments,
             mockCharToWordIndex
         );
 
@@ -81,7 +81,7 @@ describe('updatePartialAlignment - Realignment Scenarios', () => {
             minOffset,
             maxOffset,
             alignments,
-            processAlignmentUpdate,
+            updateAlignments,
             mockCharToWordIndex
         );
 
@@ -109,7 +109,7 @@ describe('updatePartialAlignment - Realignment Scenarios', () => {
             minOffset,
             maxOffset,
             alignments,
-            processAlignmentUpdate,
+            updateAlignments,
             mockCharToWordIndex
         );
 
