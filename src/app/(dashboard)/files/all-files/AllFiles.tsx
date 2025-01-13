@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import { FileWarning, FolderClosed, FolderPlusIcon, X } from 'lucide-react'
+import { Download, FileWarning, FolderClosed, FolderPlusIcon, X } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Session } from 'next-auth'
@@ -24,6 +24,7 @@ import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
 import CreateFolderModal from '@/components/create-folder-modal'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
+import DownloadModal from '@/components/download-modal'
 import DraftTranscriptFileDialog from '@/components/draft-transcript'
 import RenameFileDialog from '@/components/file-rename-dialog'
 import MoveFileModal from '@/components/move-file-modal'
@@ -134,6 +135,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
     id: 0,
     name: '',
   })
+  const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false)
   const [isMoveFileDialogOpen, setIsMoveFileDialogOpen] = useState(false)
   const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false)
 
@@ -748,6 +750,12 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
                 )}
 
                 <DropdownMenuItem
+                  onClick={() => setIsDownloadDialogOpen(true)}
+                >
+                  Download
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
                   className='text-red-500'
                   onClick={handleBulkDelete}
                 >
@@ -858,6 +866,14 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
         setIsCreateFolderDialogOpen={setIsCreateFolderDialogOpen}
         folderId={folderId}
         refetch={fetchAllFolders}
+      />
+      <DownloadModal
+        isDownloadDialogOpen={isDownloadDialogOpen}
+        setIsDownloadDialogOpen={setIsDownloadDialogOpen}
+        fileIds={
+          selectedFiles
+            .map((file) => file.id) || []
+        }
       />
     </div>
   )
