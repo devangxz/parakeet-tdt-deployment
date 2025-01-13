@@ -8,8 +8,7 @@ import 'react-quill/dist/quill.snow.css'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 import { CTMType, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
-import { createAlignments, getFormattedTranscript, updatePartialAlignment, AlignmentType } from '@/utils/transcript'
-import { diff_match_patch, DIFF_DELETE, DIFF_INSERT } from '@/utils/transcript/diff_match_patch';
+import { createAlignments, getFormattedTranscript, updatePartialAlignment, processAlignmentUpdate, AlignmentType } from '@/utils/transcript'
 
 // TODO:  Add valid values (start, end, duration, speaker) for the changed words.
 // TODO: Test if a new line is added with TS + speaker name
@@ -46,137 +45,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     const quillRef = useRef<ReactQuill>(null)
     const [alignments, setAlignments] = useState<AlignmentType[]>([])
     const [typingTimer, setTypingTimer] = useState<NodeJS.Timeout | null>(null)
-
-    // Keep track of earliest & latest changed offset across the entire typing burst
-
-    // Core alignment update logic
-    const isPunctuation = (word: string): boolean => {
-        return /^[.,!?;:]$/.test(word);
-    };
-
-    const processAlignmentUpdate = useCallback((newText: string, currentAlignments: AlignmentType[]): AlignmentType[] => {
-        if (currentAlignments.length === 0) return [];
-
-        // Convert alignments to text for diffing
-        const oldText = currentAlignments.map(a => a.word).join(' ');
-        
-        // Use diff_match_patch in word mode
-        const dmp = new diff_match_patch();
-        const rawDiffs = dmp.diff_wordMode(oldText, newText);
-        
-        // Convert dmp output to match { type, value }
-        const diffs = rawDiffs.map(([op, text]) => {
-            if (op === DIFF_DELETE) {
-                return { type: 'removed', value: text };
-            } else if (op === DIFF_INSERT) {
-                return { type: 'added', value: text };
-            }
-            return { type: 'unchanged', value: text };
-        });
-        
-        // Create new alignments array
-        const newAlignments: AlignmentType[] = [];
-        let alignmentIndex = 0;
-        let lastRemovedAlignment: AlignmentType | null = null;
-        
-        diffs.forEach((part) => {
-            console.log("Diff part:", part);
-            
-            if (part.type === 'removed') {
-                // Store removed word info for potential replacement
-                const removedWords = part.value.trim()
-                    .split(/\s+/)
-                    .filter(w => w.length > 0);
-                lastRemovedAlignment = removedWords.length === 1 ? currentAlignments[alignmentIndex] : null;
-                alignmentIndex += removedWords.length;
-            } else if (part.type === 'added') {
-                // Add new words
-                const newWords = part.value.trim().split(/\s+/).filter(w => w.length > 0);
-                
-                // Check if this is a direct word replacement
-                const isReplacement = lastRemovedAlignment && 
-                    newWords.length === 1;
-                
-                if (isReplacement) {
-                    // Use timing from the removed word
-                    newAlignments.push({
-                        word: newWords[0],
-                        type: 'edit',
-                        start: lastRemovedAlignment!.start,
-                        end: lastRemovedAlignment!.end,
-                        conf: 1.0,
-                        punct: newWords[0],
-                        source: 'user',
-                        speaker: lastRemovedAlignment!.speaker,
-                        turn: lastRemovedAlignment!.turn
-                    });
-                } else {
-                    // Handle as new insertion
-                    const prevAlignment = alignmentIndex > 0 ? currentAlignments[alignmentIndex - 1] : null;
-                    const nextAlignment = currentAlignments[alignmentIndex] || currentAlignments[currentAlignments.length - 1];
-                    
-                    newWords.forEach((word, idx) => {
-                        if (isPunctuation(word)) {
-                            // For punctuation, create meta alignment with same start/end time
-                            const start = prevAlignment ? prevAlignment.end : (nextAlignment ? nextAlignment.start : 0);
-                            
-                            newAlignments.push({
-                                word,
-                                type: 'meta', // Set type as meta for punctuation
-                                start: start,
-                                end: start, // Same as start for punctuation
-                                conf: 1.0,
-                                punct: word,
-                                source: 'user',
-                                speaker: nextAlignment.speaker,
-                                turn: nextAlignment.turn
-                            });
-                        } else {
-                            // Regular word - interpolate timing with 10ms gaps
-                            let start, end;
-                            if (!prevAlignment) {
-                                // At the start - use next word timing minus gap
-                                start = nextAlignment.start - ((newWords.length - idx) * 0.01);
-                                end = start + 0.01;
-                            } else if (!nextAlignment) {
-                                // At the end - use previous word timing plus gap
-                                start = prevAlignment.end + (idx * 0.01);
-                                end = start + 0.01;
-                            } else {
-                                // In between words - interpolate with gaps
-                                const timeGap = nextAlignment.start - prevAlignment.end;
-                                const wordDuration = timeGap / (newWords.length + 1);
-                                start = prevAlignment.end + (wordDuration * (idx + 1));
-                                end = start + 0.01;
-                            }
-
-                            newAlignments.push({
-                                word,
-                                type: 'edit',
-                                start,
-                                end,
-                                conf: 1.0,
-                                punct: word,
-                                source: 'user',
-                                speaker: nextAlignment.speaker,
-                                turn: nextAlignment.turn
-                            });
-                        }
-                    });
-                }
-                lastRemovedAlignment = null;
-            } else {
-                // Keep unchanged words
-                const unchangedWords = part.value.trim().split(/\s+/).filter(w => w.length > 0);
-                unchangedWords.forEach(() => {
-                    newAlignments.push(currentAlignments[alignmentIndex]);
-                    alignmentIndex++;
-                });
-            }
-        });
-        
-        return newAlignments;
-    }, []); // No dependencies needed
 
     const quillModules = {
         toolbar: false,
@@ -441,12 +309,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             let retainChars = 0;
             let changeLength = 0;
 
-            console.log('Delta ops:', delta.ops.map(op => {
-                if (op.retain) return `retain: ${op.retain}`;
-                if (op.delete) return `delete: ${op.delete}`;
-                if (op.insert) return `insert: ${op.insert}`;
-            }).join(', '));
-
             delta.ops.forEach((op: DeltaOperation) => {
                 if (op.retain) {
                     retainChars += op.retain;
@@ -464,13 +326,10 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                 ? retainChars + Math.abs(changeLength)
                 : retainChars + changeLength;
 
-            console.log('Retain chars:', retainChars, 'Change length:', changeLength);
-            console.log('Change region - Min:', minOffset, 'Max:', maxOffset);
-
             if (typingTimer) clearTimeout(typingTimer);
             setTypingTimer(
                 setTimeout(() => {
-                    console.log('No new keystrokes for 1s, performing partial alignment update...');
+                    console.log(`No new keystrokes for 1s, performing partial alignment update. Min Offset: ${minOffset}, Max Offset: ${maxOffset}`);
                     const rawText = quill.getText();
                     const normalizedText = rawText.replace(/\n+/g, ' ');
                     
@@ -521,7 +380,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                 const updatedAlignments = processAlignmentUpdate(transcript, newAlignments);
                 setAlignments(updatedAlignments); // Set the processed alignments
                 console.log('Alignments updated:', updatedAlignments);
-
             }
         }
     }, []) // Empty dependency array since ctms is constant

@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "jest",
     "prepare": "husky install",
     "precommit": "lint-staged",
     "build-conversion-worker": "tsc -P tsconfig.conversionWorker.json",
@@ -131,6 +132,7 @@
     "zod": "^3.23.4"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.11",
     "@types/bcrypt": "^5.0.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/braintree": "^3.3.12",
@@ -159,6 +161,15 @@
     "prisma": "^5.20.0",
     "tailwindcss": "^3.4.3",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.2"
+    "typescript": "^5.4.2",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/src/$1"
+    }
   }
 }
