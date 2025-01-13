@@ -293,7 +293,8 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
 
         alignmentWorker.current.onmessage = (e: MessageEvent) => {
             const newAlignments = e.data
-            setAlignments(newAlignments)
+            setAlignments(newAlignments);
+            console.log('Updated alignments:', newAlignments);
         }
 
         return () => {

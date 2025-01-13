@@ -37,6 +37,13 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[]): 
     const isPunctuation = (word: string): boolean => {
         return /^[.,!?;:]$/.test(word);
     };
+
+    const isMetaContent = (word: string): boolean => {
+        return (
+            /^\d:\d{2}:\d{2}\.\d$/.test(word) ||  // Timestamp
+            /^S\d+:$/.test(word)                  // Speaker label
+        );
+    };
     
     diffs.forEach((part) => {
         if (part.type === 'removed') {
@@ -73,7 +80,22 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[]): 
                 const nextAlignment = currentAlignments[alignmentIndex] || currentAlignments[currentAlignments.length - 1];
                 
                 newWords.forEach((word, idx) => {
-                    if (isPunctuation(word)) {
+                    if (isMetaContent(word)) {
+                        // Handle meta content (timestamps, speaker labels)
+                        const start = prevAlignment ? prevAlignment.end : (nextAlignment ? nextAlignment.start : 0);
+                        
+                        newAlignments.push({
+                            word,
+                            type: 'meta',
+                            start: start,
+                            end: start, // Same as start for meta content
+                            conf: 1.0,
+                            punct: word,
+                            source: 'meta',
+                            speaker: nextAlignment.speaker,
+                            turn: nextAlignment.turn
+                        });
+                    } else if (isPunctuation(word)) {
                         // For punctuation, create meta alignment with same start/end time
                         const start = prevAlignment ? prevAlignment.end : (nextAlignment ? nextAlignment.start : 0);
                         
