@@ -1,14 +1,14 @@
 'use client'
 
 import { Delta, Op } from 'quill/core'
-import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react'
+import React, { useRef, useEffect, useCallback, useMemo, useState, useLayoutEffect } from 'react'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 import { CTMType, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
-import { createAlignments, getFormattedTranscript, updatePartialAlignment, updateAlignments, AlignmentType } from '@/utils/transcript'
+import { createAlignments, getFormattedTranscript, AlignmentType } from '@/utils/transcript'
 
 // TODO:  Add valid values (start, end, duration, speaker) for the changed words.
 // TODO: Test if a new line is added with TS + speaker name
@@ -33,6 +33,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     const quillRef = useRef<ReactQuill>(null)
     const [alignments, setAlignments] = useState<AlignmentType[]>([])
     const [typingTimer, setTypingTimer] = useState<NodeJS.Timeout | null>(null)
+    const alignmentWorker = useRef<Worker | null>(null)
 
     const quillModules = {
         toolbar: false,
@@ -284,27 +285,40 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
 
     useShortcuts(shortcutControls);
 
+    useLayoutEffect(() => {
+        // Initialize web worker
+        alignmentWorker.current = new Worker(
+            new URL('@/utils/transcript/alignmentWorker.ts', import.meta.url)
+        )
+
+        alignmentWorker.current.onmessage = (e: MessageEvent) => {
+            const newAlignments = e.data
+            setAlignments(newAlignments)
+        }
+
+        return () => {
+            alignmentWorker.current?.terminate()
+        }
+    }, [])
+
     useEffect(() => {
         const quill = quillRef.current?.getEditor()
-        if (!quill) return
+        if (!quill || !alignmentWorker.current) return
 
         const handleTextChange = (delta: Delta, oldDelta: Delta, source: string) => {
-            if (source !== 'user') return;
+            if (source !== 'user') return
 
-            if (typingTimer) clearTimeout(typingTimer);
+            if (typingTimer) clearTimeout(typingTimer)
             setTypingTimer(
                 setTimeout(() => {
-                    console.log(`No new keystrokes for 1s, performing partial alignment update...`);
-
-                    const rawText = quill.getText();                    
-                    const newAlignments = updateAlignments(rawText, alignments);
-                    
-                    setAlignments(newAlignments);
-                    console.log('Alignments updated:', newAlignments);
-
+                    const rawText = quill.getText()
+                    alignmentWorker.current?.postMessage({
+                        newText: rawText,
+                        currentAlignments: alignments
+                    })
                 }, 1000)
-            );
-        };
+            )
+        }
 
         quill.on('text-change', handleTextChange)
 
@@ -314,10 +328,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                 clearTimeout(typingTimer)
             }
         }
-    }, [
-        alignments,
-        typingTimer
-    ])
+    }, [alignments, typingTimer])
 
     useEffect(() => {
         initEditor()
@@ -330,13 +341,12 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             const newAlignments = createAlignments(originalTranscript, ctms);
             setAlignments(newAlignments);
 
-            console.log('Initial Alignments:', newAlignments);
-
             if(transcript) {
                 // Process any differences between original and current transcript
-                const updatedAlignments = updateAlignments(transcript, newAlignments);
-                setAlignments(updatedAlignments); // Set the processed alignments
-                console.log('Alignments updated:', updatedAlignments);
+                alignmentWorker.current?.postMessage({
+                    newText: transcript,
+                    currentAlignments: newAlignments
+                })
             }
         }
     }, []) // Empty dependency array since ctms is constant

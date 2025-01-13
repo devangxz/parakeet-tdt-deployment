@@ -1,10 +1,14 @@
-import { updatePartialAlignment, updateAlignments } from '../alignments'
+import { updatePartialAlignment } from '../alignments'
 import { AlignmentType } from '@/utils/types/transcript'
 
-// Mock function
+// Mock functions
 const mockCharToWordIndex = (text: string, charIndex: number): number => {
     const textUpToIndex = text.slice(0, charIndex);
     return textUpToIndex.split(/\s+/).filter(word => word.trim() !== '').length;
+};
+
+const mockUpdateAlignments = (newText: string, currentAlignments: AlignmentType[]): AlignmentType[] => {
+    return currentAlignments;
 };
 
 describe('updatePartialAlignment - Realignment Scenarios', () => {
@@ -27,7 +31,7 @@ describe('updatePartialAlignment - Realignment Scenarios', () => {
             minOffset,
             maxOffset,
             alignments,
-            updateAlignments,
+            mockUpdateAlignments,
             mockCharToWordIndex
         );
 
@@ -56,7 +60,7 @@ describe('updatePartialAlignment - Realignment Scenarios', () => {
             minOffset,
             maxOffset,
             alignments,
-            updateAlignments,
+            mockUpdateAlignments,
             mockCharToWordIndex
         );
 
@@ -81,7 +85,7 @@ describe('updatePartialAlignment - Realignment Scenarios', () => {
             minOffset,
             maxOffset,
             alignments,
-            updateAlignments,
+            mockUpdateAlignments,
             mockCharToWordIndex
         );
 
@@ -109,7 +113,7 @@ describe('updatePartialAlignment - Realignment Scenarios', () => {
             minOffset,
             maxOffset,
             alignments,
-            updateAlignments,
+            mockUpdateAlignments,
             mockCharToWordIndex
         );
 
