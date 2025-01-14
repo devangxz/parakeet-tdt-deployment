@@ -668,7 +668,8 @@ const handleSubmit = async ({
             if (!fileToUpload.isUploaded) throw new Error('UF')
             await submitReviewAction(
                 Number(orderDetails.orderId),
-                orderDetails.fileId
+                orderDetails.fileId,
+                transcript
             )
         } else {
             await submitQCAction({

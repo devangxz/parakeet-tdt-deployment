@@ -1,476 +1,398 @@
+'use client'
+
+import {
+  Gavel,
+  GraduationCap,
+  Video,
+  Church,
+  Mic2,
+  Presentation,
+  Headphones,
+  ArrowRight,
+  Star,
+  Check,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react'
 import Image from 'next/image'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ReactNode, useState } from 'react'
-import { SmoothCorners as OriginalSmoothCornersWrapper } from 'react-smooth-corners'
+import React, { useState, useRef, useEffect } from 'react'
 
-interface SmoothCornersWrapperProps {
-  corners: string
-  borderRadius: string
-  shadow?: string
-  className?: string
-  children?: ReactNode // Add this line to include the children prop
-}
+const services = [
+  {
+    id: 'legal',
+    icon: <Gavel size={24} />,
+    title: 'Legal',
+    description: 'For Legal Matters',
+    longDescription:
+      'Our transcribers are not only experts in transcription but are also specially trained in legal terminology & documentation standards. Custom legal formatting options meet the specific requirements of legal documents, ensuring they are court-ready. We have been able to help court reporters and court reporting firms with deposition and courtroom transcription services. Our team maintains strict confidentiality and security protocols for all legal documents.',
+    price: '$0.80',
+    originalPrice: '$1.40',
+    image: '/assets/images/home/transcription-categories/legal.webp',
+    features: [
+      'Legal Terminology Expert',
+      'Court Documentation Ready',
+      'Deposition Transcripts',
+      'AAERT Standards',
+    ],
+    testimonial: {
+      text: 'I am a court reporter and use Scribie for deposition transcripts. The accuracy and quick turnaround save me so much time. I will be a lifetime customer! 😊',
+      author: 'Ginger Driden',
+      role: 'Court Reporter',
+    },
+  },
+  {
+    id: 'academic',
+    icon: <GraduationCap size={24} />,
+    title: 'Academic',
+    description: 'Transcription Tailored for Academia',
+    longDescription:
+      'Our transcription services are tailored for the academic sector, focusing on lectures and seminars, research interviews, focus groups, educational videos and podcasts, and classroom recordings. Each transcription is crafted with essential elements of academic content, ensuring accurate technical terminology, proper citations, and clear speaker identification throughout the document. We deliver high-quality transcripts that meet rigorous academic standards.',
+    price: '$0.80',
+    originalPrice: '$1.40',
+    image: '/assets/images/home/transcription-categories/academic.webp',
+    features: [
+      'Research Interviews',
+      'Lecture & Seminar',
+      'Focus Group Sessions',
+      'Classroom Recordings',
+    ],
+    testimonial: {
+      text: "Very impressed that you got all the scholars' names mentioned in the interview spelled correctly! Thank you for the great work!",
+      author: 'Gwendolynne Reid',
+      role: 'Academic Researcher',
+    },
+  },
+  {
+    id: 'video',
+    icon: <Video size={24} />,
+    title: 'Video',
+    description: 'For All Videos',
+    longDescription:
+      'Attention Video Producers: Elevate Your Earnings Potential! Integrate transcripts with your video offerings to enhance accessibility and viewer engagement. Our comprehensive transcription services handle all the details, ensuring your content reaches a broader audience and opens up new revenue streams. With our expert transcription team, you can focus on creating amazing content while we handle the text.',
+    price: '$0.80',
+    originalPrice: '$1.40',
+    image: '/assets/images/home/transcription-categories/video.webp',
+    features: [
+      'Video Subtitles',
+      'Enhanced Accessibility',
+      'Time-Stamped',
+      'Multi-Language',
+    ],
+    testimonial: {
+      text: 'Wonderful work and attention to detail, and quick turnaround. The transcriber found the correct spelling of a cree phrase, got names and caught small elements.',
+      author: 'John Hampton',
+      role: 'Video Producer',
+    },
+  },
+  {
+    id: 'sermon',
+    icon: <Church size={24} />,
+    title: 'Sermon',
+    description: 'For All Sermons',
+    longDescription:
+      'Transform your sermons into written form and make them accessible to a wider audience with professional sermon transcription services. Preserve the wisdom of your sermons for future generations and allow your message to reach more people. Our expert transcriptionists ensure accurate, word-for-word transcripts that capture every spiritual insight and biblical reference. Share your message with confidence and inspire your congregation today.',
+    price: '$0.80',
+    originalPrice: '$1.40',
+    image: '/assets/images/home/transcription-categories/sermon.webp',
+    features: [
+      'Scripture References',
+      'Speaker Attribution',
+      'Custom Formatting',
+      'Archive Ready',
+    ],
+    testimonial: {
+      text: 'Thanks for reaching out. Thanks for being a trusted business partner for so many wonderful years.',
+      author: 'Katherine Volk',
+      role: 'Ministry Coordinator',
+    },
+  },
+  {
+    id: 'podcast',
+    icon: <Mic2 size={24} />,
+    title: 'Podcast',
+    description: 'For Podcast Content',
+    longDescription:
+      "Promote Your Podcast With Transcripts. Improve your reach and give your audience a better listening experience with accurate, professional transcriptions. Our expert team ensures every word is captured perfectly, making your content more accessible and SEO-friendly. Transform your audio content into valuable written assets that expand your podcast's impact and drive meaningful audience engagement.",
+    price: '$0.80',
+    originalPrice: '$1.40',
+    image: '/assets/images/home/transcription-categories/podcast.webp',
+    features: [
+      'Multiple Speakers',
+      'Show Notes',
+      'SEO Optimized',
+      'Time Stamps',
+    ],
+    testimonial: {
+      text: 'Thank you for the excellent work! While scanning through it, I noticed I had missed a few names, so I really appreciate you ensuring accurate spelling throughout!',
+      author: 'David Margittai',
+      role: 'Podcast Host',
+    },
+  },
+  {
+    id: 'marketing',
+    icon: <Presentation size={24} />,
+    title: 'Marketing',
+    description: 'Elevate Your Marketing Strategy',
+    longDescription:
+      'Unlock the full potential of your marketing campaigns with our transcription services for focus groups and market research interviews. Elevate your strategy and reach new heights. Our skilled transcriptionists deliver accurate, detailed transcripts of your marketing sessions, focus groups and interviews, ensuring you capture every valuable insight and customer feedback. Get clear, organized transcripts ready for immediate analysis and action.',
+    price: '$0.80',
+    originalPrice: '$1.40',
+    image: '/assets/images/home/transcription-categories/marketing.webp',
+    features: [
+      'Focus Group Transcripts',
+      'Market Research Data',
+      'Campaign Insights',
+      'Strategy Enhancement',
+    ],
+    testimonial: {
+      text: 'Thank you – this is completely amazing! Thank you for the accuracy,fast turnaround, and taking the time to get the places right too. Really grateful.',
+      author: 'Olivia Lane-Nott',
+      role: 'Marketing Director',
+    },
+  },
+  {
+    id: 'audio',
+    icon: <Headphones size={24} />,
+    title: 'Audio',
+    description: 'Expert Transcription for All Your Audio Needs',
+    longDescription:
+      'Discover unparalleled accuracy with our audio transcription services, where expert transcribers bring precision to every word. From podcasts to interviews, our team ensures your content is transcribed with the utmost care and attention to detail. Experience transcription that understands your needs, making every audio minute count. Let our professional team deliver exceptional quality for all your transcription requirements.',
+    price: '$0.80',
+    originalPrice: '$1.40',
+    image: '/assets/images/home/transcription-categories/audio.webp',
+    features: [
+      'Unparalleled Accuracy',
+      'Expert Transcribers',
+      'Precise Word Capture',
+      'Detailed Attention',
+    ],
+    testimonial: {
+      text: 'Wonderful transcription. Scribie followed my instructions perfectly and had amazing accuracy for my poor audio quality.',
+      author: 'Elli Wynter',
+      role: 'Content Creator',
+    },
+  },
+]
 
-const SmoothCorners: React.FC<SmoothCornersWrapperProps> = (props) => (
-  <OriginalSmoothCornersWrapper {...props} />
-)
-
-export default function TranscriptionCategories() {
+const TranscriptionCategories = () => {
   const router = useRouter()
-  const [currentIndex, setCurrentIndex] = useState<number>(0)
-  const services = [
-    {
-      src: '/assets/images/home/hammer.svg',
-      title: 'Legal',
-      size: 20,
-      service: {
-        title: 'Legal Transcription',
-        description: 'For Legal Matters',
-        MainDescription: () => (
-          <div className='leading-[35px]'>
-            Our transcribers are not only experts in transcription but are also{' '}
-            <span className='text-amber-300'>
-              specially trained in legal terminology & documentation standards.
-              Custom legal formatting
-            </span>{' '}
-            options meet the specific requirements of legal documents, ensuring
-            they are court-ready. We have been able to help court reporters and
-            court reporting firms with deposition and courtroom transcription
-            services.{' '}
-            <Link className='text-white underline' target='_blank' href='https://scribie.com/samples/Scribie-Legal-Case-Study.pdf'>
-              Case Study
-            </Link>{' '}
-          </div>
-        ),
-        imageSrc: '/assets/images/legal.jpg',
-        Highlighter: () => (
-          <span className='flex items-center gap-2'>
-            <Image
-              alt='AAERT'
-              src='/assets/images/aaert.webp'
-              width={120}
-              height={55}
-              className='rounded-[16px] bg-white'
-            />
-            <p className='text-white text-xl font-semibold'>
-              We are now official sponsors of AAERT
-            </p>{' '}
-          </span>
-        ),
-        features: ["Team's Account", '24/7 support'],
-        pricing: {
-          price: 1.2,
-          discountedPrice: 0.9,
-          unit: 'audio min',
-        },
-        Testimonial: () => (
-          <div className='flex flex-col items-center space-y-[2rem] px-7'>
-            <div className='text-[1rem] md:text-base font-semibold leading-6 text-indigo-600'>
-              Legal Testimonial
-            </div>
-            <div className='max-w-[800px] text-md font-medium text-center text-black text-opacity-30 md:text-2xl'>
-              “I am a court reporter and use Scribie for deposition transcripts!
-              It has been a game-changer for me. Saved me so much time and the
-              accuracy and quick turnaround are amazing. I’ll be a lifetime
-              customer as long as I’m working! Thanks so much 😊&quot;
-            </div>
+  const [activeService, setActiveService] = useState(services[0])
+  const [showLeftScroll, setShowLeftScroll] = useState(false)
+  const [showRightScroll, setShowRightScroll] = useState(false)
+  const scrollContainerRef = useRef(null)
 
-            <div className='flex gap-4 justify-center text-base font-semibold leading-6 text-black whitespace-nowrap'>
-              <div className='grow my-auto'>Ginger Driden</div>
-            </div>
-          </div>
-        ),
-      },
-    },
-    {
-      src: '/assets/images/home/dictionary.svg',
-      title: 'Academic',
-      size: 20,
-      service: {
-        title: 'Academic',
-        description: 'Transcription Tailored for Academia.',
-        MainDescription: () => (
-          <div className='leading-[35px]'>
-            Our transcription services are tailored for the academic sector,
-            focusing on{' '}
-            <span className='text-amber-300'>
-              lectures and seminars, research interviews, focus groups,
-              educational videos and podcasts, and classroom recordings.
-            </span>{' '}
-            Each transcription is crafted with essential elements of academic
-            content.
-          </div>
-        ),
-        imageSrc: '/assets/images/academic.jpeg',
-        features: ["Team's Account", '24/7 support'],
-        pricing: {
-          price: 1.2,
-          discountedPrice: 0.9,
-          unit: 'audio min',
-        },
-        Testimonial: () => (
-          <div className='flex flex-col items-center space-y-[2rem] px-7'>
-            <div className='text-[1rem] md:text-base font-semibold leading-6 text-indigo-600'>
-              Academic Testimonial
-            </div>
-            <div className='max-w-[800px] text-md font-medium text-center text-black text-opacity-30 md:text-2xl'>
-              Very impressed that you got the names of the scholars&apos; named
-              in the interview spelled correctly! Thanks for the great work!
-            </div>
+  const checkScroll = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } =
+        scrollContainerRef.current
+      setShowLeftScroll(scrollLeft > 0)
+      setShowRightScroll(scrollLeft < scrollWidth - clientWidth - 10)
+    }
+  }
 
-            <div className='flex gap-4 justify-center text-base font-semibold leading-6 text-black whitespace-nowrap'>
-              <div className='grow my-auto'>Gwendolynne Reid</div>
-            </div>
-          </div>
-        ),
-      },
-    },
-    {
-      src: '/assets/images/home/video.svg',
-      title: 'Video',
-      size: 20,
-      service: {
-        title: 'Video Transcription',
-        description: 'For All Videos',
-        MainDescription: () => (
-          <div className='leading-[35px]'>
-            Attention Video Producers: Elevate Your Earnings Potential!
-            Integrate transcripts with your video offerings to enhance
-            accessibility and viewer engagement. Our comprehensive transcription
-            services handle all the details, ensuring your content reaches a
-            broader audience and opens up new revenue streams.
-          </div>
-        ),
-        imageSrc: '/assets/images/video-3.jpeg',
-        features: ["Team's Account", '24/7 support'],
-        pricing: {
-          price: 1.2,
-          discountedPrice: 0.9,
-          unit: 'audio min',
-        },
-        Testimonial: () => (
-          <div className='flex flex-col items-center space-y-[2rem] px-7'>
-            <div className='text-[1rem] md:text-base font-semibold leading-6 text-indigo-600'>
-              Video Testimonial
-            </div>
-            <div className='max-w-[800px] text-md font-medium text-center text-black text-opacity-30 md:text-2xl'>
-              Wonderful work and attention to detail, and quick turnaround. The
-              transcriber found the correct spelling of a cree phrase, got all
-              names correctly by referencing the video description, and caught
-              other small elements.
-            </div>
+  useEffect(() => {
+    checkScroll()
+    window.addEventListener('resize', checkScroll)
+    return () => window.removeEventListener('resize', checkScroll)
+  }, [])
 
-            <div className='flex gap-4 justify-center text-base font-semibold leading-6 text-black whitespace-nowrap'>
-              <div className='grow my-auto'>John Hampton</div>
-            </div>
-          </div>
-        ),
-      },
-    },
-    {
-      src: '/assets/images/home/sermon.svg',
-      title: 'Sermon',
-      size: 20,
-      service: {
-        title: 'Sermon',
-        description: 'For All Sermons',
-        MainDescription: () => (
-          <div className='leading-[35px]'>
-            Transform your sermons into written form and make them{' '}
-            <span className='text-amber-300'>
-              accessible to a wider audience
-            </span>{' '}
-            with professional sermon transcription services. Preserve the wisdom
-            of your sermons for future generations and allow your message to{' '}
-            <span className='text-amber-300'>reach more people</span>.
-          </div>
-        ),
-        imageSrc: '/assets/images/sermon-1.jpeg',
-        features: ["Team's Account", '24/7 support'],
-        pricing: {
-          price: 1.2,
-          discountedPrice: 0.9,
-          unit: 'audio min',
-        },
-        Testimonial: () => (
-          <div className='flex flex-col items-center space-y-[2rem] px-7'>
-            <div className='text-[1rem] md:text-base font-semibold leading-6 text-indigo-600'>
-              Sermon Testimonial
-            </div>
-            <div className='max-w-[800px] text-md font-medium text-center text-black text-opacity-30 md:text-2xl'>
-              Thanks for reaching out. I’ve attached the North Point Ministries
-              logo. Thanks for being a trusted business partner for so many
-              years.
-            </div>
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const container = scrollContainerRef.current as HTMLDivElement
+      const scrollAmount = 200
+      container.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      })
+    }
+  }
 
-            <div className='flex gap-4 justify-center text-base font-semibold leading-6 text-black whitespace-nowrap'>
-              <div className='grow my-auto'>Katherine Volk</div>
-            </div>
-          </div>
-        ),
-      },
-    },
-    {
-      src: '/assets/images/home/podcast.svg',
-      title: 'Podcast',
-      size: 20,
-      service: {
-        title: 'Podcast Transcription',
-        description: 'For Legal Matters',
-        MainDescription: () => (
-          <div className='leading-[35px]'>
-            Promote Your Podcast With Transcripts. Improve your reach and give
-            your audience a better listening experience.
-          </div>
-        ),
-        imageSrc: '/assets/images/podcast-1.jpeg',
-        features: ['Accuracy', "Team's Account", '24/7 support'],
-        pricing: {
-          price: 1.2,
-          discountedPrice: 0.9,
-          unit: 'audio min',
-        },
-        Testimonial: () => (
-          <div className='flex flex-col items-center space-y-[2rem] px-7'>
-            <div className='text-[1rem] md:text-base font-semibold leading-6 text-indigo-600'>
-              Podcast Testimonial
-            </div>
-            <div className='max-w-[800px] text-md font-medium text-center text-black text-opacity-30 md:text-2xl'>
-              Thank you for the excellent work! Scanning through it now, I
-              noticed I missed a few names, so I really appreciate you making
-              sure to find the accurate spelling for everything!
-            </div>
-
-            <div className='flex gap-4 justify-center text-base font-semibold leading-6 text-black whitespace-nowrap'>
-              <div className='grow my-auto'>David Margittai</div>
-            </div>
-          </div>
-        ),
-      },
-    },
-    {
-      src: '/assets/images/home/marketing.svg',
-      title: 'Marketing',
-      size: 20,
-      service: {
-        title: 'Marketing',
-        description: 'Elevate Your Marketing Strategy',
-        MainDescription: () => (
-          <div className='leading-[35px]'>
-            <span className='text-amber-300'>Unlock the full potential</span> of
-            your marketing campaigns with our transcription services for focus
-            groups and market research interviews.{' '}
-            <span className='text-amber-300'>
-              Elevate your strategy and reach new heights.
-            </span>
-          </div>
-        ),
-        imageSrc: '/assets/images/video-3.jpeg',
-        features: ["Team's Account", '24/7 support'],
-        pricing: {
-          price: 1.2,
-          discountedPrice: 0.9,
-          unit: 'audio min',
-        },
-        Testimonial: () => (
-          <div className='flex flex-col items-center space-y-[2rem] px-7'>
-            <div className='text-[1rem] md:text-base font-semibold leading-6 text-indigo-600'>
-              Marketing Testomonial
-            </div>
-            <div className='max-w-[800px] text-md font-medium text-center text-black text-opacity-30 md:text-2xl'>
-              Thank you – this is completely amazing! Thank you for the accuracy
-              and fast turnaround and taking the time to get the places right
-              too. Really grateful. With best wishes, Olivia
-            </div>
-
-            <div className='flex gap-4 justify-center text-base font-semibold leading-6 text-black whitespace-nowrap'>
-              <div className='grow my-auto'>Olivia Lane-Nott</div>
-            </div>
-          </div>
-        ),
-      },
-    },
-    {
-      src: '/assets/images/home/disertation.svg',
-      title: 'Audio',
-      size: 20,
-      service: {
-        title: 'Audio Transcription',
-        description: 'Expert Transcription for All Your Audio Needs',
-        MainDescription: () => (
-          <div className='leading-[35px]'>
-            Discover unparalleled accuracy with our audio transcription
-            services, where{' '}
-            <span className='text-amber-300'>
-              expert transcribers bring precision to every word. From podcasts
-              to interviews, our team ensures your content is transcribed with
-              the utmost care and attention to detail.
-            </span>{' '}
-            Experience transcription that understands your needs, making every
-            audio minute count.
-          </div>
-        ),
-        imageSrc: '/assets/images/podcast-1.jpeg',
-        features: ["Team's Account", '24/7 support'],
-        pricing: {
-          price: 1.2,
-          discountedPrice: 0.9,
-          unit: 'audio min',
-        },
-        Testimonial: () => (
-          <div className='flex flex-col items-center space-y-[2rem] px-7'>
-            <div className='text-[1rem] md:text-base font-semibold leading-6 text-indigo-600'>
-              Audio Testimonial
-            </div>
-            <div className='max-w-[800px] text-md font-medium text-center text-black text-opacity-30 md:text-2xl'>
-              Wonderful transcription. Scribie followed my instructions
-              perfectly and had amazing accuracy for my poor audio quality.
-            </div>
-
-            <div className='flex gap-4 justify-center text-base font-semibold leading-6 text-black whitespace-nowrap'>
-              <div className='grow my-auto'>Elli Wynter</div>
-            </div>
-          </div>
-        ),
-      },
-    },
-  ]
-  const [selectedService, setSelectedService] = useState(services[0])
   return (
-    <div className='flex flex-col items-center justify-center px-7 lg:px-[10%] mt-[4rem]'>
-      <div className='w-full overflow-x-auto overflow-y-hidden hide-scroll-bar'>
-        <div className='flex flex-nowrap justify-between gap-5 text-base font-semibold'>
-          {services.map((service, index) => (
+    <section className='mt-16 sm:mt-24 md:mt-28 lg:mt-36 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
+      <div className='relative mb-8 sm:mb-12 lg:mb-16'>
+        <div className='relative'>
+          <button
+            onClick={() => scroll('left')}
+            className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-8 h-8 bg-background shadow-lg rounded-full flex items-center justify-center text-primary transition-opacity duration-200 lg:hidden
+              ${
+                showLeftScroll ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              }`}
+          >
+            <ChevronLeft className='w-5 h-5' />
+          </button>
+
+          <button
+            onClick={() => scroll('right')}
+            className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-8 h-8 bg-background shadow-lg rounded-full flex items-center justify-center text-primary transition-opacity duration-200 lg:hidden
+              ${
+                showRightScroll
+                  ? 'opacity-100'
+                  : 'opacity-0 pointer-events-none'
+              }`}
+          >
+            <ChevronRight className='w-5 h-5' />
+          </button>
+
+          <div className='relative flex items-center justify-center overflow-hidden'>
             <div
-              key={index}
-              className='w-fit flex-shrink-0'
+              ref={scrollContainerRef}
+              onScroll={checkScroll}
+              className='flex overflow-x-auto scrollbar-hide lg:justify-center gap-2 p-2 bg-secondary rounded-2xl'
             >
-              <ServiceCard
-                src={service.src}
-                title={service.title}
-                size={service?.size}
-                onClick={() => {
-                  setSelectedService(service);
-                  setCurrentIndex(index);
-                }}
-                isSelected={selectedService.title === service.title}
-              />
+              {services.map((service) => (
+                <button
+                  key={service.id}
+                  onClick={() => setActiveService(service)}
+                  className={`
+                    flex items-center px-3 py-1.5 rounded-xl transition-all duration-300
+                    whitespace-nowrap flex-shrink-0 
+                    ${
+                      activeService.id === service.id
+                        ? 'bg-primary text-primary-foreground shadow-md scale-105'
+                        : 'hover:bg-secondary'
+                    }
+                  `}
+                >
+                  <span
+                    className={`
+                      flex items-center justify-center w-8 h-8 rounded-lg
+                      ${
+                        activeService.id === service.id
+                          ? 'bg-primary-foreground/20 text-primary-foreground'
+                          : 'bg-secondary text-primary'
+                      }
+                    `}
+                  >
+                    {service.icon}
+                  </span>
+                  <span className='ml-2.5 font-medium'>{service.title}</span>
+                </button>
+              ))}
             </div>
-          ))}
+          </div>
+
+          <div className='absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent pointer-events-none lg:hidden'></div>
+          <div className='absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none lg:hidden'></div>
         </div>
       </div>
-      <SmoothCorners
-        corners='32'
-        borderRadius='32px'
-        className='flex flex-col lg:flex-row justify-between border-white px-[2rem] xl:px-[4rem] py-[2rem] lg:py-[3rem] mt-[2rem] mb-[4rem] bg-indigo-900 rounded-[32px] gap-3 lg:gap-[2rem]'
-      >
-        <div className='flex flex-col gap-y-12 w-full lg:w-[50%] border-white'>
-          <div className='h-auto flex flex-col gap-y-4 text-3xl font-semibold text-white md:text-5xl'>
-            <h2 className='sm:leading-[60px]'>{services[currentIndex]?.service?.title}</h2>
-            <div className='text-lg text-white font-normal max-lg:max-w-full'>
-              {services[currentIndex]?.service?.description}
+
+      <div className='grid grid-cols-12 gap-8'>
+        <div className='col-span-12 lg:col-span-7 space-y-8'>
+          <div className='space-y-4'>
+            <div className='inline-flex items-center gap-2 px-3 sm:px-4 py-1 rounded-full bg-gradient-to-r from-secondary to-muted border border-secondary'>
+              <Sparkles className='w-3 h-3 sm:w-4 sm:h-4 text-primary' />
+              <span className='text-xs sm:text-sm font-medium text-primary'>
+                Premium {activeService.title} Service
+              </span>
             </div>
+
+            <h3 className='text-3xl sm:text-4xl font-bold text-foreground'>
+              {activeService.title} Transcription
+            </h3>
+
+            <p className='text-gray-700 text-base sm:text-lg'>
+              {activeService.longDescription}
+            </p>
           </div>
-          <div className='block lg:hidden w-full'>
-            <Image
-              alt={services[currentIndex]?.service?.title}
-              loading='lazy'
-              src={services[currentIndex]?.service?.imageSrc}
-              className='rounded-[20px] object-cover w-full'
-              width={1000}
-              height={600}
-              sizes="(max-width: 640px) 100vw, 50vw"
-            />
-          </div>
-          <div className='flex flex-col h-auto justify-center text-md md:text-2xl text-white'>
-            {services[currentIndex]?.service?.MainDescription()}
-          </div>
-          {/* {services[currentIndex]?.service?.HLink && (
-          <div className=''>
-            {services[currentIndex]?.service?.HLink?.()}
-          </div>
-        )} */}
-          <div className='flex flex-col-reverse md:flex-row justify-center md:justify-start gap-5 md:gap-5'>
-            <div
-              onClick={() => router.push('/files/upload')}
-              className='flex justify-center py-4 md:px-6 md:py-3 text-md font-semibold text-white border-white border-2 bg-indigo-900 rounded-[32px] md:w-fit cursor-pointer'
-            >
-              Upload File
-            </div>
-            <div className='flex items-center gap-1 md:gap-2.5 my-auto leading-8'>
-              <div className='text-base md:text-lg whitespace-nowrap text-white text-opacity-50 space-x-1 md:space-x-2'>
-                <span className='font-semibold text-teal-400'>@ $0.80</span>
-                <span className='text-[10px] text-slate-400 line-through'>
-                  $1.40
-                </span>
+
+          <div className='grid sm:grid-cols-2 gap-5'>
+            {activeService.features.map((feature, index) => (
+              <div key={index} className='flex items-center'>
+                <div className='w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0'>
+                  <Check className='w-5 h-5 text-primary' />
+                </div>
+                <div className='ml-2'>
+                  <span className='font-medium text-foreground'>{feature}</span>
+                </div>
               </div>
-              <div className='text-sm text-white'>
-                / audio min
+            ))}
+          </div>
+
+          <div className='bg-secondary rounded-2xl p-[22px] border border-border'>
+            <div className='flex gap-1 mb-4'>
+              {[...Array(5)].map((_, i) => (
+                <Star
+                  key={i}
+                  className='w-5 h-5 text-yellow-400 fill-current'
+                />
+              ))}
+            </div>
+            <blockquote className='text-muted-foreground italic mb-6'>
+              &ldquo;{activeService.testimonial.text}&rdquo;
+            </blockquote>
+            <div className='flex items-center gap-4'>
+              <div className='w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-semibold'>
+                {activeService.testimonial.author[0]}
+              </div>
+              <div>
+                <div className='font-semibold text-foreground'>
+                  {activeService.testimonial.author}
+                </div>
+                <div className='text-sm text-gray-700'>
+                  {activeService.testimonial.role}
+                </div>
               </div>
             </div>
           </div>
-          {services[currentIndex]?.service?.Highlighter && (
-            <div className='mt-2'>
-              {services[currentIndex]?.service?.Highlighter?.()}
+        </div>
+
+        <div className='col-span-12 lg:col-span-5'>
+          <div className='sticky top-8 space-y-6'>
+            <div className='rounded-2xl overflow-hidden shadow-xl'>
+              <div className='aspect-[5/4] relative'>
+                <Image
+                  src={activeService.image}
+                  alt={activeService.title}
+                  width={750}
+                  height={600}
+                  className='object-cover object-center w-full h-full'
+                  sizes='(max-width: 768px) 100vw, 40vw'
+                  quality={80}
+                  loading='lazy'
+                  placeholder='blur'
+                  blurDataURL='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx0fHRsdHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/2wBDAR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k='
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                  }}
+                />
+                <div className='absolute inset-0 bg-gradient-to-tr from-primary/10 to-transparent' />
+              </div>
             </div>
-          )}
-        </div>
-        <div className='hidden w-full lg:flex justify-end lg:w-[50%] lg:relative'>
-          <Image
-            alt={services[currentIndex]?.service?.title}
-            loading='lazy'
-            src={services[currentIndex]?.service?.imageSrc}
-            className='rounded-[32px] object-cover w-full'
-            width={443}
-            height={636}
-            sizes="(max-width: 640px) 100vw, 50vw"
-          />
-        </div>
-      </SmoothCorners>
-      {services[currentIndex]?.service?.Testimonial &&
-        services[currentIndex]?.service?.Testimonial?.()}
-    </div>
-  )
-}
 
-interface ServiceCardProps {
-  src: string
-  title: string
-  size: number
-  onClick: () => void
-  isSelected: boolean // Add this prop to indicate if the card is selected
-}
-
-function ServiceCard({
-  src,
-  title,
-  size,
-  onClick,
-  isSelected,
-}: ServiceCardProps) {
-  const blueFilter =
-    'invert(33%) sepia(95%) saturate(1352%) hue-rotate(221deg) brightness(91%) contrast(101%)'
-  return (
-    <div
-      className={`flex gap-3 justify-center px-[1.5rem] py-3 border border-violet-100 rounded-[32px] cursor-pointer ${isSelected ? 'bg-[#eee9ff] text-[#6442ee]' : ''
-        }`}
-      onClick={onClick}
-    >
-      <Image
-        loading='lazy'
-        src={src}
-        alt={title}
-        width={size}
-        height={size}
-        className={isSelected ? 'filter' : ''}
-        style={{ filter: isSelected ? blueFilter : '' }}
-      />
-      <div
-        className={`my-auto text-[1rem] ${isSelected ? 'text-[#6442ee]' : ''}`}
-      >
-        {title}
+            <div className='bg-background rounded-2xl border border-border overflow-hidden'>
+              <div className='p-6'>
+                <div className='flex items-baseline gap-2 mb-4'>
+                  <span className='text-3xl font-bold text-primary'>
+                    {activeService.price}
+                  </span>
+                  <span className='text-lg text-gray-600 line-through'>
+                    {activeService.originalPrice}
+                  </span>
+                  <span className='text-sm text-gray-600'>/minute</span>
+                </div>
+                <button
+                  onClick={() => router.push('/files/upload')}
+                  className='w-full bg-primary text-primary-foreground py-3 rounded-xl font-medium hover:bg-primary/90 transition-all duration-300 flex items-center justify-center gap-2 group'
+                >
+                  Upload File
+                  <ArrowRight className='w-4 h-4 transform group-hover:translate-x-1 transition-transform' />
+                </button>
+              </div>
+              <div className='bg-secondary px-6 py-4 border-t border-border'>
+                <div className='flex items-center gap-2 text-sm text-primary'>
+                  <Star className='w-4 h-4 fill-current' />
+                  <span>Top-rated service</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
   )
 }
+
+export default TranscriptionCategories

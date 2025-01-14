@@ -909,7 +909,7 @@ const bucketName = process.env.AWS_S3_BUCKET_NAME ?? ''
 export async function fileExistsInS3(key: string): Promise<boolean> {
   logger.info(`Checking if file exists in S3: ${key}`)
   try {
-    await s3Client.send(new HeadObjectCommand({ Bucket: bucketName, Key: key }));
+    await s3Client.send(new HeadObjectCommand({ Bucket: bucketName, Key: key }))
     logger.info(`File exists in S3: ${key}`)
     return true
   } catch (error) {
@@ -1130,5 +1130,26 @@ export async function deleteFileFromS3(
   } catch (error) {
     logger.error(`Error deleting S3 object ${key}: ${String(error)}`)
     throw error
+  }
+}
+
+export const getTestCustomer = async (userId: number) => {
+  try {
+    const teamAdminDetails = await getTeamAdminUserDetails(userId)
+    const customerId = teamAdminDetails ? teamAdminDetails.userId : userId
+
+    const customer = await prisma.customer.findUnique({
+      where: {
+        userId: customerId,
+      },
+    })
+
+    if (!customer) {
+      return false
+    }
+
+    return customer.isTestCustomer
+  } catch (err) {
+    return false
   }
 }

@@ -7,7 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
-import { isTranscriberICQC } from '@/utils/backend-helper'
+import { isTranscriberICQC, getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 import getOrgName from '@/utils/getOrgName'
 
@@ -23,6 +23,17 @@ export async function getAvailableQCFiles(type?: string | null) {
         error: 'User not authenticated',
       }
     }
+
+    const verifier = await prisma.verifier.findUnique({
+      where: {
+        userId: user.userId,
+      },
+    })
+
+    const enabledCustomers =
+      verifier?.enabledCustomers
+        ?.split(',')
+        .map((customer) => customer.toLowerCase()) || []
 
     let qcFiles = await prisma.order.findMany({
       where: {
@@ -78,10 +89,17 @@ export async function getAvailableQCFiles(type?: string | null) {
     for (const file of qcFiles as any) {
       const transcriberCost = await calculateTranscriberCost(file, user.userId)
       const orgName = await getOrgName(file.userId)
+      const isTestCustomer = await getTestCustomer(file.userId)
       file.qc_cost = transcriberCost.cost
       file.rate = transcriberCost.rate
       file.orgName = orgName
+      file.isTestCustomer = isTestCustomer
     }
+
+    qcFiles = qcFiles.filter((file: any) => {
+      if (!file.orgName) return true
+      return enabledCustomers.includes(file.orgName.toLowerCase())
+    })
 
     const isTranscriberICQCResult = await isTranscriberICQC(user.userId)
 

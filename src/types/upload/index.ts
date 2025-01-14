@@ -28,6 +28,8 @@ export interface FileWithId extends BaseFileInfo {
     type: string;
     file: File;
     isRLDocx: boolean;
+    parentId?: string | number | null;
+    fullPath?: string;
 }
 
 export interface CustomInputAttributes extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -158,6 +160,33 @@ export interface GooglePickerBuilder {
     setDeveloperKey(key: string): GooglePickerBuilder;
     setCallback(callback: (data: GooglePickerResponse) => void): GooglePickerBuilder;
     build(): GooglePicker;
+}
+
+export interface FolderStructure {
+    name: string;
+    parentPath: string;
+    children: FolderStructure[];
+}
+
+export interface ExtendedFile extends File {
+    fullPath?: string;
+}
+
+export interface TreeNode {
+    name: string;
+    userId?: string;
+    fileId?: string;
+    children: TreeNode[];
+}
+
+export interface ProcessedFileWithPath {
+    name: string;
+    size: number;
+    type: string;
+    fullPath: string;
+    parentPath: string;
+    lastModified: number;
+    file: File; // Keep reference to original File object
 }
 
 export interface TokenResponse {

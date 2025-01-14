@@ -55,6 +55,8 @@ const saveFileMetadata = async (metadata: Metadata): Promise<void> => {
         uploadedBy: userId,
         fileStatus: isDuplicate ? FileStatus.DUPLICATE : FileStatus.NONE,
         converted: null,
+        parentId: Number(metadata.parentId) ?? null,
+        fullPath: metadata?.fullPath || '',
     };
 
     await prisma.file.create({

@@ -460,20 +460,25 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         const quill = quillRef.current?.getEditor()
         if (!quill || !selection) return
 
-        // Apply blue background to selected text
-        quill.formatText(selection.index, selection.length, {
-            background: '#D9D9D9'
-        })
+        // Only apply highlight to selected text
+        if (selection.length > 0) {
+            quill.formatText(selection.index, selection.length, {
+                background: '#D9D9D9'
+            })
+        }
     }
 
+    // Update handleFocus to preserve line highlight
     const handleFocus = () => {
         const quill = quillRef.current?.getEditor()
         if (!quill || !selection) return
 
-        // Remove blue background from selected text
-        quill.formatText(selection.index, selection.length, {
-            background: null
-        })
+        // Only remove highlight from selected text
+        if (selection.length > 0) {
+            quill.formatText(selection.index, selection.length, {
+                background: null
+            })
+        }
 
         // Remove search highlight if exists
         if (searchHighlight) {
@@ -482,6 +487,67 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             })
         }
     }
+
+    const handleCursorMove = useCallback(() => {
+        const quill = quillRef.current?.getEditor();
+        if (!quill) return;
+
+        const selection = quill.getSelection();
+        if (!selection) return;
+
+        // Clear previous highlights first
+        const text = quill.getText();
+        quill.formatText(0, text.length, { background: null });
+
+        // If there's a text selection, don't apply line highlight
+        if (selection.length > 0) {
+            // Apply selection highlight if needed
+            if (selection) {
+                quill.formatText(selection.index, selection.length, {
+                    background: '#D9D9D9'
+                });
+            }
+            return;
+        }
+
+        // Get bounds of current cursor position
+        const bounds = quill.getBounds(selection.index);
+        if (!bounds) return;
+        // Calculate the start and end indices of the current line
+        let lineStart = selection.index;
+        let lineEnd = selection.index;
+
+        // Find start of line
+        while (lineStart > 0) {
+            const prevBounds = quill.getBounds(lineStart - 1);
+            if (!prevBounds) break;
+            if (prevBounds.top < bounds.top) break;
+            lineStart--;
+        }
+
+        // Find end of line
+        while (lineEnd < text.length) {
+            const nextBounds = quill.getBounds(lineEnd + 1);
+            if (!nextBounds) break;
+            if (nextBounds.top > bounds.top) break;
+            lineEnd++;
+        }
+
+        // Apply gray background only to current line
+        quill.formatText(lineStart, lineEnd - lineStart + 1, {
+            background: '#EDEDED'
+        });
+    }, [searchHighlight]);
+
+    useEffect(() => {
+        const quill = quillRef.current?.getEditor();
+        if (!quill) return;
+
+        quill.on('selection-change', handleCursorMove);
+        return () => {
+            quill.off('selection-change', handleCursorMove);
+        };
+    }, [handleCursorMove]);
 
     return (
         <>
