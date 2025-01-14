@@ -1,7 +1,7 @@
 'use client'
 
 import { Delta, Op } from 'quill/core'
-import React, { useRef, useEffect, useCallback, useMemo, useState, useLayoutEffect } from 'react'
+import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 
@@ -285,22 +285,31 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
 
     useShortcuts(shortcutControls);
 
-    useLayoutEffect(() => {
-        // Initialize web worker
-        alignmentWorker.current = new Worker(
-            new URL('@/utils/transcript/alignmentWorker.ts', import.meta.url)
-        )
-
-        alignmentWorker.current.onmessage = (e: MessageEvent) => {
-            const newAlignments = e.data
-            setAlignments(newAlignments);
-            console.log('Updated alignments:', newAlignments);
+    useEffect(() => {
+        try {
+            // Initialize the Web Worker
+            alignmentWorker.current = new Worker(
+                new URL('@/utils/transcript/alignmentWorker.ts', import.meta.url)
+            );
+      
+            alignmentWorker.current.onmessage = (e) => {
+                const newAlignments = e.data;
+                setAlignments(newAlignments);
+                console.log('Updated alignments:', newAlignments);
+            };
+      
+            console.log('Web Worker initialized successfully.');
+        } catch (error) {
+            console.error('Failed to initialize Web Worker:', error);
         }
-
+      
         return () => {
-            alignmentWorker.current?.terminate()
-        }
-    }, [])
+            if (alignmentWorker.current) {
+                alignmentWorker.current.terminate();
+                console.log('Web Worker terminated.');
+            }
+        };
+    }, []);
 
     useEffect(() => {
         const quill = quillRef.current?.getEditor()
