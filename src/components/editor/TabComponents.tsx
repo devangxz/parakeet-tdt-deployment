@@ -8,7 +8,6 @@ import Editor from "./Editor";
 import { TabsContent } from "./Tabs";
 import { Textarea } from "../ui/textarea";
 import { OrderDetails } from "@/app/editor/[fileId]/page";
-import { LineData } from "@/components/editor/transcriptUtils";
 import { CTMType, CustomerQuillSelection } from "@/utils/editorUtils";
 
 interface EditorTabComponentProps {
@@ -20,7 +19,6 @@ interface EditorTabComponentProps {
     orderDetails: OrderDetails
     content: Op[]
     setContent: (content: Op[]) => void
-    getLines: (lineData: LineData[]) => void
     setSelectionHandler: () => void
     selection: CustomerQuillSelection | null
     searchHighlight: CustomerQuillSelection | null

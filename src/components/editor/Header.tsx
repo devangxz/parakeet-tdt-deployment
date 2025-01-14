@@ -27,7 +27,6 @@ import PlayerButton from './PlayerButton'
 import ReportDialog from './ReportDialog'
 import ShortcutsReferenceDialog from './ShortcutsReferenceDialog'
 import Toolbar from './Toolbar'
-import { LineData } from './transcriptUtils'
 import UploadDocxDialog from './UploadDocxDialog'
 import { Button } from '../ui/button'
 import { Checkbox } from '../ui/checkbox'
@@ -149,7 +148,6 @@ interface NewPlayerProps {
   submitting: boolean
   setIsSubmitModalOpen: React.Dispatch<React.SetStateAction<boolean>>
   setSubmitting: React.Dispatch<React.SetStateAction<boolean>>
-  lines: LineData[]
   playerEvents: PlayerEvent[]
   setPdfUrl: React.Dispatch<React.SetStateAction<string>>
   setRegenCount: React.Dispatch<React.SetStateAction<number>>
@@ -179,7 +177,6 @@ export default memo(function Header({
   submitting,
   setIsSubmitModalOpen,
   setSubmitting,
-  lines,
   playerEvents,
   setPdfUrl,
   setRegenCount,
@@ -1536,7 +1533,6 @@ export default memo(function Header({
                       notes,
                       cfd,
                       setButtonLoading,
-                      lines,
                       playerEvents,
                     })
                   }

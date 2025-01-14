@@ -16,7 +16,6 @@ import { submitReviewAction } from '@/app/actions/editor/submit-review'
 import { uploadDocxAction } from '@/app/actions/editor/upload-docx'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { OrderDetails, UploadFilesType } from '@/app/editor/[fileId]/page'
-import { LineData, updateContent } from '@/components/editor/transcriptUtils'
 import {
     ALLOWED_META,
     BACKEND_URL,
@@ -483,7 +482,6 @@ type HandleSaveParams = {
     notes: string
     cfd: string
     setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
-    lines: LineData[]
     playerEvents: PlayerEvent[]
 }
 
@@ -494,7 +492,6 @@ const handleSave = async (
         notes,
         cfd,
         setButtonLoading,
-        lines,
         playerEvents,
     }: HandleSaveParams,
     showToast = true

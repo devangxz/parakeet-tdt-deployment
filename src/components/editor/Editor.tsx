@@ -34,7 +34,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     const [alignments, setAlignments] = useState<AlignmentType[]>([])
     const [typingTimer, setTypingTimer] = useState<NodeJS.Timeout | null>(null)
     const alignmentWorker = useRef<Worker | null>(null)
-
     const prevLineNodeRef = useRef<HTMLElement | null>(null);
 
     const quillModules = {
@@ -345,6 +344,15 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     useEffect(() => {
         initEditor()
     }, [initEditor])
+
+    useEffect(() => {
+        if (quillRef.current) {
+            const quill = quillRef.current?.getEditor()
+            quill.setSelection(0, 0)
+            setTimeout(() => {
+                handleCursorMove()
+            }, 0)        }
+    }, []);    
 
     // Create initial alignments once when component loads
     useEffect(() => {

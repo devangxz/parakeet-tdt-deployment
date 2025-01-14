@@ -1,11 +1,7 @@
 import { secondsToTs } from "./secondsToTs";
-import { CTMSWord } from "@/components/editor/transcriptUtils";
+import { AlignmentType } from "@/utils/transcript";
 
-interface CTMSWordWithCase extends CTMSWord {
-    case?: 'success' | 'mismatch';
-}
-
-function createSBV(alignments: CTMSWordWithCase[]): string {
+function createSBV(alignments: AlignmentType[]): string {
     try {
         let sbv = "";
         let line: string[] = [];
@@ -13,7 +9,7 @@ function createSBV(alignments: CTMSWordWithCase[]): string {
         for (let i = 0; i < alignments.length; i++) {
             const current = alignments[i];
             const word = current.word;
-            const currentCase = current.case ?? 'success';
+            const currentCase = current.type ?? 'ctm';
             const nextAlignment = i + 1 < alignments.length ? alignments[i + 1] : undefined;
 
             line.push(word);
@@ -26,17 +22,17 @@ function createSBV(alignments: CTMSWordWithCase[]): string {
             }
 
             let forceBreak = false;
-            forceBreak = line.length > 10 && !(/\w/).test(word[word.length - 1]) && currentCase === 'success';
+            forceBreak = line.length > 10 && !(/\w/).test(word[word.length - 1]) && currentCase === 'ctm';
 
             // Ensure nextAlignment is defined before using it
             const shouldBreakOnGap = nextAlignment !== undefined &&
                 line.length > 7 &&
-                currentCase === 'success' &&
-                (nextAlignment.case ?? 'success') === 'success' &&
+                currentCase === 'ctm' &&
+                (nextAlignment.type ?? 'ctm') === 'ctm' &&
                 nextAlignment.start - current.end > 0.5;
 
             forceBreak = forceBreak || shouldBreakOnGap;
-            forceBreak = forceBreak || (line.length > 12 && currentCase === 'success');
+            forceBreak = forceBreak || (line.length > 12 && currentCase === 'ctm');
             forceBreak = forceBreak || line.join(' ').length > 70;
 
             if (forceBreak) {
