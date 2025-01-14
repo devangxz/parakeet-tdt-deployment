@@ -1,6 +1,10 @@
 type OSType = 'Windows' | 'Mac OS' | 'iOS' | 'Android' | 'Linux' | 'Unknown';
 
 export const getUserOS = (): string => {
+    if (typeof window === "undefined") {
+        return "Unknown"; // Fallback value for server-side
+    }
+      
     const userAgent = window.navigator.userAgent,
         platform = window.navigator.platform,
         macosPlatforms = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K'],
