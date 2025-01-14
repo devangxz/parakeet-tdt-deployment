@@ -382,24 +382,25 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
       }
     }
 
-    const fileTree = makeTree(processedFiles)
-
-    const folderStructure = processFolderStructure(fileTree);
-
-    // Prepare files with their paths
-    const filesWithPaths: ProcessedFileWithPath[] = processedFiles.map(file => ({
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      fullPath: file.fullPath || '',
-      parentPath: file.fullPath?.split('/').slice(0, -1).join('/') || '',
-      lastModified: file.lastModified,
-      file: file // Keep the original File object
-    }));
-
     let filesUnderSizeLimit;
     try {
       if (isZipUpload) {
+
+        const fileTree = makeTree(processedFiles)
+
+        const folderStructure = processFolderStructure(fileTree);
+
+        // Prepare files with their paths
+        const filesWithPaths: ProcessedFileWithPath[] = processedFiles.map(file => ({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          fullPath: file.fullPath || '',
+          parentPath: file.fullPath?.split('/').slice(0, -1).join('/') || '',
+          lastModified: file.lastModified,
+          file: file // Keep the original File object
+        }));
+
         const filesForServer = filesWithPaths.map(file => ({
           name: file.name,
           size: file.size,
