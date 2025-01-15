@@ -487,6 +487,9 @@ export default memo(function Header({
     if (duration) {
       const time = (value / 100) * duration
       audioPlayer.current.currentTime = time
+      if (audioPlayer.current.paused) {
+        audioPlayer.current.play()
+      }
     }
   }
 
