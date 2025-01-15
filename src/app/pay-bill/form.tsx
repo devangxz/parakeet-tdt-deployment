@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { Dropin } from 'braintree-web-drop-in'
 import DropIn from 'braintree-web-drop-in-react'
+import { Mail, Wallet } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
@@ -120,16 +121,9 @@ const PayBill = () => {
 
   if (isLoading) {
     return (
-      <div className='w-full lg:grid lg:min-h-[600px] lg:grid-cols-2 xl:min-h-[800px]'>
+      <div className='w-full lg:grid lg:grid-cols-2'>
         <SideImage />
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '80vh',
-          }}
-        >
+        <div className='flex items-center justify-center px-4 py-12 lg:px-8'>
           <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
           <p>Loading...</p>
         </div>
@@ -138,150 +132,165 @@ const PayBill = () => {
   }
 
   return (
-    <>
-      <div className='w-full lg:grid lg:min-h-[600px] lg:grid-cols-2 xl:min-h-[800px]'>
-        <SideImage />
-        {paymentSuccess ? (
-          <div className='flex items-center justify-center py-12'>
-            <div className='mx-auto grid w-[350px] gap-6'>
-              <div className='grid gap-2 text-left'>
-                <h1 className='text-4xl font-bold'>Successfully Paid!</h1>
-                <p className='text-balance text-muted-foreground'>
-                  You have successfully paid the amount of ${amount}
+    <div className='w-full lg:grid lg:grid-cols-2'>
+      <SideImage />
+      <div className='flex items-center justify-center px-4 py-12 lg:px-8'>
+        <div className='w-full max-w-sm space-y-5'>
+          {paymentSuccess ? (
+            <div className='space-y-5'>
+              <div className='space-y-2.5 text-center lg:text-left'>
+                <h1 className='text-4xl font-semibold tracking-tight'>
+                  Payment Successful
+                </h1>
+                <p className='mt-2 text-md text-gray-700'>
+                  Thank you for your payment of ${amount}
                 </p>
               </div>
-              <div className='ml-20'>
+
+              <div className='mt-6'>
                 <PaymentSuccessIcon />
               </div>
-              <div className='flex justify-between mr-5'>
-                <div className='flex items-center gap-2'>
-                  <div className='text-md font-medium'>Paid By</div>
+
+              <div className='space-y-3'>
+                <div className='flex justify-between'>
+                  <span className='text-sm font-medium'>Paid By</span>
+                  <span className='text-sm'>{email}</span>
                 </div>
-                <div className='text-md font-normal'>{email}</div>
-              </div>
-              <div className='flex justify-between mr-5'>
-                <div className='flex items-center gap-2'>
-                  <div className='text-md font-medium'>Transaction ID</div>
+                <div className='flex justify-between'>
+                  <span className='text-sm font-medium'>Transaction ID</span>
+                  <span className='text-sm'>
+                    {paymentSuccessData?.transactionId}
+                  </span>
                 </div>
-                <div className='text-md font-normal'>
-                  {paymentSuccessData?.transactionId}
+                <div className='flex justify-between'>
+                  <span className='text-sm font-medium'>Payment Method</span>
+                  <span className='text-sm'>
+                    {paymentSuccessData?.paymentMethod}
+                  </span>
                 </div>
-              </div>
-              <div className='flex justify-between mr-5'>
-                <div className='flex items-center gap-2'>
-                  <div className='text-md font-medium'>Payment Method</div>
-                </div>
-                <div className='text-md font-normal'>
-                  {paymentSuccessData?.paymentMethod}
-                </div>
-              </div>
-              {paymentSuccessData?.paymentMethod !== 'CREDITS' && (
-                <div className='flex justify-between mr-5'>
-                  <div className='flex items-center gap-2'>
-                    <div className='text-md font-medium'>
+                {paymentSuccessData?.paymentMethod !== 'CREDITS' && (
+                  <div className='flex justify-between'>
+                    <span className='text-sm font-medium'>
                       {paymentSuccessData?.cc_last4 ? 'Card ending' : 'PP'}
-                    </div>
+                    </span>
+                    <span className='text-sm'>
+                      {paymentSuccessData?.cc_last4 ||
+                        paymentSuccessData?.pp_account}
+                    </span>
                   </div>
-                  <div className='text-md font-normal'>
-                    {paymentSuccessData?.cc_last4 ||
-                      paymentSuccessData?.pp_account}
-                  </div>
+                )}
+                <div className='flex justify-between'>
+                  <span className='text-sm font-medium'>Date</span>
+                  <span className='text-sm'>
+                    {new Date().toLocaleDateString()}
+                  </span>
                 </div>
-              )}
-              <div className='flex justify-between mr-5'>
-                <div className='flex items-center gap-2'>
-                  <div className='text-md font-medium'>Date</div>
-                </div>
-                <div className='text-md font-normal'>
-                  {new Date().toLocaleDateString()}
+
+                <Separator className='my-4' />
+
+                <div className='flex justify-between'>
+                  <span className='text-base font-semibold'>Final amount</span>
+                  <span className='text-base font-semibold'>
+                    ${paymentSuccessData?.amount}
+                  </span>
                 </div>
               </div>
-              <Separator className='bg-[#322078]' />
-              <div className='flex justify-between mr-5'>
-                <div className='flex items-center gap-1'>
-                  <div className='text-lg font-semibold'>Final amount</div>
-                </div>
-                <div className='text-lg font-semibold'>
-                  ${paymentSuccessData?.amount}
-                </div>
-              </div>
-              <Separator className='bg-[#322078]' />
             </div>
-          </div>
-        ) : (
-          <div className='flex items-center justify-center py-12'>
-            <div className='mx-auto grid w-[500px] gap-6'>
-              <div className='grid gap-2 text-left'>
-                <h1 className='text-4xl font-bold'>Welcome to Scribie!</h1>
-                <p className='text-balance text-muted-foreground'>
-                  Please pay your bill amount of ${amount}
+          ) : (
+            <>
+              <div className='space-y-2.5 text-center lg:text-left'>
+                <h1 className='text-4xl font-semibold tracking-tight'>
+                  Make Payment
+                </h1>
+                <p className='mt-2 text-md text-gray-700'>
+                  Please complete your payment of ${amount}
                 </p>
               </div>
+
               <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(onSubmit)}
-                  className='space-y-6'
-                >
-                  <FormField
-                    control={form.control}
-                    name='fullName'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Full Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder='Full Name'
-                            type='text'
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                <form onSubmit={form.handleSubmit(onSubmit)}>
+                  <div className='space-y-4'>
+                    <FormField
+                      control={form.control}
+                      name='fullName'
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Full Name</FormLabel>
+                          <FormControl>
+                            <div className='relative'>
+                              <Mail className='absolute left-3 top-[12px] h-4 w-4 text-muted-foreground' />
+                              <Input
+                                className='pl-9'
+                                placeholder='Enter your full name'
+                                {...field}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name='email'
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <div className='relative'>
+                              <Mail className='absolute left-3 top-[12px] h-4 w-4 text-muted-foreground' />
+                              <Input
+                                className='pl-9'
+                                placeholder='Enter email address'
+                                {...field}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {clientToken && (
+                      <div>
+                        <DropIn
+                          options={{
+                            authorization: clientToken,
+                            paypal: {
+                              flow: 'vault',
+                            },
+                          }}
+                          onInstance={(instance) => setInstance(instance)}
+                        />
+                      </div>
                     )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name='email'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input placeholder='Email' {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                  </div>
+
+                  <Button
+                    disabled={loadingPay}
+                    type='submit'
+                    className='w-full mt-7'
+                  >
+                    {loadingPay ? (
+                      <>
+                        <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                        Please wait
+                      </>
+                    ) : (
+                      <>
+                        <Wallet className='mr-2 h-4 w-4' />
+                        Pay ${amount}
+                      </>
                     )}
-                  />
-                  {clientToken && (
-                    <div>
-                      <DropIn
-                        options={{
-                          authorization: clientToken,
-                          paypal: {
-                            flow: 'vault',
-                          },
-                        }}
-                        onInstance={(instance) => setInstance(instance)}
-                      />
-                    </div>
-                  )}
-                  {loadingPay ? (
-                    <Button disabled className='w-full'>
-                      <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                      Please wait
-                    </Button>
-                  ) : (
-                    <Button type='submit' className='w-full'>
-                      Pay ${amount}
-                    </Button>
-                  )}
+                  </Button>
                 </form>
               </Form>
-            </div>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
-    </>
+    </div>
   )
 }
 

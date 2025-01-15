@@ -1,7 +1,7 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ReloadIcon } from '@radix-ui/react-icons'
+import { KeyRound, Loader2, Eye, EyeOff, Lock } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import React, { useState } from 'react'
@@ -26,6 +26,9 @@ import { Input } from '@/components/ui/input'
 const ResetPassword = () => {
   const params = useParams()
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -57,20 +60,24 @@ const ResetPassword = () => {
   }
 
   return (
-    <>
-      <div className='w-full lg:grid lg:min-h-[600px] lg:grid-cols-2 xl:min-h-[800px]'>
-        <SideImage />
-        <div className='flex items-center justify-center py-12'>
-          <div className='mx-auto grid w-[350px] gap-6'>
-            <div className='grid gap-2 text-left'>
-              <h1 className='text-4xl font-bold'>Reset password</h1>
-              <p className='text-muted-foreground'>Reset your password here</p>
+    <div className='w-full lg:grid lg:grid-cols-2'>
+      <SideImage />
+      <div className='flex items-center justify-center px-4 py-12 lg:px-8'>
+        <div className='w-full max-w-sm space-y-5'>
+          <div className='space-y-2.5 mb-6 text-center lg:text-left'>
+            <div>
+              <h1 className='text-4xl font-semibold tracking-tight'>
+                Reset password
+              </h1>
+              <p className='mt-2 text-md text-gray-700'>
+                Enter your new password below
+              </p>
             </div>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className='space-y-6'
-              >
+          </div>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <div className='space-y-4'>
                 <FormField
                   control={form.control}
                   name='password'
@@ -78,16 +85,34 @@ const ResetPassword = () => {
                     <FormItem>
                       <FormLabel>New Password</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder='Password'
-                          type='password'
-                          {...field}
-                        />
+                        <div className='relative'>
+                          <KeyRound className='absolute left-3 top-[12px] h-4 w-4 text-muted-foreground' />
+                          <Input
+                            type={showPassword ? 'text' : 'password'}
+                            className='pl-9'
+                            placeholder='Enter new password'
+                            {...field}
+                          />
+                          <Button
+                            type='button'
+                            variant='ghost'
+                            size='sm'
+                            className='absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent'
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? (
+                              <EyeOff className='h-4 w-4 text-muted-foreground' />
+                            ) : (
+                              <Eye className='h-4 w-4 text-muted-foreground' />
+                            )}
+                          </Button>
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={form.control}
                   name='confirmPassword'
@@ -95,38 +120,62 @@ const ResetPassword = () => {
                     <FormItem>
                       <FormLabel>Confirm Password</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder='Confirm Password'
-                          type='password'
-                          {...field}
-                        />
+                        <div className='relative'>
+                          <KeyRound className='absolute left-3 top-[12px] h-4 w-4 text-muted-foreground' />
+                          <Input
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            className='pl-9'
+                            placeholder='Confirm new password'
+                            {...field}
+                          />
+                          <Button
+                            type='button'
+                            variant='ghost'
+                            size='sm'
+                            className='absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent'
+                            onClick={() =>
+                              setShowConfirmPassword(!showConfirmPassword)
+                            }
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className='h-4 w-4 text-muted-foreground' />
+                            ) : (
+                              <Eye className='h-4 w-4 text-muted-foreground' />
+                            )}
+                          </Button>
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              </div>
 
+              <Button disabled={loading} type='submit' className='w-full mt-7'>
                 {loading ? (
-                  <Button disabled className='w-full'>
-                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                    Reset Password
-                  </Button>
+                  <>
+                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                    Please Wait
+                  </>
                 ) : (
-                  <Button type='submit' className='w-full'>
+                  <>
+                    <Lock className='mr-2 h-4 w-4' />
                     Reset Password
-                  </Button>
+                  </>
                 )}
-              </form>
-            </Form>
-            <div className='mt-4 text-center text-sm'>
-              <Link href='/signin' className='font-bold text-primary'>
-                Back to Sign in
-              </Link>
-            </div>
+              </Button>
+            </form>
+          </Form>
+
+          <div className='text-center text-sm text-gray-700'>
+            Remember your password?{' '}
+            <Link href='/signin' className='text-primary hover:underline'>
+              Sign In
+            </Link>
           </div>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 

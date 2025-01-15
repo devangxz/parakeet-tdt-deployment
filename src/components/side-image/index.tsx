@@ -1,71 +1,94 @@
+import { Clock, Users } from 'lucide-react'
 import Image from 'next/image'
-import React, { useEffect, useState } from 'react'
 
-const services = [
-  { image: '/assets/images/home/hammer.svg', title: 'Legal' },
-  { image: '/assets/images/home/hammer.svg', title: 'Academic' },
-  { image: '/assets/images/home/hammer.svg', title: 'Video' },
-  { image: '/assets/images/home/hammer.svg', title: 'Sermon' },
-  { image: '/assets/images/home/hammer.svg', title: 'Podcast' },
-  { image: '/assets/images/home/hammer.svg', title: 'Marketing' },
-]
+const SideImage = () => (
+  <div className='hidden lg:block h-[calc(100vh-5rem)] sticky top-20'>
+    <div className='absolute inset-0'>
+      <Image
+        alt='Backgroung image'
+        src='/assets/images/side-image.webp'
+        fill
+        quality={90}
+        priority
+        sizes='(max-width: 768px) 100vw, 100vw'
+        className='object-cover'
+        placeholder='blur'
+        blurDataURL='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx0fHRsdHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/2wBDAR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k='
+        onError={(e) => {
+          const target = e.target as HTMLImageElement
+          target.style.display = 'none'
+        }}
+      />
+    </div>
 
-const SideImage = () => {
-  const [currentService, setCurrentService] = useState(0)
+    <div className='absolute inset-0 bg-gradient-to-b from-black/25 via-black/15 to-black/25' />
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentService(
-        (currentService) => (currentService + 1) % services.length
-      )
-    }, 2000)
-    return () => clearInterval(timer)
-  }, [])
-  return (
-    <div className='hidden bg-[#322078] lg:block p-[5rem] space-y-[2rem]'>
-      <span className='text-white text-[1.5rem]'>
-        Transcription & Formatting made easy for :
-      </span>
-      <span className='text-[#36F0C3] text-[2rem] flex items-center gap-2 animate-flip-along-x repeat-infinite'>
-        {services[currentService]?.title}{' '}
-        <i>
-          <Image
-            src={services[currentService]?.image}
-            className='bg-[#36F0C3] rounded-[50%] p-1'
-            alt='Legal'
-            width={38}
-            height={38}
-          />
-        </i>
-      </span>
-      <div>
-        <Image
-          src='/assets/images/upload.png'
-          alt='upload area'
-          width={990}
-          height={622}
-          className='mx-auto'
-        />
+    <div className='relative h-full flex flex-col'>
+      <div className='flex-1 pt-12 px-4'>
+        <div className='max-w-[380px]'>
+          <h1 className='text-[2.25rem] font-semibold leading-[1.3] tracking-tight mb-7 text-primary-foreground'>
+            AI-powered transcription for your business.
+          </h1>
+
+          <div className='flex gap-3'>
+            <div className='flex items-center gap-2 bg-black/15 backdrop-blur-[2px] px-3 py-2 rounded-lg border border-primary-foreground/10'>
+              <Clock className='w-4 h-4 text-primary-foreground' />
+              <div>
+                <p className='text-lg font-semibold leading-none mb-0.5 text-primary-foreground'>
+                  10M+
+                </p>
+                <p className='text-xs text-primary-foreground/90'>
+                  Minutes Transcribed
+                </p>
+              </div>
+            </div>
+
+            <div className='flex items-center gap-2 bg-black/15 backdrop-blur-[2px] px-3 py-2 rounded-lg border border-primary-foreground/10'>
+              <Users className='w-4 h-4 text-primary-foreground' />
+              <div>
+                <p className='text-lg font-semibold leading-none mb-0.5 text-primary-foreground'>
+                  94K+
+                </p>
+                <p className='text-xs text-primary-foreground/90'>
+                  Happy Customers
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div className='flex items-center gap-2'>
-        <Image
-          alt='AAERT'
-          src='/assets/images/aaert.webp'
-          width={120}
-          height={55}
-          className='rounded-[16px] bg-white'
-        />
-        <div className='text-white'>
-          <p className='font-semibold text-[16px]'>
-            We are now official sponsors of AAERT
-          </p>
-          <p className='text-[14px]'>
-            American Association of Electronic Reporters And Transcribers
-          </p>
+
+      <div className='w-full bg-black/15 backdrop-blur-[2px] border-t border-primary-foreground/10'>
+        <div className='px-4 py-3 flex items-center gap-4'>
+          <div className='bg-primary-foreground rounded p-1.5'>
+            <Image
+              alt='AAERT'
+              src='/assets/images/aaert.webp'
+              width={80}
+              height={36}
+              className='rounded'
+              quality={80}
+              priority
+              placeholder='blur'
+              blurDataURL='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDABQODxIPDRQSEBIXFRQdHx0fHRsdHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/2wBDAR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR3/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k='
+              onError={(e) => {
+                const target = e.target as HTMLImageElement
+                target.style.display = 'none'
+              }}
+            />
+          </div>
+          <div>
+            <p className='text-base font-medium text-primary-foreground'>
+              We are now official sponsors of AAERT
+            </p>
+            <p className='text-sm text-primary-foreground/90'>
+              American Association of Electronic Reporters And Transcribers
+            </p>
+          </div>
         </div>
       </div>
     </div>
-  )
-}
+  </div>
+)
 
 export default SideImage

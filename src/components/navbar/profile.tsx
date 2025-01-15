@@ -71,16 +71,13 @@ const Profile = () => {
           <DropdownMenuItem onClick={() => router.push(`/payments/pending`)}>
             Payments
           </DropdownMenuItem>
-          {/* <DropdownMenuItem onClick={() => router.push(`/referrals`)}>
-            Referrals
-          </DropdownMenuItem> */}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => router.push(`/faq`)}>
-          FAQ
+          FAQs
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push(`/contact`)}>
-          Contact support
+          Contact Support
         </DropdownMenuItem>
         <DropdownMenuItem
           className='text-red-500'

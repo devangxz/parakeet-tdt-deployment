@@ -1,6 +1,19 @@
 'use client'
 
-import { Menu, X, Upload, LogIn, LogOut, UserPlus } from 'lucide-react'
+import {
+  Menu,
+  X,
+  Upload,
+  LogIn,
+  UserPlus,
+  Settings,
+  FileText,
+  FileQuestion,
+  Mail,
+  LogOut,
+  Wallet,
+  CircleDollarSign,
+} from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -8,16 +21,21 @@ import { Session } from 'next-auth'
 import { signOut, useSession } from 'next-auth/react'
 import React, { useState, useEffect, useCallback } from 'react'
 
+import TranscriberProfile from '@/app/transcribe/components/transcriberProfiles'
+import Profile from '@/components/navbar/profile'
+
 const MobileMenu = ({
   isOpen,
   onClose,
   session,
   isActiveLink,
+  isCustomerOrAdmin,
 }: {
   isOpen: boolean
   onClose: () => void
   session: Session | null
   isActiveLink: (href: string) => boolean
+  isCustomerOrAdmin: boolean
 }) => {
   const [mounted, setMounted] = useState(false)
   const [animationState, setAnimationState] = useState<
@@ -58,10 +76,35 @@ const MobileMenu = ({
 
   if (!mounted) return null
 
+  const MenuItem = ({
+    href,
+    icon: Icon,
+    children,
+    onClick = handleClose,
+  }: {
+    href: string
+    icon: React.ElementType
+    children: React.ReactNode
+    onClick?: () => void
+  }) => (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+        isActiveLink(href)
+          ? 'text-primary bg-primary/10'
+          : 'text-gray-600 hover:text-primary hover:bg-primary/5'
+      }`}
+    >
+      <Icon className='w-5 h-5' />
+      {children}
+    </Link>
+  )
+
   return (
     <>
       <div
-        className={`fixed inset-0 bg-black/50 backdrop-blur transition-opacity duration-300 ${
+        className={`fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
           animationState === 'closed' || animationState === 'closing'
             ? 'opacity-0'
             : 'opacity-100'
@@ -83,88 +126,113 @@ const MobileMenu = ({
             <Link href='/' onClick={handleClose}>
               <div className='flex items-center'>
                 <Image
-                  className='h-10 w-10'
+                  className='h-8 w-8'
                   src='/assets/images/logo.svg'
                   alt='scribie.ai'
-                  width={40}
-                  height={40}
+                  width={32}
+                  height={32}
                 />
-                <span className='ml-2 text-xl font-semibold text-primary'>
+                <span className='ml-2 text-lg font-semibold text-primary'>
                   scribie.ai
                 </span>
               </div>
             </Link>
             <button
               onClick={handleClose}
-              className='p-2 rounded-md hover:bg-gray-100'
+              className='p-2 rounded-lg hover:bg-gray-100'
             >
-              <X className='h-6 w-6' />
+              <X className='h-5 w-5' />
             </button>
           </div>
 
           <div className='flex-1 overflow-y-auto'>
-            <div className='flex flex-col p-6 space-y-6'>
-              <Link
-                href='/#pricing'
-                onClick={handleClose}
-                className={`flex items-center py-2 px-4 text-lg font-medium rounded-lg ${
-                  isActiveLink('#pricing')
-                    ? 'text-primary bg-primary/10'
-                    : 'text-gray-700 hover:text-primary hover:bg-primary/5'
-                }`}
-              >
-                Pricing
-              </Link>
-              <Link
-                href='/contact'
-                onClick={handleClose}
-                className={`flex items-center py-2 px-4 text-lg font-medium rounded-lg ${
-                  isActiveLink('/contact')
-                    ? 'text-primary bg-primary/10'
-                    : 'text-gray-700 hover:text-primary hover:bg-primary/5'
-                }`}
-              >
-                Contact
-              </Link>
-
-              {session ? (
-                <div className='flex flex-col space-y-4 pt-4 border-t'>
-                  <Link
-                    href='/files/upload'
-                    onClick={handleClose}
-                    className='flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-primary border-2 border-primary rounded-lg hover:bg-primary/5'
-                  >
-                    <Upload className='w-4 h-4' />
-                    Upload File
-                  </Link>
-                  <button
-                    onClick={() =>
-                      signOut({ callbackUrl: process.env.NEXT_PUBLIC_SITE_URL })
-                    }
-                    className='flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:opacity-90'
-                  >
-                    <LogOut className='w-4 h-4' />
-                    Sign Out
-                  </button>
+            <div className='p-3'>
+              {session && (
+                <div className='mb-4 p-3 bg-gray-50 rounded-lg'>
+                  <div className='text-sm font-medium text-gray-900'>
+                    {session.user?.name}
+                  </div>
+                  <div className='text-xs text-gray-500 mt-1'>
+                    {session.user?.email}
+                  </div>
                 </div>
-              ) : (
-                <div className='flex flex-col space-y-4 pt-4 border-t'>
-                  <Link
-                    href='/signin'
-                    onClick={handleClose}
-                    className='flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-primary border-2 border-primary rounded-lg hover:bg-primary/5'
+              )}
+
+              <div className='space-y-1 mb-1'>
+                {!session && (
+                  <>
+                    <MenuItem href='/#pricing' icon={CircleDollarSign}>
+                      Pricing
+                    </MenuItem>
+                    <MenuItem href='/contact' icon={Mail}>
+                      Contact
+                    </MenuItem>
+                    <MenuItem href='/signin' icon={LogIn}>
+                      Sign In
+                    </MenuItem>
+                    <MenuItem href='/register' icon={UserPlus}>
+                      Sign Up
+                    </MenuItem>
+                  </>
+                )}
+              </div>
+
+              {session && (
+                <div className='space-y-1 mb-1'>
+                  <MenuItem href='/#pricing' icon={CircleDollarSign}>
+                    Pricing
+                  </MenuItem>
+                </div>
+              )}
+
+              {session && (
+                <div className='space-y-1 mb-4'>
+                  {isCustomerOrAdmin ? (
+                    <>
+                      {session.user?.role === 'ADMIN' && (
+                        <MenuItem href='/admin/dashboard' icon={FileText}>
+                          Dashboard
+                        </MenuItem>
+                      )}
+                      <MenuItem href='/files/upload' icon={Upload}>
+                        Upload File
+                      </MenuItem>
+                      <MenuItem href='/files/all-files' icon={FileText}>
+                        Files
+                      </MenuItem>
+                      <MenuItem href='/payments/pending' icon={Wallet}>
+                        Payments
+                      </MenuItem>
+                    </>
+                  ) : (
+                    <MenuItem href='/transcribe/qc' icon={FileText}>
+                      Dashboard
+                    </MenuItem>
+                  )}
+                  <MenuItem href='/settings/personal-info' icon={Settings}>
+                    Settings
+                  </MenuItem>
+                </div>
+              )}
+
+              {session && (
+                <div className='space-y-1 pt-4 border-t border-gray-100'>
+                  <MenuItem href='/faq' icon={FileQuestion}>
+                    FAQs
+                  </MenuItem>
+                  <MenuItem href='/contact' icon={Mail}>
+                    Contact Support
+                  </MenuItem>
+                  <button
+                    onClick={() => {
+                      signOut({ callbackUrl: process.env.NEXT_PUBLIC_SITE_URL })
+                      handleClose()
+                    }}
+                    className='flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg w-full'
                   >
-                    <LogIn className='w-4 h-4' />
-                    Sign In
-                  </Link>
-                  <Link
-                    href='/register'
-                    onClick={handleClose}
-                    className='flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-primary-foreground bg-primary rounded-lg hover:opacity-90'
-                  >
-                    <UserPlus className='w-4 h-4' />
-                    Sign Up
-                  </Link>
+                    <LogOut className='w-5 h-5' />
+                    Logout
+                  </button>
                 </div>
               )}
             </div>
@@ -209,6 +277,9 @@ const Navbar = () => {
           window.location.hash === '#pricing'))
     )
   }
+
+  const isCustomerOrAdmin =
+    session?.user?.role === 'CUSTOMER' || session?.user?.role === 'ADMIN'
 
   return (
     <>
@@ -268,7 +339,7 @@ const Navbar = () => {
                 </Link>
 
                 {session ? (
-                  <div className='flex items-center space-x-6'>
+                  <div className='flex items-center space-x-8'>
                     <span className='flex items-center border-primary border-2 justify-center px-3.5 py-2 text-sm font-medium text-primary rounded-[32px] cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02]'>
                       <Link
                         href='/files/upload'
@@ -278,20 +349,10 @@ const Navbar = () => {
                         Upload File
                       </Link>
                     </span>
-                    <button
-                      onClick={() =>
-                        signOut({
-                          callbackUrl: process.env.NEXT_PUBLIC_SITE_URL,
-                        })
-                      }
-                      className='flex items-center gap-2 h-fit px-3.5 py-2 text-sm text-primary-foreground bg-primary rounded-[32px] cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02]'
-                    >
-                      <LogOut className='w-4 h-4' />
-                      Sign Out
-                    </button>
+                    {isCustomerOrAdmin ? <Profile /> : <TranscriberProfile />}
                   </div>
                 ) : (
-                  <div className='flex items-center space-x-6'>
+                  <div className='flex items-center space-x-8'>
                     <span className='flex items-center border-primary border-2 justify-center px-3.5 py-2 text-sm font-medium text-primary rounded-[32px] cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02]'>
                       <Link href='/signin' className='flex items-center gap-2'>
                         <LogIn className='w-4 h-4' />
@@ -327,6 +388,7 @@ const Navbar = () => {
         onClose={() => setIsMobileMenuOpen(false)}
         session={session}
         isActiveLink={isActiveLink}
+        isCustomerOrAdmin={isCustomerOrAdmin}
       />
     </>
   )
