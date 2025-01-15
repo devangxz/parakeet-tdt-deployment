@@ -7,9 +7,7 @@ const mockCharToWordIndex = (text: string, charIndex: number): number => {
     return textUpToIndex.split(/\s+/).filter(word => word.trim() !== '').length;
 };
 
-const mockUpdateAlignments = (newText: string, currentAlignments: AlignmentType[]): AlignmentType[] => {
-    return currentAlignments;
-};
+const mockUpdateAlignments = (newText: string, currentAlignments: AlignmentType[]): AlignmentType[] => currentAlignments;
 
 describe('updatePartialAlignment - Realignment Scenarios', () => {
     it('should handle single word insertion in the middle', () => {

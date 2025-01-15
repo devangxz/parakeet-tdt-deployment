@@ -92,6 +92,7 @@ import {
   playCurrentParagraphTimestamp,
   regenDocx,
 } from '@/utils/editorUtils'
+import formatDuration from '@/utils/formatDuration'
 
 const createShortcutControls = (
   audioPlayer: React.RefObject<HTMLAudioElement>
@@ -489,29 +490,12 @@ export default memo(function Header({
     }
   }
 
-  const formatTime = (seconds: number | undefined): string => {
-    if (!seconds) return '00:00'
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    const remainingSeconds = Math.floor(seconds % 60)
-
-    const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes
-    const formattedSeconds =
-      remainingSeconds < 10 ? `0${remainingSeconds}` : remainingSeconds
-
-    if (hours > 0) {
-      return `${hours}:${formattedMinutes}:${formattedSeconds}`
-    } else {
-      return `${formattedMinutes}:${formattedSeconds}`
-    }
-  }
-
   useEffect(() => {
     const audio = audioPlayer.current
     if (!audio) return
 
     const handleTimeUpdate = () => {
-      const currentTime = formatTime(audio.currentTime)
+      const currentTime = formatDuration(audio.currentTime)
       setCurrentTime(currentTime)
       const playedPercentage = (audio.currentTime / audio.duration) * 100
       setCurrentValue(playedPercentage)
@@ -532,7 +516,7 @@ export default memo(function Header({
     const percentage = (x / rect.width) * 100
     if (audioPlayer.current?.duration) {
       const time = (percentage / 100) * audioPlayer.current.duration
-      const timeString = formatTime(time)
+      const timeString = formatDuration(time)
 
       const tooltip = document.getElementById('time-tooltip')
       if (tooltip) {
@@ -1144,7 +1128,7 @@ export default memo(function Header({
             {currentTime}
           </span>
           <span className='absolute top-0 right-0 bg-primary text-white px-2 py-1 rounded text-xs'>
-            {formatTime(audioDuration)}
+            {formatDuration(audioDuration)}
           </span>
         </div>
       </div>

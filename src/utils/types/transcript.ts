@@ -16,7 +16,9 @@ export type AlignmentType = {
     end: number;
     conf: number;
     punct: string;
-    source: string;  // 'assembly_ai' for CTMs, user ID for edited/added words
+    source: string;
     speaker: string;
     turn?: number;
+    quillStart?: number;
+    quillEnd?: number;
 }

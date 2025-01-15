@@ -35,6 +35,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     const [typingTimer, setTypingTimer] = useState<NodeJS.Timeout | null>(null)
     const alignmentWorker = useRef<Worker | null>(null)
     const prevLineNodeRef = useRef<HTMLElement | null>(null);
+    const lastHighlightedRef = useRef<number | null>(null);
 
     const quillModules = {
         toolbar: false,
@@ -341,6 +342,187 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         }
     }, [alignments, typingTimer])
 
+    function findCurrentWordIndex(alignments: AlignmentType[], time: number, lastIndex: number | null): number  {
+        if (alignments.length === 0) return 0;
+    
+        // Find next non-meta index (includes current index)
+        const findNextNonMeta = (index: number) => {
+            while (index < alignments.length && alignments[index].type === 'meta') {
+                index++;
+            }
+            return index < alignments.length ? index : null;
+        };
+    
+        // Find previous non-meta index
+        const findPrevNonMeta = (index: number) => {
+            while (index >= 0 && alignments[index].type === 'meta') {
+                index--;
+            }
+            return index >= 0 ? index : null;
+        };
+        
+        // Sequential play optimization
+        if (lastIndex !== null) {
+            // If last index was meta, find next non-meta
+            if (alignments[lastIndex].type === 'meta') {
+                lastIndex = findNextNonMeta(lastIndex);
+                if (lastIndex === null) return alignments.length - 1;
+            }
+    
+            const lastWord = alignments[lastIndex];
+            
+            // Still in current word
+            if (time >= lastWord.start && time < lastWord.end) {
+                return lastIndex;
+            }
+            
+            // Moving forward
+            if (time >= lastWord.end) {
+                const nextIndex = findNextNonMeta(lastIndex + 1);
+                if (nextIndex !== null) {
+                    const nextWord = alignments[nextIndex];
+                    
+                    // In gap between words
+                    if (time < nextWord.start) {
+                        const timeToLastEnd = time - lastWord.end;
+                        const timeToNextStart = nextWord.start - time;
+                        return timeToLastEnd < timeToNextStart ? lastIndex : nextIndex;
+                    }
+                    
+                    // Within next word
+                    if (time < nextWord.end) {
+                        return nextIndex;
+                    }
+                }
+            } else {
+                // Moving backward
+                const prevIndex = findPrevNonMeta(lastIndex - 1);
+                if (prevIndex !== null) {
+                    const prevWord = alignments[prevIndex];
+                    if (time >= prevWord.start && time < prevWord.end) {
+                        return prevIndex;
+                    }
+                }
+            }
+        }
+        
+        // Binary search
+        let low = 0;
+        let high = alignments.length - 1;
+        
+        while (low <= high) {
+            const mid = (low + high) >> 1;
+            // Skip meta entries in binary search
+            const currentIndex = findNextNonMeta(mid);
+            if (currentIndex === null) {
+                high = mid - 1;
+                continue;
+            }
+            
+            const word = alignments[currentIndex];
+            
+            if (time >= word.start && time < word.end) {
+                return currentIndex;
+            }
+            
+            const prevIndex = findPrevNonMeta(currentIndex - 1);
+            if (prevIndex !== null) {
+                const prevWord = alignments[prevIndex];
+                if (time >= prevWord.end && time < word.start) {
+                    const prevDistance = time - prevWord.end;
+                    const nextDistance = word.start - time;
+                    return prevDistance < nextDistance ? prevIndex : currentIndex;
+                }
+            }
+            
+            if (time < word.start) {
+                high = mid - 1;
+            } else {
+                low = mid + 1;
+            }
+        }
+        
+        // Edge cases - find first/last non-meta entries
+        const firstNonMetaIndex = findNextNonMeta(0);
+        if (firstNonMetaIndex !== null && time < alignments[firstNonMetaIndex].start) {
+            return firstNonMetaIndex;
+        }
+        
+        const finalWordIndex = findPrevNonMeta(alignments.length - 1);
+        if (finalWordIndex !== null) {
+            return finalWordIndex;
+        }
+        
+        return 0;
+    }
+
+    // Inside your Editor component's timeUpdate handler
+    useEffect(() => {
+        if (!audioPlayer) return;
+        
+        const handleTimeUpdate = () => {            
+            const quill = quillRef.current?.getEditor();
+            if (!quill) return;
+        
+            const currentTime = audioPlayer.currentTime;
+            const currentWordIndex = findCurrentWordIndex(alignments, currentTime, lastHighlightedRef.current);
+            
+            // Skip if same word
+            if (currentWordIndex === lastHighlightedRef.current) return;
+        
+            // Un-highlight the old word
+            if (lastHighlightedRef.current !== null) {
+                const oldAl = alignments[lastHighlightedRef.current];
+                if (oldAl.quillStart !== undefined && oldAl.quillEnd !== undefined) {
+                    quill.formatText(oldAl.quillStart, oldAl.quillEnd - oldAl.quillStart, {
+                        background: null,
+                    });
+                }
+            }
+        
+            // Highlight the new word
+            const newAl = alignments[currentWordIndex];
+            if (newAl.quillStart !== undefined && newAl.quillEnd !== undefined) {
+                quill.formatText(newAl.quillStart, newAl.quillEnd - newAl.quillStart, {
+                    background: 'yellow',
+                });
+
+                const [line] = quill.getLine(newAl.quillStart);
+                if (!line) return;
+
+                const lineOffset = line.offset();
+                const bounds = quill.getBounds(lineOffset);
+                if (!bounds) return;
+                
+                const editorContainer = quill.root.closest('.ql-editor');
+                if (!editorContainer) return;
+                
+                // Get positions relative to editor container
+                const rect = line.domNode.getBoundingClientRect();
+                const containerRect = editorContainer.getBoundingClientRect();
+                
+                // Check if line's bottom is beyond 80% of container height
+                const lineBottomRelative = rect.bottom - containerRect.top;
+                const threshold = containerRect.height * 0.8;
+                
+                if (lineBottomRelative > threshold) {
+                    editorContainer.scrollTo({
+                        top: editorContainer.scrollTop + bounds.top - 50, // scroll to put line near top
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        
+            lastHighlightedRef.current = currentWordIndex;
+        };
+
+        audioPlayer.addEventListener('timeupdate', handleTimeUpdate);
+        
+        return () => {
+            audioPlayer.removeEventListener('timeupdate', handleTimeUpdate);
+        };
+    }, [alignments, audioPlayer]);
+
     useEffect(() => {
         initEditor()
     }, [initEditor])
@@ -351,7 +533,8 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             quill.setSelection(0, 0)
             setTimeout(() => {
                 handleCursorMove()
-            }, 0)        }
+            }, 0)        
+        }
     }, []);    
 
     // Create initial alignments once when component loads
@@ -534,6 +717,11 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             quill.off('selection-change', handleCursorMove);
         };
     }, [handleCursorMove]);
+
+    // const handleTimeUpdate = (currentTime: number) => {
+    //     // Handle the time update here
+    //     console.log('Audio time updated:', currentTime)
+    // }
 
     return (
         <>

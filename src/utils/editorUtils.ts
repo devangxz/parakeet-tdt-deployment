@@ -109,9 +109,7 @@ const updatePlayedPercentage = (
     setPlayedPercentage(Math.min(100, percentagePlayed)) // Ensure percentage does not exceed 100
 }
 
-const convertSecondsToTimestamp = (seconds: number) => {
-    return secondsToTs(seconds, true, 1)
-}
+const convertSecondsToTimestamp = (seconds: number) => secondsToTs(seconds, true, 1);
 
 const downloadMP3 = async (orderDetails: OrderDetails) => {
     const toastId = toast.loading('Downloading MP3...')
@@ -510,7 +508,6 @@ const handleSave = async (
             .split('\n')
             .filter((paragraph) => paragraph.trim() !== '')
         const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/
-        //const updatedCtms = updateContent(transcript, lines)
         for (const paragraph of paragraphs) {
             if (
                 !paragraphRegex.test(paragraph) &&
@@ -542,7 +539,6 @@ const handleSave = async (
             fileId: orderDetails.fileId,
             transcript,
             cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
-            //ctms: updatedCtms,
             orderId: orderDetails.orderId,
             // playerEvents: newEvents // Send only new events
         })
