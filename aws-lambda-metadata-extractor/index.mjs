@@ -104,7 +104,7 @@ export const handler = async (event) => {
         const fileNameWithExtension = `${fileName}.${fileExtension}`;
 
         console.log(`[${objectKey}] Processing file - ${fileId} of user - ${userId}`);
-        
+
         try {
             contentInfo = await validateFileType(bucketName, objectKey);
 
@@ -132,6 +132,8 @@ export const handler = async (event) => {
                 timeTakenToExtractMetadata: processingTimeInSeconds,
                 userId,
                 teamUserId,
+                parentId: s3Metadata.parent_id,
+                fullPath: s3Metadata.full_path
             };
 
             await sendWebhook(webhookData, uploadEnvironment);
@@ -195,7 +197,7 @@ const getMetadata = async (params) => {
         }
         return await runMediaInfo(tempFilePath);
     } finally {
-        await fs.unlink(tempFilePath).catch(error => 
+        await fs.unlink(tempFilePath).catch(error =>
             console.error(`[${params.Key}] Error deleting temp file:`, error));
     }
 };

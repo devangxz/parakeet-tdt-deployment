@@ -1,14 +1,14 @@
 'use client'
 
-import { Op } from 'quill/core'
-import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react'
+import { Delta, Op } from 'quill/core'
+import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 
-import { LineData, CTMSWord, WordData } from './transcriptUtils'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
-import { ConvertedASROutput, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
+import { CTMType, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
+import { createAlignments, getFormattedTranscript, AlignmentType } from '@/utils/transcript'
 
 // TODO:  Add valid values (start, end, duration, speaker) for the changed words.
 // TODO: Test if a new line is added with TS + speaker name
@@ -16,95 +16,40 @@ import { ConvertedASROutput, CustomerQuillSelection, insertTimestampAndSpeakerIn
 // TODO: Problem with updates near punctuation marks
 interface EditorProps {
     transcript: string
-    ctms: ConvertedASROutput[]
+    ctms: CTMType[]
     audioPlayer: HTMLAudioElement | null
     duration: number
     getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void
     orderDetails: OrderDetails
     content: Op[]
     setContent: (content: Op[]) => void
-    getLines: (lineData: LineData[]) => void
     setSelectionHandler: () => void
     selection: CustomerQuillSelection | null
     searchHighlight: CustomerQuillSelection | null
 }
 
-export default function Editor({ transcript, ctms, audioPlayer, duration, getQuillRef, orderDetails, content, setContent, getLines, setSelectionHandler, selection, searchHighlight }: EditorProps) {
+export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight }: EditorProps) {
+    const ctms = initialCtms; // Make CTMs constant
     const quillRef = useRef<ReactQuill>(null)
-    const [lines, setLines] = useState<LineData[]>([])
+    const [alignments, setAlignments] = useState<AlignmentType[]>([])
+    const [typingTimer, setTypingTimer] = useState<NodeJS.Timeout | null>(null)
+    const alignmentWorker = useRef<Worker | null>(null)
+    const prevLineNodeRef = useRef<HTMLElement | null>(null);
+
     const quillModules = {
         toolbar: false,
     }
 
-    //let ctms: CTMSWord[] = []
-
-    const processTranscript = useCallback(
-        (transcript: string, ctms: CTMSWord[]) => {
-            const textLines = transcript.split('\n')
-            const newLines: LineData[] = []
-            let ctmsIndex = 0
-            let wordIndex = 0
-
-            const newCtms_local: CTMSWord[] = []
-            textLines.forEach((line) => {
-                const lineContent: { insert: string }[] = []
-                const lineWords: WordData[] = []
-                const words = line.split(/\s+/)
-
-                for (let i = 0; i < words.length; i++) {
-                    if (words[i] != '') {
-                        const wordData: WordData = { word: words[i] }
-                        if (i < 2) {
-                            wordData.ctms = {
-                                start: 0,
-                                end: 0,
-                                word: words[i],
-                                punct: '',
-                                index: wordIndex,
-                                speaker: '',
-                            }
-                        } else if (ctmsIndex < ctms.length) {
-                            wordData.ctms = ctms[ctmsIndex]
-                            if (wordData.ctms) {
-                                wordData.ctms.index = wordIndex
-                                ctmsIndex += 1
-                            }
-                        } else {
-                            wordData.ctms = {
-                                start: 0,
-                                end: 0,
-                                word: words[i],
-                                punct: '',
-                                index: wordIndex,
-                                speaker: '',
-                            }
-                        }
-                        newCtms_local.push(wordData.ctms)
-                        lineWords.push(wordData)
-                        lineContent.push({ insert: words[i] })
-                        if (i < words.length - 1) {
-                            lineContent.push({ insert: ' ' })
-                        }
-                        wordIndex++
-                    }
-                }
-
-                lineContent.push({ insert: '\n' })
-                newLines.push({ content: lineContent, words: lineWords })
-            })
-
-            setLines(newLines)
-            return newCtms_local
-        },
-        []
-    )
+    const characterIndexToWordIndex = (text: string, charIndex: number): number => {
+        const textUpToIndex = text.slice(0, charIndex);
+        return textUpToIndex.split(/\s+/).filter(word => word.trim() !== '').length;
+    };
 
     const initEditor = useCallback(async () => {
-        processTranscript(transcript, ctms)
         const quill = quillRef.current?.getEditor()
         if (!quill) return
         quill.container.style.fontSize = '16px'
-    }, [processTranscript, transcript, ctms])
+    }, [])
 
     const getFormattedContent = (text: string) => {
         const timestampPattern = /\[\d:\d{2}:\d{2}\.\d\]\s_{4}/g;
@@ -123,23 +68,23 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         const quill = quillRef.current?.getEditor()
         if (!quill) return
 
-        // Get the contents as a Delta object instead of plain text
+        // Get the contents as a Delta object
         const delta = quill.getContents()
         setContent(delta.ops)
 
         // Store the text content in localStorage
+        const newText = quill.getText();
         localStorage.setItem('transcript', JSON.stringify({
-            [orderDetails.fileId]: quill.getText()
+            [orderDetails.fileId]: newText
         }))
-    }, [])
+    }, [orderDetails.fileId])
 
     useEffect(() => {
         if (!content.length) {
             const formattedContent = getFormattedContent(transcript);
             setContent(formattedContent);
         }
-        getLines(lines);
-    }, [lines, content.length, transcript]);
+    }, [content.length, transcript]);
 
     const handleEditorClick = useCallback(() => {
         const quill = quillRef.current?.getEditor()
@@ -148,21 +93,18 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         const clickPosition = quill.getSelection()?.index
         if (clickPosition === undefined) return
 
-        let currentPosition = 0
-        for (const line of lines) {
-            for (const wordData of line.words) {
-                const wordEnd = currentPosition + wordData.word.length
-                if (clickPosition >= currentPosition && clickPosition < wordEnd) {
-                    if (wordData.ctms && audioPlayer) {
-                        audioPlayer.currentTime = wordData.ctms.start;
-                    }
-                    return
-                }
-                currentPosition = wordEnd + 1 // +1 for the space
-            }
-            currentPosition++ // +1 for the newline
+        const text = quill.getText()
+        const wordIndex = characterIndexToWordIndex(text, clickPosition)
+        
+        if (wordIndex >= 0 && wordIndex < alignments.length && audioPlayer) {
+            const alignment = alignments[wordIndex]
+            console.log('Playing word:', alignment.word, 'at timestamp:', alignment.start)
+            audioPlayer.currentTime = alignment.start
+            audioPlayer.play()
+        } else {
+            console.log('Skipping playback - conditions not met')
         }
-    }, [lines, duration, audioPlayer])
+    }, [alignments, audioPlayer])
 
     const handlePlayAudioAtCursorPositionShortcut = useCallback(() => {
         const quill = quillRef.current?.getEditor();
@@ -345,8 +287,89 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
     useShortcuts(shortcutControls);
 
     useEffect(() => {
+        try {
+            // Initialize the Web Worker
+            alignmentWorker.current = new Worker(
+                new URL('@/utils/transcript/alignmentWorker.ts', import.meta.url)
+            );
+      
+            alignmentWorker.current.onmessage = (e) => {
+                const newAlignments = e.data;
+                setAlignments(newAlignments);
+                console.log('Updated alignments:', newAlignments);
+            };
+      
+            console.log('Web Worker initialized successfully.');
+        } catch (error) {
+            console.error('Failed to initialize Web Worker:', error);
+        }
+      
+        return () => {
+            if (alignmentWorker.current) {
+                alignmentWorker.current.terminate();
+                console.log('Web Worker terminated.');
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        const quill = quillRef.current?.getEditor()
+        if (!quill || !alignmentWorker.current) return
+
+        const handleTextChange = (delta: Delta, oldDelta: Delta, source: string) => {
+            if (source !== 'user') return
+
+            if (typingTimer) clearTimeout(typingTimer)
+            setTypingTimer(
+                setTimeout(() => {
+                    const rawText = quill.getText()
+                    alignmentWorker.current?.postMessage({
+                        newText: rawText,
+                        currentAlignments: alignments
+                    })
+                }, 1000)
+            )
+        }
+
+        quill.on('text-change', handleTextChange)
+
+        return () => {
+            quill.off('text-change', handleTextChange)
+            if (typingTimer) {
+                clearTimeout(typingTimer)
+            }
+        }
+    }, [alignments, typingTimer])
+
+    useEffect(() => {
         initEditor()
     }, [initEditor])
+
+    useEffect(() => {
+        if (quillRef.current) {
+            const quill = quillRef.current?.getEditor()
+            quill.setSelection(0, 0)
+            setTimeout(() => {
+                handleCursorMove()
+            }, 0)        }
+    }, []);    
+
+    // Create initial alignments once when component loads
+    useEffect(() => {
+        if (ctms.length > 0) {
+            const originalTranscript = getFormattedTranscript(ctms);
+            const newAlignments = createAlignments(originalTranscript, ctms);
+            setAlignments(newAlignments);
+
+            if(transcript) {
+                // Process any differences between original and current transcript
+                alignmentWorker.current?.postMessage({
+                    newText: transcript,
+                    currentAlignments: newAlignments
+                })
+            }
+        }
+    }, []) // Empty dependency array since ctms is constant
 
     useEffect(() => {
         const quill = quillRef.current?.getEditor()
@@ -447,20 +470,25 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
         const quill = quillRef.current?.getEditor()
         if (!quill || !selection) return
 
-        // Apply blue background to selected text
-        quill.formatText(selection.index, selection.length, {
-            background: '#D9D9D9'
-        })
+        // Only apply highlight to selected text
+        if (selection.length > 0) {
+            quill.formatText(selection.index, selection.length, {
+                background: '#D9D9D9'
+            })
+        }
     }
 
+    // Update handleFocus to preserve line highlight
     const handleFocus = () => {
         const quill = quillRef.current?.getEditor()
         if (!quill || !selection) return
 
-        // Remove blue background from selected text
-        quill.formatText(selection.index, selection.length, {
-            background: null
-        })
+        // Only remove highlight from selected text
+        if (selection.length > 0) {
+            quill.formatText(selection.index, selection.length, {
+                background: null
+            })
+        }
 
         // Remove search highlight if exists
         if (searchHighlight) {
@@ -469,6 +497,43 @@ export default function Editor({ transcript, ctms, audioPlayer, duration, getQui
             })
         }
     }
+
+    const handleCursorMove = useCallback(() => {
+        const quill = quillRef.current?.getEditor();
+        if (!quill) return;
+
+        const selection = quill.getSelection();
+        if (!selection) return;
+
+        // If the user is highlighting text, you may want to bail out:
+        if (selection.length > 0) return;
+
+        const [line] = quill.getLine(selection.index);
+        if (!line) return;
+
+        // If still in the same line as before, skip
+        const currentLineDomNode = line.domNode as HTMLElement;
+        if (prevLineNodeRef.current === currentLineDomNode) return;
+
+        // Remove highlight from old line
+        if (prevLineNodeRef.current) {
+            prevLineNodeRef.current.classList.remove("line-highlight");
+        }
+
+        // Add highlight to the new line
+        currentLineDomNode.classList.add("line-highlight");
+        prevLineNodeRef.current = currentLineDomNode;
+    }, []);
+
+    useEffect(() => {
+        const quill = quillRef.current?.getEditor();
+        if (!quill) return;
+
+        quill.on('selection-change', handleCursorMove);
+        return () => {
+            quill.off('selection-change', handleCursorMove);
+        };
+    }, [handleCursorMove]);
 
     return (
         <>

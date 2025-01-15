@@ -309,3 +309,11 @@ html {
 .instruction-row:hover + .table-row {
   background-color: hsl(var(--muted) / 0.5);
 }
+
+.line-highlight {
+  background-color: #EDEDED;
+}
+
+.ql-editor {
+  caret-color: red;
+}

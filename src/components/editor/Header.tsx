@@ -16,7 +16,7 @@ import {
 } from '@radix-ui/react-icons'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
+import { useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
@@ -27,7 +27,6 @@ import PlayerButton from './PlayerButton'
 import ReportDialog from './ReportDialog'
 import ShortcutsReferenceDialog from './ShortcutsReferenceDialog'
 import Toolbar from './Toolbar'
-import { LineData } from './transcriptUtils'
 import UploadDocxDialog from './UploadDocxDialog'
 import { Button } from '../ui/button'
 import { Checkbox } from '../ui/checkbox'
@@ -149,7 +148,6 @@ interface NewPlayerProps {
   submitting: boolean
   setIsSubmitModalOpen: React.Dispatch<React.SetStateAction<boolean>>
   setSubmitting: React.Dispatch<React.SetStateAction<boolean>>
-  lines: LineData[]
   playerEvents: PlayerEvent[]
   setPdfUrl: React.Dispatch<React.SetStateAction<string>>
   setRegenCount: React.Dispatch<React.SetStateAction<number>>
@@ -168,7 +166,7 @@ interface NewPlayerProps {
   toggleFindAndReplace: () => void
 }
 
-export default function Header({
+export default memo(function Header({
   getAudioPlayer,
   quillRef,
   editorModeOptions,
@@ -179,7 +177,6 @@ export default function Header({
   submitting,
   setIsSubmitModalOpen,
   setSubmitting,
-  lines,
   playerEvents,
   setPdfUrl,
   setRegenCount,
@@ -257,6 +254,7 @@ export default function Header({
   const [downloadableType, setDownloadableType] = useState('no-marking')
   const [asrFileUrl, setAsrFileUrl] = useState('')
   const [qcFileUrl, setQcFileUrl] = useState('')
+  const [LLMFileUrl, setLLMFileUrl] = useState('')
   const [reReviewComment, setReReviewComment] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
@@ -374,7 +372,19 @@ export default function Header({
   const decreaseFontSize = () => adjustFontSize(false)
 
   const shortcutControls = useMemo(
-    () => createShortcutControls(audioPlayer),
+    () => ({
+      ...createShortcutControls(audioPlayer),
+      togglePlay: () => {
+        if (!audioPlayer.current) return
+        if (audioPlayer.current.paused) {
+          audioPlayer.current.play().catch(error => {
+            console.error('Play error:', error)
+          })
+        } else {
+          audioPlayer.current.pause()
+        }
+      },
+    }),
     [audioPlayer]
   )
 
@@ -397,13 +407,19 @@ export default function Header({
 
   const fetchAudioUrl = async () => {
     try {
-      const { success, signedUrl } = await getSignedUrlAction(`${orderDetails.fileId}.mp3`, Math.max(Number(orderDetails.duration) * 4, 1800)) // 4 times the duration
+      console.log('Fetching audio URL for fileId:', orderDetails.fileId)
+      const { success, signedUrl } = await getSignedUrlAction(
+        `${orderDetails.fileId}.mp3`, 
+        Math.max(Number(orderDetails.duration) * 4, 1800)
+      )
       if (success && signedUrl) {
+        console.log('Got signed URL:', signedUrl)
         setAudioUrl(signedUrl)
       } else {
         throw new Error('Failed to fetch audio file')
       }
     } catch (error) {
+      console.error('Error fetching audio:', error)
       toast.error('Failed to fetch audio file')
     }
   }
@@ -416,18 +432,53 @@ export default function Header({
 
   useEffect(() => {
     const audio = audioPlayer.current
-    if (!audio) return
-    const handleLoadedMetadata = () => {
-      setAudioDuration(audio.duration)
-      setSpeed(audio.playbackRate * 100)
-      if (getAudioPlayer) getAudioPlayer(audio)
+    if (!audio || !audioUrl) return
+
+    // Initialize audio and pass to parent immediately
+    if (!audio.src || audio.src !== audioUrl) {
+        audio.src = audioUrl
     }
+    
+    // Always pass the audio player reference to parent
+    if (getAudioPlayer) {
+        getAudioPlayer(audio)
+    }
+        
+    const handleLoadStart = () => {
+        // Audio loading started
+    }
+
+    const handleCanPlayThrough = () => {
+        // Only set player loaded on initial load
+        if (!audio.currentTime) {
+            setIsPlayerLoaded(true)
+        }
+    }
+
+    const handleLoadedMetadata = () => {
+        if (!audioDuration) {
+            setAudioDuration(audio.duration)
+            setSpeed(audio.playbackRate * 100)
+        }
+    }
+
+    const handleError = (e: ErrorEvent) => {
+        console.error('Audio loading error:', e)
+        setIsPlayerLoaded(false)
+    }
+
+    audio.addEventListener('loadstart', handleLoadStart)
+    audio.addEventListener('canplaythrough', handleCanPlayThrough)
     audio.addEventListener('loadedmetadata', handleLoadedMetadata)
+    audio.addEventListener('error', handleError)
 
     return () => {
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+        audio.removeEventListener('loadstart', handleLoadStart)
+        audio.removeEventListener('canplaythrough', handleCanPlayThrough)
+        audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+        audio.removeEventListener('error', handleError)
     }
-  }, [audioPlayer, getAudioPlayer])
+  }, [audioUrl, getAudioPlayer])
 
   const seekTo = (value: number) => {
     if (!audioPlayer.current) return
@@ -474,6 +525,8 @@ export default function Header({
   }, [])
 
   const handleMouseMoveOnWaveform = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (typeof document === "undefined") return; // Ensure code runs only in the browser
+
     const rect = e.currentTarget.getBoundingClientRect()
     const x = e.clientX - rect.left
     const percentage = (x / rect.width) * 100
@@ -561,31 +614,36 @@ export default function Header({
       if (!audioPlayer || !audioPlayer.current || !videoRef.current) return
       const player = audioPlayer.current
       videoRef.current.volume = 0
-      player.onplay = () => videoRef.current?.play()
-      player.onpause = () => videoRef.current?.pause()
-      player.onseeked = () => {
-        if (!videoRef.current) return
-
-        videoRef.current.currentTime = player.currentTime
-      }
-      player.onseeking = () => {
+      
+      const handleAudioPlay = () => videoRef.current?.play()
+      const handleAudioPause = () => videoRef.current?.pause()
+      
+      player.addEventListener('play', handleAudioPlay)
+      player.addEventListener('pause', handleAudioPause)
+      
+      player.addEventListener('seeking', () => {
         if (videoRef.current) videoRef.current.currentTime = player.currentTime
+      })
+
+      return () => {
+        player.removeEventListener('play', handleAudioPlay)
+        player.removeEventListener('pause', handleAudioPause)
       }
     }
 
-    syncVideoWithAudio()
-    const interval = setInterval(() => {
-      if (!audioPlayer || !audioPlayer.current || !videoRef.current) return
-      if (
-        videoRef.current &&
-        audioPlayer.current.currentTime !== videoRef.current.currentTime
-      ) {
-        videoRef.current.currentTime = audioPlayer.current.currentTime
-      }
-    }, 1000)
+    if (videoPlayerOpen) {
+      const cleanup = syncVideoWithAudio()
+      const interval = setInterval(() => {
+        if (!audioPlayer || !audioPlayer.current || !videoRef.current) return
+        if (videoRef.current.currentTime !== audioPlayer.current.currentTime) {
+          videoRef.current.currentTime = audioPlayer.current.currentTime
+        }
+      }, 1000)
 
-    return () => {
-      clearInterval(interval)
+      return () => {
+        cleanup?.()
+        clearInterval(interval)
+      }
     }
   }, [audioPlayer, videoRef, videoPlayerOpen])
 
@@ -682,6 +740,8 @@ export default function Header({
   const handleDragChange = (
     e: React.MouseEvent<HTMLDivElement | HTMLVideoElement>
   ) => {
+    if (typeof document === "undefined") return; // Ensure code runs only in the browser
+
     e.preventDefault()
     const target = e.target as HTMLDivElement // Correctly typecast the event target
     const onMouseMove = (moveEvent: MouseEvent) => {
@@ -716,44 +776,80 @@ export default function Header({
     setRevertTranscriptOpen(!revertTranscriptOpen)
   }
 
+  function checkSpeakerOrder(speakers: Record<string, string>): boolean {
+    const expectedOrder = Object.keys(speakers).sort((a, b) => {
+      const numA = parseInt(a.replace('S', ''));
+      const numB = parseInt(b.replace('S', ''));
+      return numA - numB;
+    });
+
+    return Object.keys(speakers).every((key, index) => key === expectedOrder[index]);
+  }
+
   const toggleSpeakerName = async () => {
-    // Extract unique speakers from the transcript
     try {
-      if (quillRef && quillRef.current && !speakerName) {
+      if (quillRef && quillRef.current) { // Removed !speakerName condition to re-fetch every time
         const quill = quillRef.current.getEditor()
         const text = quill.getText()
         const speakerRegex = /\d{1,2}:\d{2}:\d{2}\.\d\s+(S\d+):/g
-        const speakers = new Set<string>()
+        const speakerOrder: string[] = []
         let match
 
+        // Collect speakers in order of appearance
         while ((match = speakerRegex.exec(text)) !== null) {
-          speakers.add(match[1])
+          const speaker = match[1]
+          if (!speakerOrder.includes(speaker)) {
+            speakerOrder.push(speaker)
+          }
         }
 
         const response = await getSpeakerNamesAction(orderDetails.fileId)
         const speakerNamesList = response.data
-        // Update the speakerName state
         const newSpeakerNames: Record<string, string> = {}
-        const maxSpeakers = Math.max(speakers.size, speakerNamesList.length)
 
-        for (let i = 0; i < maxSpeakers; i++) {
-          const speaker = Array.from(speakers)[i] || `S${i + 1}`
-          if (
+        // Map speaker names based on order of appearance
+        speakerOrder.forEach((speaker) => {
+          const speakerNumber = parseInt(speaker.replace('S', '')) - 1
+          // Preserve existing speaker names if they exist
+          if (speakerName && speakerName[speaker]) {
+            newSpeakerNames[speaker] = speakerName[speaker]
+          } else if (
             speakerNamesList &&
-            speakerNamesList[i] &&
-            (speakerNamesList[i].fn || speakerNamesList[i].ln)
+            speakerNamesList[speakerNumber] &&
+            (speakerNamesList[speakerNumber].fn || speakerNamesList[speakerNumber].ln)
           ) {
-            const { fn, ln } = speakerNamesList[i]
+            const { fn, ln } = speakerNamesList[speakerNumber]
             newSpeakerNames[speaker] = `${fn} ${ln}`.trim()
           } else {
-            newSpeakerNames[speaker] = `Speaker ${i + 1}`
+            newSpeakerNames[speaker] = `Speaker ${speakerNumber + 1}`
+          }
+        })
+
+        // Add any remaining speakers from the API that weren't in the transcript
+        const maxSpeakerNumber = Math.max(
+          ...speakerOrder.map(s => parseInt(s.replace('S', ''))),
+          speakerNamesList.length
+        )
+
+        for (let i = 1; i <= maxSpeakerNumber; i++) {
+          const speaker = `S${i}`
+          if (!newSpeakerNames[speaker]) {
+            if (speakerName && speakerName[speaker]) {
+              newSpeakerNames[speaker] = speakerName[speaker]
+            } else if (
+              speakerNamesList &&
+              speakerNamesList[i - 1] &&
+              (speakerNamesList[i - 1].fn || speakerNamesList[i - 1].ln)
+            ) {
+              const { fn, ln } = speakerNamesList[i - 1]
+              newSpeakerNames[speaker] = `${fn} ${ln}`.trim()
+            } else {
+              newSpeakerNames[speaker] = `Speaker ${i}`
+            }
           }
         }
 
-        setSpeakerName((prevState) => ({
-          ...prevState,
-          ...newSpeakerNames,
-        }))
+        setSpeakerName(newSpeakerNames) // Replace instead of merge with previous state
       }
       setIsSpeakerNameModalOpen(!isSpeakerNameModalOpen)
     } catch (error) {
@@ -798,10 +894,17 @@ export default function Header({
 
   const revertTranscript = async () => {
     const toastId = toast.loading('Reverting transcript...')
+    let type = 'QC'
+    if (orderDetails.status === 'REVIEWER_ASSIGNED') {
+      type = 'CF_REV'
+    } else if (orderDetails.status === 'FINALIZER_ASSIGNED') {
+      type = 'CF_FINALIZER'
+    }
+
     try {
       await axiosInstance.post(`${FILE_CACHE_URL}/revert-transcript`, {
         fileId: orderDetails.fileId,
-        type: 'QC',
+        type
       })
       toast.success('Transcript reverted successfully')
       localStorage.removeItem('transcript')
@@ -902,6 +1005,8 @@ export default function Header({
       setAsrFileUrl(asrFileUrl?.signedUrl || '')
       const qcFileUrl = await getTextFile(orderDetails.fileId, 'QC')
       setQcFileUrl(qcFileUrl?.signedUrl || '')
+      const LLMFileUrl = await getTextFile(orderDetails.fileId, 'LLM')
+      setLLMFileUrl(LLMFileUrl?.signedUrl || '')
     }
   }
 
@@ -971,6 +1076,24 @@ export default function Header({
     toast.success('Inserted swear in line text');
   }
 
+  const insertInterpreterSwearInLine = () => {
+    if (!quillRef?.current) return;
+
+    const quill = quillRef.current.getEditor();
+    const range = quill.getSelection();
+
+    if (!range) {
+      toast.error('Please place cursor where you want to insert the text');
+      return;
+    }
+
+    const textToInsert = "WHEREUPON, [--INTERPRETER--<replace_with_interpreter_name>--INTERPRETER--] the interpreter was duly sworn.";
+
+    quill.insertText(range.index, textToInsert);
+
+    toast.success('Inserted swear in line text');
+  }
+
   return (
     <div className='min-h-24 relative mx-2'>
       {!isPlayerLoaded && (
@@ -985,6 +1108,8 @@ export default function Header({
           className='relative h-full overflow-hidden'
           onMouseMove={handleMouseMoveOnWaveform}
           onMouseLeave={() => {
+            if (typeof document === "undefined") return; // Ensure code runs only in the browser
+
             const tooltip = document.getElementById('time-tooltip')
             if (tooltip) {
               tooltip.style.display = 'none'
@@ -1025,10 +1150,11 @@ export default function Header({
       </div>
 
       <div className='h-1/2 bg-white border border-gray-200 px-1 flex flex-col justify-between rounded-b-lg'>
-        <audio
-          ref={audioPlayer}
-          className='hidden'
-          src={`${audioUrl}`}
+        <audio 
+          ref={audioPlayer} 
+          className='hidden' 
+          src={audioUrl}
+          preload="auto"
         ></audio>
 
         <div className='flex items-center h-full'>
@@ -1171,6 +1297,7 @@ export default function Header({
                       handleAdjustTimestamps={handleAdjustTimestamps}
                       increaseFontSize={increaseFontSize}
                       decreaseFontSize={decreaseFontSize}
+                      insertInterpreterSwearInLine={insertInterpreterSwearInLine}
                     />
                   </div>}
                 </div>
@@ -1192,6 +1319,7 @@ export default function Header({
                   handleAdjustTimestamps={handleAdjustTimestamps}
                   increaseFontSize={increaseFontSize}
                   decreaseFontSize={decreaseFontSize}
+                  insertInterpreterSwearInLine={insertInterpreterSwearInLine}
                 />
               </div>
             </div>
@@ -1286,6 +1414,10 @@ export default function Header({
                     {(orderDetails.status === 'REVIEWER_ASSIGNED' || orderDetails.status === 'FINALIZER_ASSIGNED') &&
                       <DropdownMenuItem asChild>
                         <a href={qcFileUrl} target='_blank'>Download QC text</a>
+                      </DropdownMenuItem>}
+                    {(orderDetails.status === 'REVIEWER_ASSIGNED' || orderDetails.status === 'FINALIZER_ASSIGNED') &&
+                      <DropdownMenuItem asChild>
+                        <a href={LLMFileUrl} target='_blank'>Download LLM text</a>
                       </DropdownMenuItem>}
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -1407,7 +1539,6 @@ export default function Header({
                       notes,
                       cfd,
                       setButtonLoading,
-                      lines,
                       playerEvents,
                     })
                   }
@@ -1465,6 +1596,15 @@ export default function Header({
             </DialogDescription>
           </DialogHeader>
 
+          {speakerName && !checkSpeakerOrder(speakerName) && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-yellow-800 text-sm">
+                Warning: Speaker labels in the transcript are not in sequential order.
+                This may cause confusion. Please ensure the transcript follows the correct order before proceeding (S1, S2, S3...).
+              </p>
+            </div>
+          )}
+
           <div className='space-y-4'>
             {speakerName &&
               Object.entries(speakerName).map(([key, value], index) => (
@@ -1474,6 +1614,7 @@ export default function Header({
                 >
                   <Label htmlFor={key}>{key}:</Label>
                   <Input
+                    disabled={!checkSpeakerOrder(speakerName)}
                     id={key}
                     value={value}
                     onChange={(e) => handleSpeakerNameChange(e, key)}
@@ -1525,7 +1666,7 @@ export default function Header({
             <DialogClose asChild>
               <Button variant='outline'>Close</Button>
             </DialogClose>
-            <Button onClick={updateSpeakerName}>Update</Button>
+            <Button disabled={!checkSpeakerOrder(speakerName || {})} onClick={updateSpeakerName}>Update</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1698,4 +1839,4 @@ export default function Header({
       />
     </div>
   )
-}
+})

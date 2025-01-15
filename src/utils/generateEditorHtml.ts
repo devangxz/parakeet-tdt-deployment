@@ -1,4 +1,4 @@
-import { ConvertedASROutput, convertBlankToSeconds, convertTimestampToSeconds, generateRandomColor } from "./editorUtils";
+import { CTMType, convertBlankToSeconds, convertTimestampToSeconds, generateRandomColor } from "./editorUtils";
 
 function checkTimeStamp(timeStamp: string) {
     return /^\d+:[0-5][0-9]:[0-5][0-9].[0-9]$/.test(timeStamp);
@@ -12,7 +12,7 @@ function checkSpeakerName(speakerName: string) {
 
 const speakers: { [key: string]: string } = {}
 
-const generateHTML = (transcript: string, ctms: ConvertedASROutput[], type: string) => { //TODO: need to add ctms to the function
+const generateHTML = (transcript: string, ctms: CTMType[], type: string) => { //TODO: need to add ctms to the function
     let html = '';
     let wordIndex = 0
 
@@ -40,7 +40,7 @@ const generateHTML = (transcript: string, ctms: ConvertedASROutput[], type: stri
         return `<span class="word-span text-lg" data-index=${wordIndex} data-para-start-time=${paraStartTime} data-time-start=${timeStart} data-time-end=${timeEnd}>${item} </span>`
     }
 
-    ctms = ctms.flat().filter((item: ConvertedASROutput | null) => item !== null);
+    ctms = ctms.flat().filter((item: CTMType | null) => item !== null);
 
     const transcriptArray = transcript.split('\n').map(para => {
         if (para === '') {

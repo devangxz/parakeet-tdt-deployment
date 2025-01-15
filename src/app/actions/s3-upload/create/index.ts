@@ -22,7 +22,9 @@ export async function createMultipartUpload(
     userId: number
     internalTeamUserId?: number
   },
-  isYouTubeFile?: boolean
+  isYouTubeFile?: boolean,
+  parentId?: string | number | null,
+  fullPath?: string
 ) {
   try {
     let user
@@ -91,13 +93,15 @@ export async function createMultipartUpload(
         type: isYouTubeFile
           ? 'YOUTUBE_FILE'
           : fileExtension.toLowerCase() === '.docx'
-          ? 'DOCX_FILE'
-          : 'ORIGINAL_FILE',
+            ? 'DOCX_FILE'
+            : 'ORIGINAL_FILE',
         user_id: user.userId?.toString(),
         team_user_id:
           user.internalTeamUserId?.toString() || user.userId?.toString(),
         file_id: fileId,
         file_name: fileName,
+        parent_id: parentId?.toString() ?? '',
+        full_path: fullPath ? fullPath.split('/').slice(0, -1).join('/') : '',
       },
     })
     const data = await s3Client.send(command)

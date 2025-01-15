@@ -6,6 +6,8 @@ import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
 import axiosInstance from './axios'
+import { CTMType } from './getFormattedTranscript'
+import { secondsToTs } from './secondsToTs'
 import { getFrequentTermsAction } from '@/app/actions/editor/frequent-terms'
 import { getOrderDetailsAction } from '@/app/actions/editor/order-details'
 import { reportFileAction } from '@/app/actions/editor/report-file'
@@ -14,7 +16,6 @@ import { submitReviewAction } from '@/app/actions/editor/submit-review'
 import { uploadDocxAction } from '@/app/actions/editor/upload-docx'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { OrderDetails, UploadFilesType } from '@/app/editor/[fileId]/page'
-import { LineData, updateContent } from '@/components/editor/transcriptUtils'
 import {
     ALLOWED_META,
     BACKEND_URL,
@@ -85,21 +86,6 @@ function convertTimestampToSeconds(timestamp: string) {
     return totalSeconds
 }
 
-type ConvertedASROutput = {
-    start: number
-    duration: number
-    end: number
-    word: string
-    conf: number
-    chars: string
-    punct: string
-    source: string
-    turn_prob: number
-    index: number
-    speaker: string
-    turn?: number
-}
-
 const updatePlayedPercentage = (
     audioPlayer: HTMLAudioElement | null,
     audioPlayed: Set<number>,
@@ -124,13 +110,7 @@ const updatePlayedPercentage = (
 }
 
 const convertSecondsToTimestamp = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    const secondsLeft = seconds % 60
-
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${secondsLeft
-        .toFixed(1)
-        .padStart(4, '0')}`
+    return secondsToTs(seconds, true, 1)
 }
 
 const downloadMP3 = async (orderDetails: OrderDetails) => {
@@ -408,7 +388,7 @@ type FetchFileDetailsParams = {
     setCfd: React.Dispatch<React.SetStateAction<string>>
     setStep: React.Dispatch<React.SetStateAction<string>>
     setTranscript: React.Dispatch<React.SetStateAction<string>>
-    setCtms: React.Dispatch<React.SetStateAction<ConvertedASROutput[]>>
+    setCtms: React.Dispatch<React.SetStateAction<CTMType[]>>
     setPlayerEvents: React.Dispatch<React.SetStateAction<PlayerEvent[]>>
 }
 
@@ -474,6 +454,7 @@ const fetchFileDetails = async ({
         setPlayerEvents([]) // TODO: Implement player events
         return orderRes.orderDetails
     } catch (error) {
+        console.log(error)
         if (
             error instanceof Error &&
             'response' in error &&
@@ -501,7 +482,6 @@ type HandleSaveParams = {
     notes: string
     cfd: string
     setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
-    lines: LineData[]
     playerEvents: PlayerEvent[]
 }
 
@@ -512,7 +492,6 @@ const handleSave = async (
         notes,
         cfd,
         setButtonLoading,
-        lines,
         playerEvents,
     }: HandleSaveParams,
     showToast = true
@@ -531,7 +510,7 @@ const handleSave = async (
             .split('\n')
             .filter((paragraph) => paragraph.trim() !== '')
         const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/
-        const updatedCtms = updateContent(transcript, lines)
+        //const updatedCtms = updateContent(transcript, lines)
         for (const paragraph of paragraphs) {
             if (
                 !paragraphRegex.test(paragraph) &&
@@ -563,7 +542,7 @@ const handleSave = async (
             fileId: orderDetails.fileId,
             transcript,
             cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
-            ctms: updatedCtms,
+            //ctms: updatedCtms,
             orderId: orderDetails.orderId,
             // playerEvents: newEvents // Send only new events
         })
@@ -686,7 +665,8 @@ const handleSubmit = async ({
             if (!fileToUpload.isUploaded) throw new Error('UF')
             await submitReviewAction(
                 Number(orderDetails.orderId),
-                orderDetails.fileId
+                orderDetails.fileId,
+                transcript
             )
         } else {
             await submitQCAction({
@@ -1181,4 +1161,4 @@ export {
     insertTimestampAndSpeakerInitialAtStartOfCurrentLine,
     capitalizeWord
 }
-export type { ConvertedASROutput }
+export type { CTMType }
