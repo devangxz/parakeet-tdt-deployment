@@ -89,8 +89,8 @@ const CountrySelect = ({
       <PopoverTrigger asChild>
         <Button
           type='button'
-          variant={'outline'}
-          className={cn('flex gap-1 not-rounded px-3')}
+          variant={'order'}
+          className={cn('flex gap-1 not-rounded px-3 py-[18.5px]')}
           disabled={disabled}
         >
           <FlagComponent country={value} countryName={value} />

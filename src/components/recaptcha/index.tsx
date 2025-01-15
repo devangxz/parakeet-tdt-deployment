@@ -27,7 +27,7 @@ function Recaptcha({ setCaptcha }: { setCaptcha: (value: boolean) => void }) {
 
   return (
     <ReCAPTCHA
-      className='my-5 w-[350px]'
+      className='my-7 w-[350px]'
       sitekey={reCaptch_sitekey ?? ''}
       onChange={handleRecaptcha}
       data-testid='recaptcha'

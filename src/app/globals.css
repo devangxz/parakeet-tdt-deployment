@@ -10,6 +10,7 @@ html {
   :root {
     --primary: 263 75.6% 58%;
     --primary-foreground: 0 0% 100%;
+    --primary-dark: 263 75.6% 38%;
 
     --background: 0 0% 100%;
     --foreground: 263 50% 15%;
@@ -41,6 +42,7 @@ html {
   .dark {
     --primary: 263 75.6% 58%;
     --primary-foreground: 0 0% 100%;
+    --primary-dark: 263 75.6% 38%;
 
     --background: 263 60% 4%;
     --foreground: 263 10% 95%;
