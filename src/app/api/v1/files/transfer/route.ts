@@ -1,8 +1,8 @@
 import { NextResponse, NextRequest } from 'next/server'
 
 import logger from '@/lib/logger'
-import transferFiles from '@/services/file-service/transfer'
 import { authenticateRequest } from '@/services/auth-service/authenticate-api'
+import transferFiles from '@/services/file-service/transfer'
 
 export async function POST(request: NextRequest) {
   try {
