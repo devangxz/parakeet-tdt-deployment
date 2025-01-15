@@ -20,7 +20,6 @@ import {
 } from '@/components/editor/TabComponents'
 import { Tabs, TabsList, TabsTrigger } from '@/components/editor/Tabs'
 import renderTitleInputs from '@/components/editor/TitleInputs'
-import { LineData } from '@/components/editor/transcriptUtils'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -41,7 +40,7 @@ import {
   useShortcuts,
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
-  ConvertedASROutput,
+  CTMType,
   updatePlayedPercentage,
   regenDocx,
   fetchFileDetails,
@@ -108,7 +107,7 @@ function EditorPage() {
   const { data: session } = useSession()
   const [diff, setDiff] = useState<Change[]>([])
   const [transcript, setTranscript] = useState('')
-  const [ctms, setCtms] = useState<ConvertedASROutput[]>([])
+  const [ctms, setCtms] = useState<CTMType[]>([])
   const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null)
   const [step, setStep] = useState<string>('')
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false)
@@ -128,7 +127,6 @@ function EditorPage() {
   const [quillRef, setQuillRef] = useState<React.RefObject<ReactQuill>>()
 
   const [content, setContent] = useState<Op[]>([])
-  const [lines, setLines] = useState<LineData[]>([])
   const [findText, setFindText] = useState('')
   const [replaceText, setReplaceText] = useState('')
   const [matchCase, setMatchCase] = useState(false)
@@ -246,15 +244,15 @@ function EditorPage() {
     )
   }
 
-  const toggleFindAndReplace = () => {
-    setFindAndReplaceOpen(!findAndReplaceOpen)
+  const toggleFindAndReplace = useCallback(() => {
+    setFindAndReplaceOpen(prev => !prev)
     setSelectionHandler()
     setTimeout(() => {
       if (findInputRef.current) {
         findInputRef.current.focus()
       }
     }, 50)
-  }
+  }, [setSelectionHandler])
 
   const shortcutControls = useMemo(() => {
     const controls: Partial<ShortcutControls> = {
@@ -300,7 +298,6 @@ function EditorPage() {
           notes,
           cfd,
           setButtonLoading,
-          lines,
           playerEvents,
         })
       }
@@ -366,9 +363,9 @@ function EditorPage() {
     setDiff(diff)
   }
 
-  const getAudioPlayer = (audioPlayer: HTMLAudioElement | null) => {
+  const getAudioPlayer = useCallback((audioPlayer: HTMLAudioElement | null) => {
     setAudioPlayer(audioPlayer)
-  }
+  }, [])
 
   const [audioPlayed, setAudioPlayed] = useState(new Set<number>())
   const [playedPercentage, setPlayedPercentage] = useState(0)
@@ -382,7 +379,6 @@ function EditorPage() {
           notes,
           cfd,
           setButtonLoading,
-          lines,
           playerEvents,
         },
         false
@@ -390,7 +386,7 @@ function EditorPage() {
     }, 1000 * 60 * AUTOSAVE_INTERVAL)
 
     return () => clearInterval(interval)
-  }, [getEditorText, orderDetails, notes, step, cfd, lines])
+  }, [getEditorText, orderDetails, notes, step, cfd])
 
   useEffect(() => {
     const handleTimeUpdate = () => {
@@ -418,6 +414,10 @@ function EditorPage() {
 
   const getPlayedPercentage = () => playedPercentage
 
+  const getEditorMode = useCallback((editorMode: string) => {
+    setEditorMode(editorMode)
+  }, [])
+
   const getEditorModeOptions = async () => {
     try {
       // const response = await axiosInstance.get(`${BACKEND_URL}/get-options/${orderDetails.orderId}`);
@@ -427,10 +427,6 @@ function EditorPage() {
       toast.error('Error fetching editor mode options')
     }
   } //Setting the editor mode to manual for now at cf step
-
-  const getEditorMode = (editorMode: string) => {
-    setEditorMode(editorMode)
-  }
 
   useEffect(() => {
     if (step !== 'QC' && orderDetails.orderId) {
@@ -496,10 +492,6 @@ function EditorPage() {
       }
     }
   }, [orderDetails])
-
-  const getLines = (lineData: LineData[]) => {
-    setLines(lineData)
-  }
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value
@@ -567,7 +559,6 @@ function EditorPage() {
         submitting={submitting}
         setIsSubmitModalOpen={setIsSubmitModalOpen}
         setSubmitting={setSubmitting}
-        lines={lines}
         playerEvents={playerEvents}
         setPdfUrl={setPdfUrl}
         setRegenCount={setRegenCount}
@@ -615,7 +606,6 @@ function EditorPage() {
 
                       <EditorTabComponent
                         content={content}
-                        getLines={getLines}
                         setContent={setContent}
                         orderDetails={orderDetails}
                         transcript={transcript}

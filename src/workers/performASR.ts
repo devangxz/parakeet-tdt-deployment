@@ -5,7 +5,7 @@ import logger from "../lib/logger";
 import prisma from "../lib/prisma";
 import { redis } from '../lib/redis'
 import { getSignedURLFromS3 } from "../utils/backend-helper";
-import getFormattedTranscript, { convertASRArray, ConvertedASROutput } from "../utils/getFormattedTranscript";
+import { getFormattedTranscript, getCTMs, CTMType } from "../utils/transcript";
 
 async function transcribe(fileURL: string, fileId: string) {
     const client = new AssemblyAI({
@@ -22,15 +22,15 @@ async function transcribe(fileURL: string, fileId: string) {
         throw new Error('Transcription failed');
     }
 
-    const ctms = convertASRArray(transcriptData.words);
-    const transcript = getFormattedTranscript(transcriptData.words);
+    const ctms = getCTMs(transcriptData.words);
+    const transcript = getFormattedTranscript(ctms);
     logger.info(`<-- ASRAssemblyAI:transcribe ${fileId}`);
     return { transcript, ctms, words: transcriptData.words };
 }
 
 export async function performASR(fileId: string): Promise<{
     transcript: string;
-    ctms: ConvertedASROutput[];
+    ctms: CTMType[];
     words: Word[];
     ASRElapsedTime: number;
     fileId: string;
