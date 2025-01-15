@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { FileStatus } from '@prisma/client'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { completeMultipartUpload } from '@/app/actions/s3-upload/complete'
@@ -10,6 +11,7 @@ import {
   UPLOAD_MAX_RETRIES,
 } from '@/constants'
 import logger from '@/lib/logger'
+import prisma from '@/lib/prisma'
 import { authenticateRequest } from '@/services/auth-service/authenticate-api'
 import { generateUniqueId } from '@/utils/generateUniqueId'
 import { handleRetryableError } from '@/utils/uploadUtils'
@@ -29,6 +31,29 @@ interface UserInfo {
   internalTeamUserId?: number
 }
 
+const insertFileRecord = async (
+  fileId: string,
+  filename: string,
+  userId: number,
+  uploadedBy: number,
+  size: number,
+  duration: number
+) => {
+  const fileRecord = await prisma.file.create({
+    data: {
+      fileId,
+      filename,
+      fileKey: `${filename}_${fileId}.mp3`,
+      userId,
+      uploadedBy,
+      filesize: size.toString(),
+      duration,
+      fileStatus: FileStatus.NONE,
+    },
+  })
+  return fileRecord
+}
+
 export async function POST(req: NextRequest) {
   try {
     const userDetails = await authenticateRequest(req)
@@ -45,6 +70,26 @@ export async function POST(req: NextRequest) {
 
     const file = formData.get('file') as File
     const url = formData.get('url') as string
+    const type = formData.get('type') as string
+    const fileId = generateUniqueId()
+
+    if (type === 'ScribieDotComUpload') {
+      const filename = formData.get('filename') as string
+      const userId = userDetails.internalTeamUserId || userDetails.userId
+      const uploadedBy = userDetails.userId
+      const size = file.size
+      const duration = parseInt(formData.get('duration') as string)
+
+      await insertFileRecord(
+        fileId,
+        filename.split('.')[0],
+        userId,
+        uploadedBy,
+        size,
+        duration
+      )
+      logger.info('File record inserted successfully', { fileId })
+    }
 
     if (!file && !url) {
       return NextResponse.json(
@@ -67,10 +112,10 @@ export async function POST(req: NextRequest) {
 
     if (file) {
       logger.info('Handling file upload')
-      return handleFileUpload(file, userInfo)
+      return handleFileUpload(file, userInfo, fileId)
     } else {
       logger.info('Handling URL upload')
-      return handleUrlUpload(url, userInfo)
+      return handleUrlUpload(url, userInfo, fileId)
     }
   } catch (error) {
     logger.error('Upload failed:', error)
@@ -86,7 +131,11 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function handleFileUpload(file: File, userInfo: UserInfo) {
+async function handleFileUpload(
+  file: File,
+  userInfo: UserInfo,
+  fileId: string
+) {
   logger.info('Starting file upload handler', {
     fileName: file.name,
     fileSize: file.size,
@@ -124,7 +173,6 @@ async function handleFileUpload(file: File, userInfo: UserInfo) {
   }
 
   try {
-    const fileId = generateUniqueId()
     logger.info('Generated file ID', { fileId })
 
     // Initialize multipart upload
@@ -272,7 +320,11 @@ const extractFileName = (url: string): string => {
   }
 }
 
-async function handleUrlUpload(url: string, userInfo: UserInfo) {
+async function handleUrlUpload(
+  url: string,
+  userInfo: UserInfo,
+  fileId: string
+) {
   logger.info('Starting URL upload handler', { url })
   try {
     // Validate URL and get file metadata
@@ -314,7 +366,6 @@ async function handleUrlUpload(url: string, userInfo: UserInfo) {
     }
 
     const fileName = extractFileName(url)
-    const fileId = generateUniqueId()
     logger.info('Generated file details', { fileName, fileId })
 
     // Initialize multipart upload

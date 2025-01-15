@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
       // Create a new user with a random password
       memberUser = await prisma.user.create({
         data: {
-          email: memberEmail,
+          email: memberEmail.toLowerCase(),
           user: memberEmail,
         },
       })
