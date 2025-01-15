@@ -525,6 +525,8 @@ export default memo(function Header({
   }, [])
 
   const handleMouseMoveOnWaveform = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (typeof document === "undefined") return; // Ensure code runs only in the browser
+
     const rect = e.currentTarget.getBoundingClientRect()
     const x = e.clientX - rect.left
     const percentage = (x / rect.width) * 100
@@ -738,6 +740,8 @@ export default memo(function Header({
   const handleDragChange = (
     e: React.MouseEvent<HTMLDivElement | HTMLVideoElement>
   ) => {
+    if (typeof document === "undefined") return; // Ensure code runs only in the browser
+
     e.preventDefault()
     const target = e.target as HTMLDivElement // Correctly typecast the event target
     const onMouseMove = (moveEvent: MouseEvent) => {
@@ -1104,6 +1108,8 @@ export default memo(function Header({
           className='relative h-full overflow-hidden'
           onMouseMove={handleMouseMoveOnWaveform}
           onMouseLeave={() => {
+            if (typeof document === "undefined") return; // Ensure code runs only in the browser
+
             const tooltip = document.getElementById('time-tooltip')
             if (tooltip) {
               tooltip.style.display = 'none'
