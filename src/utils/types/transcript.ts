@@ -19,6 +19,6 @@ export type AlignmentType = {
     source: string;
     speaker: string;
     turn?: number;
-    quillStart?: number;
-    quillEnd?: number;
+    startPos?: number;
+    endPos?: number;
 }

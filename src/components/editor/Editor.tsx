@@ -7,8 +7,8 @@ import 'react-quill/dist/quill.snow.css'
 
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
-import { CTMType, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
-import { createAlignments, getFormattedTranscript, AlignmentType } from '@/utils/transcript'
+import { CTMType, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, scrollEditorToPos } from '@/utils/editorUtils'
+import { createAlignments, getFormattedTranscript, AlignmentType, getAlignmentIndexByTime } from '@/utils/transcript'
 
 // TODO:  Add valid values (start, end, duration, speaker) for the changed words.
 // TODO: Test if a new line is added with TS + speaker name
@@ -345,121 +345,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         }
     }, [alignments, typingTimer])
 
-    function findCurrentWordIndex(alignments: AlignmentType[], time: number, lastIndex: number | null): number  {
-        if (alignments.length === 0) return 0;
-    
-        // Find next non-meta index (includes current index)
-        const findNextNonMeta = (index: number) => {
-            while (index < alignments.length && alignments[index].type === 'meta') {
-                index++;
-            }
-            return index < alignments.length ? index : null;
-        };
-    
-        // Find previous non-meta index
-        const findPrevNonMeta = (index: number) => {
-            while (index >= 0 && alignments[index].type === 'meta') {
-                index--;
-            }
-            return index >= 0 ? index : null;
-        };
-        
-        // Sequential play optimization
-        if (lastIndex !== null) {
-            // If last index was meta, find next non-meta
-            if (alignments[lastIndex].type === 'meta') {
-                lastIndex = findNextNonMeta(lastIndex);
-                if (lastIndex === null) return alignments.length - 1;
-            }
-    
-            const lastWord = alignments[lastIndex];
-            
-            // Still in current word
-            if (time >= lastWord.start && time < lastWord.end) {
-                return lastIndex;
-            }
-            
-            // Moving forward
-            if (time >= lastWord.end) {
-                const nextIndex = findNextNonMeta(lastIndex + 1);
-                if (nextIndex !== null) {
-                    const nextWord = alignments[nextIndex];
-                    
-                    // In gap between words
-                    if (time < nextWord.start) {
-                        const timeToLastEnd = time - lastWord.end;
-                        const timeToNextStart = nextWord.start - time;
-                        return timeToLastEnd < timeToNextStart ? lastIndex : nextIndex;
-                    }
-                    
-                    // Within next word
-                    if (time < nextWord.end) {
-                        return nextIndex;
-                    }
-                }
-            } else {
-                // Moving backward
-                const prevIndex = findPrevNonMeta(lastIndex - 1);
-                if (prevIndex !== null) {
-                    const prevWord = alignments[prevIndex];
-                    if (time >= prevWord.start && time < prevWord.end) {
-                        return prevIndex;
-                    }
-                }
-            }
-        }
-        
-        // Binary search
-        let low = 0;
-        let high = alignments.length - 1;
-        
-        while (low <= high) {
-            const mid = (low + high) >> 1;
-            // Skip meta entries in binary search
-            const currentIndex = findNextNonMeta(mid);
-            if (currentIndex === null) {
-                high = mid - 1;
-                continue;
-            }
-            
-            const word = alignments[currentIndex];
-            
-            if (time >= word.start && time < word.end) {
-                return currentIndex;
-            }
-            
-            const prevIndex = findPrevNonMeta(currentIndex - 1);
-            if (prevIndex !== null) {
-                const prevWord = alignments[prevIndex];
-                if (time >= prevWord.end && time < word.start) {
-                    const prevDistance = time - prevWord.end;
-                    const nextDistance = word.start - time;
-                    return prevDistance < nextDistance ? prevIndex : currentIndex;
-                }
-            }
-            
-            if (time < word.start) {
-                high = mid - 1;
-            } else {
-                low = mid + 1;
-            }
-        }
-        
-        // Edge cases - find first/last non-meta entries
-        const firstNonMetaIndex = findNextNonMeta(0);
-        if (firstNonMetaIndex !== null && time < alignments[firstNonMetaIndex].start) {
-            return firstNonMetaIndex;
-        }
-        
-        const finalWordIndex = findPrevNonMeta(alignments.length - 1);
-        if (finalWordIndex !== null) {
-            return finalWordIndex;
-        }
-        
-        return 0;
-    }
-
-    // Inside your Editor component's timeUpdate handler
     useEffect(() => {
         if (!audioPlayer) return;
         
@@ -468,7 +353,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             if (!quill) return;
         
             const currentTime = audioPlayer.currentTime;
-            const currentWordIndex = findCurrentWordIndex(alignments, currentTime, lastHighlightedRef.current);
+            const currentWordIndex = getAlignmentIndexByTime(alignments, currentTime, lastHighlightedRef.current);
             
             // Skip if same word
             if (currentWordIndex === lastHighlightedRef.current) return;
@@ -476,8 +361,8 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             // Un-highlight the old word
             if (lastHighlightedRef.current !== null) {
                 const oldAl = alignments[lastHighlightedRef.current];
-                if (oldAl.quillStart !== undefined && oldAl.quillEnd !== undefined) {
-                    quill.formatText(oldAl.quillStart, oldAl.quillEnd - oldAl.quillStart, {
+                if (oldAl.startPos !== undefined && oldAl.endPos !== undefined) {
+                    quill.formatText(oldAl.startPos, oldAl.endPos - oldAl.startPos, {
                         background: null,
                     });
                 }
@@ -485,35 +370,12 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         
             // Highlight the new word
             const newAl = alignments[currentWordIndex];
-            if (newAl.quillStart !== undefined && newAl.quillEnd !== undefined) {
-                quill.formatText(newAl.quillStart, newAl.quillEnd - newAl.quillStart, {
+            if (newAl.startPos !== undefined && newAl.endPos !== undefined) {
+                quill.formatText(newAl.startPos, newAl.endPos - newAl.startPos, {
                     background: 'yellow',
                 });
 
-                const [line] = quill.getLine(newAl.quillStart);
-                if (!line) return;
-
-                const lineOffset = line.offset();
-                const bounds = quill.getBounds(lineOffset);
-                if (!bounds) return;
-                
-                const editorContainer = quill.root.closest('.ql-editor');
-                if (!editorContainer) return;
-                
-                // Get positions relative to editor container
-                const rect = line.domNode.getBoundingClientRect();
-                const containerRect = editorContainer.getBoundingClientRect();
-                
-                // Check if line's bottom is beyond 80% of container height
-                const lineBottomRelative = rect.bottom - containerRect.top;
-                const threshold = containerRect.height * 0.8;
-                
-                if (lineBottomRelative > threshold) {
-                    editorContainer.scrollTo({
-                        top: editorContainer.scrollTop + bounds.top - 50, // scroll to put line near top
-                        behavior: 'smooth'
-                    });
-                }
+                scrollEditorToPos(quill, newAl.startPos);
             }
         
             lastHighlightedRef.current = currentWordIndex;

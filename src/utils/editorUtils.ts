@@ -1131,11 +1131,39 @@ const insertTimestampBlankAtCursorPosition = (
     quill.setSelection(cursorPosition + formattedTime.length, 0)
 }
 
+const scrollEditorToPos = (quill: Quill, pos: number) => {
+    const [line] = quill.getLine(pos);
+    if (!line) return;
+
+    const lineOffset = line.offset();
+    const bounds = quill.getBounds(lineOffset);
+    if (!bounds) return;
+    
+    const editorContainer = quill.root.closest('.ql-editor');
+    if (!editorContainer) return;
+    
+    // Get positions relative to editor container
+    const rect = line.domNode.getBoundingClientRect();
+    const containerRect = editorContainer.getBoundingClientRect();
+    
+    // Check if line's bottom is beyond 80% of container height
+    const lineBottomRelative = rect.bottom - containerRect.top;
+    const threshold = containerRect.height * 0.8;
+    
+    if (lineBottomRelative > threshold) {
+        editorContainer.scrollTo({
+            top: editorContainer.scrollTop + bounds.top - 50, // scroll to put line near top
+            behavior: 'smooth'
+        });
+    }
+}
+
 export {
     generateRandomColor,
     convertBlankToSeconds,
     convertTimestampToSeconds,
     updatePlayedPercentage,
+    scrollEditorToPos,
     convertSecondsToTimestamp,
     downloadMP3,
     handleTextFilesUpload,

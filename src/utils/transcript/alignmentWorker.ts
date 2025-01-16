@@ -126,8 +126,8 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[]) {
                     end: lastRemovedAlignment!.end,
                     conf: lastRemovedAlignment!.conf,
                     speaker: lastRemovedAlignment!.speaker,
-                    quillStart: startPos,
-                    quillEnd: endPos
+                    startPos: startPos,
+                    endPos: endPos
                 };                
                 newAlignments.push(replaced);
                 newTokenIndex++;
@@ -159,8 +159,8 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[]) {
                             source: 'meta',
                             speaker: nextAlignment.speaker,
                             turn: nextAlignment.turn,
-                            quillStart: startPos,
-                            quillEnd: endPos
+                            startPos: startPos,
+                            endPos: endPos
                         });
                         newTokenIndex++;
                     } else {
@@ -192,8 +192,8 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[]) {
                             source: 'user',
                             speaker: nextAlignment.speaker,
                             turn: nextAlignment.turn,
-                            quillStart: startPos,
-                            quillEnd: endPos
+                            startPos: startPos,
+                            endPos: endPos
                         });
                     }
                 });
@@ -211,8 +211,8 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[]) {
 
                 newAlignments.push({
                     ...oldAl,
-                    quillStart: startPos,
-                    quillEnd: endPos
+                    startPos: startPos,
+                    endPos: endPos
                 });
             });
         }
