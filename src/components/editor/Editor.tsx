@@ -583,11 +583,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         };
     }, [handleCursorMove]);
 
-    // const handleTimeUpdate = (currentTime: number) => {
-    //     // Handle the time update here
-    //     console.log('Audio time updated:', currentTime)
-    // }
-
     return (
         <>
             {/* <ContextMenu>
