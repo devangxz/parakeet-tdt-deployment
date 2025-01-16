@@ -1,7 +1,7 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ReloadIcon } from '@radix-ui/react-icons'
+import { Mail, Loader2, LinkIcon } from 'lucide-react'
 import Link from 'next/link'
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -54,57 +54,70 @@ const ForgotPassword = () => {
   }
 
   return (
-    <>
-      <div className='w-full lg:grid lg:min-h-[600px] lg:grid-cols-2 xl:min-h-[800px]'>
-        <SideImage />
-        <div className='flex items-center justify-center py-12'>
-          <div className='mx-auto grid w-[350px] gap-6'>
-            <div className='grid gap-2 text-left'>
-              <h1 className='text-4xl font-bold'>Forgot password?</h1>
-              <p className='text-muted-foreground'>
+    <div className='w-full lg:grid lg:grid-cols-2'>
+      <SideImage />
+      <div className='flex items-center justify-center px-4 py-12 lg:px-8'>
+        <div className='w-full max-w-sm space-y-5'>
+          <div className='space-y-2.5 mb-6 text-center lg:text-left'>
+            <div>
+              <h1 className='text-4xl font-semibold tracking-tight'>
+                Get Reset Link
+              </h1>
+              <p className='mt-2 text-md text-gray-700'>
                 Enter your email address below and we&apos;ll get you back on
                 track
               </p>
             </div>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className='space-y-6'
-              >
-                <FormField
-                  control={form.control}
-                  name='email'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder='Email' {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {loading ? (
-                  <Button disabled className='w-full'>
-                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                    Request Reset Link
-                  </Button>
-                ) : (
-                  <Button type='submit' className='w-full'>
-                    Request Reset Link
-                  </Button>
+          </div>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <FormField
+                control={form.control}
+                name='email'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <div className='relative'>
+                        <Mail className='absolute left-3 top-[12px] h-4 w-4 text-muted-foreground' />
+                        <Input
+                          className='pl-9'
+                          placeholder='Enter email address'
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </form>
-            </Form>
-            <div className='mt-4 text-center text-sm'>
-              <Link href='/signin' className='font-bold text-primary'>
-                Back to Sign in
-              </Link>
-            </div>
+              />
+
+              <Button disabled={loading} type='submit' className='w-full mt-7'>
+                {loading ? (
+                  <>
+                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                    Please Wait
+                  </>
+                ) : (
+                  <>
+                    <LinkIcon className='mr-2 h-4 w-4' />
+                    Request Reset Link
+                  </>
+                )}
+              </Button>
+            </form>
+          </Form>
+
+          <div className='text-center text-sm text-gray-700'>
+            Remember your password?{' '}
+            <Link href='/signin' className='text-primary hover:underline'>
+              Sign In
+            </Link>
           </div>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 

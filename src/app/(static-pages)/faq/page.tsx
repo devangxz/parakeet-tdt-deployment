@@ -1,5 +1,5 @@
 'use client'
-import { MessagesSquare, SlidersHorizontal } from 'lucide-react'
+import { FileText, MessagesSquare } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 import {
@@ -13,91 +13,198 @@ import { StaticContent } from '@/constants'
 
 export default function Page() {
   const router = useRouter()
+
+  const faqCategories = {
+    service: StaticContent.faq.Accordian.slice(0, 5),
+    pricing: StaticContent.faq.Accordian.slice(5, 9),
+    files: StaticContent.faq.Accordian.slice(9, 13),
+    process: StaticContent.faq.Accordian.slice(13, 17),
+    security: StaticContent.faq.Accordian.slice(17, 19),
+    work: StaticContent.faq.Accordian.slice(19),
+  }
+
   return (
-    <div>
-      {/* First section  */}
-      <div className='hidden bg-muted lg:block py-[5rem]'>
-        <div className='grid gap-2 text-center'>
-          <h1 className='text-4xl font-bold'>FAQ</h1>
-          <p className='text-balance text-muted-foreground'>
-            Search our FAQ for answers to anything you might ask.
+    <section>
+      <div className='relative mx-auto max-w-7xl mt-16 sm:mt-20 md:mt-24 lg:mt-32 px-4 sm:px-6 lg:px-8 pb-10 lg:pb-20'>
+        <header className='text-center mb-8 sm:mb-12 lg:mb-16'>
+          <h1 className='text-4xl md:text-5xl lg:text-6xl font-bold text-foreground max-w-3xl lg:max-w-4xl mx-auto leading-tight md:leading-[1.3] lg:leading-[1.1]'>
+            Frequently Asked <span className='text-primary'>Questions</span>
+          </h1>
+
+          <p className='mt-4 sm:mt-6 lg:mt-8 text-gray-700 max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
+            Find answers to common questions about our transcription services
           </p>
-        </div>
-      </div>
-      {/* Second Section  */}
-      <div className='w-full lg:grid lg:grid-cols-2 py-[5rem]'>
-        {/* I Section  */}
-        <div className='flex flex-col items-center space-y-4'>
-          <div className='flex w-[510px] h-[496px] rounded-[32px] bg-[#322078] mx-auto'></div>
-          <p className=' text-slate-400 text-center mx-auto'>Get started with using our service/product <br /> to transcribe your files</p>
-          <Button className='mx-auto' onClick={()=>router.push("/customer-guide")}>Customer Guide</Button>
-        </div>
-        {/* II Section  */}
-        <div className='space-y-4'>
-          <div className='text-4xl font-semibold'>Human Transcription</div>
-          <div className='space-y-2'>
-            {StaticContent.faq.Accordian.map(
-              (
-                question: { heading: string; content: string },
-                index: number
-              ) => (
+        </header>
+
+        <main className='mt-16 sm:mt-20 md:mt-24 lg:mt-32'>
+          <div className='mb-16'>
+            <h2 className='text-3xl sm:text-4xl font-bold mb-8'>Get Started</h2>
+            <div className='space-y-4'>
+              {faqCategories.service.map((question, index) => (
                 <Accordion key={index} type='single' collapsible>
-                  <AccordionItem value={question.heading}>
-                    <AccordionTrigger className='text-lg'>
+                  <AccordionItem
+                    value={question.heading}
+                    className='border border-border rounded-xl overflow-hidden bg-card'
+                  >
+                    <AccordionTrigger className='px-6 py-4 hover:bg-primary/5 text-lg'>
                       {question.heading}
                     </AccordionTrigger>
-                    <AccordionContent className='text-lg'>
+                    <AccordionContent className='px-6 py-4 text-gray-700 text-base sm:text-lg'>
                       {question.content}
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
-              )
-            )}
+              ))}
+            </div>
           </div>
-        </div>
-      </div>
-      {/* Third Section  */}
-      <div className='w-[100%] flex justify-center gap-[10%] py-[5rem]'>
-        <HelpCTA
-          Icon={MessagesSquare}
-          heading="Can't find your answer?"
-          description="We want to answer all of your queries. Get in touch and we'll get back to you as soon as we can."
-          callback={() => router.push("/contact")}
-        />
-        <HelpCTA
-          Icon={SlidersHorizontal}
-          heading='Technical issue'
-          description='Have some technical issues? File a bug report or contact our technical team.'
-          callback={() => router.push("/contact")}
-        />
-      </div>
-    </div>
-  )
-}
 
-function HelpCTA({
-  Icon,
-  heading,
-  description,
-  callback,
-}: {
-  Icon: React.ElementType
-  heading: string
-  description: string
-  callback: () => void
-}) {
-  return (
-    <div
-      onClick={() => callback()}
-      className='flex flex-start gap-2 w-[30%] p-[1.5rem] border-2 rounded-md cursor-pointer hover:shadow-[rgba(0,0,0,0.05)_0px_1px_2px_0px]' // TODO: on hover add border color
-    >
-      <i>
-        <Icon />
-      </i>
-      <div>
-        <p className='text-[1.3rem] font-semibold'>{heading}</p>
-        <p>{description}</p>
+          <div className='mb-16'>
+            <h2 className='text-3xl sm:text-4xl font-bold mb-8'>Pricing</h2>
+            <div className='space-y-4'>
+              {faqCategories.pricing.map((question, index) => (
+                <Accordion key={index} type='single' collapsible>
+                  <AccordionItem
+                    value={question.heading}
+                    className='border border-border rounded-xl overflow-hidden bg-card'
+                  >
+                    <AccordionTrigger className='px-6 py-4 hover:bg-primary/5 text-lg'>
+                      {question.heading}
+                    </AccordionTrigger>
+                    <AccordionContent className='px-6 py-4 text-gray-700 text-base sm:text-lg'>
+                      {question.content}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              ))}
+            </div>
+          </div>
+
+          <div className='mb-16'>
+            <h2 className='text-3xl sm:text-4xl font-bold mb-8'>
+              File Formats
+            </h2>
+            <div className='space-y-4'>
+              {faqCategories.files.map((question, index) => (
+                <Accordion key={index} type='single' collapsible>
+                  <AccordionItem
+                    value={question.heading}
+                    className='border border-border rounded-xl overflow-hidden bg-card'
+                  >
+                    <AccordionTrigger className='px-6 py-4 hover:bg-primary/5 text-lg'>
+                      {question.heading}
+                    </AccordionTrigger>
+                    <AccordionContent className='px-6 py-4 text-gray-700 text-base sm:text-lg'>
+                      {question.content}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              ))}
+            </div>
+          </div>
+
+          <div className='mb-16'>
+            <h2 className='text-3xl sm:text-4xl font-bold mb-8'>Process</h2>
+            <div className='space-y-4'>
+              {faqCategories.process.map((question, index) => (
+                <Accordion key={index} type='single' collapsible>
+                  <AccordionItem
+                    value={question.heading}
+                    className='border border-border rounded-xl overflow-hidden bg-card'
+                  >
+                    <AccordionTrigger className='px-6 py-4 hover:bg-primary/5 text-lg'>
+                      {question.heading}
+                    </AccordionTrigger>
+                    <AccordionContent className='px-6 py-4 text-gray-700 text-base sm:text-lg'>
+                      {question.content}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              ))}
+            </div>
+          </div>
+
+          <div className='mb-16'>
+            <h2 className='text-3xl sm:text-4xl font-bold mb-8'>Security</h2>
+            <div className='space-y-4'>
+              {faqCategories.security.map((question, index) => (
+                <Accordion key={index} type='single' collapsible>
+                  <AccordionItem
+                    value={question.heading}
+                    className='border border-border rounded-xl overflow-hidden bg-card'
+                  >
+                    <AccordionTrigger className='px-6 py-4 hover:bg-primary/5 text-lg'>
+                      {question.heading}
+                    </AccordionTrigger>
+                    <AccordionContent className='px-6 py-4 text-gray-700 text-base sm:text-lg'>
+                      {question.content}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              ))}
+            </div>
+          </div>
+
+          <div className='mb-16'>
+            <h2 className='text-3xl sm:text-4xl font-bold mb-8'>Join Us</h2>
+            <div className='space-y-4'>
+              {faqCategories.work.map((question, index) => (
+                <Accordion key={index} type='single' collapsible>
+                  <AccordionItem
+                    value={question.heading}
+                    className='border border-border rounded-xl overflow-hidden bg-card'
+                  >
+                    <AccordionTrigger className='px-6 py-4 hover:bg-primary/5 text-lg'>
+                      {question.heading}
+                    </AccordionTrigger>
+                    <AccordionContent className='px-6 py-4 text-gray-700 text-base sm:text-lg'>
+                      {question.content}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              ))}
+            </div>
+          </div>
+        </main>
+
+        <section className='mt-20 sm:mt-28 md:mt-32 lg:mt-40 grid md:grid-cols-2 gap-8'>
+          <div className='relative'>
+            <div className='relative bg-primary-foreground p-8 rounded-2xl h-full border border-border'>
+              <h3 className='text-xl font-semibold mb-4'>New to Scribie?</h3>
+              <p className='text-gray-700 mb-8'>
+                Get started with our guide to make the most of our transcription
+                services
+              </p>
+              <Button
+                onClick={() => router.push('/customer-guide')}
+                variant='outline'
+                className='w-full py-6 text-lg border-primary/20 hover:bg-primary/5 flex items-center justify-center gap-2'
+              >
+                <FileText className='w-5 h-5' />
+                View Guide
+              </Button>
+            </div>
+          </div>
+
+          <div className='relative'>
+            <div className='relative bg-primary-foreground p-8 rounded-2xl h-full border border-border'>
+              <h3 className='text-xl font-semibold mb-4'>
+                Still Have Questions?
+              </h3>
+              <p className='text-gray-700 mb-8'>
+                Can&apos;t find what you&apos;re looking for? Our support team
+                is here to help you
+              </p>
+              <Button
+                onClick={() => router.push('/contact')}
+                className='w-full bg-primary text-primary-foreground hover:bg-primary/90 py-6 text-lg flex items-center justify-center gap-2'
+              >
+                <MessagesSquare className='w-5 h-5' />
+                Contact Support
+              </Button>
+            </div>
+          </div>
+        </section>
       </div>
-    </div>
+    </section>
   )
 }

@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
+import { UserCheck, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -30,12 +31,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-const ResetPassword = () => {
+const VerifyAccount = () => {
   const params = useParams()
   const { status, update, data: session } = useSession()
   const [isLoading, setIsLoading] = useState(true)
   const [loading, setLoading] = useState(false)
   const [invalidToken, setInvalidToken] = useState(false)
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -97,120 +99,140 @@ const ResetPassword = () => {
       } else {
         toast.error(`Failed to save source`)
       }
-      setLoading(false)
     } catch (error) {
       toast.error(`Failed to save source`)
+    } finally {
+      setLoading(false)
     }
   }
 
   if (isLoading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '80vh',
-        }}
-      >
-        <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-        <p>Loading...</p>
+      <div className='w-full lg:grid lg:grid-cols-2'>
+        <SideImage />
+        <div className='flex items-center justify-center px-4 py-12 lg:px-8'>
+          <div className='flex items-center space-x-2'>
+            <ReloadIcon className='h-4 w-4 animate-spin' />
+            <p>Verifying your account...</p>
+          </div>
+        </div>
       </div>
     )
   }
 
   if (invalidToken) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          flexDirection: 'column',
-          height: '80vh',
-        }}
-      >
-        <div>Token is not valid, pls check your mail.</div>
-        <Link
-          href={status !== 'authenticated' ? '/signin' : '/files/upload'}
-          className='font-bold text-primary'
-        >
-          {status !== 'authenticated' ? 'Back to Sign in' : 'Back to Dashboard'}
-        </Link>
-      </div>
-    )
-  }
-  return (
-    <>
-      <div className='w-full lg:grid lg:min-h-[600px] lg:grid-cols-2 xl:min-h-[800px]'>
+      <div className='w-full lg:grid lg:grid-cols-2'>
         <SideImage />
-        <div className='flex items-center justify-center py-12'>
-          <div className='mx-auto grid w-[350px] gap-6'>
-            <div className='grid gap-2 text-left'>
-              <h1 className='text-4xl font-bold'>Thank you</h1>
-              <p className='text-muted-foreground'>For verifying your email</p>
+        <div className='flex items-center justify-center px-4 py-12 lg:px-8'>
+          <div className='w-full max-w-sm text-center'>
+            <div className='space-y-2.5 mb-6'>
+              <h1 className='text-4xl font-semibold tracking-tight'>
+                Invalid Token
+              </h1>
+              <p className='mt-2 text-md text-gray-700'>
+                The verification link appears to be invalid. Please check your
+                email for the correct link.
+              </p>
             </div>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className='space-y-6'
-              >
-                <FormField
-                  control={form.control}
-                  name='source'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>How did you hear about us?</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder='Select how you find us' />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value='Google'>Google</SelectItem>
-                          <SelectItem value='Bing'>Bing</SelectItem>
-                          <SelectItem value='Facebook'>Facebook</SelectItem>
-                          <SelectItem value='Twitter'>Twitter</SelectItem>
-                          <SelectItem value='A friend'>A friend</SelectItem>
-                          <SelectItem value='Other'>Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {loading ? (
-                  <Button disabled className='w-full'>
-                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                    Submit
-                  </Button>
-                ) : (
-                  <Button type='submit' className='w-full'>
-                    Submit
-                  </Button>
-                )}
-              </form>
-            </Form>
-            <div className='mt-4 text-center text-sm'>
+            <div className='text-center text-sm'>
               <Link
                 href={status !== 'authenticated' ? '/signin' : '/files/upload'}
-                className='font-bold text-primary'
+                className='text-primary hover:underline'
               >
                 {status !== 'authenticated'
-                  ? 'Back to Sign in'
+                  ? 'Back to Sign In'
                   : 'Back to Dashboard'}
               </Link>
             </div>
           </div>
         </div>
       </div>
-    </>
+    )
+  }
+
+  return (
+    <div className='w-full lg:grid lg:grid-cols-2'>
+      <SideImage />
+      <div className='flex items-center justify-center px-4 py-12 lg:px-8'>
+        <div className='w-full max-w-sm space-y-5'>
+          <div className='space-y-2.5 mb-6 text-center lg:text-left'>
+            <div>
+              <h1 className='text-4xl font-semibold tracking-tight'>
+                Thank you
+              </h1>
+              <p className='mt-2 text-md text-gray-700'>
+                Your email has been successfully verified
+              </p>
+            </div>
+          </div>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-7'>
+              <FormField
+                control={form.control}
+                name='source'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>How did you hear about us?</FormLabel>
+                    <FormControl>
+                      <div className='relative'>
+                        <UserCheck className='absolute left-3 top-[12px] h-4 w-4 text-muted-foreground z-10' />
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className='pl-9'>
+                              <SelectValue placeholder='Select how you found us' />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value='Google'>Google</SelectItem>
+                            <SelectItem value='Bing'>Bing</SelectItem>
+                            <SelectItem value='Facebook'>Facebook</SelectItem>
+                            <SelectItem value='Twitter'>Twitter</SelectItem>
+                            <SelectItem value='A friend'>A friend</SelectItem>
+                            <SelectItem value='Other'>Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button disabled={loading} type='submit' className='w-full mt-7'>
+                {loading ? (
+                  <>
+                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                    Please Wait
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className='mr-2 h-4 w-4' />
+                    Submit
+                  </>
+                )}
+              </Button>
+            </form>
+          </Form>
+
+          <div className='text-center text-sm'>
+            <Link
+              href={status !== 'authenticated' ? '/signin' : '/files/upload'}
+              className='text-primary hover:underline'
+            >
+              {status !== 'authenticated'
+                ? 'Back to Sign In'
+                : 'Back to Dashboard'}
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
-export default ResetPassword
+export default VerifyAccount
