@@ -7,8 +7,8 @@ import 'react-quill/dist/quill.snow.css'
 
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
-import { CTMType, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, } from '@/utils/editorUtils'
-import { createAlignments, getFormattedTranscript, AlignmentType } from '@/utils/transcript'
+import { CTMType, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, scrollEditorToPos } from '@/utils/editorUtils'
+import { createAlignments, getFormattedTranscript, AlignmentType, getAlignmentIndexByTime } from '@/utils/transcript'
 
 // TODO:  Add valid values (start, end, duration, speaker) for the changed words.
 // TODO: Test if a new line is added with TS + speaker name
@@ -35,8 +35,12 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     const [typingTimer, setTypingTimer] = useState<NodeJS.Timeout | null>(null)
     const alignmentWorker = useRef<Worker | null>(null)
     const prevLineNodeRef = useRef<HTMLElement | null>(null);
+    const lastHighlightedRef = useRef<number | null>(null);
 
     const quillModules = {
+        history: {
+            userOnly: true
+        },        
         toolbar: false,
     }
 
@@ -342,6 +346,49 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     }, [alignments, typingTimer])
 
     useEffect(() => {
+        if (!audioPlayer) return;
+        
+        const handleTimeUpdate = () => {            
+            const quill = quillRef.current?.getEditor();
+            if (!quill) return;
+        
+            const currentTime = audioPlayer.currentTime;
+            const currentWordIndex = getAlignmentIndexByTime(alignments, currentTime, lastHighlightedRef.current);
+            
+            // Skip if same word
+            if (currentWordIndex === lastHighlightedRef.current) return;
+        
+            // Un-highlight the old word
+            if (lastHighlightedRef.current !== null) {
+                const oldAl = alignments[lastHighlightedRef.current];
+                if (oldAl.startPos !== undefined && oldAl.endPos !== undefined) {
+                    quill.formatText(oldAl.startPos, oldAl.endPos - oldAl.startPos, {
+                        background: null,
+                    });
+                }
+            }
+        
+            // Highlight the new word
+            const newAl = alignments[currentWordIndex];
+            if (newAl.startPos !== undefined && newAl.endPos !== undefined) {
+                quill.formatText(newAl.startPos, newAl.endPos - newAl.startPos, {
+                    background: 'yellow',
+                });
+
+                scrollEditorToPos(quill, newAl.startPos);
+            }
+        
+            lastHighlightedRef.current = currentWordIndex;
+        };
+
+        audioPlayer.addEventListener('timeupdate', handleTimeUpdate);
+        
+        return () => {
+            audioPlayer.removeEventListener('timeupdate', handleTimeUpdate);
+        };
+    }, [alignments, audioPlayer]);
+
+    useEffect(() => {
         initEditor()
     }, [initEditor])
 
@@ -351,7 +398,8 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             quill.setSelection(0, 0)
             setTimeout(() => {
                 handleCursorMove()
-            }, 0)        }
+            }, 0)        
+        }
     }, []);    
 
     // Create initial alignments once when component loads

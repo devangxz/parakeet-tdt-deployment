@@ -71,6 +71,120 @@ export function updatePartialAlignment(
     ];
 }
 
+export function getAlignmentIndexByTime(alignments: AlignmentType[], time: number, lastIndex: number | null): number  {
+    if (alignments.length === 0) return 0;
+
+    // Find next non-meta index (includes current index)
+    const findNextNonMeta = (index: number) => {
+        while (index < alignments.length && alignments[index].type === 'meta') {
+            index++;
+        }
+        return index < alignments.length ? index : null;
+    };
+
+    // Find previous non-meta index
+    const findPrevNonMeta = (index: number) => {
+        while (index >= 0 && alignments[index].type === 'meta') {
+            index--;
+        }
+        return index >= 0 ? index : null;
+    };
+    
+    // Sequential play optimization
+    if (lastIndex !== null) {
+        // If last index was meta, find next non-meta
+        if (alignments[lastIndex].type === 'meta') {
+            lastIndex = findNextNonMeta(lastIndex);
+            if (lastIndex === null) return alignments.length - 1;
+        }
+
+        const lastWord = alignments[lastIndex];
+        
+        // Still in current word
+        if (time >= lastWord.start && time < lastWord.end) {
+            return lastIndex;
+        }
+        
+        // Moving forward
+        if (time >= lastWord.end) {
+            const nextIndex = findNextNonMeta(lastIndex + 1);
+            if (nextIndex !== null) {
+                const nextWord = alignments[nextIndex];
+                
+                // In gap between words
+                if (time < nextWord.start) {
+                    const timeToLastEnd = time - lastWord.end;
+                    const timeToNextStart = nextWord.start - time;
+                    return timeToLastEnd < timeToNextStart ? lastIndex : nextIndex;
+                }
+                
+                // Within next word
+                if (time < nextWord.end) {
+                    return nextIndex;
+                }
+            }
+        } else {
+            // Moving backward
+            const prevIndex = findPrevNonMeta(lastIndex - 1);
+            if (prevIndex !== null) {
+                const prevWord = alignments[prevIndex];
+                if (time >= prevWord.start && time < prevWord.end) {
+                    return prevIndex;
+                }
+            }
+        }
+    }
+    
+    // Binary search
+    let low = 0;
+    let high = alignments.length - 1;
+    
+    while (low <= high) {
+        const mid = (low + high) >> 1;
+        // Skip meta entries in binary search
+        const currentIndex = findNextNonMeta(mid);
+        if (currentIndex === null) {
+            high = mid - 1;
+            continue;
+        }
+        
+        const word = alignments[currentIndex];
+        
+        if (time >= word.start && time < word.end) {
+            return currentIndex;
+        }
+        
+        const prevIndex = findPrevNonMeta(currentIndex - 1);
+        if (prevIndex !== null) {
+            const prevWord = alignments[prevIndex];
+            if (time >= prevWord.end && time < word.start) {
+                const prevDistance = time - prevWord.end;
+                const nextDistance = word.start - time;
+                return prevDistance < nextDistance ? prevIndex : currentIndex;
+            }
+        }
+        
+        if (time < word.start) {
+            high = mid - 1;
+        } else {
+            low = mid + 1;
+        }
+    }
+    
+    // Edge cases - find first/last non-meta entries
+    const firstNonMetaIndex = findNextNonMeta(0);
+    if (firstNonMetaIndex !== null && time < alignments[firstNonMetaIndex].start) {
+        return firstNonMetaIndex;
+    }
+    
+    const finalWordIndex = findPrevNonMeta(alignments.length - 1);
+    if (finalWordIndex !== null) {
+        return finalWordIndex;
+    }
+    
+    return 0;
+}
+
 export function createAlignments(text: string, ctms: CTMType[]): AlignmentType[] {
     const words = text.split(/\s+/);
     const alignments: AlignmentType[] = [];
