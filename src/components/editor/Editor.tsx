@@ -38,6 +38,9 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     const lastHighlightedRef = useRef<number | null>(null);
 
     const quillModules = {
+        history: {
+            userOnly: true
+        },        
         toolbar: false,
     }
 
