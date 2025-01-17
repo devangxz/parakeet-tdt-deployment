@@ -1115,19 +1115,9 @@ const insertTimestampBlankAtCursorPosition = (
     }
 
     const currentTime = audioPlayer.currentTime
+    const formattedTime = `[${secondsToTs(currentTime, true, 1)}] ____ `
 
-    const hours = Math.floor(currentTime / 3600)
-    const minutes = Math.floor((currentTime % 3600) / 60)
-    const seconds = Math.floor(currentTime % 60)
-    const milliseconds = Math.floor((currentTime % 1) * 10)
-
-    const formattedTime = ` [${hours}:${minutes
-        .toString()
-        .padStart(2, '0')}:${seconds
-            .toString()
-            .padStart(2, '0')}.${milliseconds}] ____`
-
-    quill.insertText(cursorPosition, formattedTime, { color: '#FF0000' })
+    quill.insertText(cursorPosition, formattedTime, 'user');    
     quill.setSelection(cursorPosition + formattedTime.length, 0)
 }
 

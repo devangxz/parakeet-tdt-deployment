@@ -10,10 +10,6 @@ import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcu
 import { CTMType, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, scrollEditorToPos } from '@/utils/editorUtils'
 import { createAlignments, getFormattedTranscript, AlignmentType, getAlignmentIndexByTime } from '@/utils/transcript'
 
-// TODO:  Add valid values (start, end, duration, speaker) for the changed words.
-// TODO: Test if a new line is added with TS + speaker name
-// TODO: A meta text is added, this should have empty ctm
-// TODO: Problem with updates near punctuation marks
 interface EditorProps {
     transcript: string
     ctms: CTMType[]
@@ -28,6 +24,11 @@ interface EditorProps {
     searchHighlight: CustomerQuillSelection | null
 }
 
+interface HistoryState {
+    content: Op[];
+    selection?: { index: number; length: number };
+}
+
 export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight }: EditorProps) {
     const ctms = initialCtms; // Make CTMs constant
     const quillRef = useRef<ReactQuill>(null)
@@ -36,9 +37,12 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     const alignmentWorker = useRef<Worker | null>(null)
     const prevLineNodeRef = useRef<HTMLElement | null>(null);
     const lastHighlightedRef = useRef<number | null>(null);
+    const [undoStack, setUndoStack] = useState<HistoryState[]>([]);
+    const [redoStack, setRedoStack] = useState<HistoryState[]>([]);
+    const TYPING_PAUSE = 500; // Half second pause indicates word completion
 
     const quillModules = {
-        history: { userOnly: true },
+        history: false,
         toolbar: false,
     };
 
@@ -53,7 +57,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         quill.container.style.fontSize = '16px'
     }, [])
 
-    const getFormattedContent = (text: string) => {
+    const getFormattedContent = (text: string, pushToHistory = false) => {
         const formattedContent: Op[] = [];
         let lastIndex = 0;
         
@@ -96,7 +100,15 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         if (lastIndex < text.length) {
             formattedContent.push({ insert: text.slice(lastIndex) });
         }
-    
+
+        if (pushToHistory) {
+            setUndoStack(prev => [...prev, { 
+                content: formattedContent,
+                selection: quillRef.current?.getEditor()?.getSelection() || undefined
+            }]);
+            setRedoStack([]);
+        }
+
         return formattedContent;
     };
 
@@ -343,57 +355,166 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     useEffect(() => {
         const quill = quillRef.current?.getEditor();
         if (!quill || !alignmentWorker.current) return;
-
+    
         const handleTextChange = (delta: Delta, oldDelta: Delta, source: string) => {
             if (source !== 'user') return;
-
+    
+            // Add to undo stack immediately for text changes
+            if (delta.ops?.some(op => op.insert || op.delete)) {
+                setUndoStack(prev => [...prev, {
+                    content: oldDelta.ops, // Save the state before change
+                    selection: quill.getSelection() || undefined
+                }]);
+                setRedoStack([]); // Clear redo stack on new change
+            }
+    
             if (typingTimer) clearTimeout(typingTimer);
-
+    
             setTypingTimer(
                 setTimeout(() => {
-                    quill.off('text-change', handleTextChange);
-
-                    // Get the current selection (cursor or highlight)
                     const currentSelection = quill.getSelection();
-
                     const rawText = quill.getText();
                     const newOps = getFormattedContent(rawText);
-
-                    // Update editor contents
+    
+                    // Format the text without adding to undo stack
                     quill.setContents(newOps);
-
-                    // Restore the selection if we had one
                     if (currentSelection) {
-                        quill.setSelection(currentSelection.index, currentSelection.length);
+                        quill.setSelection(currentSelection);
                     }
-
-                    // Send to alignment worker
+    
                     alignmentWorker.current?.postMessage({
                         newText: rawText,
                         currentAlignments: alignments,
                     });
-
-                    // Re-attach the listener
-                    quill.on('text-change', handleTextChange);
-
-                    // Update your React state / local storage
+    
                     setContent(newOps);
                     localStorage.setItem(
                         'transcript',
                         JSON.stringify({ [orderDetails.fileId]: rawText })
                     );
-                }, 1000)
+                }, TYPING_PAUSE)
             );
         };
-
+    
         quill.on('text-change', handleTextChange);
-
         return () => {
             quill.off('text-change', handleTextChange);
             if (typingTimer) clearTimeout(typingTimer);
         };
     }, [alignments, typingTimer]);
-      
+
+    useEffect(() => {
+        // Override execCommand to monitor browser undo/redo
+        const originalExecCommand = document.execCommand;
+        document.execCommand = function(command, ...args) {
+            console.log('Browser execCommand called:', command, args);
+            if (command === 'undo' || command === 'redo') {
+                return false;
+            }
+            return originalExecCommand.call(this, command, ...args);
+        };
+    
+        const quill = quillRef.current?.getEditor();
+        if (!quill) return;
+    
+        const editor = quill.root;
+        editor.addEventListener('beforeinput', (e) => {
+            console.log('beforeinput:', e.inputType);
+            if (e.inputType === 'historyUndo' || e.inputType === 'historyRedo') {
+                e.preventDefault();
+            }
+        }, true);
+    
+        editor.setAttribute('spellcheck', 'false');
+        editor.setAttribute('autocorrect', 'off');
+        editor.setAttribute('autocapitalize', 'off');
+    
+        const handleKeyDown = (e: KeyboardEvent) => {
+            console.log('Key pressed:', e.key, 'Meta/Ctrl:', e.metaKey || e.ctrlKey, 'Shift:', e.shiftKey);
+    
+            // Undo
+            if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                
+                console.log('Undo triggered, undo stack length:', undoStack.length);
+                if (undoStack.length === 0) {
+                    console.log('No more undo states available');
+                    return;
+                }
+    
+                const stateToRestore = undoStack[undoStack.length - 1];
+                console.log('Restoring state from undo stack:', stateToRestore);
+                setUndoStack(prev => prev.slice(0, -1));
+    
+                // Save current state to redo stack
+                const currentState = {
+                    content: quill.getContents().ops,
+                    selection: quill.getSelection() || undefined
+                };
+                console.log('Saving current state to redo stack:', currentState);
+                setRedoStack(prev => [...prev, currentState]);
+    
+                // Restore state
+                console.log('Setting editor contents and selection');
+                quill.setContents(stateToRestore.content);
+                if (stateToRestore.selection) {
+                    quill.setSelection(stateToRestore.selection);
+                }
+            }
+            
+            // Redo
+            if (((e.metaKey || e.ctrlKey) && e.key === 'y') || 
+                ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z')) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                
+                console.log('Redo triggered, redo stack length:', redoStack.length);
+                if (redoStack.length === 0) {
+                    console.log('No more redo states available');
+                    return;
+                }
+    
+                const stateToRestore = redoStack[redoStack.length - 1];
+                console.log('Restoring state from redo stack:', stateToRestore);
+                setRedoStack(prev => prev.slice(0, -1));
+    
+                // Save current state to undo stack
+                const currentState = {
+                    content: quill.getContents().ops,
+                    selection: quill.getSelection() || undefined
+                };
+                console.log('Saving current state to undo stack:', currentState);
+                setUndoStack(prev => [...prev, currentState]);
+    
+                // Restore state
+                console.log('Setting editor contents and selection');
+                quill.setContents(stateToRestore.content);
+                if (stateToRestore.selection) {
+                    quill.setSelection(stateToRestore.selection);
+                }
+            }
+        };
+
+        const handleBeforeInput = (e: InputEvent) => {
+            if (e.inputType === 'historyUndo' || e.inputType === 'historyRedo') {
+                e.preventDefault();
+            }
+        };
+            
+        // Attach at capture phase at document level
+        document.addEventListener('keydown', handleKeyDown, true);
+        editor.addEventListener('beforeinput', handleBeforeInput, true);
+    
+        return () => {
+            document.execCommand = originalExecCommand;
+            document.removeEventListener('keydown', handleKeyDown, true);
+            if (editor) {
+                editor.removeEventListener('beforeinput', handleBeforeInput, true);
+            }
+        };
+    }, [undoStack, redoStack]); // Add dependencies
+
     useEffect(() => {
         if (!audioPlayer) return;
         
