@@ -2,7 +2,7 @@
 import { DialogDescription } from '@radix-ui/react-dialog'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import JSZip from 'jszip';
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '../ui/button'
@@ -33,7 +33,6 @@ const DownloadModal = ({
         'srt': false,
     })
 
-    // Function to download multiple files as a zip
     async function downloadFilesAsZip(files: { name: string, content: Blob }[]) {
         const zip = new JSZip();
 
@@ -65,7 +64,6 @@ const DownloadModal = ({
         }
     }
 
-    // Example with fetch:
     async function downloadRemoteFilesAsZip(fileUrls: { url: string, name: string }[]) {
         const files = await Promise.all(
             fileUrls.map(async (file) => {
@@ -81,7 +79,15 @@ const DownloadModal = ({
         await downloadFilesAsZip(files);
     }
 
-    const handleSelectAllTypes = () => { }
+    const handleSelectAllTypes = () => {
+        setSelectedTypes({
+            'microsoft-word': true,
+            'pdf': true,
+            'plain-text': true,
+            'vtt': true,
+            'srt': true,
+        })
+    }
 
     const handleDownloadStep = async () => {
         const toastId = toast.loading('Generating zip file...')
@@ -106,8 +112,20 @@ const DownloadModal = ({
             setIsLoading(false)
             setIsDownloadDialogOpen(false)
         }
-        // setStep(2)
     }
+
+    useEffect(() => {
+        if (isDownloadDialogOpen) {
+            setStep(1)
+            setSelectedTypes({
+                'microsoft-word': false,
+                'pdf': false,
+                'plain-text': false,
+                'vtt': false,
+                'srt': false,
+            })
+        }
+    }, [isDownloadDialogOpen])
 
     return <Dialog open={isDownloadDialogOpen} onOpenChange={setIsDownloadDialogOpen}>
         <DialogContent>
@@ -119,23 +137,23 @@ const DownloadModal = ({
             </DialogHeader>
             {(step === 1 && !isLoading) && <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center space-x-2">
-                    <Checkbox onCheckedChange={(isChecked) => setSelectedTypes({ ...selectedTypes, 'microsoft-word': !!isChecked })} id="microsoft-word" />
+                    <Checkbox checked={selectedTypes['microsoft-word']} onCheckedChange={(isChecked) => setSelectedTypes({ ...selectedTypes, 'microsoft-word': !!isChecked })} id="microsoft-word" />
                     <Label htmlFor="microsoft-word">Microsoft Word</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <Checkbox onCheckedChange={(isChecked) => setSelectedTypes({ ...selectedTypes, 'pdf': !!isChecked })} id="pdf" />
+                    <Checkbox checked={selectedTypes['pdf']} onCheckedChange={(isChecked) => setSelectedTypes({ ...selectedTypes, 'pdf': !!isChecked })} id="pdf" />
                     <Label htmlFor="pdf">Adobe PDF</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <Checkbox onCheckedChange={(isChecked) => setSelectedTypes({ ...selectedTypes, 'plain-text': !!isChecked })} id="plain-text" />
+                    <Checkbox checked={selectedTypes['plain-text']} onCheckedChange={(isChecked) => setSelectedTypes({ ...selectedTypes, 'plain-text': !!isChecked })} id="plain-text" />
                     <Label htmlFor="plain-text">Plain Text</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <Checkbox onCheckedChange={(isChecked) => setSelectedTypes({ ...selectedTypes, 'vtt': !!isChecked })} id="vtt" />
+                    <Checkbox checked={selectedTypes['vtt']} onCheckedChange={(isChecked) => setSelectedTypes({ ...selectedTypes, 'vtt': !!isChecked })} id="vtt" />
                     <Label htmlFor="vtt">WebVTT Subtitle</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                    <Checkbox onCheckedChange={(isChecked) => setSelectedTypes({ ...selectedTypes, 'srt': !!isChecked })} id="srt" />
+                    <Checkbox checked={selectedTypes['srt']} onCheckedChange={(isChecked) => setSelectedTypes({ ...selectedTypes, 'srt': !!isChecked })} id="srt" />
                     <Label htmlFor="srt">SubRip Subtitle</Label>
                 </div>
             </div>}
