@@ -445,8 +445,7 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
               })
 
             // Replace the files array with extracted files
-            processedFiles = extractedFiles
-
+            processedFiles = [...extractedFiles, ...filesUnderSizeLimit.filter(file => !file.name.endsWith('.zip'))]
             if (processedFiles.length === 0) {
               toast.error('No valid files found in the zip archive')
               return
