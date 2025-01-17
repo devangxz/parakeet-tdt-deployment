@@ -2,7 +2,7 @@
 import { DialogDescription } from '@radix-ui/react-dialog'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import JSZip from 'jszip';
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '../ui/button'
@@ -114,20 +114,19 @@ const DownloadModal = ({
         }
     }
 
-    useEffect(() => {
-        if (isDownloadDialogOpen) {
-            setStep(1)
-            setSelectedTypes({
-                'microsoft-word': false,
-                'pdf': false,
-                'plain-text': false,
-                'vtt': false,
-                'srt': false,
-            })
-        }
-    }, [isDownloadDialogOpen])
+    const handleOpenChange = (value: boolean) => {
+        setIsDownloadDialogOpen(value)
+        setStep(1)
+        setSelectedTypes({
+            'microsoft-word': false,
+            'pdf': false,
+            'plain-text': false,
+            'vtt': false,
+            'srt': false,
+        })
+    }
 
-    return <Dialog open={isDownloadDialogOpen} onOpenChange={setIsDownloadDialogOpen}>
+    return <Dialog open={isDownloadDialogOpen} onOpenChange={handleOpenChange}>
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>Download Zip</DialogTitle>

@@ -304,7 +304,6 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
       }
 
       let filesToUpload: FileWithId[] = []
-      console.log('filesUnderSizeLimit', filesUnderSizeLimit)
 
       if (fileInputRef.current) fileInputRef.current.value = ''
       if (folderInputRef.current) folderInputRef.current.value = ''
