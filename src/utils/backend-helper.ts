@@ -65,7 +65,7 @@ export const getTeamAdminUserDetails = async (internalAdminUserId: number) => {
     })
 
     if (!teamMember) {
-      logger.error(
+      logger.info(
         `No team found with the given internal admin user ID ${internalAdminUserId}`
       )
       return false
@@ -340,7 +340,7 @@ export const getEmailDetails = async (userId: number, paidBy: number = 0) => {
       })
 
       if (!teamMember) {
-        logger.error(
+        logger.info(
           `No team found with the given internal admin user ID ${userId}`
         )
         return false

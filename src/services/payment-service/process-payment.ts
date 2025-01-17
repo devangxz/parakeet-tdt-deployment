@@ -32,10 +32,10 @@ export const processPayment = async (
       }
 
       const file_ids = invoice.itemNumber?.split(',') ?? []
+      let instructions = invoice.instructions
       const invoiceOptions = JSON.parse(invoice.options ?? '{}')
       for (const fileId of file_ids) {
         const tatHours = invoiceOptions.exd == 1 ? 12 : 24
-        let instructions = invoice.instructions
         if (orderType === OrderType.TRANSCRIPTION_FORMATTING) {
           const file = await prisma.file.findUnique({
             where: {
@@ -70,13 +70,9 @@ export const processPayment = async (
             orderTs: new Date(),
             deadlineTs: addHours(new Date(), tatHours),
             deliveryTs: addHours(new Date(), tatHours),
-            instructions: invoice.instructions,
+            instructions: instructions,
           },
         })
-
-        // TODO: add order service
-        // await OrderService.add(order.id, OrderTrigger.CREATE_ORDER)
-        // logger.info(`Order created for file ${fileId}`)
       }
       const getEmails = await getEmailDetails(invoice.userId, paidBy)
       if (!getEmails) {
@@ -125,9 +121,9 @@ export const processPayment = async (
       }
 
       await ses.sendMail('ORDER_CONFIRMATION', emailData, templateData)
-      if (invoice.instructions) {
+      if (instructions) {
         await ses.sendMail('SEND_INSTRUCTIONS', instructionData, {
-          instructions: invoice.instructions,
+          instructions: instructions,
           customerEmail: getEmails.email || '',
           fileIds: invoice.itemNumber ?? '',
           invoiceId: invoice.invoiceId,
