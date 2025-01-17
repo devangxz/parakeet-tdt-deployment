@@ -38,11 +38,9 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     const lastHighlightedRef = useRef<number | null>(null);
 
     const quillModules = {
-        history: {
-            userOnly: true
-        },        
+        history: { userOnly: true },
         toolbar: false,
-    }
+    };
 
     const characterIndexToWordIndex = (text: string, charIndex: number): number => {
         const textUpToIndex = text.slice(0, charIndex);
@@ -56,32 +54,51 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     }, [])
 
     const getFormattedContent = (text: string) => {
-        const timestampPattern = /\[\d:\d{2}:\d{2}\.\d\]\s_{4}/g;
-        const parts = text.split(/((?:\[\d:\d{2}:\d{2}\.\d\]\s_{4})|(?:\d:\d{2}:\d{2}\.\d\s+S\d+:))/g);
-        const formattedContent = parts.map(part => {
-            if (timestampPattern.test(part)) {
-                return { insert: part, attributes: { color: '#FF0000' } };
+        const formattedContent: Op[] = [];
+        let lastIndex = 0;
+        
+        // Update pattern to explicitly include the timestamp+blank pattern
+        const pattern = /(\d:\d{2}:\d{2}\.\d\s+S\d+:|(?:\[\d:\d{2}:\d{2}\.\d\]\s+____)|\[[^\]]+\])/g;
+        let match;
+        
+        while ((match = pattern.exec(text)) !== null) {
+            if (match.index > lastIndex) {
+                formattedContent.push({ insert: text.slice(lastIndex, match.index) });
             }
-            return { insert: part };
-        });
-
-        return formattedContent.filter(part => part.insert.trim() !== '');
-    }
-
-    const handleContentChange = useCallback(() => {
-        const quill = quillRef.current?.getEditor()
-        if (!quill) return
-
-        // Get the contents as a Delta object
-        const delta = quill.getContents()
-        setContent(delta.ops)
-
-        // Store the text content in localStorage
-        const newText = quill.getText();
-        localStorage.setItem('transcript', JSON.stringify({
-            [orderDetails.fileId]: newText
-        }))
-    }, [orderDetails.fileId])
+    
+            const matchedText = match[0];
+            
+            // Rule 1: TS + Speaker labels
+            if (matchedText.match(/^\d:\d{2}:\d{2}\.\d\s+S\d+:/)) {
+                formattedContent.push({ 
+                    insert: matchedText,
+                    attributes: { bold: true }
+                });
+            }
+            // Rule 2: TS + blank (complete pattern)
+            else if (matchedText.match(/\[\d:\d{2}:\d{2}\.\d\]\s+____/)) {
+                formattedContent.push({ 
+                    insert: matchedText,
+                    attributes: { color: '#FF0000' }
+                });
+            }
+            // Rule 3: Any other bracketed content
+            else if (matchedText.startsWith('[')) {
+                formattedContent.push({ 
+                    insert: matchedText,
+                    attributes: { background: '#f5f5f5', color: '#4A4A4A' }
+                });
+            }
+            
+            lastIndex = match.index + matchedText.length;
+        }
+    
+        if (lastIndex < text.length) {
+            formattedContent.push({ insert: text.slice(lastIndex) });
+        }
+    
+        return formattedContent;
+    };
 
     useEffect(() => {
         if (!content.length) {
@@ -316,35 +333,67 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         };
     }, []);
 
-    useEffect(() => {
+    const handleContentChange = useCallback(() => {
         const quill = quillRef.current?.getEditor()
-        if (!quill || !alignmentWorker.current) return
+        if (!quill) return
+        
+        setContent(quill.getContents().ops)
+    }, [orderDetails.fileId])
+        
+    useEffect(() => {
+        const quill = quillRef.current?.getEditor();
+        if (!quill || !alignmentWorker.current) return;
 
         const handleTextChange = (delta: Delta, oldDelta: Delta, source: string) => {
-            if (source !== 'user') return
+            if (source !== 'user') return;
 
-            if (typingTimer) clearTimeout(typingTimer)
+            if (typingTimer) clearTimeout(typingTimer);
+
             setTypingTimer(
                 setTimeout(() => {
-                    const rawText = quill.getText()
+                    quill.off('text-change', handleTextChange);
+
+                    // Get the current selection (cursor or highlight)
+                    const currentSelection = quill.getSelection();
+
+                    const rawText = quill.getText();
+                    const newOps = getFormattedContent(rawText);
+
+                    // Update editor contents
+                    quill.setContents(newOps);
+
+                    // Restore the selection if we had one
+                    if (currentSelection) {
+                        quill.setSelection(currentSelection.index, currentSelection.length);
+                    }
+
+                    // Send to alignment worker
                     alignmentWorker.current?.postMessage({
                         newText: rawText,
-                        currentAlignments: alignments
-                    })
-                }, 1000)
-            )
-        }
+                        currentAlignments: alignments,
+                    });
 
-        quill.on('text-change', handleTextChange)
+                    // Re-attach the listener
+                    quill.on('text-change', handleTextChange);
+
+                    // Update your React state / local storage
+                    setContent(newOps);
+                    localStorage.setItem(
+                        'transcript',
+                        JSON.stringify({ [orderDetails.fileId]: rawText })
+                    );
+                }, 1000)
+            );
+        };
+
+        quill.on('text-change', handleTextChange);
 
         return () => {
-            quill.off('text-change', handleTextChange)
-            if (typingTimer) {
-                clearTimeout(typingTimer)
-            }
-        }
-    }, [alignments, typingTimer])
-
+            quill.off('text-change', handleTextChange);
+            if (typingTimer) clearTimeout(typingTimer);
+        };
+    }, [alignments, typingTimer]);
+      
     useEffect(() => {
         if (!audioPlayer) return;
         
@@ -593,7 +642,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                 modules={quillModules}
                 value={{ ops: content }}
                 onChange={handleContentChange}
-                formats={['size', 'background', 'font', 'color']}
+                formats={['size', 'background', 'font', 'color', 'bold', 'italics']}
                 className='h-full'
                 onChangeSelection={setSelectionHandler}
                 onBlur={handleBlur}
