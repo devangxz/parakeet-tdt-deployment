@@ -579,8 +579,8 @@ const capitalizeWord = (quillRef: React.RefObject<ReactQuill> | undefined) => {
             const char = match[1].toUpperCase();
 
             // Use Quill's deleteText and insertText methods
-            quill.deleteText(index, length);
-            quill.insertText(index, char);
+            quill.deleteText(index, length, 'user');
+            quill.insertText(index, char, 'user');
         }
     }
 }
@@ -835,20 +835,15 @@ const adjustTimestamps = (
             const timestamp = extractTimestamp(paragraph)
             if (timestamp !== null) {
                 const adjustedTimestamp = timestamp + adjustment
-                const newHours = Math.floor(adjustedTimestamp / 3600)
-                const newMinutes = Math.floor((adjustedTimestamp % 3600) / 60)
-                const newSeconds = (adjustedTimestamp % 60).toFixed(1)
-                const newTimestamp = `${newHours}:${newMinutes
-                    .toString()
-                    .padStart(2, '0')}:${newSeconds.padStart(4, '0')}`
+                const newTimestamp = secondsToTs(adjustedTimestamp, true, 1)
                 return paragraph.replace(/^\d{1,2}:\d{2}:\d{2}\.\d/, newTimestamp)
             }
             return paragraph
         })
         .join('\n\n')
 
-    quill.deleteText(selection.index, selection.length)
-    quill.insertText(selection.index, adjustedText)
+    quill.deleteText(selection.index, selection.length, 'user')
+    quill.insertText(selection.index, adjustedText, 'user')
 
     toast.success('Timestamps adjusted successfully.')
 }
@@ -1084,7 +1079,7 @@ const insertTimestampAndSpeakerInitialAtStartOfCurrentLine = (
     }
 
     const speakerText = ' S1: ';
-    quill.insertText(paragraphStart, formattedTime + speakerText);
+    quill.insertText(paragraphStart, formattedTime + speakerText, 'user');
 
     // Select just the speaker number for easy editing
     const speakerNumberStart = paragraphStart + formattedTime.length + 2; // +2 for ' S'

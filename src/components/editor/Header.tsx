@@ -96,7 +96,7 @@ import formatDuration from '@/utils/formatDuration'
 
 const createShortcutControls = (
   audioPlayer: React.RefObject<HTMLAudioElement>
-): Partial<ShortcutControls> => ({
+): ShortcutControls => ({
   togglePlay: () => {
     if (!audioPlayer.current) return
     audioPlayer.current.paused
@@ -111,6 +111,46 @@ const createShortcutControls = (
       audioPlayer.current.currentTime += seconds
     }
   },
+  playNextBlank: () => {},
+  playPreviousBlank: () => {},
+  playAudioAtCursorPosition: () => {},
+  insertTimestampBlankAtCursorPosition: () => {},
+  insertTimestampAndSpeakerInitialAtStartOfCurrentLine: () => {},
+  googleSearchSelectedWord: () => {},
+  defineSelectedWord: () => {},
+  increaseFontSize: () => {},
+  decreaseFontSize: () => {},
+  repeatLastFind: () => {},
+  increaseVolume: () => {
+    if (audioPlayer.current) {
+      audioPlayer.current.volume = Math.min(1, audioPlayer.current.volume + 0.1)
+    }
+  },
+  decreaseVolume: () => {
+    if (audioPlayer.current) {
+      audioPlayer.current.volume = Math.max(0, audioPlayer.current.volume - 0.1)
+    }
+  },
+  increasePlaybackSpeed: () => {
+    if (audioPlayer.current) {
+      audioPlayer.current.playbackRate += 0.1
+    }
+  },
+  decreasePlaybackSpeed: () => {
+    if (audioPlayer.current) {
+      audioPlayer.current.playbackRate = Math.max(0.1, audioPlayer.current.playbackRate - 0.1)
+    }
+  },
+  playAudioFromTheStartOfCurrentParagraph: () => {},
+  capitalizeFirstLetter: () => {},
+  uppercaseWord: () => {},
+  lowercaseWord: () => {},
+  joinWithNextParagraph: () => {},
+  findNextOccurrenceOfString: () => {},
+  findThePreviousOccurrenceOfString: () => {},
+  replaceNextOccurrenceOfString: () => {},
+  replaceAllOccurrencesOfString: () => {},
+  saveChanges: () => {},
   increaseVolume: () => {
     if (audioPlayer.current) {
       audioPlayer.current.volume = Math.min(1, audioPlayer.current.volume + 0.1)
@@ -373,19 +413,7 @@ export default memo(function Header({
   const decreaseFontSize = () => adjustFontSize(false)
 
   const shortcutControls = useMemo(
-    () => ({
-      ...createShortcutControls(audioPlayer),
-      togglePlay: () => {
-        if (!audioPlayer.current) return
-        if (audioPlayer.current.paused) {
-          audioPlayer.current.play().catch(error => {
-            console.error('Play error:', error)
-          })
-        } else {
-          audioPlayer.current.pause()
-        }
-      },
-    }),
+    () => createShortcutControls(audioPlayer),
     [audioPlayer]
   )
 
@@ -1153,7 +1181,11 @@ export default memo(function Header({
                     <PlayerButton
                       icon={<TrackPreviousIcon />}
                       tooltip=''
-                      onClick={() => shortcutControls.skipAudio?.(-10)}
+                      onClick={() => {
+                        if (audioPlayer.current) {
+                          audioPlayer.current.currentTime -= 5
+                        }
+                      }}
                     />
                   </TooltipTrigger>
                   <TooltipContent>
@@ -1191,8 +1223,12 @@ export default memo(function Header({
                   <TooltipTrigger>
                     <PlayerButton
                       icon={<TrackNextIcon />}
-                      tooltip='Go forward 10 seconds'
-                      onClick={() => shortcutControls.skipAudio?.(10)}
+                      tooltip='Go forward 5 seconds'
+                      onClick={() => {
+                        if (audioPlayer.current) {
+                          audioPlayer.current.currentTime += 5
+                        }
+                      }}
                     />
                   </TooltipTrigger>
                   <TooltipContent>
