@@ -327,9 +327,9 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             );
       
             alignmentWorker.current.onmessage = (e) => {
-                const newAlignments = e.data;
+                const newAlignments = e.data.alignments;
                 setAlignments(newAlignments);
-                console.log('Updated alignments:', newAlignments);
+                console.log('Updated alignments:', newAlignments, 'WER:', e.data.wer);
             };
       
             console.log('Web Worker initialized successfully.');
@@ -385,6 +385,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                     alignmentWorker.current?.postMessage({
                         newText: rawText,
                         currentAlignments: alignments,
+                        ctms: ctms
                     });
     
                     setContent(newOps);
@@ -559,7 +560,8 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                 // Process any differences between original and current transcript
                 alignmentWorker.current?.postMessage({
                     newText: transcript,
-                    currentAlignments: newAlignments
+                    currentAlignments: newAlignments,
+                    ctms: ctms
                 })
             }
         }

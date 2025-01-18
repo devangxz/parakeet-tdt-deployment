@@ -1,5 +1,5 @@
 import { diff_match_patch, DIFF_DELETE, DIFF_INSERT } from '@/utils/transcript/diff_match_patch'
-import { AlignmentType } from '@/utils/types/transcript'
+import { AlignmentType, CTMType } from '@/utils/types/transcript'
 
 function processMetaPhrase(text: string): string[] {
     text = text.trim();
@@ -108,10 +108,79 @@ function tokenizeWithOffsets(rawText: string) {
   return tokens;
 }
 
+function markExactMatches(alignments: AlignmentType[], ctms: CTMType[]) {
+    let ctmIndex = 0;
+    let alignIndex = 0;
+
+    while (ctmIndex < ctms.length && alignIndex < alignments.length) {
+        const ctm = ctms[ctmIndex];
+        const alignment = alignments[alignIndex];
+
+        // Skip meta
+        if (alignment.type !== 'ctm') {
+            alignIndex++;
+            continue;
+        }
+
+        // Exact matching by start/end
+        if (ctm.start === alignment.start && ctm.end === alignment.end) {
+            alignments[alignIndex] = {
+                ...alignment,
+                ctmIndex,
+                case: ctm.word.toLowerCase() === alignment.word.toLowerCase() ? 'success' : 'mismatch'
+            };
+            ctmIndex++;
+            alignIndex++;
+        } else if (alignment.start < ctm.start) {
+            // No match found for this alignment
+            alignments[alignIndex] = {
+                ...alignment,
+                ctmIndex: -1,
+                case: 'mismatch'
+            };
+            alignIndex++;
+        } else {
+            ctmIndex++;
+        }
+    }
+
+    // Mark remaining alignments as mismatches
+    while (alignIndex < alignments.length) {
+        const alignment = alignments[alignIndex];
+        if (alignment.type === 'ctm') {
+            alignments[alignIndex] = {
+                ...alignment,
+                ctmIndex: -1,
+                case: 'mismatch'
+            };
+        }
+        alignIndex++;
+    }
+
+    return alignments;
+}
+
+function calculateWER(alignments: AlignmentType[], ctms: CTMType[]) {
+  const ctmWords = ctms.length;
+  const stats = alignments.reduce((acc, al) => {
+    if (al.type === 'ctm') {
+      acc.total++;
+      acc.success += al.case === 'success' ? 1 : 0;
+    }
+    return acc;
+  }, { total: 0, success: 0 });
+
+  // Errors = substitutions + insertions + deletions
+  const errors = (stats.total - stats.success) + (ctmWords - stats.success);
+  const wer = errors / ctmWords;
+
+  return wer;
+}
+
 /**
  * This updates (or re-generates) alignments given a new text input.
  */
-function updateAlignments(newText: string, currentAlignments: AlignmentType[]) {
+function updateAlignments(newText: string, currentAlignments: AlignmentType[], ctms: CTMType[]) {
     if (!currentAlignments.length) return [];
 
     // Build word array + positions from the new text
@@ -168,7 +237,7 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[]) {
                     word: segmentWords[0],
                     punct: segmentWords[0],
                     source: 'user',
-                    type: 'edit',
+                    type: 'ctm',
                     start: lastRemovedAlignment!.start,
                     end: lastRemovedAlignment!.end,
                     conf: lastRemovedAlignment!.conf,
@@ -189,18 +258,22 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[]) {
                 segmentWords.forEach((word: string, idx: number) => {
                     // Insert meta or punctuation
                     if (isMetaContent(word) || isPunctuation(word)) {
-                        const startTime = prevAlignment
-                            ? prevAlignment.end
-                            : nextAlignment
-                            ? nextAlignment.start
-                            : 0;
+                        // Find next non-meta alignment's start time
+                        let nextStartTime = nextAlignment?.start;
+                        for (let i = alignmentIndex; i < currentAlignments.length; i++) {
+                            const align = currentAlignments[i];
+                            if (align.type !== 'meta') {
+                                nextStartTime = align.start;
+                                break;
+                            }
+                        }
 
                         const { startPos, endPos } = newTokens[newTokenIndex];
                         newAlignments.push({
                             word,
-                            type: 'meta',
-                            start: startTime,
-                            end: startTime,
+                            type: 'meta', 
+                            start: nextStartTime || 0,
+                            end: nextStartTime || 0,
                             conf: 1.0,
                             punct: word,
                             source: 'meta',
@@ -231,9 +304,9 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[]) {
 
                         newAlignments.push({
                             word,
-                            type: 'edit',
-                            start,
-                            end,
+                            type: 'ctm',
+                            start: Number(start.toFixed(3)),
+                            end: Number(end.toFixed(3)), 
                             conf: 1.0,
                             punct: word,
                             source: 'user',
@@ -265,11 +338,12 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[]) {
         }
     });
 
-    return newAlignments;
+    return markExactMatches(newAlignments, ctms);
 }
 
 self.onmessage = (e) => {
-    const { newText, currentAlignments } = e.data;
-    const updatedAlignments = updateAlignments(newText, currentAlignments);
-    self.postMessage(updatedAlignments);
+    const { newText, currentAlignments, ctms } = e.data;
+    const updatedAlignments = updateAlignments(newText, currentAlignments, ctms);
+    const wer = calculateWER(updatedAlignments, ctms);
+    self.postMessage({ alignments: updatedAlignments, wer: Number(wer.toFixed(2)) });
 };
