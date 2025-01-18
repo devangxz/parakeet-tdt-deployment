@@ -22,6 +22,7 @@ interface EditorProps {
     setSelectionHandler: () => void
     selection: CustomerQuillSelection | null
     searchHighlight: CustomerQuillSelection | null
+    highlightWordsEnabled: boolean;
 }
 
 interface HistoryState {
@@ -29,7 +30,7 @@ interface HistoryState {
     selection?: { index: number; length: number };
 }
 
-export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight }: EditorProps) {
+export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled }: EditorProps) {
     const ctms = initialCtms; // Make CTMs constant
     const quillRef = useRef<ReactQuill>(null)
     const [alignments, setAlignments] = useState<AlignmentType[]>([])
@@ -495,11 +496,28 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     }, [undoStack, redoStack]);
 
     useEffect(() => {
+        // Clear highlight when feature is turned off or component unmounts
+        if (!highlightWordsEnabled && lastHighlightedRef.current !== null) {
+            const quill = quillRef.current?.getEditor();
+            if (!quill) return;
+            
+            const oldAl = alignments[lastHighlightedRef.current];
+            if (oldAl.startPos !== undefined && oldAl.endPos !== undefined) {
+                quill.formatText(oldAl.startPos, oldAl.endPos - oldAl.startPos, {
+                    background: null,
+                });
+            }
+            lastHighlightedRef.current = null;
+        }
+    }, [highlightWordsEnabled]);    
+
+    useEffect(() => {
         if (!audioPlayer) return;
         
         const handleTimeUpdate = () => {            
             const quill = quillRef.current?.getEditor();
-            if (!quill) return;
+
+            if (!quill || !highlightWordsEnabled) return; 
         
             const currentTime = audioPlayer.currentTime;
             const currentWordIndex = getAlignmentIndexByTime(alignments, currentTime, lastHighlightedRef.current);
@@ -533,7 +551,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         return () => {
             audioPlayer.removeEventListener('timeupdate', handleTimeUpdate);
         };
-    }, [alignments, audioPlayer]);
+    }, [alignments, audioPlayer, highlightWordsEnabled]);
 
     useEffect(() => {
         initEditor()

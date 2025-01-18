@@ -207,6 +207,8 @@ interface NewPlayerProps {
     isUploaded?: boolean
   },
   toggleFindAndReplace: () => void
+  highlightWordsEnabled: boolean;
+  setHighlightWordsEnabled: (enabled: boolean) => void;
 }
 
 export default memo(function Header({
@@ -226,6 +228,8 @@ export default memo(function Header({
   setFileToUpload,
   fileToUpload,
   toggleFindAndReplace,
+  highlightWordsEnabled,
+  setHighlightWordsEnabled,
 }: NewPlayerProps) {
   const [currentValue, setCurrentValue] = useState(0)
   const [currentTime, setCurrentTime] = useState('00:00')
@@ -1323,6 +1327,8 @@ export default memo(function Header({
                       increaseFontSize={increaseFontSize}
                       decreaseFontSize={decreaseFontSize}
                       insertInterpreterSwearInLine={insertInterpreterSwearInLine}
+                      highlightWordsEnabled={highlightWordsEnabled}
+                      setHighlightWordsEnabled={setHighlightWordsEnabled}                  
                     />
                   </div>}
                 </div>
@@ -1345,6 +1351,8 @@ export default memo(function Header({
                   increaseFontSize={increaseFontSize}
                   decreaseFontSize={decreaseFontSize}
                   insertInterpreterSwearInLine={insertInterpreterSwearInLine}
+                  highlightWordsEnabled={highlightWordsEnabled}
+                  setHighlightWordsEnabled={setHighlightWordsEnabled}              
                 />
               </div>
             </div>
