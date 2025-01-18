@@ -507,8 +507,18 @@ const handleSave = async (
         const paragraphs = transcript
             .split('\n')
             .filter((paragraph) => paragraph.trim() !== '')
+        
+        // Helper function to detect meta-only paragraphs
+        const isMetaOnlyParagraph = (text: string) => {
+            const trimmed = text.trim()
+            return /^\[.*\]$/.test(trimmed)
+        }
+
         const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/
         for (const paragraph of paragraphs) {
+            // Skip validation for meta-only paragraphs
+            if (isMetaOnlyParagraph(paragraph)) continue;
+            
             if (
                 !paragraphRegex.test(paragraph) &&
                 orderDetails.orderType !== 'TRANSCRIPTION_FORMATTING'

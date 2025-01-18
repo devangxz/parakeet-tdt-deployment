@@ -7,7 +7,7 @@ import 'react-quill/dist/quill.snow.css'
 
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
-import { CTMType, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition, scrollEditorToPos } from '@/utils/editorUtils'
+import { CTMType, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition } from '@/utils/editorUtils'
 import { createAlignments, getFormattedTranscript, AlignmentType, getAlignmentIndexByTime } from '@/utils/transcript'
 
 interface EditorProps {
@@ -407,7 +407,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         // Override execCommand to monitor browser undo/redo
         const originalExecCommand = document.execCommand;
         document.execCommand = function(command, ...args) {
-            console.log('Browser execCommand called:', command, args);
             if (command === 'undo' || command === 'redo') {
                 return false;
             }
@@ -419,32 +418,20 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     
         const editor = quill.root;
         editor.addEventListener('beforeinput', (e) => {
-            console.log('beforeinput:', e.inputType);
             if (e.inputType === 'historyUndo' || e.inputType === 'historyRedo') {
                 e.preventDefault();
             }
         }, true);
-    
-        editor.setAttribute('spellcheck', 'false');
-        editor.setAttribute('autocorrect', 'off');
-        editor.setAttribute('autocapitalize', 'off');
-    
+        
         const handleKeyDown = (e: KeyboardEvent) => {
-            console.log('Key pressed:', e.key, 'Meta/Ctrl:', e.metaKey || e.ctrlKey, 'Shift:', e.shiftKey);
-    
             // Undo
             if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
                 e.preventDefault();
                 e.stopImmediatePropagation();
                 
-                console.log('Undo triggered, undo stack length:', undoStack.length);
-                if (undoStack.length === 0) {
-                    console.log('No more undo states available');
-                    return;
-                }
+                if (undoStack.length === 0) return;
     
                 const stateToRestore = undoStack[undoStack.length - 1];
-                console.log('Restoring state from undo stack:', stateToRestore);
                 setUndoStack(prev => prev.slice(0, -1));
     
                 // Save current state to redo stack
@@ -452,11 +439,9 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                     content: quill.getContents().ops,
                     selection: quill.getSelection() || undefined
                 };
-                console.log('Saving current state to redo stack:', currentState);
                 setRedoStack(prev => [...prev, currentState]);
     
                 // Restore state
-                console.log('Setting editor contents and selection');
                 quill.setContents(stateToRestore.content);
                 if (stateToRestore.selection) {
                     quill.setSelection(stateToRestore.selection);
@@ -469,14 +454,9 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                 e.preventDefault();
                 e.stopImmediatePropagation();
                 
-                console.log('Redo triggered, redo stack length:', redoStack.length);
-                if (redoStack.length === 0) {
-                    console.log('No more redo states available');
-                    return;
-                }
+                if (redoStack.length === 0) return;
     
                 const stateToRestore = redoStack[redoStack.length - 1];
-                console.log('Restoring state from redo stack:', stateToRestore);
                 setRedoStack(prev => prev.slice(0, -1));
     
                 // Save current state to undo stack
@@ -484,11 +464,9 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                     content: quill.getContents().ops,
                     selection: quill.getSelection() || undefined
                 };
-                console.log('Saving current state to undo stack:', currentState);
                 setUndoStack(prev => [...prev, currentState]);
     
                 // Restore state
-                console.log('Setting editor contents and selection');
                 quill.setContents(stateToRestore.content);
                 if (stateToRestore.selection) {
                     quill.setSelection(stateToRestore.selection);
@@ -513,7 +491,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                 editor.removeEventListener('beforeinput', handleBeforeInput, true);
             }
         };
-    }, [undoStack, redoStack]); // Add dependencies
+    }, [undoStack, redoStack]);
 
     useEffect(() => {
         if (!audioPlayer) return;
@@ -544,8 +522,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                 quill.formatText(newAl.startPos, newAl.endPos - newAl.startPos, {
                     background: 'yellow',
                 });
-
-                scrollEditorToPos(quill, newAl.startPos);
             }
         
             lastHighlightedRef.current = currentWordIndex;
