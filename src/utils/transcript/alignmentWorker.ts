@@ -45,20 +45,67 @@ const isMetaContent = (word: string) => (
  * ]
  */
 function tokenizeWithOffsets(rawText: string) {
-    const tokens = [];
-    // Use a regex that captures sequences of non-whitespace plus bracketed phrases
-    const regex = /\[.*?\]|\S+/g;
-    let match;
-    
-    while ((match = regex.exec(rawText)) !== null) {
-        const word = match[0];
-        // `match.index` is exactly where this token starts in rawText
-        const startPos = match.index;
-        const endPos = startPos + word.length; // not inclusive
-        
-        tokens.push({ word, startPos, endPos });
-    }
-    return tokens;
+  const tokens = [];
+  let currentPos = 0;
+  
+  // Match either:
+  // - Complete meta phrase [...] to be split later
+  // - Single non-whitespace characters
+  const segments = rawText.match(/\[([^\]]*)\]|\S+/g) || [];
+  
+  for (const segment of segments) {
+      // Skip whitespace
+      while (currentPos < rawText.length && /\s/.test(rawText[currentPos])) {
+          currentPos++;
+      }
+      
+      // For meta phrases, split into multiple tokens
+      if (segment.startsWith('[') && segment.endsWith(']')) {
+          const words = segment.slice(1, -1).split(/\s+/);
+          const startBracketPos = currentPos;
+          
+          // First word with opening bracket
+          tokens.push({
+              word: `[${words[0]}`,
+              startPos: startBracketPos,
+              endPos: startBracketPos + words[0].length + 1
+          });
+          
+          // Middle words (if any)
+          let wordPos = startBracketPos + words[0].length + 1;
+          for (let i = 1; i < words.length - 1; i++) {
+              wordPos++; // Skip space
+              tokens.push({
+                  word: words[i],
+                  startPos: wordPos,
+                  endPos: wordPos + words[i].length
+              });
+              wordPos += words[i].length;
+          }
+          
+          // Last word with closing bracket
+          if (words.length > 1) {
+              wordPos++; // Skip space
+              tokens.push({
+                  word: `${words[words.length - 1]}]`,
+                  startPos: wordPos,
+                  endPos: wordPos + words[words.length - 1].length + 1
+              });
+          }
+          
+          currentPos = startBracketPos + segment.length;
+          continue;
+      }
+      
+      // Normal word
+      tokens.push({
+          word: segment,
+          startPos: currentPos,
+          endPos: currentPos + segment.length
+      });
+      currentPos += segment.length;
+  }
+  return tokens;
 }
 
 /**
