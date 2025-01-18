@@ -16,6 +16,7 @@ import {
 } from '@radix-ui/react-icons'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import Quill from 'quill'
 import { useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
@@ -95,7 +96,8 @@ import {
 import formatDuration from '@/utils/formatDuration'
 
 const createShortcutControls = (
-  audioPlayer: React.RefObject<HTMLAudioElement>
+  audioPlayer: React.RefObject<HTMLAudioElement>,
+  quill: Quill | null
 ): ShortcutControls => ({
   togglePlay: () => {
     if (!audioPlayer.current) return
@@ -151,26 +153,26 @@ const createShortcutControls = (
   replaceNextOccurrenceOfString: () => {},
   replaceAllOccurrencesOfString: () => {},
   saveChanges: () => {},
-  increaseVolume: () => {
-    if (audioPlayer.current) {
-      audioPlayer.current.volume = Math.min(1, audioPlayer.current.volume + 0.1)
-    }
+  jumpAudioAndCursorForwardBy3Seconds: () => {
+    if (audioPlayer.current) audioPlayer.current.currentTime += 3;
   },
-  decreaseVolume: () => {
-    if (audioPlayer.current) {
-      audioPlayer.current.volume = Math.max(0, audioPlayer.current.volume - 0.1)
-    }
+  playNextBlankInstance: () => {
+    if (!quill || !audioPlayer.current) return
+    navigateAndPlayBlanks(quill, audioPlayer.current)
   },
-  increasePlaybackSpeed: () => {
-    if (audioPlayer.current) {
-      audioPlayer.current.playbackRate += 0.1
-    }
+  playPreviousBlankInstance: () => {
+    if (!quill || !audioPlayer.current) return
+    navigateAndPlayBlanks(quill, audioPlayer.current, true)
   },
-  decreasePlaybackSpeed: () => {
-    if (audioPlayer.current) {
-      audioPlayer.current.playbackRate = Math.max(0.1, audioPlayer.current.playbackRate - 0.1)
-    }
+  playCurrentParagraphInstance: () => {
+    if (!quill || !audioPlayer.current) return
+    playCurrentParagraphTimestamp(quill, audioPlayer.current)
   },
+  adjustTimestampsInstance: () => {
+    if (!quill) return
+    // You'll need to pass the appropriate parameters for adjustTimestamps
+    adjustTimestamps(quill, 0, quill.getSelection())
+  }
 })
 
 interface PlayerEvent {
@@ -413,9 +415,9 @@ export default memo(function Header({
   const decreaseFontSize = () => adjustFontSize(false)
 
   const shortcutControls = useMemo(
-    () => createShortcutControls(audioPlayer),
-    [audioPlayer]
-  )
+    () => createShortcutControls(audioPlayer, quillRef?.current?.getEditor() || null),
+    [audioPlayer, quillRef]
+    )
 
   useShortcuts(shortcutControls as ShortcutControls)
 
