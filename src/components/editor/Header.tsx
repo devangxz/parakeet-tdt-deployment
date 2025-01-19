@@ -1039,8 +1039,8 @@ export default memo(function Header({
 
     const nextChar = quill.getText(range.index + range.length, 1);
     const wrappedText = `[--${selectedText.toUpperCase()}--]${nextChar === '\n' ? '\n' : '\n\n'}`;
-    quill.deleteText(range.index, range.length);
-    quill.insertText(range.index, wrappedText);
+    quill.deleteText(range.index, range.length, 'user');
+    quill.insertText(range.index, wrappedText, 'user');
 
     toast.success(`Marked as start of ${selectedText}`);
   }
@@ -1059,8 +1059,8 @@ export default memo(function Header({
     const selectedText = quill.getText(range.index, range.length);
     const wrappedText = `[--EXAMINEE--${selectedText.toUpperCase()}--EXAMINEE--]`;
 
-    quill.deleteText(range.index, range.length);
-    quill.insertText(range.index, wrappedText);
+    quill.deleteText(range.index, range.length, 'user');
+    quill.insertText(range.index, wrappedText, 'user');
 
     toast.success('Marked as continuation of examination');
   }
@@ -1078,7 +1078,7 @@ export default memo(function Header({
 
     const textToInsert = "WHEREUPON, [--EXAMINEE--<replace_with_examinee_name>--EXAMINEE--] having been called as a witness, being duly sworn by the notary public present, testified as follows:";
 
-    quill.insertText(range.index, textToInsert);
+    quill.insertText(range.index, textToInsert, 'user');
 
     toast.success('Inserted swear in line text');
   }
@@ -1096,7 +1096,7 @@ export default memo(function Header({
 
     const textToInsert = "WHEREUPON, [--INTERPRETER--<replace_with_interpreter_name>--INTERPRETER--] the interpreter was duly sworn.";
 
-    quill.insertText(range.index, textToInsert);
+    quill.insertText(range.index, textToInsert, 'user');
 
     toast.success('Inserted swear in line text');
   }

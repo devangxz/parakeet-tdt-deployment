@@ -1017,8 +1017,8 @@ const replaceTextHandler = (
 
     const replace = (index: number) => {
         const absoluteIndex = index + searchRange.start
-        quill.deleteText(absoluteIndex, searchText.length)
-        quill.insertText(absoluteIndex, replaceWith)
+        quill.deleteText(absoluteIndex, searchText.length, 'user')
+        quill.insertText(absoluteIndex, replaceWith, 'user')
         replaced = true
     }
 

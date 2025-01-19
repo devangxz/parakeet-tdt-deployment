@@ -226,8 +226,8 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         const capitalizedWords = words.map(word =>
             word.charAt(0).toUpperCase() + word.slice(1)
         );
-        quill.deleteText(selection.index, selection.length);
-        quill.insertText(selection.index, capitalizedWords.join(' '));
+        quill.deleteText(selection.index, selection.length, 'user');
+        quill.insertText(selection.index, capitalizedWords.join(' '), 'user');
     }, [quillRef]);
 
     const uppercaseWord = useCallback(() => {
@@ -237,8 +237,8 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         if (!selection) return;
 
         const text = quill.getText(selection.index, selection.length);
-        quill.deleteText(selection.index, selection.length);
-        quill.insertText(selection.index, text.toUpperCase());
+        quill.deleteText(selection.index, selection.length, 'user');
+        quill.insertText(selection.index, text.toUpperCase(), 'user');
     }, [quillRef]);
 
     const lowercaseWord = useCallback(() => {
@@ -248,8 +248,8 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         if (!selection) return;
 
         const text = quill.getText(selection.index, selection.length);
-        quill.deleteText(selection.index, selection.length);
-        quill.insertText(selection.index, text.toLowerCase());
+        quill.deleteText(selection.index, selection.length, 'user');
+        quill.insertText(selection.index, text.toLowerCase(), 'user');
     }, [quillRef]);
 
     const joinWithNextParagraph = useCallback(() => {
