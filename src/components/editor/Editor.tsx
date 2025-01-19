@@ -253,46 +253,32 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     }, [quillRef]);
 
     const joinWithNextParagraph = useCallback(() => {
-        if (!quillRef.current) return;
-        const quill = quillRef.current.getEditor();
-        const selection = quill.getSelection();
-        if (!selection) return;
-
-        // Get the text and find current paragraph
+        const quill = quillRef.current?.getEditor();
+        const selection = quill?.getSelection();
+        if (!quill || !selection) return;
+        
         const text = quill.getText();
-        const lines = text.split('\n').filter(line => line.trim() !== '');
-
-        // Find current line index
-        let currentLineIndex = 0;
-        let charCount = 0;
-        for (let i = 0; i < lines.length; i++) {
-            charCount += lines[i].length + 1;
-            if (charCount > selection.index) {
-                currentLineIndex = i;
-                break;
-            }
+        const position = selection.index;
+        
+        // Add \s* after S\d+: to include the space in timestamp pattern
+        const nextParaPattern = /\n\s*(\d:\d{2}:\d{2}\.\d\s+S\d+:\s+)?(\S.*)/;
+        nextParaPattern.lastIndex = position;
+        const match = nextParaPattern.exec(text.slice(position));
+        
+        if (!match) return;
+        
+        const prevParaEnd = position + match.index;
+        let paraStart = prevParaEnd;
+        while (paraStart > 0 && /\s/.test(text[paraStart - 1])) {
+            paraStart--;
         }
-
-        const currentPara = lines[currentLineIndex];
-        const nextPara = lines[currentLineIndex + 1];
-        if (!currentPara || !nextPara) return;
-
-        // Find positions
-        const currentParaStart = text.indexOf(currentPara);
-
-        // Get the timestamp and speaker pattern to remove
-        const timestampMatch = nextPara.match(/^\d:\d{2}:\d{2}\.\d\s+S\d+:\s*/);
-        if (!timestampMatch) return;
-
-        // Delete the newlines between paragraphs and the timestamp/speaker
-        quill.deleteText(
-            currentParaStart + currentPara.length,
-            2 + timestampMatch[0].length
-        );
-
-        // Insert a space between paragraphs
-        quill.insertText(currentParaStart + currentPara.length, ' ');
-    }, [quillRef]);
+        
+        const tsLength = match[1]?.length || 0;
+        
+        quill.deleteText(paraStart, prevParaEnd - paraStart + 1 + tsLength, 'user');
+        if (tsLength === 0) quill.insertText(paraStart, ' ', 'user');
+        quill.setSelection(paraStart + 1, 0);
+     }, [quillRef]);
 
     const shortcutControls = useMemo(() => {
         const controls: Partial<ShortcutControls> = {
