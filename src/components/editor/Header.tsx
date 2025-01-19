@@ -350,36 +350,22 @@ export default memo(function Header({
     setStep(currentStep)
   }, [orderDetails])
 
-  const playNextBlankInstance = () => {
+  const playNextBlankInstance = useCallback(() => {
     const quill = quillRef?.current?.getEditor()
     if (!quill) return
-    return navigateAndPlayBlanks.bind(
-      null,
-      quill,
-      audioPlayer.current,
-      false
-    )
-  }
+    navigateAndPlayBlanks(quill, audioPlayer.current, false)
+  }, [audioPlayer, quillRef])
 
   const playPreviousBlankInstance = useCallback(() => {
     const quill = quillRef?.current?.getEditor()
     if (!quill) return
-    return navigateAndPlayBlanks.bind(
-      null,
-      quill,
-      audioPlayer.current,
-      true
-    )
+    navigateAndPlayBlanks(quill, audioPlayer.current, true)
   }, [audioPlayer, quillRef])
 
   const playCurrentParagraphInstance = useCallback(() => {
     const quill = quillRef?.current?.getEditor()
     if (!quill) return
-    return playCurrentParagraphTimestamp.bind(
-      null,
-      quill,
-      audioPlayer.current,
-    )
+    playCurrentParagraphTimestamp(quill, audioPlayer.current)
   }, [audioPlayer, quillRef])
 
   const adjustTimestampsInstance = useCallback(() => {
@@ -617,9 +603,9 @@ export default memo(function Header({
 
   const editorShortcutControls = useMemo(() => {
     const controls: Partial<ShortcutControls> = {
-      playNextBlank: playNextBlankInstance(),
-      playPreviousBlank: playPreviousBlankInstance(),
-      playAudioFromTheStartOfCurrentParagraph: playCurrentParagraphInstance(),
+      playNextBlank: playNextBlankInstance,
+      playPreviousBlank: playPreviousBlankInstance,
+      playAudioFromTheStartOfCurrentParagraph: playCurrentParagraphInstance,
     }
     return controls as ShortcutControls
   }, [
