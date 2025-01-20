@@ -21,7 +21,7 @@ export async function uploadToBox(
         const { uploadUrl, folderId } = await uploadUrlResponse.json()
 
         // Upload the file through our proxy to handle CORS
-        const uploadResponse = await fetch('/api/box/upload', {
+        const uploadResponse = await fetch('/api/box', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
