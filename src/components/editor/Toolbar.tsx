@@ -1,4 +1,4 @@
-import { ClockIcon, MagnifyingGlassIcon, Pencil1Icon, Pencil2Icon, PersonIcon, SpaceEvenlyVerticallyIcon, TextAlignLeftIcon, ThickArrowLeftIcon, ThickArrowRightIcon, TimerIcon, ZoomInIcon, ZoomOutIcon } from "@radix-ui/react-icons";
+import { ClockIcon, MagnifyingGlassIcon, Pencil1Icon, Pencil2Icon, PersonIcon, SpaceEvenlyVerticallyIcon, TextAlignLeftIcon, ThickArrowLeftIcon, ThickArrowRightIcon, TimerIcon, ZoomInIcon, ZoomOutIcon, LightningBoltIcon } from "@radix-ui/react-icons";
 
 import PlayerButton from "./PlayerButton";
 import { Button } from "../ui/button";
@@ -23,7 +23,9 @@ interface ToolbarProps {
     handleAdjustTimestamps: () => void
     increaseFontSize: () => void
     decreaseFontSize: () => void
-    insertInterpreterSwearInLine: () => void
+    insertInterpreterSwearInLine: () => void,
+    highlightWordsEnabled: boolean;
+    setHighlightWordsEnabled: (enabled: boolean) => void;
 }
 
 export default function Toolbar({
@@ -43,6 +45,8 @@ export default function Toolbar({
     increaseFontSize,
     decreaseFontSize,
     insertInterpreterSwearInLine,
+    highlightWordsEnabled,
+    setHighlightWordsEnabled
 }: ToolbarProps) {
     return <TooltipProvider>
         <Tooltip>
@@ -174,6 +178,19 @@ export default function Toolbar({
             </TooltipContent>
         </Tooltip>
 
+        <Tooltip>
+            <TooltipTrigger>
+                <PlayerButton
+                    icon={highlightWordsEnabled ? <LightningBoltIcon /> : <LightningBoltIcon className="opacity-50" />}
+                    tooltip='Word Highlight'
+                    onClick={() => setHighlightWordsEnabled(!highlightWordsEnabled)}
+                />
+            </TooltipTrigger>
+            <TooltipContent>
+                <p>Toggle word highlighting</p>
+            </TooltipContent>
+        </Tooltip>
+        
         {orderDetails.orgName.toLowerCase() === 'remotelegal' &&
             <>
                 <Tooltip>

@@ -11,13 +11,15 @@ export type CTMType = {
 
 export type AlignmentType = {
     word: string;
-    type: 'meta' | 'ctm' | 'edit';
+    type: 'meta' | 'ctm';
     start: number;
     end: number;
     conf: number;
     punct: string;
     source: string;
     speaker: string;
+    case?: 'success' | 'mismatch'; 
+    ctmIndex?: number;
     turn?: number;
     startPos?: number;
     endPos?: number;

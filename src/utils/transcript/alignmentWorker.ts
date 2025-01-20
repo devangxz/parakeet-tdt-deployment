@@ -1,5 +1,5 @@
 import { diff_match_patch, DIFF_DELETE, DIFF_INSERT } from '@/utils/transcript/diff_match_patch'
-import { AlignmentType } from '@/utils/types/transcript'
+import { AlignmentType, CTMType } from '@/utils/types/transcript'
 
 function processMetaPhrase(text: string): string[] {
     text = text.trim();
@@ -45,26 +45,142 @@ const isMetaContent = (word: string) => (
  * ]
  */
 function tokenizeWithOffsets(rawText: string) {
-    const tokens = [];
-    // Use a regex that captures sequences of non-whitespace plus bracketed phrases
-    const regex = /\[.*?\]|\S+/g;
-    let match;
-    
-    while ((match = regex.exec(rawText)) !== null) {
-        const word = match[0];
-        // `match.index` is exactly where this token starts in rawText
-        const startPos = match.index;
-        const endPos = startPos + word.length; // not inclusive
-        
-        tokens.push({ word, startPos, endPos });
+  const tokens = [];
+  let currentPos = 0;
+  
+  // Match either:
+  // - Complete meta phrase [...] to be split later
+  // - Single non-whitespace characters
+  const segments = rawText.match(/\[([^\]]*)\]|\S+/g) || [];
+  
+  for (const segment of segments) {
+      // Skip whitespace
+      while (currentPos < rawText.length && /\s/.test(rawText[currentPos])) {
+          currentPos++;
+      }
+      
+      // For meta phrases, split into multiple tokens
+      if (segment.startsWith('[') && segment.endsWith(']')) {
+          const words = segment.slice(1, -1).split(/\s+/);
+          const startBracketPos = currentPos;
+          
+          // First word with opening bracket
+          tokens.push({
+              word: `[${words[0]}`,
+              startPos: startBracketPos,
+              endPos: startBracketPos + words[0].length + 1
+          });
+          
+          // Middle words (if any)
+          let wordPos = startBracketPos + words[0].length + 1;
+          for (let i = 1; i < words.length - 1; i++) {
+              wordPos++; // Skip space
+              tokens.push({
+                  word: words[i],
+                  startPos: wordPos,
+                  endPos: wordPos + words[i].length
+              });
+              wordPos += words[i].length;
+          }
+          
+          // Last word with closing bracket
+          if (words.length > 1) {
+              wordPos++; // Skip space
+              tokens.push({
+                  word: `${words[words.length - 1]}]`,
+                  startPos: wordPos,
+                  endPos: wordPos + words[words.length - 1].length + 1
+              });
+          }
+          
+          currentPos = startBracketPos + segment.length;
+          continue;
+      }
+      
+      // Normal word
+      tokens.push({
+          word: segment,
+          startPos: currentPos,
+          endPos: currentPos + segment.length
+      });
+      currentPos += segment.length;
+  }
+  return tokens;
+}
+
+function markExactMatches(alignments: AlignmentType[], ctms: CTMType[]) {
+    let ctmIndex = 0;
+    let alignIndex = 0;
+
+    while (ctmIndex < ctms.length && alignIndex < alignments.length) {
+        const ctm = ctms[ctmIndex];
+        const alignment = alignments[alignIndex];
+
+        // Skip meta
+        if (alignment.type !== 'ctm') {
+            alignIndex++;
+            continue;
+        }
+
+        // Exact matching by start/end
+        if (ctm.start === alignment.start && ctm.end === alignment.end) {
+            alignments[alignIndex] = {
+                ...alignment,
+                ctmIndex,
+                case: ctm.word.toLowerCase() === alignment.word.toLowerCase() ? 'success' : 'mismatch'
+            };
+            ctmIndex++;
+            alignIndex++;
+        } else if (alignment.start < ctm.start) {
+            // No match found for this alignment
+            alignments[alignIndex] = {
+                ...alignment,
+                ctmIndex: -1,
+                case: 'mismatch'
+            };
+            alignIndex++;
+        } else {
+            ctmIndex++;
+        }
     }
-    return tokens;
+
+    // Mark remaining alignments as mismatches
+    while (alignIndex < alignments.length) {
+        const alignment = alignments[alignIndex];
+        if (alignment.type === 'ctm') {
+            alignments[alignIndex] = {
+                ...alignment,
+                ctmIndex: -1,
+                case: 'mismatch'
+            };
+        }
+        alignIndex++;
+    }
+
+    return alignments;
+}
+
+function calculateWER(alignments: AlignmentType[], ctms: CTMType[]) {
+  const ctmWords = ctms.length;
+  const stats = alignments.reduce((acc, al) => {
+    if (al.type === 'ctm') {
+      acc.total++;
+      acc.success += al.case === 'success' ? 1 : 0;
+    }
+    return acc;
+  }, { total: 0, success: 0 });
+
+  // Errors = substitutions + insertions + deletions
+  const errors = (stats.total - stats.success) + (ctmWords - stats.success);
+  const wer = errors / ctmWords;
+
+  return wer;
 }
 
 /**
  * This updates (or re-generates) alignments given a new text input.
  */
-function updateAlignments(newText: string, currentAlignments: AlignmentType[]) {
+function updateAlignments(newText: string, currentAlignments: AlignmentType[], ctms: CTMType[]) {
     if (!currentAlignments.length) return [];
 
     // Build word array + positions from the new text
@@ -121,7 +237,7 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[]) {
                     word: segmentWords[0],
                     punct: segmentWords[0],
                     source: 'user',
-                    type: 'edit',
+                    type: 'ctm',
                     start: lastRemovedAlignment!.start,
                     end: lastRemovedAlignment!.end,
                     conf: lastRemovedAlignment!.conf,
@@ -142,18 +258,22 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[]) {
                 segmentWords.forEach((word: string, idx: number) => {
                     // Insert meta or punctuation
                     if (isMetaContent(word) || isPunctuation(word)) {
-                        const startTime = prevAlignment
-                            ? prevAlignment.end
-                            : nextAlignment
-                            ? nextAlignment.start
-                            : 0;
+                        // Find next non-meta alignment's start time
+                        let nextStartTime = nextAlignment?.start;
+                        for (let i = alignmentIndex; i < currentAlignments.length; i++) {
+                            const align = currentAlignments[i];
+                            if (align.type !== 'meta') {
+                                nextStartTime = align.start;
+                                break;
+                            }
+                        }
 
                         const { startPos, endPos } = newTokens[newTokenIndex];
                         newAlignments.push({
                             word,
-                            type: 'meta',
-                            start: startTime,
-                            end: startTime,
+                            type: 'meta', 
+                            start: nextStartTime || 0,
+                            end: nextStartTime || 0,
                             conf: 1.0,
                             punct: word,
                             source: 'meta',
@@ -184,9 +304,9 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[]) {
 
                         newAlignments.push({
                             word,
-                            type: 'edit',
-                            start,
-                            end,
+                            type: 'ctm',
+                            start: Number(start.toFixed(3)),
+                            end: Number(end.toFixed(3)), 
                             conf: 1.0,
                             punct: word,
                             source: 'user',
@@ -218,11 +338,12 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[]) {
         }
     });
 
-    return newAlignments;
+    return markExactMatches(newAlignments, ctms);
 }
 
 self.onmessage = (e) => {
-    const { newText, currentAlignments } = e.data;
-    const updatedAlignments = updateAlignments(newText, currentAlignments);
-    self.postMessage(updatedAlignments);
+    const { newText, currentAlignments, ctms } = e.data;
+    const updatedAlignments = updateAlignments(newText, currentAlignments, ctms);
+    const wer = calculateWER(updatedAlignments, ctms);
+    self.postMessage({ alignments: updatedAlignments, wer: Number(wer.toFixed(2)) });
 };

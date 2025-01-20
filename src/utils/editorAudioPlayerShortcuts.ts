@@ -321,7 +321,7 @@ const useShortcuts = (shortcutControls: ShortcutControls) => {
     useEffect(() => {
         const shortcuts = getAllShortcuts().reduce((acc, { shortcut, key }) => {
             const skipAudioWrapper = (seconds: number) => {
-                if (typeof shortcutControls?.skipAudio === 'function') {
+                if (shortcutControls && typeof shortcutControls.skipAudio === 'function') {
                     shortcutControls.skipAudio(seconds);
                 } else {
                     console.error('shortcutControls.skipAudio is not a function', shortcutControls);
@@ -330,25 +330,53 @@ const useShortcuts = (shortcutControls: ShortcutControls) => {
 
             switch (key) {
                 case 'skipAudioBackwardsBy3Seconds':
-                    acc[shortcut] = () => skipAudioWrapper(-3);
+                    acc[shortcut] = () => {
+                        if (shortcutControls && typeof shortcutControls.skipAudio === 'function') {
+                            shortcutControls.skipAudio(-3)
+                        }
+                    };
                     break;
                 case 'skipAudioBackwardsBy5Seconds':
-                    acc[shortcut] = () => skipAudioWrapper(-5);
+                    acc[shortcut] = () => {
+                        if (shortcutControls && typeof shortcutControls.skipAudio === 'function') {
+                            shortcutControls.skipAudio(-5)
+                        }
+                    };
                     break;
                 case 'skipAudioBackwardsBy8Seconds':
-                    acc[shortcut] = () => skipAudioWrapper(-8);
+                    acc[shortcut] = () => {
+                        if (shortcutControls && typeof shortcutControls.skipAudio === 'function') {
+                            shortcutControls.skipAudio(-8)
+                        }
+                    };
                     break;
                 case 'skipAudioBackwardsBy10Seconds':
-                    acc[shortcut] = () => skipAudioWrapper(-10);
+                    acc[shortcut] = () => {
+                        if (shortcutControls && typeof shortcutControls.skipAudio === 'function') {
+                            shortcutControls.skipAudio(-10)
+                        }
+                    };
                     break;
                 case 'skipAudioBackwardsBy15Seconds':
-                    acc[shortcut] = () => skipAudioWrapper(-15);
+                    acc[shortcut] = () => {
+                        if (shortcutControls && typeof shortcutControls.skipAudio === 'function') {
+                            shortcutControls.skipAudio(-15)
+                        }
+                    };
                     break;
                 case 'skipAudioForwardBy3Seconds':
-                    acc[shortcut] = () => skipAudioWrapper(3);
+                    acc[shortcut] = () => {
+                        if (shortcutControls && typeof shortcutControls.skipAudio === 'function') {
+                            shortcutControls.skipAudio(3)
+                        }
+                    };
                     break;
                 case 'jumpAudioAndCursorForwardBy3Seconds':
-                    acc[shortcut] = () => skipAudioWrapper(3);
+                    acc[shortcut] = () => {
+                        if (shortcutControls && typeof shortcutControls.skipAudio === 'function') {
+                            shortcutControls.skipAudio(3)
+                        }
+                    };
                     break;
                 case 'skipAudioForwardBy10Seconds':
                     acc[shortcut] = () => skipAudioWrapper(10);
