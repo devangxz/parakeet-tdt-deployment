@@ -49,7 +49,9 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
 
     const characterIndexToWordIndex = (text: string, charIndex: number): number => {
         const textUpToIndex = text.slice(0, charIndex);
-        return textUpToIndex.split(/\s+/).filter(word => word.trim() !== '').length;
+        const endsWithSpace = textUpToIndex.endsWith(' ');
+        const wordCount = textUpToIndex.split(/\s+/).filter(word => word.trim() !== '').length;
+        return endsWithSpace ? wordCount : wordCount - 1;
     };
 
     const initEditor = useCallback(async () => {
@@ -129,40 +131,18 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
 
         const text = quill.getText()
         const wordIndex = characterIndexToWordIndex(text, clickPosition)
-        
         if (wordIndex >= 0 && wordIndex < alignments.length && audioPlayer) {
-            const alignment = alignments[wordIndex]
-            console.log('Playing word:', alignment.word, 'at timestamp:', alignment.start)
-            audioPlayer.currentTime = alignment.start
+            const { startPos, word, start } = alignments[wordIndex];
+            quill.setSelection(startPos!, word.length);
+
+            console.log('Playing word:', word, 'at timestamp:', start)
+            audioPlayer.currentTime = start
             audioPlayer.play()
-        } else {
-            console.log('Skipping playback - conditions not met')
         }
     }, [alignments, audioPlayer])
 
     const handlePlayAudioAtCursorPositionShortcut = useCallback(() => {
-        const quill = quillRef.current?.getEditor();
-        if (!quill) return;
-
-        const currentSelection = quill.getSelection();
-        if (!currentSelection) return;
-
-        const text = quill.getText();
-        const cursorPosition = currentSelection.index;
-
-        let wordStart = cursorPosition;
-        let wordEnd = cursorPosition;
-
-        while (wordStart > 0 && text[wordStart - 1] !== ' ' && text[wordStart - 1] !== '\n') {
-            wordStart--;
-        }
-
-        while (wordEnd < text.length && text[wordEnd] !== ' ' && text[wordEnd] !== '\n') {
-            wordEnd++;
-        }
-
-        quill.setSelection(wordStart, wordEnd - wordStart);
-        handleEditorClick();
+        handleEditorClick()
     }, [handleEditorClick]);
 
     const insertTimestampBlankAtCursorPositionInstance = useCallback(() => {
@@ -170,38 +150,52 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     }, [audioPlayer]);
 
     const googleSearchSelectedWord = useCallback(() => {
-        if (!quillRef.current) return;
-
-        const quill = quillRef.current.getEditor();
+        const quill = quillRef.current?.getEditor();
+        if (!quill || !quill.getSelection()) return;
+    
+        let searchText;
         const selection = quill.getSelection();
-
-        if (!selection) return;
-
-        const selectedText = quill.getText(selection.index, selection.length);
-
-        if (selectedText.trim()) {
-            const searchQuery = encodeURIComponent(selectedText.trim());
-            const googleSearchUrl = `https://www.google.com/search?q=${searchQuery}`;
-            window.open(googleSearchUrl, '_blank');
+        if(!selection) return
+        
+        if (selection.length > 0) {
+            searchText = quill.getText(selection.index, selection.length);
+        } else {
+            const wordIndex = characterIndexToWordIndex(quill.getText(), selection.index);
+            if (wordIndex >= 0 && wordIndex < alignments.length) {
+                const { startPos, word } = alignments[wordIndex];
+                quill.setSelection(startPos!, word.length);
+                searchText = word;
+            }
         }
-    }, [quillRef]);
+    
+        if (searchText) {
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(searchText)}`, '_blank');
+        }
+    }, [quillRef, alignments]);
 
     const defineSelectedWord = useCallback(() => {
-        if (!quillRef.current) return;
-
-        const quill = quillRef.current.getEditor();
+        const quill = quillRef.current?.getEditor();
+        if (!quill || !quill.getSelection()) return;
+     
+        let searchText;
         const selection = quill.getSelection();
-
-        if (!selection) return;
-
-        const selectedText = quill.getText(selection.index, selection.length);
-
-        if (selectedText.trim()) {
-            const searchQuery = encodeURIComponent(selectedText.trim());
-            const googleSearchUrl = `https://www.google.com/search?q=define: ${searchQuery}`;
-            window.open(googleSearchUrl, '_blank');
+        if(!selection) return
+        
+        if (selection.length > 0) {
+            searchText = quill.getText(selection.index, selection.length);
+        } else {
+            const wordIndex = characterIndexToWordIndex(quill.getText(), selection.index);
+            if (wordIndex >= 0 && wordIndex < alignments.length) {
+                const { startPos, word } = alignments[wordIndex];
+                quill.setSelection(startPos!, word.length);
+                searchText = word;
+            }
         }
-    }, [quillRef]);
+     
+        if (searchText) {
+            window.open(`https://www.google.com/search?q=define: ${encodeURIComponent(searchText)}`, '_blank');
+        }
+     }, [quillRef, alignments]);
 
     const adjustFontSize = useCallback((increase: boolean) => {
         if (!quillRef.current) return;
@@ -569,7 +563,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                 })
             }
         }
-    }, []) // Empty dependency array since ctms is constant
+    }, [])
 
     useEffect(() => {
         const quill = quillRef.current?.getEditor()
