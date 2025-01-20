@@ -1,4 +1,5 @@
 import { StarFilledIcon, StarIcon } from '@radix-ui/react-icons'
+import { useGoogleLogin } from '@react-oauth/google'
 import { Session } from 'next-auth'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -7,6 +8,9 @@ import { SpecialInstructions } from './special-instructions'
 import { Tip } from '../../all-files/AllFiles'
 import { orderController } from '../controllers'
 import { getOrderRating } from '@/app/actions/order/rating'
+import { BoxUploadButton } from '@/components/box-upload-button'
+import { DropboxUploadButton } from '@/components/dropbox-upload-button'
+import OneDriveUploadButton from '@/components/one-drive-upload-button'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -15,6 +19,8 @@ import {
   DialogHeader,
 } from '@/components/ui/dialog'
 import { FILE_CACHE_URL } from '@/constants'
+import { uploadToGoogleDrive } from '@/utils/google-drive'
+
 interface CheckAndDownloadProps {
   id: string
   orderId: string
@@ -42,6 +48,7 @@ export function CheckAndDownload({
   const [hover, setHover] = useState<null | number>(null)
   const [showSubtitle, setShowSubtitle] = useState<boolean>(false)
   const [rating, setRating] = useState<null | number>(storedrating || null)
+  const [isUploading, setIsUploading] = useState(false)
   const ratingMessages = ['Poor', 'Bad', 'Okay', 'Good', 'Excellent']
   const controller = async (
     payload: {
@@ -63,6 +70,54 @@ export function CheckAndDownload({
     } catch (err) {
       const errorToastId = toast.error(`Error` + err)
       toast.dismiss(errorToastId)
+      toast.dismiss(toastId)
+    }
+  }
+
+  const [currentFileUrl, setCurrentFileUrl] = useState<string>('')
+  const [currentFileName, setCurrentFileName] = useState<string>('')
+
+  const login = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      const accessToken = tokenResponse.access_token
+      localStorage.setItem('gdrive_token', accessToken)
+      // If we were in the middle of an upload, retry it
+      if (isUploading) {
+        handleGDriveUpload(currentFileUrl, currentFileName)
+      }
+    },
+    onError: (errorResponse) => {
+      console.error('Google login error:', errorResponse)
+      toast.error('Failed to login to Google Drive')
+    },
+    scope: 'https://www.googleapis.com/auth/drive.file',
+  })
+
+  const handleGDriveUpload = async (fileUrl: string, fileName: string) => {
+    setCurrentFileUrl(fileUrl)
+    setCurrentFileName(fileName)
+    const token = localStorage.getItem('gdrive_token')
+    if (!token) {
+      login()
+      return
+    }
+
+    setIsUploading(true)
+    const toastId = toast.loading('Uploading to Google Drive...')
+
+    try {
+      await uploadToGoogleDrive(fileUrl, fileName, token)
+      toast.success('File uploaded to Google Drive successfully')
+    } catch (error: unknown) {
+      console.error('Upload error:', error)
+      if (error instanceof Error && error.message.includes('login')) {
+        login() // Trigger new login if token expired
+      } else {
+        const errorMessage = error instanceof Error ? error.message : 'Failed to upload to Google Drive'
+        toast.error(errorMessage)
+      }
+    } finally {
+      setIsUploading(false)
       toast.dismiss(toastId)
     }
   }
@@ -149,10 +204,10 @@ export function CheckAndDownload({
                       `/editor/${id}`,
                       '_blank',
                       'toolbar=no,location=no,menubar=no,width=' +
-                        window.screen.width +
-                        ',height=' +
-                        window.screen.height +
-                        ',left=0,top=0'
+                      window.screen.width +
+                      ',height=' +
+                      window.screen.height +
+                      ',left=0,top=0'
                     )
                   }
                 >
@@ -181,12 +236,26 @@ export function CheckAndDownload({
                   className='text-primary'
                 >{`${docx?.name}_cf.docx`}</a>
                 <div className='flex space-x-2'>
-                  {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'>
-                    Save to Dropbox
-                  </div>
-                  <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'>
-                    Save to Google Drive
-                  </div> */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleGDriveUpload(cfDocxSignedUrl, `${docx?.name}_cf.docx`)}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? 'Uploading...' : 'Save to Google Drive'}
+                  </Button>
+                  <OneDriveUploadButton
+                    fileUrl={cfDocxSignedUrl}
+                    fileName={`${docx?.name}_cf.docx`}
+                  />
+                  <BoxUploadButton
+                    fileUrl={cfDocxSignedUrl}
+                    fileName={`${docx?.name}_cf.docx`}
+                  />
+                  <DropboxUploadButton
+                    fileUrl={cfDocxSignedUrl}
+                    fileName={`${docx?.name}_cf.docx`}
+                  />
                 </div>
               </div>
               {/* pdf  */}
@@ -197,12 +266,14 @@ export function CheckAndDownload({
                   className='text-primary'
                 >{`${pdf?.name}_cf.pdf`}</a>
                 <div className='flex space-x-2'>
-                  {/* <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'>
-                    Save to Dropbox
-                  </div>
-                  <div className='border-2 rounded-md p-[3px] cursor-pointer text-[0.875rem] md:px-[.5rem]'>
-                    Save to Google Drive
-                  </div> */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleGDriveUpload(`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${session?.user?.token}`, `${pdf?.name}_cf.pdf`)}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? 'Uploading...' : 'Save to Google Drive'}
+                  </Button>
                 </div>
               </div>
             </div>
