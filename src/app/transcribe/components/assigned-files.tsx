@@ -34,6 +34,7 @@ interface File extends BaseTranscriberFile {
   jobType: string
   orgName: string
   testFile: boolean
+  containsMp4: boolean
 }
 
 interface Props {
@@ -113,6 +114,9 @@ export default function AssignedFilesPage({ changeTab }: Props) {
             jobType: assignment.type,
             orgName: assignment.order.orgName,
             testFile: assignment.order.isTestCustomer,
+            containsMp4:
+              assignment.order.File.fileKey?.split('.').pop().toLowerCase() ===
+              'mp4',
           }
         })
         setAssginedFiles(orders ?? [])
@@ -266,6 +270,14 @@ export default function AssignedFilesPage({ changeTab }: Props) {
                 className='font-semibold text-[10px] text-green-600'
               >
                 Test File
+              </Badge>
+            )}
+            {row.original.containsMp4 && (
+              <Badge
+                variant='outline'
+                className='font-semibold text-[10px] text-green-600'
+              >
+                Contains Video
               </Badge>
             )}
           </div>
