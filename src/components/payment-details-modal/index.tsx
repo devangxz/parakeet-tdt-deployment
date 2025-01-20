@@ -115,9 +115,13 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     borderWidth: 1,
+    borderColor: '#000',
     flex: 1,
     textAlign: 'center',
     fontSize: 10,
+    padding: 2,
+    borderBottom: 'none',
+    borderRight: 'none',
   },
   tableCell: {
     borderWidth: 1,
@@ -125,6 +129,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 10,
     padding: 2,
+    borderBottom: 'none',
   },
   customerTableCell: {
     padding: 5,
@@ -132,14 +137,17 @@ const styles = StyleSheet.create({
     borderColor: '#000',
     flex: 1,
     fontSize: 10,
+    borderBottom: 'none',
   },
   customerTableCellMain: {
     padding: 5,
     borderWidth: 1,
     borderColor: '#000',
+    borderBottom: 'none',
     flex: 1,
     fontSize: 10,
     fontWeight: 700,
+    borderRight: 'none',
     color: '#000',
   },
   footer: {
@@ -182,7 +190,7 @@ const InvoicePDF = ({
 }) => (
   <Document>
     <Page size='A4' style={styles.page}>
-      <Image src='https://scribie.com/assets/img/scribie-invoice.png' />
+      <Image src='/assets/images/scribie-invoice.png' />
       <View>
         <Text style={styles.header}>INVOICE</Text>
         <View style={styles.tableCustomer}>
@@ -201,8 +209,14 @@ const InvoicePDF = ({
             <Text style={styles.customerTableCell}>{invoice?.id}</Text>
           </View>
           <View style={styles.tableRow}>
-            <Text style={styles.customerTableCellMain}>EIN</Text>
-            <Text style={styles.customerTableCell}>99-5031138</Text>
+            <Text
+              style={[styles.customerTableCellMain, { borderBottomWidth: 1 }]}
+            >
+              EIN
+            </Text>
+            <Text style={[styles.customerTableCell, { borderBottomWidth: 1 }]}>
+              99-5031138
+            </Text>
           </View>
         </View>
       </View>
@@ -235,6 +249,8 @@ const InvoicePDF = ({
                 borderWidth: 1,
                 textAlign: 'center',
                 fontSize: 10,
+                borderBottom: 'none',
+                borderRight: 'none',
               }}
             >
               #
@@ -248,17 +264,25 @@ const InvoicePDF = ({
                 borderWidth: 1,
                 textAlign: 'center',
                 fontSize: 10,
+                borderBottom: 'none',
+                borderRight: 'none',
               }}
             >
               {invoice?.type === 'TRANSCRIPT' ? 'File Name' : 'Description'}
             </Text>
             {invoice?.type === 'TRANSCRIPT' && (
               <>
-                <Text style={styles.tableCellHeader}>Minutes</Text>
-                <Text style={styles.tableCellHeader}>Rate</Text>
+                <Text style={[styles.tableCellHeader, { paddingRight: 3 }]}>
+                  Minutes
+                </Text>
+                <Text style={[styles.tableCellHeader, { paddingRight: 3 }]}>
+                  Rate
+                </Text>
               </>
             )}
-            <Text style={styles.tableCellHeader}>Amount</Text>
+            <Text style={[styles.tableCellHeader, { borderRightWidth: 1 }]}>
+              Amount
+            </Text>
           </View>
           {billSummary?.files.map((file, index) => (
             <View style={styles.tableRow} key={index}>
@@ -269,6 +293,8 @@ const InvoicePDF = ({
                   borderColor: '#000',
                   fontSize: 10,
                   padding: 2,
+                  borderBottom: 'none',
+                  borderRight: 'none',
                 }}
               >
                 {index + 1}
@@ -280,14 +306,25 @@ const InvoicePDF = ({
                   borderColor: '#000',
                   fontSize: 10,
                   padding: 2,
+                  borderBottom: 'none',
+                  borderRight: 'none',
                 }}
               >
                 {file.filename}
               </Text>
-              <Text style={styles.tableCell}>
+              <Text style={[styles.tableCell, { paddingRight: 3 }]}>
                 {(Number(file.duration) / 60).toFixed(2)}
               </Text>
-              <Text style={styles.tableCell}>
+              <Text
+                style={[
+                  styles.tableCell,
+                  {
+                    borderLeft: 'none',
+                    borderRight: 'none',
+                    paddingRight: 3,
+                  },
+                ]}
+              >
                 ${Number(file.rate).toFixed(2)}
               </Text>
               <Text style={[styles.tableCell, { textAlign: 'right' }]}>
@@ -305,6 +342,8 @@ const InvoicePDF = ({
                     borderColor: '#000',
                     fontSize: 10,
                     padding: 2,
+                    borderBottom: 'none',
+                    borderRight: 'none',
                   }}
                 >
                   1
@@ -316,6 +355,8 @@ const InvoicePDF = ({
                     borderColor: '#000',
                     fontSize: 10,
                     padding: 2,
+                    borderBottom: 'none',
+                    borderRight: 'none',
                   }}
                 >
                   Invoice for adding account credits
@@ -336,6 +377,8 @@ const InvoicePDF = ({
                   borderColor: '#000',
                   fontSize: 10,
                   padding: 2,
+                  borderBottom: 'none',
+                  borderRight: 'none',
                 }}
               >
                 Applied Discount
@@ -354,11 +397,17 @@ const InvoicePDF = ({
                 borderColor: '#000',
                 fontSize: 10,
                 padding: 2,
+                borderRight: 'none',
               }}
             >
               Total
             </Text>
-            <Text style={[styles.tableCell, { textAlign: 'right' }]}>
+            <Text
+              style={[
+                styles.tableCell,
+                { textAlign: 'right', borderBottomWidth: 1 },
+              ]}
+            >
               $
               {invoice?.type === 'ADD_CREDITS'
                 ? receipt?.netAmount
@@ -376,41 +425,60 @@ const InvoicePDF = ({
             <Text
               style={[
                 styles.tableCellHeader,
-                { textAlign: 'center', fontSize: 15 },
+                { textAlign: 'center', fontSize: 15, borderRightWidth: 1 },
               ]}
             >
               PAYMENT RECEIPT
             </Text>
           </View>
           <View style={styles.tableRow}>
-            <Text style={styles.tableCell}>Payment Method</Text>
+            <Text style={[styles.tableCell, { borderRight: 'none' }]}>
+              Payment Method
+            </Text>
             <Text style={styles.tableCell}>{receipt?.paymentMethod}</Text>
           </View>
           <View style={styles.tableRow}>
-            <Text style={styles.tableCell}>Paid By</Text>
+            <Text style={[styles.tableCell, { borderRight: 'none' }]}>
+              Paid By
+            </Text>
             <Text style={styles.tableCell}>
               {receipt?.paidByName} ({receipt?.paidByEmail})
             </Text>
           </View>
           <View style={styles.tableRow}>
-            <Text style={styles.tableCell}>Transaction ID</Text>
+            <Text style={[styles.tableCell, { borderRight: 'none' }]}>
+              Transaction ID
+            </Text>
             <Text style={styles.tableCell}>{receipt?.transactionId}</Text>
           </View>
           <View style={styles.tableRow}>
-            <Text style={styles.tableCell}>Credits used</Text>
+            <Text style={[styles.tableCell, { borderRight: 'none' }]}>
+              Credits used
+            </Text>
             <Text style={styles.tableCell}>${receipt?.creditsUsed}</Text>
           </View>
           <View style={styles.tableRow}>
-            <Text style={styles.tableCell}>Refund Amount</Text>
+            <Text style={[styles.tableCell, { borderRight: 'none' }]}>
+              Refund Amount
+            </Text>
             <Text style={styles.tableCell}>${receipt?.refundedAmount}</Text>
           </View>
           <View style={styles.tableRow}>
-            <Text style={styles.tableCell}>Net Amount</Text>
+            <Text style={[styles.tableCell, { borderRight: 'none' }]}>
+              Net Amount
+            </Text>
             <Text style={styles.tableCell}>${receipt?.netAmount}</Text>
           </View>
           <View style={styles.tableRow}>
-            <Text style={styles.tableCell}>Payment Date</Text>
-            <Text style={styles.tableCell}>
+            <Text
+              style={[
+                styles.tableCell,
+                { borderBottomWidth: 1, borderRight: 'none' },
+              ]}
+            >
+              Payment Date
+            </Text>
+            <Text style={[styles.tableCell, { borderBottomWidth: 1 }]}>
               {formatDateTime(receipt?.date ?? '')}
             </Text>
           </View>
