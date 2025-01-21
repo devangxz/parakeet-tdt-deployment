@@ -113,16 +113,16 @@ const createShortcutControls = (
       audioPlayer.current.currentTime += seconds
     }
   },
-  playNextBlank: () => {},
-  playPreviousBlank: () => {},
-  playAudioAtCursorPosition: () => {},
-  insertTimestampBlankAtCursorPosition: () => {},
-  insertTimestampAndSpeakerInitialAtStartOfCurrentLine: () => {},
-  googleSearchSelectedWord: () => {},
-  defineSelectedWord: () => {},
-  increaseFontSize: () => {},
-  decreaseFontSize: () => {},
-  repeatLastFind: () => {},
+  playNextBlank: () => { },
+  playPreviousBlank: () => { },
+  playAudioAtCursorPosition: () => { },
+  insertTimestampBlankAtCursorPosition: () => { },
+  insertTimestampAndSpeakerInitialAtStartOfCurrentLine: () => { },
+  googleSearchSelectedWord: () => { },
+  defineSelectedWord: () => { },
+  increaseFontSize: () => { },
+  decreaseFontSize: () => { },
+  repeatLastFind: () => { },
   increaseVolume: () => {
     if (audioPlayer.current) {
       audioPlayer.current.volume = Math.min(1, audioPlayer.current.volume + 0.1)
@@ -143,16 +143,16 @@ const createShortcutControls = (
       audioPlayer.current.playbackRate = Math.max(0.1, audioPlayer.current.playbackRate - 0.1)
     }
   },
-  playAudioFromTheStartOfCurrentParagraph: () => {},
-  capitalizeFirstLetter: () => {},
-  uppercaseWord: () => {},
-  lowercaseWord: () => {},
-  joinWithNextParagraph: () => {},
-  findNextOccurrenceOfString: () => {},
-  findThePreviousOccurrenceOfString: () => {},
-  replaceNextOccurrenceOfString: () => {},
-  replaceAllOccurrencesOfString: () => {},
-  saveChanges: () => {},
+  playAudioFromTheStartOfCurrentParagraph: () => { },
+  capitalizeFirstLetter: () => { },
+  uppercaseWord: () => { },
+  lowercaseWord: () => { },
+  joinWithNextParagraph: () => { },
+  findNextOccurrenceOfString: () => { },
+  findThePreviousOccurrenceOfString: () => { },
+  replaceNextOccurrenceOfString: () => { },
+  replaceAllOccurrencesOfString: () => { },
+  saveChanges: () => { },
   jumpAudioAndCursorForwardBy3Seconds: () => {
     if (audioPlayer.current) audioPlayer.current.currentTime += 3;
   },
@@ -407,7 +407,7 @@ export default memo(function Header({
   const shortcutControls = useMemo(
     () => createShortcutControls(audioPlayer, quillRef?.current?.getEditor() || null),
     [audioPlayer, quillRef]
-    )
+  )
 
   useShortcuts(shortcutControls as ShortcutControls)
 
@@ -430,7 +430,7 @@ export default memo(function Header({
     try {
       console.log('Fetching audio URL for fileId:', orderDetails.fileId)
       const { success, signedUrl } = await getSignedUrlAction(
-        `${orderDetails.fileId}.mp3`, 
+        `${orderDetails.fileId}.mp3`,
         Math.max(Number(orderDetails.duration) * 4, 1800)
       )
       if (success && signedUrl) {
@@ -457,35 +457,35 @@ export default memo(function Header({
 
     // Initialize audio and pass to parent immediately
     if (!audio.src || audio.src !== audioUrl) {
-        audio.src = audioUrl
+      audio.src = audioUrl
     }
-    
+
     // Always pass the audio player reference to parent
     if (getAudioPlayer) {
-        getAudioPlayer(audio)
+      getAudioPlayer(audio)
     }
-        
+
     const handleLoadStart = () => {
-        // Audio loading started
+      // Audio loading started
     }
 
     const handleCanPlayThrough = () => {
-        // Only set player loaded on initial load
-        if (!audio.currentTime) {
-            setIsPlayerLoaded(true)
-        }
+      // Only set player loaded on initial load
+      if (!audio.currentTime) {
+        setIsPlayerLoaded(true)
+      }
     }
 
     const handleLoadedMetadata = () => {
-        if (!audioDuration) {
-            setAudioDuration(audio.duration)
-            setSpeed(audio.playbackRate * 100)
-        }
+      if (!audioDuration) {
+        setAudioDuration(audio.duration)
+        setSpeed(audio.playbackRate * 100)
+      }
     }
 
     const handleError = (e: ErrorEvent) => {
-        console.error('Audio loading error:', e)
-        setIsPlayerLoaded(false)
+      console.error('Audio loading error:', e)
+      setIsPlayerLoaded(false)
     }
 
     audio.addEventListener('loadstart', handleLoadStart)
@@ -494,10 +494,10 @@ export default memo(function Header({
     audio.addEventListener('error', handleError)
 
     return () => {
-        audio.removeEventListener('loadstart', handleLoadStart)
-        audio.removeEventListener('canplaythrough', handleCanPlayThrough)
-        audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
-        audio.removeEventListener('error', handleError)
+      audio.removeEventListener('loadstart', handleLoadStart)
+      audio.removeEventListener('canplaythrough', handleCanPlayThrough)
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      audio.removeEventListener('error', handleError)
     }
   }, [audioUrl, getAudioPlayer])
 
@@ -621,13 +621,13 @@ export default memo(function Header({
       if (!audioPlayer || !audioPlayer.current || !videoRef.current) return
       const player = audioPlayer.current
       videoRef.current.volume = 0
-      
+
       const handleAudioPlay = () => videoRef.current?.play()
       const handleAudioPause = () => videoRef.current?.pause()
-      
+
       player.addEventListener('play', handleAudioPlay)
       player.addEventListener('pause', handleAudioPause)
-      
+
       player.addEventListener('seeking', () => {
         if (videoRef.current) videoRef.current.currentTime = player.currentTime
       })
@@ -1157,9 +1157,9 @@ export default memo(function Header({
       </div>
 
       <div className='h-1/2 bg-white border border-gray-200 px-1 flex flex-col justify-between rounded-b-lg'>
-        <audio 
-          ref={audioPlayer} 
-          className='hidden' 
+        <audio
+          ref={audioPlayer}
+          className='hidden'
           src={audioUrl}
           preload="auto"
         ></audio>
@@ -1282,7 +1282,7 @@ export default memo(function Header({
 
                 <div className='h-full w-[2px] bg-gray-800 mx-3'></div>
 
-                <div className='block min-[1450px]:hidden relative'>
+                <div className='block 2xl:hidden relative'>
                   <Tooltip>
                     <TooltipTrigger>
                       <PlayerButton
@@ -1295,7 +1295,7 @@ export default memo(function Header({
                       <p>Toggle more options</p>
                     </TooltipContent>
                   </Tooltip>
-                  {isToolbarDropdownOpen && <div className='absolute top-[35px] -right-[380px] z-10 bg-white rounded-lg shadow-lg border border-gray-200 w-fit p-2'>
+                  {isToolbarDropdownOpen && <div className='absolute top-[35px] -right-[380px] z-10 bg-white rounded-lg shadow-lg border border-gray-200 w-fit p-2 flex'>
                     <Toolbar
                       orderDetails={orderDetails}
                       setSelectionHandler={setSelectionHandler}
@@ -1314,12 +1314,12 @@ export default memo(function Header({
                       decreaseFontSize={decreaseFontSize}
                       insertInterpreterSwearInLine={insertInterpreterSwearInLine}
                       highlightWordsEnabled={highlightWordsEnabled}
-                      setHighlightWordsEnabled={setHighlightWordsEnabled}                  
+                      setHighlightWordsEnabled={setHighlightWordsEnabled}
                     />
                   </div>}
                 </div>
               </TooltipProvider>
-              <div className='hidden min-[1450px]:block'>
+              <div className='hidden 2xl:block'>
                 <Toolbar
                   orderDetails={orderDetails}
                   setSelectionHandler={setSelectionHandler}
@@ -1338,7 +1338,7 @@ export default memo(function Header({
                   decreaseFontSize={decreaseFontSize}
                   insertInterpreterSwearInLine={insertInterpreterSwearInLine}
                   highlightWordsEnabled={highlightWordsEnabled}
-                  setHighlightWordsEnabled={setHighlightWordsEnabled}              
+                  setHighlightWordsEnabled={setHighlightWordsEnabled}
                 />
               </div>
             </div>
