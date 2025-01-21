@@ -8,9 +8,9 @@ import { SpecialInstructions } from './special-instructions'
 import { Tip } from '../../all-files/AllFiles'
 import { orderController } from '../controllers'
 import { getOrderRating } from '@/app/actions/order/rating'
-import { BoxUploadButton } from '@/components/box-upload-button'
-import { DropboxUploadButton } from '@/components/dropbox-upload-button'
-import OneDriveUploadButton from '@/components/one-drive-upload-button'
+// import { BoxUploadButton } from '@/components/box-upload-button'
+// import { DropboxUploadButton } from '@/components/dropbox-upload-button'
+// import OneDriveUploadButton from '@/components/one-drive-upload-button'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -244,7 +244,7 @@ export function CheckAndDownload({
                   >
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
                   </Button>
-                  <OneDriveUploadButton
+                  {/* <OneDriveUploadButton
                     fileUrl={cfDocxSignedUrl}
                     fileName={`${docx?.name}_cf.docx`}
                   />
@@ -255,7 +255,7 @@ export function CheckAndDownload({
                   <DropboxUploadButton
                     fileUrl={cfDocxSignedUrl}
                     fileName={`${docx?.name}_cf.docx`}
-                  />
+                  /> */}
                 </div>
               </div>
               {/* pdf  */}
