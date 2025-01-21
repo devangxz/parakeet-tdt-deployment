@@ -1,4 +1,5 @@
 'use client';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { useSession } from 'next-auth/react'
 
 import BrevoChatWidget from '@/components/chat-widget'
@@ -12,9 +13,11 @@ export default function DashboardLayout({
   const { data: session } = useSession()
   return (
     <>
-      <TooltipProvider>{children}{(session?.user === undefined || session?.user?.role == 'CUSTOMER') && (
-        <BrevoChatWidget />
-      )}</TooltipProvider>
+      <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}>
+        <TooltipProvider>{children}{(session?.user === undefined || session?.user?.role == 'CUSTOMER') && (
+          <BrevoChatWidget />
+        )}</TooltipProvider>
+      </GoogleOAuthProvider>
     </>
   )
 }
