@@ -138,9 +138,9 @@ function EditorPage() {
   const [searchHighlight, setSearchHighlight] = useState<{ index: number; length: number } | null>(null);
   const [highlightWordsEnabled, setHighlightWordsEnabled] = useState(true);
   const lastTrackedSecondRef = useRef(-1)
-  const [playStats, setPlayStats] = useState<{listenCount: number[]}>(() => ({
-    listenCount: new Array(Math.ceil(audioDuration)).fill(0)
-  }))
+  const [playStats, setPlayStats] = useState<{listenCount: number[]}>({ listenCount: [] })
+  const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set());
+  const getEditedSegmentsRef = useRef<() => number[]>(() => []);  
 
   interface PlayerEvent {
     t: number
@@ -403,6 +403,13 @@ function EditorPage() {
   }
 
   useEffect(() => {
+    if (isSubmitModalOpen) {
+      const segments = getEditedSegmentsRef.current();
+      setEditedSegments(new Set(segments));
+    }
+  }, [isSubmitModalOpen]);  
+
+  useEffect(() => {
     setPlayStats(() => ({
       listenCount: new Array(Math.ceil(audioDuration)).fill(0)
     }))
@@ -640,6 +647,7 @@ function EditorPage() {
                         selection={selection}
                         searchHighlight={searchHighlight}
                         highlightWordsEnabled={highlightWordsEnabled}
+                        getEditedSegmentsRef={getEditedSegmentsRef}
                       />
 
                       <DiffTabComponent diff={diff} />
@@ -803,7 +811,8 @@ function EditorPage() {
                         key={i}
                         className="h-full flex-1"
                         style={{
-                          backgroundColor: getHeatmapColor(count)
+                          backgroundColor: getHeatmapColor(count),
+                          borderBottom: editedSegments.has(i) ? '5px solid #EF4444' : 'none'
                         }}
                       />
                     ))}
@@ -824,7 +833,7 @@ function EditorPage() {
                 <Button
                   onClick={() => {
                     if (!quillRef?.current) return
-                    const quill = quillRef.current.getEditor()
+                    const quill = quillRef.current.getEditor()      
                     handleSubmit({
                       orderDetails,
                       step,

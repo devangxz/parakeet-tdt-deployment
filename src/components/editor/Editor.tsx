@@ -23,6 +23,7 @@ interface EditorProps {
     selection: CustomerQuillSelection | null
     searchHighlight: CustomerQuillSelection | null
     highlightWordsEnabled: boolean;
+    getEditedSegmentsRef: React.MutableRefObject<() => number[]>;
 }
 
 interface HistoryState {
@@ -30,7 +31,7 @@ interface HistoryState {
     selection?: { index: number; length: number };
 }
 
-export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled }: EditorProps) {
+export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, getEditedSegmentsRef }: EditorProps) {
     const ctms = initialCtms; // Make CTMs constant
     const quillRef = useRef<ReactQuill>(null)
     const [alignments, setAlignments] = useState<AlignmentType[]>([])
@@ -46,6 +47,19 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         history: false,
         toolbar: false,
     };
+
+    useEffect(() => {
+        getEditedSegmentsRef.current = () => {
+          const segments = alignments
+            .filter(al => al.case === 'mismatch')
+            .flatMap(al => {
+              const start = Math.floor(al.start);
+              const end = Math.ceil(al.end);
+              return Array.from({ length: end - start }, (_, i) => start + i);
+            });
+          return segments;
+        };
+    }, [alignments]);    
 
     const characterIndexToWordIndex = (text: string, charIndex: number): number => {
         const textUpToIndex = text.slice(0, charIndex);
