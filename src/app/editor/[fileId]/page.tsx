@@ -137,6 +137,8 @@ function EditorPage() {
   const findInputRef = useRef<HTMLInputElement>(null)
   const [selection, setSelection] = useState<CustomerQuillSelection | null>(null)
   const [searchHighlight, setSearchHighlight] = useState<{ index: number; length: number } | null>(null);
+  const [highlightWordsEnabled, setHighlightWordsEnabled] = useState(true);
+
   interface PlayerEvent {
     t: number
     s: number
@@ -565,6 +567,8 @@ function EditorPage() {
         setFileToUpload={setFileToUpload}
         fileToUpload={fileToUpload}
         toggleFindAndReplace={toggleFindAndReplace}
+        highlightWordsEnabled={highlightWordsEnabled}
+        setHighlightWordsEnabled={setHighlightWordsEnabled}
       />
       <div className='flex flex-col flex-1 overflow-hidden'>
         <div className='flex justify-between px-16 mt-2 flex-shrink-0'></div>
@@ -616,6 +620,7 @@ function EditorPage() {
                         setSelectionHandler={setSelectionHandler}
                         selection={selection}
                         searchHighlight={searchHighlight}
+                        highlightWordsEnabled={highlightWordsEnabled}
                       />
 
                       <DiffTabComponent diff={diff} />
