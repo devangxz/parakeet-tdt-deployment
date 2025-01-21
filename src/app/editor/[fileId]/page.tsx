@@ -41,7 +41,6 @@ import {
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   CTMType,
-  updatePlayedPercentage,
   regenDocx,
   fetchFileDetails,
   handleSave,
@@ -138,6 +137,10 @@ function EditorPage() {
   const [selection, setSelection] = useState<CustomerQuillSelection | null>(null)
   const [searchHighlight, setSearchHighlight] = useState<{ index: number; length: number } | null>(null);
   const [highlightWordsEnabled, setHighlightWordsEnabled] = useState(true);
+  const lastTrackedSecondRef = useRef(-1)
+  const [playStats, setPlayStats] = useState<{listenCount: number[]}>(() => ({
+    listenCount: new Array(Math.ceil(audioDuration)).fill(0)
+  }))
 
   interface PlayerEvent {
     t: number
@@ -369,9 +372,6 @@ function EditorPage() {
     setAudioPlayer(audioPlayer)
   }, [])
 
-  const [audioPlayed, setAudioPlayed] = useState(new Set<number>())
-  const [playedPercentage, setPlayedPercentage] = useState(0)
-
   useEffect(() => {
     const interval = setInterval(async () => {
       await handleSave(
@@ -390,31 +390,52 @@ function EditorPage() {
     return () => clearInterval(interval)
   }, [getEditorText, orderDetails, notes, step, cfd])
 
+  const getHeatmapColor = (count: number) => {
+    const colors = [
+      '#f3f4f6', // gray for unplayed
+      '#fef9c3', // light yellow
+      '#fde047', // yellow
+      '#fb923c', // orange  
+      '#ef4444', // red
+      '#b91c1c'  // dark red
+    ]
+    return colors[Math.min(count, 5)]
+  }
+
+  useEffect(() => {
+    setPlayStats(() => ({
+      listenCount: new Array(Math.ceil(audioDuration)).fill(0)
+    }))
+  }, [audioDuration])
+
   useEffect(() => {
     const handleTimeUpdate = () => {
       if (!audioPlayer) return
-      const currentTime = Math.floor(audioPlayer.currentTime)
-      setAudioPlayed((prev) => new Set(prev.add(currentTime)))
-      updatePlayedPercentage(audioPlayer, audioPlayed, setPlayedPercentage)
-      // Cast target to HTMLAudioElement to access currentTime
-      // const target = e.target as HTMLAudioElement //TODO: Implement this
-      // setPlayerEvents(prev => [...prev, { t: (new Date()).getTime(), s: target.currentTime }])
-    }
-
-    const handlePlayEnd = () => {
-      updatePlayedPercentage(audioPlayer, audioPlayed, setPlayedPercentage)
+      const currentSecond = Math.floor(audioPlayer.currentTime)
+      
+      // Only update stats if we've moved to a new second
+      if (currentSecond !== lastTrackedSecondRef.current) {
+        lastTrackedSecondRef.current = currentSecond
+        
+        setPlayStats(prev => {
+          const newListenCount = [...prev.listenCount]
+          newListenCount[currentSecond] = (newListenCount[currentSecond] || 0) + 1
+          return { listenCount: newListenCount }
+        })
+      }  
     }
 
     audioPlayer?.addEventListener('timeupdate', handleTimeUpdate)
-    audioPlayer?.addEventListener('ended', handlePlayEnd)
 
     return () => {
       audioPlayer?.removeEventListener('timeupdate', handleTimeUpdate)
-      audioPlayer?.removeEventListener('ended', handlePlayEnd)
     }
-  }, [audioPlayer, audioPlayed])
+  }, [audioPlayer])
 
-  const getPlayedPercentage = () => playedPercentage
+  const getPlayedPercentage = () => {
+    const playedSections = playStats.listenCount.filter(count => count > 0).length
+    return Math.round((playedSections / playStats.listenCount.length) * 100)
+  }
 
   const getEditorMode = useCallback((editorMode: string) => {
     setEditorMode(editorMode)
@@ -422,9 +443,7 @@ function EditorPage() {
 
   const getEditorModeOptions = async () => {
     try {
-      // const response = await axiosInstance.get(`${BACKEND_URL}/get-options/${orderDetails.orderId}`);
       setEditorMode('Manual')
-      // setEditorModeOptions(response.data.options);
     } catch (error) {
       toast.error('Error fetching editor mode options')
     }
@@ -757,39 +776,76 @@ function EditorPage() {
           </div>
         </div>
 
-        <Dialog open={isSubmitModalOpen} onOpenChange={setIsSubmitModalOpen}>
+        <Dialog 
+          open={isSubmitModalOpen} 
+          onOpenChange={(open) => {
+            setIsSubmitModalOpen(open)
+            if (!open) {
+              setSubmitting(false)
+            }
+          }}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Submit</DialogTitle>
               <DialogDescription>
                 Please confirm that you want to submit the transcript
               </DialogDescription>
-              <Button
-                onClick={() => {
-                  if (!quillRef?.current) return
-                  const quill = quillRef.current.getEditor()
-                  handleSubmit({
-                    orderDetails,
-                    step,
-                    editorMode,
-                    fileToUpload,
-                    setButtonLoading,
-                    getPlayedPercentage,
-                    router,
-                    quill,
-                  })
-                  setSubmitting(false)
-                  setIsSubmitModalOpen(false)
-                }}
-                disabled={buttonLoading.submit}
-                className='ml-2'
-              >
-                {' '}
-                {buttonLoading.submit && (
-                  <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                )}{' '}
-                Confirm
-              </Button>
+
+              <div className="py-4">
+                <p className="text-sm text-gray-500 mb-2">
+                  Audio Playback Coverage: <span className="font-medium">{getPlayedPercentage().toFixed(1)}%</span>
+                </p>
+                <div className="space-y-1">
+                  <div className="h-12 rounded-md overflow-hidden border flex">
+                    {playStats.listenCount.map((count, i) => (
+                      <div
+                        key={i}
+                        className="h-full flex-1"
+                        style={{
+                          backgroundColor: getHeatmapColor(count)
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSubmitting(false)
+                    setIsSubmitModalOpen(false)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (!quillRef?.current) return
+                    const quill = quillRef.current.getEditor()
+                    handleSubmit({
+                      orderDetails,
+                      step,
+                      editorMode,
+                      fileToUpload,
+                      setButtonLoading,
+                      getPlayedPercentage,
+                      router,
+                      quill,
+                    })
+                    setSubmitting(false)
+                    setIsSubmitModalOpen(false)
+                  }}
+                  disabled={buttonLoading.submit}
+                >
+                  {buttonLoading.submit && (
+                    <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Confirm
+                </Button>
+              </div>
             </DialogHeader>
           </DialogContent>
         </Dialog>
