@@ -84,7 +84,7 @@ import DefaultShortcuts, {
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   adjustTimestamps,
-  capitalizeWord,
+  autoCapitalizeSentences,
   downloadMP3,
   getFrequentTermsHandler,
   handleSave,
@@ -1551,7 +1551,7 @@ export default memo(function Header({
 
                 <Button
                   onClick={() => {
-                    capitalizeWord(quillRef)
+                    autoCapitalizeSentences(quillRef)
                     handleSave({
                       getEditorText,
                       orderDetails,

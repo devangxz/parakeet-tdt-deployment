@@ -572,27 +572,26 @@ const handleSave = async (
     }
 }
 
-const capitalizeWord = (quillRef: React.RefObject<ReactQuill> | undefined) => {
-    if (quillRef?.current) {
-        const quill = quillRef.current.getEditor();
-        const text = quill.getText();
+const autoCapitalizeSentences = (quillRef: React.RefObject<ReactQuill> | undefined) => {
+  if (quillRef?.current) {
+      const quill = quillRef.current.getEditor();
+      const text = quill.getText();
 
-        // Find all matches using regex
-        const regex = /(?:[.!?])\s+([a-z])/g;
-        let match;
+      // Match sentence endings followed by spaces and a lowercase letter
+      const regex = /([.!?])\s+([a-z])/g;
+      let match;
 
-        while ((match = regex.exec(text)) !== null) {
-            const index = match.index + 2; // +2 to account for the period and space
-            const length = 1; // length of the character to capitalize
+      while ((match = regex.exec(text)) !== null) {
+          // Calculate dynamic index based on full match length
+          const charIndex = match.index + match[0].length - 1;
+          const lowercaseChar = match[2];
+          const uppercaseChar = lowercaseChar.toUpperCase();
 
-            // Get the character to capitalize
-            const char = match[1].toUpperCase();
-
-            // Use Quill's deleteText and insertText methods
-            quill.deleteText(index, length, 'user');
-            quill.insertText(index, char, 'user');
-        }
-    }
+          // Replace the lowercase character
+          quill.deleteText(charIndex, 1, 'user');
+          quill.insertText(charIndex, uppercaseChar, 'user');
+      }
+  }
 }
 
 type HandleSubmitParams = {
@@ -1178,6 +1177,6 @@ export {
     replaceTextHandler,
     insertTimestampBlankAtCursorPosition,
     insertTimestampAndSpeakerInitialAtStartOfCurrentLine,
-    capitalizeWord
+    autoCapitalizeSentences
 }
 export type { CTMType }

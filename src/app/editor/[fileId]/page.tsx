@@ -49,7 +49,7 @@ import {
   searchAndSelect,
   replaceTextHandler,
   CustomerQuillSelection,
-  capitalizeWord,
+  autoCapitalizeSentences,
 } from '@/utils/editorUtils'
 
 export type OrderDetails = {
@@ -293,7 +293,7 @@ function EditorPage() {
       },
 
       saveChanges: () => {
-        capitalizeWord(quillRef)
+        autoCapitalizeSentences(quillRef)
         handleSave({
           getEditorText,
           orderDetails,
