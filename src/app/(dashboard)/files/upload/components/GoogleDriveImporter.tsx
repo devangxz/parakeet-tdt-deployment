@@ -489,7 +489,7 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
 
     const tokenClient = window.google.accounts.oauth2.initCodeClient({
       client_id: GOOGLE_CLIENT_ID,
-      scope: 'https://www.googleapis.com/auth/drive.readonly',
+      scope: 'https://www.googleapis.com/auth/drive.file',
       ux_mode: 'popup',
       callback: async (response: { error?: string; code?: string }) => {
         if (response.error) {
