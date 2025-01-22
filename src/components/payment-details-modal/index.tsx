@@ -209,8 +209,8 @@ const InvoicePDF = ({
       <View style={styles.section}>
         <View style={styles.address}>
           <Text style={styles.addressLabel}>FROM:</Text>
-          <Text style={styles.fontStyle10}>Scribie Technologies, Inc.,</Text>
-          <Text>44 Tehama St.,</Text>
+          <Text style={styles.fontStyle10}>Scribie Technologies Inc.,</Text>
+          <Text>2261 Market Street, #22612,</Text>
           <Text>San Francisco, CA 94105, United States</Text>
           <Text>payments@scribie.com</Text>
         </View>

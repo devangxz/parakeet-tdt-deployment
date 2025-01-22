@@ -236,42 +236,40 @@ const Page = ({ data }: { data: PreferencesResponse }) => {
   }
 
   return (
-    <div className='w-[80%] space-y-[1.5rem]'>
-      <div className='w-[70%] space-y-[1.5rem]'>
-        <HeadingDescription heading='Mail notifications' />
-        {preferences.map((preference, index) => (
-          <div key={index} className='w-[100%] flex items-center gap-[1.25rem]'>
-            {}
-            <Switch
-              checked={
-                preferencesOptions[
-                  preference.orderKey as keyof preferecesOptoinsType
-                ] === true
-              }
-              onCheckedChange={(isChecked) => {
-                setPreferencesOptions({
-                  ...preferencesOptions,
-                  [preference.orderKey as keyof preferecesOptoinsType]:
-                    isChecked,
-                })
-              }}
-              className='bg-violet-200'
-            />
-            <div>
-              <div className='font-semibold'>{preference.heading}</div>
-              <div className='text-gray-600 text-sm not-italic font-normal leading-5'>
-                {preference.description}
+    <div className='lg:w-[70%] flex flex-1 flex-col p-4 gap-5'>
+      <div className='border-b-2 border-customBorder space-y-4 pb-6'>
+        <HeadingDescription heading='Mail Notifications' />
+        <div className='space-y-4'>
+          {preferences.map((preference, index) => (
+            <div key={index} className='flex items-center gap-4'>
+              <Switch
+                checked={
+                  preferencesOptions[
+                    preference.orderKey as keyof preferecesOptoinsType
+                  ] === true
+                }
+                onCheckedChange={(isChecked) => {
+                  setPreferencesOptions({
+                    ...preferencesOptions,
+                    [preference.orderKey as keyof preferecesOptoinsType]:
+                      isChecked,
+                  })
+                }}
+              />
+              <div className='space-y-0.5'>
+                <div className='font-semibold'>{preference.heading}</div>
+                <div className='text-gray-500 text-sm not-italic font-normal leading-5'>
+                  {preference.description}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      <hr />
-
-      <div className='space-y-[1rem]'>
+      <div className='space-y-4'>
         <HeadingDescription
-          heading='Records per page'
+          heading='Records Per Page'
           description='Please select the default number of records to display on a given page.'
         />
         <div className='flex items-center justify-between'>
@@ -320,16 +318,17 @@ const Page = ({ data }: { data: PreferencesResponse }) => {
               </Label>
             </div>
           </RadioGroup>
-          <div className='my-[1.5rem]'>
+          <div>
             {loading ? (
-              <Button disabled>
+              <Button disabled variant='default' className='w-full'>
                 <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
                 Save
               </Button>
             ) : (
               <Button
                 onClick={() => handlePreferences()}
-                className='w-[4rem] h-[2.5rem]'
+                variant='default'
+                className='w-full'
               >
                 Save
               </Button>

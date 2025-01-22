@@ -256,7 +256,7 @@ const Invoice = () => {
 
   return (
     <>
-      <div className='space-y-6'>
+      <div className='h-full flex-1 flex-col p-4 md:flex space-y-3'>
         <div>
           <h1 className='text-lg font-semibold md:text-lg'>Pending Invoices</h1>
         </div>

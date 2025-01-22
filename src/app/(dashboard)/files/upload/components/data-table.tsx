@@ -39,7 +39,6 @@ export function DataTable<TData, TValue>({
   onSelectedRowsChange,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
-
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -86,11 +85,13 @@ export function DataTable<TData, TValue>({
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow
-                key={headerGroup.id}
-              >
+              <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} colSpan={header.colSpan}>
+                  <TableHead
+                    key={header.id}
+                    colSpan={header.colSpan}
+                    className='h-fit p-4 text-left align-middle font-medium text-[15px]'
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -114,7 +115,11 @@ export function DataTable<TData, TValue>({
                   }`}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell data-testid={`file-item-${cell.getValue()}`} key={cell.id}>
+                    <TableCell
+                      data-testid={`file-item-${cell.getValue()}`}
+                      key={cell.id}
+                      className='px-4 py-3'
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -129,7 +134,7 @@ export function DataTable<TData, TValue>({
                   colSpan={columns.length}
                   className='h-24 text-center'
                 >
-                  No results.
+                  No results
                 </TableCell>
               </TableRow>
             )}

@@ -1,4 +1,5 @@
 'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
 import { useSession } from 'next-auth/react'
@@ -14,10 +15,10 @@ import { acceptTeamJoinRequest } from '@/app/actions/team/accept-join-request'
 import { createTeam } from '@/app/actions/team/create'
 import { declineTeamJoinRequest } from '@/app/actions/team/decline-join-request'
 import { getTeams } from '@/app/actions/teams'
+import HeadingDescription from '@/components/heading-description'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
 import { Team } from '@/types/teams'
 
 export default function TeamsPage() {
@@ -151,7 +152,7 @@ export default function TeamsPage() {
         <div className='flex items-center gap-3'>
           <Button
             variant='outline'
-            className='not-rounded'
+            className='border-2 border-customBorder not-rounded w-[140px]'
             onClick={() => {
               setSelectedTeam(row.original)
               setOpenRenameDialog(true)
@@ -161,7 +162,7 @@ export default function TeamsPage() {
           </Button>
           <Button
             variant='outline'
-            className='not-rounded'
+            className='border-2 border-customBorder not-rounded w-[140px]'
             onClick={() => {
               setSelectedTeam(row.original)
               setOpenDetailsDialog(true)
@@ -234,82 +235,79 @@ export default function TeamsPage() {
 
   return (
     <>
-      <div className='h-full flex-1 flex-col space-y-[1.5rem] md:flex'>
-        <div className='flex items-center justify-between space-y-2'>
-          <div>
-            <h1 className='text-lg font-semibold md:text-lg'>Team workspace</h1>
-            <p className='text-sm mt-1 text-muted-foreground'>
-              Teams are collaborative workspaces where all members can upload
+      <div className='flex flex-1 flex-col p-4 gap-5'>
+        <div className='border-b-2 border-customBorder space-y-4 pb-6'>
+          <HeadingDescription
+            heading='Team Workspace'
+            description='Teams are collaborative workspaces where all members can upload
               files, order transcripts, edit transcripts, etc. To create a team,
               please enter the name below and invite each team member from the
               Details button. To join someone else`s team, please contact the
-              team admin and request them to invite you.
-            </p>
-          </div>
+              team admin and request them to invite you.'
+          />
+          <UserPermissions />
         </div>
-        <UserPermissions />
-        {showInvitation && !session?.user?.internalTeamUserId && (
-          <>
-            <Separator />
-            <div>
-              <h1 className='text-lg font-semibold md:text-lg'>
-                Your pending Invitations
-              </h1>
-              <p className='text-sm mt-1 text-muted-foreground'>
-                Please click on the Accept button if you wish to join or the
-                Decline button to reject this invite. Team is a collaborative
-                workspace where all team team members can upload files, orders
-                transcript, edit transcripts, etc.
-              </p>
-              <div>
-                {invitationDetails?.map((invitation, index) => (
-                  <div key={index}>
-                    <p className='text-md mt-5'>
-                      You have been invited to join the{' '}
-                      <b>{invitation.teamName}</b> by{' '}
-                      <b>
-                        {invitation.adminName} ({invitation.adminEmail})
-                      </b>
-                      .{' '}
-                    </p>
-                    <div className='flex gap-2 mt-2 justify-end'>
-                      {isAcceptInviteLoading ? (
-                        <Button disabled>
-                          Please wait
-                          <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={() => handleAcceptInvite(invitation.teamId)}
-                        >
-                          Accept
-                        </Button>
-                      )}
 
-                      {isDeclineInviteLoading ? (
-                        <Button disabled>
-                          Please wait
-                          <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-                        </Button>
-                      ) : (
-                        <Button
-                          variant='destructive'
-                          onClick={() => handleDeclineInvite(invitation.teamId)}
-                        >
-                          Decline
-                        </Button>
-                      )}
-                    </div>
+        {showInvitation && !session?.user?.internalTeamUserId && (
+          <div className='border-b-2 border-customBorder space-y-4 pb-6'>
+            <HeadingDescription
+              heading='Your Pending Invitations'
+              description='Please click on the Accept button if you wish to join or the Decline
+            button to reject this invite. Team is a collaborative workspace
+            where all team team members can upload files, orders transcript,
+            edit transcripts, etc.'
+            />
+            <div className='space-y-4'>
+              {invitationDetails?.map((invitation, index) => (
+                <div key={index} className='flex items-center justify-between'>
+                  <p className='text-md'>
+                    You have been invited to join the{' '}
+                    <b>{invitation.teamName}</b> by{' '}
+                    <b>
+                      {invitation.adminName} ({invitation.adminEmail})
+                    </b>
+                    .{' '}
+                  </p>
+                  <div className='flex gap-2'>
+                    {isAcceptInviteLoading ? (
+                      <Button disabled variant='default' className='w-full'>
+                        <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                        Accept
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => handleAcceptInvite(invitation.teamId)}
+                        variant='default'
+                        className='w-full'
+                      >
+                        Accept
+                      </Button>
+                    )}
+
+                    {isDeclineInviteLoading ? (
+                      <Button disabled variant='destructive' className='w-full'>
+                        <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                        Decline
+                      </Button>
+                    ) : (
+                      <Button
+                        variant='destructive'
+                        onClick={() => handleDeclineInvite(invitation.teamId)}
+                        className='w-full'
+                      >
+                        Decline
+                      </Button>
+                    )}
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          </>
+          </div>
         )}
 
         {!session?.user?.internalTeamUserId && (
-          <>
-            <h1 className='text-lg font-semibold md:text-lg'>Teams</h1>
+          <div className='space-y-4'>
+            <HeadingDescription heading='Teams' />
             <div className='flex items-center justify-between gap-20'>
               <div className='grid w-full items-center gap-1.5'>
                 <Label htmlFor='teamName'>New team name</Label>
@@ -321,18 +319,24 @@ export default function TeamsPage() {
                   onChange={(e) => setNewTeamName(e.target.value)}
                 />
               </div>
-              {isCreateTeamLoading ? (
-                <Button disabled className='mt-5'>
-                  Please wait
-                  <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-                </Button>
-              ) : (
-                <Button className='mt-5' onClick={handleCreateTeam}>
-                  Create team
-                </Button>
-              )}
+              <div>
+                {isCreateTeamLoading ? (
+                  <Button disabled variant='default' className='mt-5 w-full'>
+                    Create Team
+                    <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+                  </Button>
+                ) : (
+                  <Button
+                    variant='default'
+                    className='mt-5 w-full'
+                    onClick={handleCreateTeam}
+                  >
+                    Create Team
+                  </Button>
+                )}
+              </div>
             </div>
-          </>
+          </div>
         )}
 
         <DataTable data={allTeams || []} columns={columns} />

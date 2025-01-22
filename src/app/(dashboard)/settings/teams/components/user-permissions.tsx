@@ -156,17 +156,12 @@ export default function UserPermissions() {
   ]
 
   return (
-    <Accordion
-      type='single'
-      collapsible
-      className='w-full'
-      style={{ marginTop: '-10px' }}
-    >
-      <AccordionItem value='item-1'>
-        <AccordionTrigger className='underline text-primary'>
+    <Accordion type='single' collapsible className='w-full'>
+      <AccordionItem value='item-1' className='border-b-0'>
+        <AccordionTrigger className='underline text-primary py-0'>
           View User Permissions
         </AccordionTrigger>
-        <AccordionContent>
+        <AccordionContent className='pb-0 pt-0 pl-0'>
           <MemberDataTable data={permissions} columns={columns} />
         </AccordionContent>
       </AccordionItem>

@@ -49,7 +49,7 @@ const Footer = () => (
     <div className='relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
       <div className='pb-6 grid grid-cols-1 lg:grid-cols-12 gap-12'>
         <div className='relative -top-1.5 lg:col-span-4'>
-          <div className='flex items-center mb-[11px] -ml-1'>
+          <div className='flex items-center mb-[11px]'>
             <div className='flex-shrink-0'>
               <Image
                 className='h-12 w-12'
@@ -75,13 +75,16 @@ const Footer = () => (
               <div className='p-2 bg-primary/60 rounded-lg'>
                 <MapPin size={18} className='text-primary-foreground/90' />
               </div>
-              <span className='text-base'>44 Tehama St, San Francisco</span>
+              <span className='text-sm'>
+                2261 Market Street, #22612, San Francisco, CA 94114, United
+                States
+              </span>
             </div>
             <div className='flex items-center gap-3 text-primary-foreground'>
               <div className='p-2 bg-primary/60 rounded-lg'>
                 <Phone size={18} className='text-primary-foreground/90' />
               </div>
-              <span className='text-base'>+1 (866) 941 - 4131</span>
+              <span className='text-sm'>+1 (866) 941 - 4131</span>
             </div>
           </div>
 

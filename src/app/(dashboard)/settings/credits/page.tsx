@@ -13,6 +13,7 @@ import { DataTable } from './components/data-table'
 import { getCredits } from '@/app/actions/payment/credits'
 import { getAddCreditsInvoice } from '@/app/actions/payment/credits/get-add-credits-invoice'
 import { updateCreditPreferences } from '@/app/actions/payment/credits/preferences'
+import HeadingDescription from '@/components/heading-description'
 import AddCreditsDialog from '@/components/pay-add-credits'
 import {
   AlertDialog,
@@ -35,7 +36,6 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { MIN_CREDIT, MAX_CREDIT } from '@/constants'
 import formatDateTime from '@/utils/formatDateTime'
@@ -242,137 +242,157 @@ const Invoice = () => {
 
   return (
     <>
-      <div className='space-y-6'>
-        <div className='border-2 w-[222px] p-4 rounded-[12px]'>
-          <h1 className='text-lg font-semibold md:text-lg'>
-            Credit balance{' '}
+      <div className='flex flex-1 flex-col p-4 gap-5'>
+        <div className='border-b-2 border-customBorder space-y-4 pb-6'>
+          <h1 className='w-[222px] rounded-md p-4 border-2 border-customBorder text-lg font-semibold md:text-xl'>
+            Credit Balance{' '}
             <span className='text-primary ml-2'>${creditsBalance}</span>
           </h1>
         </div>
-        <Separator />
-        <div className='text-muted-foreground'>
-          <h1 className='text-lg font-semibold md:text-lg text-black'>
-            Add credits
-          </h1>
-          <p>Please enter amount to load credits to your account.</p>
-          <p>Notes:</p>
-          <ol className='ml-2'>
-            <li>1. Credits can be used to pay for invoices on Scribie</li>
-            <li>
-              2. Credits do not expire and can be shared between team members
-            </li>
-            <li>
-              3. Credits cannot be withdrawn but can be transferred to another
-              team
-            </li>
-            <li>
-              4. Minimum value is ${MIN_CREDIT} and maximum value is $
-              {MAX_CREDIT}
-            </li>
-          </ol>
-        </div>
-        <div className='flex items-center justify-between gap-20'>
-          <div className='grid w-full items-center gap-1.5'>
-            <Label htmlFor='teamName'>Enter amount</Label>
-            <Input
-              id='amount'
-              type='number'
-              placeholder='Eg. $100'
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
+
+        <div className='border-b-2 border-customBorder space-y-4 pb-6'>
+          <HeadingDescription
+            heading='Add Credits'
+            description='Please enter amount to load credits to your account.'
+          />
+          <div className='space-y-2'>
+            <p className='font-semibold'>Notes:</p>
+            <ol className='list-decimal pl-5 space-y-1.5 text-gray-700'>
+              <li>Credits can be used to pay for invoices on Scribie</li>
+              <li>
+                Credits do not expire and can be shared between team members
+              </li>
+              <li>
+                Credits cannot be withdrawn but can be transferred to another
+                team
+              </li>
+              <li>
+                Minimum value is ${MIN_CREDIT} and maximum value is $
+                {MAX_CREDIT}
+              </li>
+            </ol>
           </div>
-          {isAddCreditsLoading ? (
-            <Button disabled className='mt-5'>
-              Please wait
-              <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-            </Button>
-          ) : (
-            <Button
-              className='mt-5'
-              onClick={() => {
-                if (!session?.user?.internalTeamUserId) {
-                  setWarningDialog(true)
-                } else {
-                  handleAddCredit()
-                }
-              }}
-            >
-              Add Credits
-            </Button>
-          )}
+          <div className='flex items-center justify-between gap-20'>
+            <div className='grid w-full items-center gap-1.5'>
+              <Label htmlFor='amount'>Enter amount</Label>
+              <Input
+                id='amount'
+                type='number'
+                placeholder='Eg. $100'
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </div>
+            <div className='mt-5'>
+              {isAddCreditsLoading ? (
+                <Button
+                  type='submit'
+                  disabled
+                  variant='default'
+                  className='w-full'
+                >
+                  <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                  Add Credits
+                </Button>
+              ) : (
+                <Button
+                  type='submit'
+                  variant='default'
+                  className='w-full'
+                  onClick={() => {
+                    if (!session?.user?.internalTeamUserId) {
+                      setWarningDialog(true)
+                    } else {
+                      handleAddCredit()
+                    }
+                  }}
+                >
+                  Add Credits
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
-        <Separator />
-        <h1 className='text-lg font-semibold md:text-lg'>Credit history</h1>
-        <DataTable data={invoices || []} columns={columns} />
-        <Separator />
-        <div>
-          <h1 className='text-lg font-semibold md:text-lg mb-5'>
-            Credit preferences
-          </h1>
+
+        <div className='border-b-2 border-customBorder space-y-4 pb-6'>
+          <HeadingDescription heading='Credit History' />
+          <DataTable data={invoices || []} columns={columns} />
+        </div>
+
+        <div className='space-y-4'>
+          <HeadingDescription heading='Credit Preferences' />
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className='w-full space-y-6'
+              className='space-y-2.5'
             >
-              <div className=''>
-                <FormField
-                  control={form.control}
-                  name='ucd'
-                  render={({ field }) => (
-                    <FormItem className='flex flex-row items-center border mb-5 gap-5 rounded-lg p-3 shadow-sm'>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className='space-y-0.5'>
-                        <FormLabel className='text-md'>
-                          Automatically apply credits
-                        </FormLabel>
-                        <FormDescription className='text-sm'>
-                          Credits will be automatically applied to each invoice
-                          before payment.
-                        </FormDescription>
-                      </div>
-                    </FormItem>
+              <FormField
+                control={form.control}
+                name='ucd'
+                render={({ field }) => (
+                  <FormItem className='flex flex-row items-center border gap-5 rounded-md p-3 shadow-sm'>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className='space-y-0.5'>
+                      <FormLabel className='text-md'>
+                        Automatically apply credits
+                      </FormLabel>
+                      <FormDescription className='text-sm'>
+                        Credits will be automatically applied to each invoice
+                        before payment.
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='rtc'
+                render={({ field }) => (
+                  <FormItem className='flex flex-row items-center gap-5 rounded-md border p-3 shadow-sm'>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className='space-y-0.5'>
+                      <FormLabel className='text-md'>
+                        Convert refunds to credits
+                      </FormLabel>
+                      <FormDescription className='text-sm'>
+                        Refunds issued for payments made with Credit Card/PayPal
+                        will be sent to account credits. Refunds for payments
+                        made with account credits is always sent to account
+                        credits and cannot be changed.
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+              <div className='flex justify-end pt-2'>
+                <div>
+                  {isCreditPreferenceLoading ? (
+                    <Button
+                      type='submit'
+                      disabled
+                      variant='default'
+                      className='w-full'
+                    >
+                      <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                      Update
+                    </Button>
+                  ) : (
+                    <Button type='submit' variant='default' className='w-full'>
+                      Update
+                    </Button>
                   )}
-                />
-                <FormField
-                  control={form.control}
-                  name='rtc'
-                  render={({ field }) => (
-                    <FormItem className='flex flex-row items-center gap-5 rounded-lg border p-3 shadow-sm'>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className='space-y-0.5'>
-                        <FormLabel className='text-md'>
-                          Convert refunds to credits
-                        </FormLabel>
-                        <FormDescription className='text-sm'>
-                          Refunds issued for payments made with Credit
-                          Card/PayPal will be sent to account credits. Refunds
-                          for payments made with account credits is always sent
-                          to account credits and cannot be changed.
-                        </FormDescription>
-                      </div>
-                    </FormItem>
-                  )}
-                />
+                </div>
               </div>
-              {isCreditPreferenceLoading ? (
-                <Button disabled>
-                  Please wait
-                  <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-                </Button>
-              ) : (
-                <Button type='submit'>Update</Button>
-              )}
             </form>
           </Form>
         </div>

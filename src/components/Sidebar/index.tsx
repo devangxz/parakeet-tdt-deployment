@@ -1,4 +1,5 @@
 'use client'
+
 import { Database, Settings, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -6,7 +7,6 @@ import React, { useState, useEffect } from 'react'
 
 import { getCreditBalanceAction } from '@/app/actions/credit-balance'
 import TeamSwitcher from '@/components/team-switcher'
-import { Separator } from '@/components/ui/separator'
 import { SidebarItemType } from '@/types/sidebar'
 
 interface SidebarProps {
@@ -40,47 +40,44 @@ const Sidebar = ({
 
   return (
     <div className='flex-1'>
-      <nav className='grid items-start px-2 text-md font-medium lg:px-4'>
+      <nav className='grid items-start text-md font-medium px-2 lg:px-4 pt-4'>
         {showTeams && (
-          <>
-            <h2 className='mb-2 text-lg font-semibold tracking-tight mt-3'>
-              Teams
-            </h2>
-            <div className='mt-2 mb-8'>
-              <TeamSwitcher />
-            </div>
-            <Separator className='mb-6' />
-          </>
+          <div className='pb-5 border-b-2 border-customBorder'>
+            <h2 className='mb-2.5 text-lg font-semibold tracking-tight'>Teams</h2>
+            <TeamSwitcher />
+          </div>
         )}
 
-        {!showTeams && <div className='mt-3' />}
+        <div className='py-3 border-b-2 border-customBorder'>
+          <SidebarItems
+            sidebarItems={sidebarItems as SidebarItemType[]}
+            heading={heading}
+            pathname={pathname as string}
+          />
+        </div>
 
-        <SidebarItems
-          sidebarItems={sidebarItems as SidebarItemType[]}
-          heading={heading}
-          pathname={pathname as string}
-        />
-        <Separator className='mb-6 mt-6 p-0' />
-        <h2 className='mb-2 text-lg font-semibold tracking-tight'>More</h2>
-        <Link
-          href='/settings/credits'
-          className={`flex items-center gap-2.5 rounded-lg px-3 py-2 transition-all hover:text-primary`}
-        >
-          <Database className='h-5 w-5' />
-          Credits
-          <div className='ml-auto flex items-center' test-id='credit-balance'>
-            <p className='font-normal mr-1'>${creditsBalance}</p>
-            <ChevronDown className='h-5 w-5 -rotate-90 font-normal' />
-          </div>
-        </Link>
-        <Link
-          href='/settings/personal-info'
-          className={`flex items-center gap-2.5 rounded-lg px-3 py-2 transition-all hover:text-primary`}
-        >
-          <Settings className='h-5 w-5' />
-          Settings
-          <ChevronDown className='h-5 w-5 ml-auto flex -rotate-90 font-normal' />
-        </Link>
+        <div className='pt-3'>
+          <h2 className='mb-2.5 text-lg font-semibold tracking-tight'>More</h2>
+          <Link
+            href='/settings/credits'
+            className={`flex items-center gap-2.5 px-3 pt-1 pb-2 transition-all hover:text-primary`}
+          >
+            <Database className='h-5 w-5' />
+            Credits
+            <div className='ml-auto flex items-center' test-id='credit-balance'>
+              <p className='font-normal mr-1'>${creditsBalance}</p>
+              <ChevronDown className='h-5 w-5 -rotate-90 font-normal' />
+            </div>
+          </Link>
+          <Link
+            href='/settings/personal-info'
+            className={`flex items-center gap-2.5 px-3 py-1.5 transition-all hover:text-primary`}
+          >
+            <Settings className='h-5 w-5' />
+            Settings
+            <ChevronDown className='h-5 w-5 ml-auto flex -rotate-90 font-normal' />
+          </Link>
+        </div>
       </nav>
     </div>
   )
@@ -97,8 +94,8 @@ export type props = {
 export function SidebarItems(props: props) {
   const { heading, sidebarItems, pathname } = props
   return (
-    <>
-      <h2 className='mb-2 text-lg font-semibold tracking-tight'>{heading}</h2>
+    <div>
+      <h2 className='mb-2.5 text-lg font-semibold tracking-tight'>{heading}</h2>
       {sidebarItems.map((item, index) => {
         const Icon = item.icon
         const isActive = pathname === item.href
@@ -106,7 +103,7 @@ export function SidebarItems(props: props) {
           <Link
             key={index}
             href={item.href}
-            className={`flex items-center gap-2.5 rounded-lg px-3 py-2 transition-all ${
+            className={`flex items-center gap-2.5 rounded-md px-3 py-2 transition-all ${
               isActive ? 'text-primary bg-primary/10' : 'hover:text-primary'
             }`}
           >
@@ -118,6 +115,6 @@ export function SidebarItems(props: props) {
           </Link>
         )
       })}
-    </>
+    </div>
   )
 }

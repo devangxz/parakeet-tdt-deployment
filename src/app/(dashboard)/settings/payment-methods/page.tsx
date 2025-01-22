@@ -12,8 +12,8 @@ import { getClientTokenAction } from '@/app/actions/payment/client-token'
 import { getPaymentMethods } from '@/app/actions/payment/get-payment-methods'
 import { removePaymentMethod } from '@/app/actions/payment/remove-payment-method'
 import AddPaymentMethodDialog from '@/components/add-payment-method'
+import HeadingDescription from '@/components/heading-description'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 
 interface PaymentMethod {
   id: number
@@ -116,7 +116,7 @@ const Invoice = () => {
             <Button
               disabled
               variant='outline'
-              className='border-2 not-rounded w-[140px]'
+              className='border-2 border-customBorder not-rounded w-[140px]'
             >
               Please wait
               <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
@@ -124,7 +124,7 @@ const Invoice = () => {
           ) : (
             <Button
               variant='outline'
-              className='border-2 not-rounded w-[140px]'
+              className='border-2 border-customBorder not-rounded w-[140px]'
               onClick={() => {
                 handleRemovePaymentMethod(
                   row.original.id.toString(),
@@ -207,43 +207,39 @@ const Invoice = () => {
 
   return (
     <>
-      <div className='space-y-6'>
-        <div>
-          <h1 className='text-lg font-semibold md:text-lg'>
-            Add payment method
-          </h1>
-          <div className='text-muted-foreground'>
-            <p>
-              The following are your stored payment methods. Please click the
-              Add button to add a new method.
-            </p>
-          </div>
+      <div className='flex flex-1 flex-col p-4 gap-5'>
+        <div className='border-b-2 border-customBorder space-y-4 pb-6'>
+          <HeadingDescription
+            heading='Add Payment Method'
+            description='The following are your stored payment methods. Please click the
+              Add button to add a new method.'
+          />
+          {isAddPaymentMethodLoading ? (
+            <Button
+              disabled
+              variant='outline'
+              className='not-rounded border-2 border-customBorder w-[240px]'
+            >
+              Please wait
+              <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+            </Button>
+          ) : (
+            <Button
+              variant='outline'
+              className='not-rounded border-2 border-customBorder w-[240px]'
+              onClick={() => {
+                handleAddPaymentMethod()
+              }}
+            >
+              <CreditCard className='mr-2' /> Add new payment method
+            </Button>
+          )}
         </div>
-        {isAddPaymentMethodLoading ? (
-          <Button
-            disabled
-            variant='outline'
-            className='not-rounded border-2 w-[240px]'
-          >
-            Please wait
-            <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-          </Button>
-        ) : (
-          <Button
-            variant='outline'
-            className='not-rounded border-2 w-[240px]'
-            onClick={() => {
-              handleAddPaymentMethod()
-            }}
-          >
-            <CreditCard className='mr-2' /> Add new payment method
-          </Button>
-        )}
-        <Separator />
-        <h1 className='text-lg font-semibold md:text-lg'>
-          Saved Payment Methods
-        </h1>
-        <DataTable data={paymentMethods || []} columns={columns} />
+
+        <div className='space-y-4'>
+          <HeadingDescription heading='Saved Payment Methods' />
+          <DataTable data={paymentMethods || []} columns={columns} />
+        </div>
       </div>
       <AddPaymentMethodDialog
         open={openDetailsDialog}

@@ -25,12 +25,14 @@ interface UploadType {
 
 const FileFormatDisplay = ({ formats }: { formats: string[] }) => (
   <div className='flex flex-wrap items-center gap-2'>
-    <span className='font-medium text-sm'>Supported File Formats:</span>
+    <span className='text-gray-700 font-medium text-sm'>
+      Supported File Formats:
+    </span>
     {formats.map((format, index) => (
       <Badge
         key={index}
         variant='outline'
-        className='px-2 py-0.5 text-xs bg-[#F3F0FF] border-purple-200 text-purple-700 hover:bg-purple-100 transition-colors'
+        className='px-1.5 py-0.5 text-xs bg-secondary border-primary/20 text-primary'
       >
         {format}
       </Badge>
@@ -52,44 +54,44 @@ const Dashboard = () => {
         {
           id: 'local',
           icon: '/assets/images/upload/computer.svg',
-          title: 'Upload files via Computer',
+          title: 'Upload Files Via Computer',
         },
       ]
     : [
         {
           id: 'local',
           icon: '/assets/images/upload/computer.svg',
-          title: 'Upload files via Computer',
+          title: 'Upload Files Via Computer',
         },
         {
           id: 'youtube',
           icon: '/assets/images/upload/youtube.svg',
-          title: 'Upload files via YouTube',
+          title: 'Upload Files Via YouTube',
         },
         {
           id: 'link',
           icon: '/assets/images/upload/link.svg',
-          title: 'Upload files via Link',
+          title: 'Upload Files Via Link',
         },
         {
           id: 'dropbox',
           icon: '/assets/images/upload/dropbox.svg',
-          title: 'Upload files via Dropbox',
+          title: 'Upload Files Via Dropbox',
         },
         {
           id: 'box',
           icon: '/assets/images/upload/box.svg',
-          title: 'Upload files via Box',
+          title: 'Upload Files Via Box',
         },
         {
           id: 'one-drive',
           icon: '/assets/images/upload/one-drive.svg',
-          title: 'Upload files via OneDrive',
+          title: 'Upload Files Via OneDrive',
         },
         {
           id: 'google-drive',
           icon: '/assets/images/upload/google-drive.svg',
-          title: 'Upload files via Google Drive',
+          title: 'Upload Files Via Google Drive',
         },
       ]
 
@@ -134,25 +136,25 @@ const Dashboard = () => {
   }
 
   return (
-    <main className='flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-muted/40'>
-      <div className='flex flex-col gap-4'>
-        <div className='flex items-center justify-between mb-1'>
-          <h1 className='text-lg font-semibold md:text-lg'>{getPageTitle()}</h1>
+    <div className='flex flex-1 flex-col p-4 gap-10'>
+      <div className='flex flex-col gap-3'>
+        <div className='flex items-start justify-between'>
+          <h1 className='text-lg font-semibold md:text-xl'>{getPageTitle()}</h1>
 
-          <div className='bg-[#F3F0FF] rounded-2xl p-1'>
+          <div className='bg-primary/5 rounded-md p-1'>
             <ul className='flex items-center justify-center gap-3 max-w-3xl mx-auto'>
               {uploadTypes.map((type) => (
                 <li key={type.id}>
                   <button
                     onClick={() => setSelectedTab(type.id)}
                     className={cn(
-                      'w-12 h-12 rounded-xl flex items-center justify-center outline-none',
+                      'w-11 h-11 rounded-md flex items-center justify-center outline-none',
                       selectedTab === type.id
                         ? 'bg-white shadow-md'
                         : 'hover:bg-white/40'
                     )}
                   >
-                    <div className='relative w-12 h-12'>
+                    <div className='relative w-11 h-11'>
                       <Image
                         src={type.icon}
                         alt={type.title}
@@ -180,7 +182,7 @@ const Dashboard = () => {
         setUploadSuccess={setUploadSuccess}
         uploadSuccess={uploadSuccess}
       />
-    </main>
+    </div>
   )
 }
 
