@@ -284,169 +284,15 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
     }
 
     let isZipUpload = false
-
-    const makeTree = (files: ExtendedFile[]): TreeNode => {
-      const filesArray = Array.from(files);
-
-      const createChild = (name: string, userId?: string, fileId?: string): TreeNode => ({
-        name,
-        userId,
-        children: [],
-        ...(fileId && { fileId }) // Only add fileId if defined
-      });
-
-      const addPath = (file: ExtendedFile, tree: TreeNode): void => {
-        if (file.name.endsWith('.DS_Store')) return;
-
-        const path = file.fullPath;
-        if (!path) return;
-        const parts = path.split('/');
-
-        // Initialize tree if empty
-        if (!tree.name) {
-          Object.assign(tree, createChild(parts[0]));
-        }
-
-        parts.shift();
-
-        // Build tree structure
-        parts.reduce((current, part) => {
-          const existingChild = current.children.find(child => child.name === part);
-
-          if (existingChild) return existingChild;
-
-          const newChild = createChild(
-            part,
-          );
-          current.children.push(newChild);
-          return newChild;
-        }, tree);
-      };
-
-      const tree: TreeNode = {} as TreeNode;
-      filesArray.forEach(file => addPath(file, tree));
-      return tree;
-    };
-    //parentId
-    //fullPath
-    let processedFiles: ExtendedFile[] = files as ExtendedFile[]
-    const zipFile = files.find(file => file.name.endsWith('.zip'))
-
-    if (zipFile) {
-      try {
-        isZipUpload = true
-        const zip = new JSZip()
-        const contents = await zip.loadAsync(zipFile)
-
-        const extractedFilePromises = Object.keys(contents.files)
-          .filter(filename => {
-            const isSystemFile = filename.includes('.DS_Store') ||
-              filename.includes('__MACOSX') ||
-              filename.startsWith('.')
-            const hasExtension = filename.includes('.')
-            return !isSystemFile && hasExtension
-          })
-          .map(async (filename) => {
-            const entry = contents.files[filename]
-            if (!entry.dir) {
-              const blob = await entry.async('blob')
-              return new File([blob], filename.split('/').slice(-1)[0], {
-                type: blob.type || 'application/octet-stream',
-                lastModified: entry.date.getTime()
-              }) as File & { fullPath?: string }
-            }
-            return null
-          })
-
-        const extractedFiles = (await Promise.all(extractedFilePromises))
-          .filter((file): file is File => file !== null)
-          .map(file => {
-            const originalFile = contents.files[Object.keys(contents.files).find(key =>
-              key.endsWith(file.name)
-            ) || '']
-              ; (file as File & { fullPath: string }).fullPath = originalFile?.name || file.name
-            return file
-          })
-
-        // Replace the files array with extracted files
-        processedFiles = extractedFiles
-
-        if (processedFiles.length === 0) {
-          toast.error('No valid files found in the zip archive')
-          return
-        }
-      } catch (error) {
-        console.error(`Error processing zip file ${zipFile.name}:`, error)
-        toast.error(`Failed to process zip file ${zipFile.name}`)
-        return
-      }
-    }
-
     let filesUnderSizeLimit;
     try {
-      if (isZipUpload) {
-
-        const fileTree = makeTree(processedFiles)
-
-        const folderStructure = processFolderStructure(fileTree);
-
-        // Prepare files with their paths
-        const filesWithPaths: ProcessedFileWithPath[] = processedFiles.map(file => ({
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          fullPath: file.fullPath || '',
-          parentPath: file.fullPath?.split('/').slice(0, -1).join('/') || '',
-          lastModified: file.lastModified,
-          file: file // Keep the original File object
-        }));
-
-        const filesForServer = filesWithPaths.map(file => ({
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          fullPath: file.fullPath,
-          parentPath: file.parentPath,
-          lastModified: file.lastModified
-          // Exclude the actual File object
-        }));
-
-        const res = await processFilesAndFolders({
-          folderStructure,
-          files: filesForServer
-        });
-
-        if (!res.success || !res.files) {
-          throw new Error(res.message)
+      filesUnderSizeLimit = files.filter((file) => {
+        if (file.size > MAX_FILE_SIZE) {
+          toast.error(`File "${file.name}" was rejected due to exceeding 10GB size limit.`);
+          return false;
         }
-
-        filesUnderSizeLimit = res.files.map(processedFile => {
-          const originalFileData = filesWithPaths.find(f => f.name === processedFile.name);
-          if (!originalFileData) {
-            throw new Error(`Could not find original file for ${processedFile.name}`);
-          }
-
-          return {
-            ...processedFile,
-            file: originalFileData.file,
-          };
-        }).filter(file => {
-          if (file.size > MAX_FILE_SIZE) {
-            toast.error(`File "${file.name}" was rejected due to exceeding 10GB size limit.`);
-            return false;
-          }
-          return true;
-        });
-      } else {
-        // Handle non-zip uploads as before
-        filesUnderSizeLimit = processedFiles.filter((file) => {
-          if (file.size > MAX_FILE_SIZE) {
-            toast.error(`File "${file.name}" was rejected due to exceeding 10GB size limit.`);
-            return false;
-          }
-          return true;
-        });
-      }
+        return true;
+      });
 
       if (filesUnderSizeLimit.length === 0) {
         if (files.length > 1) {
@@ -466,8 +312,7 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
       setIsUploading(true)
 
       if (isRemoteLegal) {
-        const remoteLegalFiles = filesUnderSizeLimit as File[]
-        const remoteLegalFolderFiles = remoteLegalFiles.filter((file) => {
+        const remoteLegalFolderFiles = filesUnderSizeLimit.filter((file) => {
           const pathSegments = file.webkitRelativePath.split('/')
           return (
             pathSegments.length > 1 &&
@@ -481,10 +326,10 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
           return
         }
 
-        const mp3File = remoteLegalFiles.find((file) =>
+        const mp3File = remoteLegalFolderFiles.find((file) =>
           file.name.toLowerCase().endsWith('.mp3')
         )
-        const docxFile = remoteLegalFiles.find((file) =>
+        const docxFile = remoteLegalFolderFiles.find((file) =>
           file.name.toLowerCase().endsWith('.docx')
         )
 
@@ -516,6 +361,156 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
           },
         ]
       } else {
+
+        const makeTree = (files: ExtendedFile[]): TreeNode => {
+          const filesArray = Array.from(files);
+
+          const createChild = (name: string, userId?: string, fileId?: string): TreeNode => ({
+            name,
+            userId,
+            children: [],
+            ...(fileId && { fileId }) // Only add fileId if defined
+          });
+
+          const addPath = (file: ExtendedFile, tree: TreeNode): void => {
+            if (file.name.endsWith('.DS_Store')) return;
+
+            const path = file.fullPath;
+            if (!path) return;
+            const parts = path.split('/');
+
+            // Initialize tree if empty
+            if (!tree.name) {
+              Object.assign(tree, createChild(parts[0]));
+            }
+
+            parts.shift();
+
+            // Build tree structure
+            parts.reduce((current, part) => {
+              const existingChild = current.children.find(child => child.name === part);
+
+              if (existingChild) return existingChild;
+
+              const newChild = createChild(
+                part,
+              );
+              current.children.push(newChild);
+              return newChild;
+            }, tree);
+          };
+
+          const tree: TreeNode = {} as TreeNode;
+          filesArray.forEach(file => addPath(file, tree));
+          return tree;
+        };
+
+        let processedFiles: ExtendedFile[] = files as ExtendedFile[]
+        const zipFile = files.find(file => file.name.endsWith('.zip'))
+
+        if (zipFile) {
+          try {
+            isZipUpload = true
+            const zip = new JSZip()
+            const contents = await zip.loadAsync(zipFile)
+
+            const extractedFilePromises = Object.keys(contents.files)
+              .filter(filename => {
+                const isSystemFile = filename.includes('.DS_Store') ||
+                  filename.includes('__MACOSX') ||
+                  filename.startsWith('.')
+                const hasExtension = filename.includes('.')
+                return !isSystemFile && hasExtension
+              })
+              .map(async (filename) => {
+                const entry = contents.files[filename]
+                if (!entry.dir) {
+                  const blob = await entry.async('blob')
+                  return new File([blob], filename.split('/').slice(-1)[0], {
+                    type: blob.type || 'application/octet-stream',
+                    lastModified: entry.date.getTime()
+                  }) as File & { fullPath?: string }
+                }
+                return null
+              })
+
+            const extractedFiles = (await Promise.all(extractedFilePromises))
+              .filter((file): file is File => file !== null)
+              .map(file => {
+                const originalFile = contents.files[Object.keys(contents.files).find(key =>
+                  key.endsWith(file.name)
+                ) || '']
+                  ; (file as File & { fullPath: string }).fullPath = originalFile?.name || file.name
+                return file
+              })
+
+            // Replace the files array with extracted files
+            processedFiles = [...extractedFiles, ...filesUnderSizeLimit.filter(file => !file.name.endsWith('.zip'))]
+            if (processedFiles.length === 0) {
+              toast.error('No valid files found in the zip archive')
+              return
+            }
+          } catch (error) {
+            toast.error(`Failed to process zip file ${zipFile.name}`)
+            return
+          }
+        }
+
+        if (isZipUpload) {
+
+          const fileTree = makeTree(processedFiles)
+
+          const folderStructure = processFolderStructure(fileTree);
+
+          // Prepare files with their paths
+          const filesWithPaths: ProcessedFileWithPath[] = processedFiles.map(file => ({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            fullPath: file.fullPath || '',
+            parentPath: file.fullPath?.split('/').slice(0, -1).join('/') || '',
+            lastModified: file.lastModified,
+            file: file // Keep the original File object
+          }));
+
+          const filesForServer = filesWithPaths.map(file => ({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            fullPath: file.fullPath,
+            parentPath: file.parentPath,
+            lastModified: file.lastModified
+            // Exclude the actual File object
+          }));
+
+          const res = await processFilesAndFolders({
+            folderStructure,
+            files: filesForServer
+          });
+
+          if (!res.success || !res.files) {
+            throw new Error(res.message)
+          }
+
+          filesUnderSizeLimit = res.files.map(processedFile => {
+            const originalFileData = filesWithPaths.find(f => f.name === processedFile.name);
+            if (!originalFileData) {
+              throw new Error(`Could not find original file for ${processedFile.name}`);
+            }
+
+            return {
+              ...processedFile,
+              file: originalFileData.file,
+            };
+          }).filter(file => {
+            if (file.size > MAX_FILE_SIZE) {
+              toast.error(`File "${file.name}" was rejected due to exceeding 10GB size limit.`);
+              return false;
+            }
+            return true;
+          });
+        }
+
         const allowedFiles = filesUnderSizeLimit.filter((file) =>
           validateFileType('file' in file ? file.file : file)
         );
@@ -574,10 +569,14 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
     } catch (error) {
 
       toast.error('Upload failed')
-      if (filesUnderSizeLimit && filesUnderSizeLimit.length > 0 && isZipUpload) {
-        const files = filesUnderSizeLimit as { parentId: number }[]
-        const folderIds = files.map((file) => file.parentId)
-        deleteMultipleFoldersAction(folderIds)
+      try {
+        if (filesUnderSizeLimit && filesUnderSizeLimit.length > 0 && isZipUpload) {
+          const files = filesUnderSizeLimit as { parentId: number }[]
+          const folderIds = files.map((file) => file.parentId)
+          await deleteMultipleFoldersAction(folderIds)
+        }
+      } catch (error) {
+        toast.error('Upload failed')
       }
       setIsUploading(false)
     } finally {

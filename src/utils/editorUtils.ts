@@ -388,6 +388,7 @@ type FetchFileDetailsParams = {
     setTranscript: React.Dispatch<React.SetStateAction<string>>
     setCtms: React.Dispatch<React.SetStateAction<CTMType[]>>
     setPlayerEvents: React.Dispatch<React.SetStateAction<PlayerEvent[]>>
+    setAsrTranscript: React.Dispatch<React.SetStateAction<string>>
 }
 
 const fetchFileDetails = async ({
@@ -398,6 +399,7 @@ const fetchFileDetails = async ({
     setTranscript,
     setCtms,
     setPlayerEvents,
+    setAsrTranscript,
 }: FetchFileDetailsParams) => {
     try {
         const orderRes = await getOrderDetailsAction(params?.fileId as string)
@@ -442,6 +444,7 @@ const fetchFileDetails = async ({
         ]
         if (transcript) {
             setTranscript(transcript)
+            setAsrTranscript(transcriptRes.data.result.asrTranscript)
         } else {
             setTranscript(transcriptRes.data.result.transcript)
         }
@@ -507,8 +510,18 @@ const handleSave = async (
         const paragraphs = transcript
             .split('\n')
             .filter((paragraph) => paragraph.trim() !== '')
+
+        // Helper function to detect meta-only paragraphs
+        const isMetaOnlyParagraph = (text: string) => {
+            const trimmed = text.trim()
+            return /^\[.*\]$/.test(trimmed)
+        }
+
         const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/
         for (const paragraph of paragraphs) {
+            // Skip validation for meta-only paragraphs
+            if (isMetaOnlyParagraph(paragraph)) continue;
+
             if (
                 !paragraphRegex.test(paragraph) &&
                 orderDetails.orderType !== 'TRANSCRIPTION_FORMATTING'
@@ -562,27 +575,26 @@ const handleSave = async (
     }
 }
 
-const capitalizeWord = (quillRef: React.RefObject<ReactQuill> | undefined) => {
-    if (quillRef?.current) {
-        const quill = quillRef.current.getEditor();
-        const text = quill.getText();
+const autoCapitalizeSentences = (quillRef: React.RefObject<ReactQuill> | undefined) => {
+  if (quillRef?.current) {
+      const quill = quillRef.current.getEditor();
+      const text = quill.getText();
 
-        // Find all matches using regex
-        const regex = /\.\s+([a-z])/g;
-        let match;
+      // Match sentence endings followed by spaces and a lowercase letter
+      const regex = /([.!?])\s+([a-z])/g;
+      let match;
 
-        while ((match = regex.exec(text)) !== null) {
-            const index = match.index + 2; // +2 to account for the period and space
-            const length = 1; // length of the character to capitalize
+      while ((match = regex.exec(text)) !== null) {
+          // Calculate dynamic index based on full match length
+          const charIndex = match.index + match[0].length - 1;
+          const lowercaseChar = match[2];
+          const uppercaseChar = lowercaseChar.toUpperCase();
 
-            // Get the character to capitalize
-            const char = match[1].toUpperCase();
-
-            // Use Quill's deleteText and insertText methods
-            quill.deleteText(index, length);
-            quill.insertText(index, char);
-        }
-    }
+          // Replace the lowercase character
+          quill.deleteText(charIndex, 1, 'user');
+          quill.insertText(charIndex, uppercaseChar, 'user');
+      }
+  }
 }
 
 type HandleSubmitParams = {
@@ -835,20 +847,15 @@ const adjustTimestamps = (
             const timestamp = extractTimestamp(paragraph)
             if (timestamp !== null) {
                 const adjustedTimestamp = timestamp + adjustment
-                const newHours = Math.floor(adjustedTimestamp / 3600)
-                const newMinutes = Math.floor((adjustedTimestamp % 3600) / 60)
-                const newSeconds = (adjustedTimestamp % 60).toFixed(1)
-                const newTimestamp = `${newHours}:${newMinutes
-                    .toString()
-                    .padStart(2, '0')}:${newSeconds.padStart(4, '0')}`
+                const newTimestamp = secondsToTs(adjustedTimestamp, true, 1)
                 return paragraph.replace(/^\d{1,2}:\d{2}:\d{2}\.\d/, newTimestamp)
             }
             return paragraph
         })
         .join('\n\n')
 
-    quill.deleteText(selection.index, selection.length)
-    quill.insertText(selection.index, adjustedText)
+    quill.deleteText(selection.index, selection.length, 'user')
+    quill.insertText(selection.index, adjustedText, 'user')
 
     toast.success('Timestamps adjusted successfully.')
 }
@@ -1012,8 +1019,8 @@ const replaceTextHandler = (
 
     const replace = (index: number) => {
         const absoluteIndex = index + searchRange.start
-        quill.deleteText(absoluteIndex, searchText.length)
-        quill.insertText(absoluteIndex, replaceWith)
+        quill.deleteText(absoluteIndex, searchText.length, 'user')
+        quill.insertText(absoluteIndex, replaceWith, 'user')
         replaced = true
     }
 
@@ -1084,7 +1091,7 @@ const insertTimestampAndSpeakerInitialAtStartOfCurrentLine = (
     }
 
     const speakerText = ' S1: ';
-    quill.insertText(paragraphStart, formattedTime + speakerText);
+    quill.insertText(paragraphStart, formattedTime + speakerText, 'user');
 
     // Select just the speaker number for easy editing
     const speakerNumberStart = paragraphStart + formattedTime.length + 2; // +2 for ' S'
@@ -1115,19 +1122,9 @@ const insertTimestampBlankAtCursorPosition = (
     }
 
     const currentTime = audioPlayer.currentTime
+    const formattedTime = `[${secondsToTs(currentTime, true, 1)}] ____ `
 
-    const hours = Math.floor(currentTime / 3600)
-    const minutes = Math.floor((currentTime % 3600) / 60)
-    const seconds = Math.floor(currentTime % 60)
-    const milliseconds = Math.floor((currentTime % 1) * 10)
-
-    const formattedTime = ` [${hours}:${minutes
-        .toString()
-        .padStart(2, '0')}:${seconds
-            .toString()
-            .padStart(2, '0')}.${milliseconds}] ____`
-
-    quill.insertText(cursorPosition, formattedTime, { color: '#FF0000' })
+    quill.insertText(cursorPosition, formattedTime, 'user');
     quill.setSelection(cursorPosition + formattedTime.length, 0)
 }
 
@@ -1138,18 +1135,18 @@ const scrollEditorToPos = (quill: Quill, pos: number) => {
     const lineOffset = line.offset();
     const bounds = quill.getBounds(lineOffset);
     if (!bounds) return;
-    
+
     const editorContainer = quill.root.closest('.ql-editor');
     if (!editorContainer) return;
-    
+
     // Get positions relative to editor container
     const rect = line.domNode.getBoundingClientRect();
     const containerRect = editorContainer.getBoundingClientRect();
-    
+
     // Check if line's bottom is beyond 80% of container height
     const lineBottomRelative = rect.bottom - containerRect.top;
     const threshold = containerRect.height * 0.8;
-    
+
     if (lineBottomRelative > threshold) {
         editorContainer.scrollTo({
             top: editorContainer.scrollTop + bounds.top - 50, // scroll to put line near top
@@ -1183,6 +1180,6 @@ export {
     replaceTextHandler,
     insertTimestampBlankAtCursorPosition,
     insertTimestampAndSpeakerInitialAtStartOfCurrentLine,
-    capitalizeWord
+    autoCapitalizeSentences
 }
 export type { CTMType }

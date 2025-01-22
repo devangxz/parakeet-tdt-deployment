@@ -49,7 +49,7 @@ import {
   searchAndSelect,
   replaceTextHandler,
   CustomerQuillSelection,
-  capitalizeWord,
+  autoCapitalizeSentences,
 } from '@/utils/editorUtils'
 
 export type OrderDetails = {
@@ -125,6 +125,7 @@ function EditorPage() {
   })
   const [audioDuration, setAudioDuration] = useState(1)
   const [quillRef, setQuillRef] = useState<React.RefObject<ReactQuill>>()
+  const [asrTranscript, setAsrTranscript] = useState('')
 
   const [content, setContent] = useState<Op[]>([])
   const [findText, setFindText] = useState('')
@@ -137,6 +138,8 @@ function EditorPage() {
   const findInputRef = useRef<HTMLInputElement>(null)
   const [selection, setSelection] = useState<CustomerQuillSelection | null>(null)
   const [searchHighlight, setSearchHighlight] = useState<{ index: number; length: number } | null>(null);
+  const [highlightWordsEnabled, setHighlightWordsEnabled] = useState(true);
+
   interface PlayerEvent {
     t: number
     s: number
@@ -258,6 +261,18 @@ function EditorPage() {
     const controls: Partial<ShortcutControls> = {
       findNextOccurrenceOfString: () => {
         if (!findAndReplaceOpen) {
+          if (quillRef?.current) {
+            const quill = quillRef.current.getEditor()
+            const selection = quill.getSelection()
+            if (selection) {
+              const selectedText = quill.getText(selection.index, selection.length)
+              if (selectedText) {
+                setFindText(selectedText)
+                setSelection(null)
+                setMatchCount(countMatches(selectedText))
+              }
+            }
+          }
           toggleFindAndReplace()
         } else if (findText) {
           searchAndSelectInstance(findText, selection)
@@ -291,7 +306,7 @@ function EditorPage() {
       },
 
       saveChanges: () => {
-        capitalizeWord(quillRef)
+        autoCapitalizeSentences(quillRef)
         handleSave({
           getEditorText,
           orderDetails,
@@ -352,6 +367,7 @@ function EditorPage() {
       setTranscript,
       setCtms,
       setPlayerEvents,
+      setAsrTranscript,
     })
   }, [])
 
@@ -359,7 +375,7 @@ function EditorPage() {
     const contentText = content.map(op =>
       typeof op.insert === 'string' ? op.insert : ''
     ).join('')
-    const diff = diffWords(transcript, contentText)
+    const diff = diffWords(asrTranscript || transcript, contentText)
     setDiff(diff)
   }
 
@@ -565,6 +581,8 @@ function EditorPage() {
         setFileToUpload={setFileToUpload}
         fileToUpload={fileToUpload}
         toggleFindAndReplace={toggleFindAndReplace}
+        highlightWordsEnabled={highlightWordsEnabled}
+        setHighlightWordsEnabled={setHighlightWordsEnabled}
       />
       <div className='flex flex-col flex-1 overflow-hidden'>
         <div className='flex justify-between px-16 mt-2 flex-shrink-0'></div>
@@ -616,6 +634,7 @@ function EditorPage() {
                         setSelectionHandler={setSelectionHandler}
                         selection={selection}
                         searchHighlight={searchHighlight}
+                        highlightWordsEnabled={highlightWordsEnabled}
                       />
 
                       <DiffTabComponent diff={diff} />
