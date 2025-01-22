@@ -9,6 +9,7 @@ import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
 import Header from '@/components/editor/Header'
@@ -140,7 +141,8 @@ function EditorPage() {
   const lastTrackedSecondRef = useRef(-1)
   const [playStats, setPlayStats] = useState<{listenCount: number[]}>({ listenCount: [] })
   const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set());
-  const getEditedSegmentsRef = useRef<() => number[]>(() => []);  
+  const getEditedSegmentsRef = useRef<() => number[]>(() => []);
+  const [waveformUrl, setWaveformUrl] = useState('')
 
   interface PlayerEvent {
     t: number
@@ -373,6 +375,23 @@ function EditorPage() {
   }, [])
 
   useEffect(() => {
+    const fetchWaveform = async () => {
+      try {
+        const res = await getSignedUrlAction(`${orderDetails.fileId}_wf.png`, 300)
+        if (res.success && res.signedUrl) {
+          setWaveformUrl(res.signedUrl)
+        }
+      } catch (error) {
+        console.error('Failed to load waveform:', error)
+      }
+    }
+    
+    if (orderDetails.fileId) {
+      fetchWaveform()
+    }
+  }, [orderDetails.fileId])  
+
+  useEffect(() => {
     const interval = setInterval(async () => {
       await handleSave(
         {
@@ -595,6 +614,7 @@ function EditorPage() {
         toggleFindAndReplace={toggleFindAndReplace}
         highlightWordsEnabled={highlightWordsEnabled}
         setHighlightWordsEnabled={setHighlightWordsEnabled}
+        waveformUrl={waveformUrl}
       />
       <div className='flex flex-col flex-1 overflow-hidden'>
         <div className='flex justify-between px-16 mt-2 flex-shrink-0'></div>
@@ -793,7 +813,7 @@ function EditorPage() {
             }
           }}
         >
-          <DialogContent>
+          <DialogContent className="max-w-4xl">
             <DialogHeader>
               <DialogTitle>Submit</DialogTitle>
               <DialogDescription>
@@ -802,20 +822,39 @@ function EditorPage() {
 
               <div className="py-4">
                 <p className="text-sm text-gray-500 mb-2">
-                  Audio Playback Coverage: <span className="font-medium">{getPlayedPercentage().toFixed(1)}%</span>
+                  Audio Playback Coverage: <span className="font-medium">{getPlayedPercentage()}%</span>
                 </p>
                 <div className="space-y-1">
-                  <div className="h-12 rounded-md overflow-hidden border flex">
-                    {playStats.listenCount.map((count, i) => (
-                      <div
-                        key={i}
-                        className="h-full flex-1"
-                        style={{
-                          backgroundColor: getHeatmapColor(count),
-                          borderBottom: editedSegments.has(i) ? '5px solid #EF4444' : 'none'
-                        }}
-                      />
-                    ))}
+                  <div 
+                    className="h-12 rounded-md overflow-hidden border relative"
+                    style={{
+                      backgroundImage: `url(${waveformUrl})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center'
+                    }}
+                  >
+                    {/* Heatmap layer */}
+                    <div className="absolute inset-0 flex">
+                      {playStats.listenCount.map((count, i) => (
+                        <div
+                          key={i}
+                          className="h-full flex-1 relative flex items-center justify-center"
+                          style={{
+                            backgroundColor: getHeatmapColor(count),
+                            opacity: 0.7,
+                          }}
+                        >
+                          {editedSegments.has(i) && (
+                            <div 
+                              className="absolute w-2 h-2 rounded-full bg-red-500"
+                              style={{
+                                boxShadow: '0 0 4px rgba(239, 68, 68, 0.5)'
+                              }}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
