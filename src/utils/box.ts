@@ -1,7 +1,7 @@
 export async function uploadToBox(fileUrl: string, fileName: string, token: string) {
     try {
         // Get upload URL and token
-        const urlResponse = await fetch('/api/box', {
+        const urlResponse = await fetch('/box', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

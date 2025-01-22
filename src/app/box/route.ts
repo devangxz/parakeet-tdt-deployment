@@ -3,6 +3,8 @@ import FormData from 'form-data'
 import jwt from 'jsonwebtoken'
 import { NextResponse } from 'next/server'
 
+import logger from '@/lib/logger'
+
 export async function POST(req: Request) {
     try {
         const { fileUrl, fileName, token } = await req.json()
@@ -63,7 +65,7 @@ export async function POST(req: Request) {
         return NextResponse.json(uploadResponse.data)
     } catch (error) {
         if (axios.isAxiosError(error)) {
-            console.error('Box API Error Response:', error.response?.data)
+            logger.error(`Box API Error Response: ${error.response?.data?.message}`)
             return NextResponse.json(
                 {
                     error: error.response?.data?.message || 'Failed to upload file',

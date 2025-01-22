@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
+import logger from '@/lib/logger'
+
 const BOX_API_URL = 'https://upload.box.com/api/2.0'  // Changed to upload API URL
 
 export async function POST() {
@@ -28,7 +30,7 @@ export async function POST() {
         })
     } catch (error: unknown) {
         if (axios.isAxiosError(error)) {
-            console.error('Box API Error Response:', error.response?.data)
+            logger.error(`Box API Error Response: ${error.response?.data?.message}`)
             if (error.response?.status === 401) {
                 return NextResponse.json(
                     { error: 'Authentication failed' },

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 
@@ -82,13 +83,13 @@ export const DropboxUploadButton = ({
         const options: DropboxSaveOptions = {
             files: files,
             success: () => {
-                console.log('Files saved successfully to Dropbox!');
+                toast.success('Files saved successfully to Dropbox!');
             },
             cancel: () => {
-                console.log('Save to Dropbox cancelled');
+                toast.error('Save to Dropbox cancelled');
             },
-            error: (error: Error) => {
-                console.error('Error saving to Dropbox:', error);
+            error: () => {
+                toast.error('Error saving to Dropbox');
             }
         };
 
