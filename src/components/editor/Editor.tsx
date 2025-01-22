@@ -7,8 +7,19 @@ import 'react-quill/dist/quill.snow.css'
 
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
-import { CTMType, CustomerQuillSelection, insertTimestampAndSpeakerInitialAtStartOfCurrentLine, insertTimestampBlankAtCursorPosition } from '@/utils/editorUtils'
-import { createAlignments, getFormattedTranscript, AlignmentType, getAlignmentIndexByTime } from '@/utils/transcript'
+import {
+  CTMType,
+  CustomerQuillSelection,
+  insertTimestampAndSpeakerInitialAtStartOfCurrentLine,
+  insertTimestampBlankAtCursorPosition,
+  autoCapitalizeSentences
+} from '@/utils/editorUtils'
+import {
+  createAlignments,
+  getFormattedTranscript,
+  AlignmentType,
+  getAlignmentIndexByTime
+} from '@/utils/transcript'
 
 interface EditorProps {
     transcript: string
@@ -353,6 +364,8 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     
             setTypingTimer(
                 setTimeout(() => {
+                    autoCapitalizeSentences(quillRef);
+
                     const currentSelection = quill.getSelection();
                     const rawText = quill.getText();
                     const newOps = getFormattedContent(rawText);
