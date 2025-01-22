@@ -388,6 +388,7 @@ type FetchFileDetailsParams = {
     setTranscript: React.Dispatch<React.SetStateAction<string>>
     setCtms: React.Dispatch<React.SetStateAction<CTMType[]>>
     setPlayerEvents: React.Dispatch<React.SetStateAction<PlayerEvent[]>>
+    setAsrTranscript: React.Dispatch<React.SetStateAction<string>>
 }
 
 const fetchFileDetails = async ({
@@ -398,6 +399,7 @@ const fetchFileDetails = async ({
     setTranscript,
     setCtms,
     setPlayerEvents,
+    setAsrTranscript,
 }: FetchFileDetailsParams) => {
     try {
         const orderRes = await getOrderDetailsAction(params?.fileId as string)
@@ -442,6 +444,7 @@ const fetchFileDetails = async ({
         ]
         if (transcript) {
             setTranscript(transcript)
+            setAsrTranscript(transcriptRes.data.result.asrTranscript)
         } else {
             setTranscript(transcriptRes.data.result.transcript)
         }
@@ -507,7 +510,7 @@ const handleSave = async (
         const paragraphs = transcript
             .split('\n')
             .filter((paragraph) => paragraph.trim() !== '')
-        
+
         // Helper function to detect meta-only paragraphs
         const isMetaOnlyParagraph = (text: string) => {
             const trimmed = text.trim()
@@ -518,7 +521,7 @@ const handleSave = async (
         for (const paragraph of paragraphs) {
             // Skip validation for meta-only paragraphs
             if (isMetaOnlyParagraph(paragraph)) continue;
-            
+
             if (
                 !paragraphRegex.test(paragraph) &&
                 orderDetails.orderType !== 'TRANSCRIPTION_FORMATTING'
@@ -1121,7 +1124,7 @@ const insertTimestampBlankAtCursorPosition = (
     const currentTime = audioPlayer.currentTime
     const formattedTime = `[${secondsToTs(currentTime, true, 1)}] ____ `
 
-    quill.insertText(cursorPosition, formattedTime, 'user');    
+    quill.insertText(cursorPosition, formattedTime, 'user');
     quill.setSelection(cursorPosition + formattedTime.length, 0)
 }
 
@@ -1132,18 +1135,18 @@ const scrollEditorToPos = (quill: Quill, pos: number) => {
     const lineOffset = line.offset();
     const bounds = quill.getBounds(lineOffset);
     if (!bounds) return;
-    
+
     const editorContainer = quill.root.closest('.ql-editor');
     if (!editorContainer) return;
-    
+
     // Get positions relative to editor container
     const rect = line.domNode.getBoundingClientRect();
     const containerRect = editorContainer.getBoundingClientRect();
-    
+
     // Check if line's bottom is beyond 80% of container height
     const lineBottomRelative = rect.bottom - containerRect.top;
     const threshold = containerRect.height * 0.8;
-    
+
     if (lineBottomRelative > threshold) {
         editorContainer.scrollTo({
             top: editorContainer.scrollTop + bounds.top - 50, // scroll to put line near top
