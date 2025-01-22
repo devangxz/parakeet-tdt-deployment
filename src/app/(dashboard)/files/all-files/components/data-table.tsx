@@ -87,13 +87,17 @@ export function DataTable<TData, TValue>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} colSpan={header.colSpan}>
+                  <TableHead
+                    key={header.id}
+                    colSpan={header.colSpan}
+                    className='h-fit p-4 text-left align-middle font-medium text-[15px]'
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -105,12 +109,13 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
-                  className={`${calculateDifferenceInHours(row.getValue('date')) <= 1 &&
+                  className={`${
+                    calculateDifferenceInHours(row.getValue('date')) <= 1 &&
                     'bg-[#FFFBEB]'
-                    }`}
+                  }`}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} className='px-4 py-3'>
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -125,7 +130,7 @@ export function DataTable<TData, TValue>({
                   colSpan={columns.length}
                   className='h-24 text-center'
                 >
-                  No results.
+                  No results
                 </TableCell>
               </TableRow>
             )}

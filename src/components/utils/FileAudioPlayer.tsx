@@ -31,10 +31,10 @@ const FileAudioPlayer = ({
   return (
     <button
       onClick={() => toggleAudio(fileId)}
-      className='rounded-full border p-2 text-primary'
+      className='rounded-full border p-1.5 text-primary'
     >
-      {!isAudioPlaying && <Play className='h-5 w-5' />}
-      {isAudioPlaying && <Pause className='h-5 w-5' />}
+      {!isAudioPlaying && <Play className='h-4 w-4' />}
+      {isAudioPlaying && <Pause className='h-4 w-4' />}
       {isAudioPlaying && (
         <audio
           src={url}

@@ -1,4 +1,5 @@
 'use client'
+
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import React, { useEffect, useState } from 'react'
@@ -159,14 +160,11 @@ const Page = () => {
   }, [])
 
   return (
-    <div className='w-[80%] space-y-[1.25rem]'>
-      <HeadingDescription heading='Personal Info' />
-      <div className='w-[70%]'>
+    <div className='lg:w-[70%] flex flex-1 flex-col p-4 gap-5'>
+      <div className='border-b-2 border-customBorder space-y-4 pb-6'>
+        <HeadingDescription heading='Personal Info' />
         <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className='space-y-[1rem]'
-          >
+          <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-2.5'>
             <div className='flex w-[100%] gap-[1.8rem]'>
               <FormField
                 control={form.control}
@@ -327,29 +325,30 @@ const Page = () => {
                 </FormItem>
               )}
             />
-            <div className='flex justify-end'>
+            <div className='flex justify-end pt-2'>
               <SaveButton type='submit' loading={loadingOptions} />
             </div>
           </form>
         </Form>
       </div>
 
-      <hr />
-
-      <div className='w-[70%]'>
+      <div className='space-y-4'>
+        <HeadingDescription
+          heading={'Email'}
+          description={
+            'The secondary email address can be set as the Sign In email address after it has been verified. Use this setting if you wish to change the login email address of your Scribie.ai account.'
+          }
+        />
         <Form {...emailForm}>
-          <form onSubmit={(e) => onEmailSubmit(e, emailForm.getValues())}>
+          <form
+            onSubmit={(e) => onEmailSubmit(e, emailForm.getValues())}
+            className='space-y-2.5'
+          >
             <FormField
               control={emailForm.control}
               name='secondaryEmail'
               render={({ field }) => (
                 <FormItem>
-                  <HeadingDescription
-                    heading={'Email'}
-                    description={
-                      'The secondary email address can be set as the Sign In email address after it has been verified. Use this setting if you wish to change the login email address of your Scribie.com account.'
-                    }
-                  />
                   <FormControl>
                     <Input placeholder='Email' {...field} />
                   </FormControl>
@@ -357,12 +356,12 @@ const Page = () => {
                 </FormItem>
               )}
             />
-            <div className='flex items-center justify-between'>
+            <div className='flex items-center justify-between pt-2'>
               <FormField
                 control={emailForm.control}
                 name='defaultEmail'
                 render={({ field }) => (
-                  <FormItem className='flex flex-row items-start space-x-3 space-y-0'>
+                  <FormItem className='flex flex-row items-start space-x-2 space-y-0'>
                     <FormControl>
                       <Checkbox
                         checked={field.value}
@@ -394,14 +393,14 @@ interface SaveButtonProps {
 function SaveButton(props: SaveButtonProps) {
   const { type, loading = false } = props
   return (
-    <div className='my-[1.5rem]'>
+    <div>
       {loading ? (
-        <Button type={type} disabled>
+        <Button type={type} disabled variant='default' className='w-full'>
           <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
           Update
         </Button>
       ) : (
-        <Button type={type} className='w-[4rem] h-[2.5rem]'>
+        <Button type={type} variant='default' className='w-full'>
           Update
         </Button>
       )}

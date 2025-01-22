@@ -1,4 +1,5 @@
 'use client'
+
 import {
   Users,
   User,
@@ -29,12 +30,12 @@ export default function SettingsLayout({
     sidebarItems.push(
       {
         href: '/settings/order-options',
-        title: 'Order options',
+        title: 'Order Options',
         icon: ShoppingBasket,
       },
       {
         href: '/settings/payment-methods',
-        title: 'Payment method',
+        title: 'Payment Method',
         icon: Banknote,
       },
       {
@@ -68,12 +69,12 @@ export default function SettingsLayout({
         },
         {
           href: '/settings/order-options',
-          title: 'Order options',
+          title: 'Order Options',
           icon: ShoppingBasket,
         },
         {
           href: '/settings/payment-methods',
-          title: 'Payment method',
+          title: 'Payment Method',
           icon: Banknote,
         },
         {

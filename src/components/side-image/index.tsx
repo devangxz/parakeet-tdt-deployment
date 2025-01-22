@@ -21,12 +21,12 @@ const SideImage = () => (
       />
     </div>
 
-    <div className='absolute inset-0 bg-gradient-to-b from-black/25 via-black/15 to-black/25' />
+    <div className='absolute inset-0 bg-gradient-to-b from-black/30 via-black/25 to-black/30' />
 
-    <div className='relative h-full flex flex-col'>
-      <div className='flex-1 pt-12 px-4'>
+    <div className='relative h-full flex flex-col justify-end'>
+      <div className='mb-12 lg:pl-8 xl:pl-[calc((100vw-1232px)/2)]'>
         <div className='max-w-[380px]'>
-          <h1 className='text-[2.25rem] font-semibold leading-[1.3] tracking-tight mb-7 text-primary-foreground'>
+          <h1 className='text-[2.25rem] font-semibold leading-[1.3] tracking-tight mb-4 text-primary-foreground'>
             AI-powered transcription for your business.
           </h1>
 
@@ -58,8 +58,8 @@ const SideImage = () => (
         </div>
       </div>
 
-      <div className='w-full bg-black/15 backdrop-blur-[2px] border-t border-primary-foreground/10'>
-        <div className='px-4 py-3 flex items-center gap-4'>
+      <div className='w-full bg-black/25 backdrop-blur-[2px] border-t border-primary-foreground/10'>
+        <div className='pl-11 py-3 flex items-center gap-4'>
           <div className='bg-primary-foreground rounded p-1.5'>
             <Image
               alt='AAERT'
