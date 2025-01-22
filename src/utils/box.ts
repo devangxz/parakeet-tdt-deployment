@@ -1,27 +1,7 @@
-export async function uploadToBox(
-    fileUrl: string,
-    fileName: string,
-    accessToken: string
-) {
+export async function uploadToBox(fileUrl: string, fileName: string, token: string) {
     try {
-        // First get an upload URL from Box
-        const uploadUrlResponse = await fetch('/api/box/upload-url', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({ fileName }),
-        })
-
-        if (!uploadUrlResponse.ok) {
-            throw new Error('Failed to get upload URL')
-        }
-
-        const { uploadUrl, folderId } = await uploadUrlResponse.json()
-
-        // Upload the file through our proxy to handle CORS
-        const uploadResponse = await fetch('/api/box', {
+        // Get upload URL and token
+        const urlResponse = await fetch('/api/box', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -29,19 +9,18 @@ export async function uploadToBox(
             body: JSON.stringify({
                 fileUrl,
                 fileName,
-                uploadUrl,
-                folderId,
-                accessToken,
+                token
             }),
         })
 
-        if (!uploadResponse.ok) {
-            throw new Error('Failed to upload file')
+        if (!urlResponse.ok) {
+            const errorData = await urlResponse.json()
+            throw new Error(errorData.error || 'Failed to upload file')
         }
 
-        return await uploadResponse.json()
+        return await urlResponse.json()
     } catch (error) {
-        console.error('Box upload error:', error)
+        console.error('Upload error:', error)
         throw error
     }
 }
