@@ -578,7 +578,7 @@ const capitalizeWord = (quillRef: React.RefObject<ReactQuill> | undefined) => {
         const text = quill.getText();
 
         // Find all matches using regex
-        const regex = /\.\s+([a-z])/g;
+        const regex = /(?:[.!?])\s+([a-z])/g;
         let match;
 
         while ((match = regex.exec(text)) !== null) {
