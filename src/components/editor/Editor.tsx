@@ -490,22 +490,20 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         };
     }, [undoStack, redoStack]);
     
-    useEffect(() => {
-        // Clear highlight when feature is turned off or component unmounts
-        if (!highlightWordsEnabled && lastHighlightedRef.current !== null) {
-            console.log('hi')
+    const clearHighlights = useCallback(() => {
+        requestAnimationFrame(() => {
             const quill = quillRef.current?.getEditor();
             if (!quill) return;
-            
-            const oldAl = alignments[lastHighlightedRef.current];
-            if (oldAl.startPos !== undefined && oldAl.endPos !== undefined) {
-                quill.formatText(oldAl.startPos, oldAl.endPos - oldAl.startPos, {
-                    background: null,
-                });
-            }
+            quill.formatText(0, quill.getLength(), { background: null });
+        });
+    }, []);
+
+    useEffect(() => {
+        if (!highlightWordsEnabled) {
+            clearHighlights();
             lastHighlightedRef.current = null;
         }
-    }, [highlightWordsEnabled]);    
+    }, [highlightWordsEnabled, clearHighlights]);
 
     useEffect(() => {
         if (!audioPlayer) return;
