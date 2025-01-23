@@ -855,7 +855,7 @@ const adjustTimestamps = (
         .join('\n\n')
 
     quill.deleteText(selection.index, selection.length, 'user')
-    quill.insertText(selection.index, adjustedText, 'user')
+    quill.insertText(selection.index, adjustedText, { bold: true }, 'user')
 
     toast.success('Timestamps adjusted successfully.')
 }
@@ -1063,7 +1063,7 @@ const replaceTextHandler = (
     }
 }
 
-const insertTimestampAndSpeakerInitialAtStartOfCurrentLine = (
+const insertTimestampAndSpeaker = (
     audioPlayer: HTMLAudioElement | null,
     quill: Quill | undefined
 ) => {
@@ -1091,7 +1091,7 @@ const insertTimestampAndSpeakerInitialAtStartOfCurrentLine = (
     }
 
     const speakerText = ' S1: ';
-    quill.insertText(paragraphStart, formattedTime + speakerText, 'user');
+    quill.insertText(paragraphStart, formattedTime + speakerText, { bold: true }, 'user');
 
     // Select just the speaker number for easy editing
     const speakerNumberStart = paragraphStart + formattedTime.length + 2; // +2 for ' S'
@@ -1117,14 +1117,14 @@ const insertTimestampBlankAtCursorPosition = (
 
     if (isStartOfParagraph) {
         // Call the other function instead
-        insertTimestampAndSpeakerInitialAtStartOfCurrentLine(audioPlayer, quill);
+        insertTimestampAndSpeaker(audioPlayer, quill);
         return;
     }
 
     const currentTime = audioPlayer.currentTime
     const formattedTime = `[${secondsToTs(currentTime, true, 1)}] ____ `
 
-    quill.insertText(cursorPosition, formattedTime, 'user');
+    quill.insertText(cursorPosition, formattedTime, { color: '#FF0000' }, 'user');
     quill.setSelection(cursorPosition + formattedTime.length, 0)
 }
 
@@ -1179,7 +1179,7 @@ export {
     searchAndSelect,
     replaceTextHandler,
     insertTimestampBlankAtCursorPosition,
-    insertTimestampAndSpeakerInitialAtStartOfCurrentLine,
+    insertTimestampAndSpeaker,
     autoCapitalizeSentences
 }
 export type { CTMType }
