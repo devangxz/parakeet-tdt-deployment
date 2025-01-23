@@ -21,7 +21,7 @@ interface DefaultShortcuts {
     jumpAudioAndCursorForwardBy3Seconds: string;
     playAudioAtCursorPosition: string;
     insertTimestampBlankAtCursorPosition: string;
-    insertTimestampAndSpeakerInitialAtStartOfCurrentLine: string;
+    insertTimestampAndSpeaker: string;
     googleSearchSelectedWord: string;
     defineSelectedWord: string;
     increaseFontSize: string;
@@ -111,7 +111,7 @@ export interface ShortcutControls {
     jumpAudioAndCursorForwardBy3Seconds: () => void;
     playAudioAtCursorPosition: () => void;
     insertTimestampBlankAtCursorPosition: () => void;
-    insertTimestampAndSpeakerInitialAtStartOfCurrentLine: () => void;
+    insertTimestampAndSpeaker: () => void;
     googleSearchSelectedWord: () => void;
     defineSelectedWord: () => void;
     increaseFontSize: () => void;
@@ -211,7 +211,7 @@ const defaultShortcuts: DefaultShortcuts = {
     jumpAudioAndCursorForwardBy3Seconds: "Shift+F9",
     playAudioAtCursorPosition: "Shift+F10",
     insertTimestampBlankAtCursorPosition: "F12",
-    insertTimestampAndSpeakerInitialAtStartOfCurrentLine: "Shift+F12",
+    insertTimestampAndSpeaker: "Shift+F12",
     googleSearchSelectedWord: isMac ? 'Alt+ß' : 'Alt+S',
     defineSelectedWord: isMac ? 'Alt+ð' : 'Alt+D',
     increaseFontSize: 'Control+Shift+ArrowUp',
