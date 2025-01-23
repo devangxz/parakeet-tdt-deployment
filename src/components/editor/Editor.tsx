@@ -302,6 +302,37 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
 
     useShortcuts(shortcutControls);
 
+    const handleContentChange = useCallback(() => {
+        const quill = quillRef.current?.getEditor()
+        if (!quill) return
+        
+        setContent(quill.getContents().ops)
+    }, [orderDetails.fileId])
+
+    const clearHighlights = useCallback(() => {
+        requestAnimationFrame(() => {
+            const quill = quillRef.current?.getEditor();
+            if (!quill) return;
+            quill.formatText(0, quill.getLength(), { background: null });
+        });
+    }, []);
+        
+    const scheduleAlignmentUpdate = useCallback(() => {
+        const quill = quillRef.current?.getEditor();
+        if (!quill) return;
+        
+        if (typingTimer) clearTimeout(typingTimer);
+        setTypingTimer(
+            setTimeout(() => {
+                alignmentWorker.current?.postMessage({
+                    newText: quill.getText(),
+                    currentAlignments: alignments,
+                    ctms: ctms
+                });
+            }, TYPING_PAUSE)
+        );
+    }, [alignments, ctms, typingTimer, quillRef]);
+
     useEffect(() => {
         try {
             // Initialize the Web Worker
@@ -328,13 +359,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         };
     }, []);
 
-    const handleContentChange = useCallback(() => {
-        const quill = quillRef.current?.getEditor()
-        if (!quill) return
-        
-        setContent(quill.getContents().ops)
-    }, [orderDetails.fileId])
-        
     useEffect(() => {
         const quill = quillRef.current?.getEditor();
         if (!quill || !alignmentWorker.current) return;
@@ -363,23 +387,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             quill.off('text-change', handleTextChange);
             if (typingTimer) clearTimeout(typingTimer);
         };
-    }, [alignments, ctms, typingTimer]); 
-
-    const scheduleAlignmentUpdate = useCallback(() => {
-        const quill = quillRef.current?.getEditor();
-        if (!quill) return;
-        
-        if (typingTimer) clearTimeout(typingTimer);
-        setTypingTimer(
-            setTimeout(() => {
-                alignmentWorker.current?.postMessage({
-                    newText: quill.getText(),
-                    currentAlignments: alignments,
-                    ctms: ctms
-                });
-            }, TYPING_PAUSE)
-        );
-    }, [alignments, ctms, typingTimer, quillRef]);
+    }, [alignments, ctms, typingTimer]);
 
     useEffect(() => {
         // Override execCommand to stop browser's native undo/redo
@@ -490,14 +498,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         };
     }, [undoStack, redoStack]);
     
-    const clearHighlights = useCallback(() => {
-        requestAnimationFrame(() => {
-            const quill = quillRef.current?.getEditor();
-            if (!quill) return;
-            quill.formatText(0, quill.getLength(), { background: null });
-        });
-    }, []);
-
     useEffect(() => {
         if (!highlightWordsEnabled) {
             clearHighlights();
@@ -511,7 +511,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         const handleTimeUpdate = () => {            
             const quill = quillRef.current?.getEditor();
 
-            if (!quill || !highlightWordsEnabled) return; 
+            if (!quill || !highlightWordsEnabled) return;
         
             const currentTime = audioPlayer.currentTime;
             const currentWordIndex = getAlignmentIndexByTime(alignments, currentTime, lastHighlightedRef.current);
