@@ -13,6 +13,7 @@ import {
   TrackPreviousIcon,
   TrackNextIcon,
   DropdownMenuIcon,
+  ArrowUpIcon,
 } from '@radix-ui/react-icons'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
@@ -84,7 +85,7 @@ import DefaultShortcuts, {
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   adjustTimestamps,
-  capitalizeWord,
+  autoCapitalizeSentences,
   downloadMP3,
   getFrequentTermsHandler,
   handleSave,
@@ -1101,6 +1102,23 @@ export default memo(function Header({
     toast.success('Inserted swear in line text');
   }
 
+  const handleSwapSpeakers = (currentIndex: number) => {
+    if (!speakerName || currentIndex === 0) return;
+
+    const entries = Object.entries(speakerName);
+    const currentKey = entries[currentIndex][0];
+    const previousKey = entries[currentIndex - 1][0];
+
+    setSpeakerName(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        [currentKey]: prev[previousKey],
+        [previousKey]: prev[currentKey]
+      };
+    });
+  };
+
   return (
     <div className='min-h-24 relative mx-2'>
       {!isPlayerLoaded && (
@@ -1551,7 +1569,7 @@ export default memo(function Header({
 
                 <Button
                   onClick={() => {
-                    capitalizeWord(quillRef)
+                    autoCapitalizeSentences(quillRef)
                     handleSave({
                       getEditorText,
                       orderDetails,
@@ -1632,13 +1650,25 @@ export default memo(function Header({
                   className='flex items-center justify-start space-x-2'
                 >
                   <Label htmlFor={key}>{key}:</Label>
-                  <Input
-                    disabled={!checkSpeakerOrder(speakerName)}
-                    id={key}
-                    value={value}
-                    onChange={(e) => handleSpeakerNameChange(e, key)}
-                    className='w-4/5'
-                  />
+                  <div className="relative flex items-center w-4/5">
+                    <Input
+                      disabled={!checkSpeakerOrder(speakerName)}
+                      id={key}
+                      value={value}
+                      onChange={(e) => handleSpeakerNameChange(e, key)}
+                      className='w-full'
+                    />
+                    {index > 0 && (
+                      <button
+                        onClick={() => handleSwapSpeakers(index)}
+                        title='Swap with previous speaker'
+                        className='absolute right-2 p-1 hover:bg-gray-100 rounded-full transition-colors'
+                        type="button"
+                      >
+                        <ArrowUpIcon className="h-4 w-4 text-gray-500" />
+                      </button>
+                    )}
+                  </div>
                   {index === Object.entries(speakerName).length - 1 && (
                     <button
                       onClick={addSpeakerName}
