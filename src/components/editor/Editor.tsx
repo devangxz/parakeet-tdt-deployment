@@ -12,7 +12,6 @@ import {
   CustomerQuillSelection,
   insertTimestampAndSpeakerInitialAtStartOfCurrentLine,
   insertTimestampBlankAtCursorPosition,
-  autoCapitalizeSentences
 } from '@/utils/editorUtils'
 import {
   createAlignments,
@@ -364,8 +363,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     
             setTypingTimer(
                 setTimeout(() => {
-                    autoCapitalizeSentences(quillRef);
-
                     const currentSelection = quill.getSelection();
                     const rawText = quill.getText();
                     const newOps = getFormattedContent(rawText);
