@@ -1,4 +1,4 @@
-import { User, OrderType } from '@prisma/client'
+import { User, OrderType, QCType } from '@prisma/client'
 import bcrypt from 'bcrypt'
 
 import { AFFILIATE_RATE } from '@/constants'
@@ -174,6 +174,12 @@ export async function createUser(
         },
       })
     } else {
+      await prisma.verifier.create({
+        data: {
+          userId: newUser.id,
+          qcType: QCType.FREELANCER,
+        },
+      })
       await prisma.transcriberNotifyPrefs.create({
         data: {
           userId: newUser.id,
