@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic'
+import { FileTag } from '@prisma/client'
 import { NextRequest, NextResponse } from 'next/server'
 
 import logger from '@/lib/logger'
@@ -54,6 +55,13 @@ export async function GET(req: NextRequest) {
       },
     })
 
+    const deliveredFileVersion = await prisma.fileVersion.findFirst({
+      where: {
+        fileId: file.fileId,
+        tag: FileTag.CUSTOMER_DELIVERED,
+      },
+    })
+
     const info = {
       filename: file.filename,
       file_id: file.fileId,
@@ -83,6 +91,7 @@ export async function GET(req: NextRequest) {
       video_available: false,
       video_location: null,
       legal_file: false,
+      versionId: deliveredFileVersion?.s3VersionId ?? '',
     }
 
     logger.info(`File details fetched successfully for file ${fileId}`)
