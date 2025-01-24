@@ -296,8 +296,8 @@ export function CheckAndDownload({
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
                   </Button>
                   {/* <OneDriveUploadButton
-                    fileUrl={cfDocxSignedUrl}
-                    fileName={`${docx?.name}_cf.docx`}
+                    fileUrl={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${session?.user?.token}`}
+                    fileName={`${pdf?.name}_cf.pdf`}
                   /> */}
                   <BoxUploadButton
                     fileUrl={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${session?.user?.token}`}
@@ -344,8 +344,8 @@ export function CheckAndDownload({
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
                   </Button>
                   {/* <OneDriveUploadButton
-                    fileUrl={cfDocxSignedUrl}
-                    fileName={`${docx?.name}_cf.docx`}
+                    fileUrl={`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${session?.user?.token}`}
+                    fileName={`${docx?.name}.docx`}
                   /> */}
                   <BoxUploadButton
                     fileUrl={`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${session?.user?.token}`}
@@ -384,8 +384,8 @@ export function CheckAndDownload({
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
                   </Button>
                   {/* <OneDriveUploadButton
-                    fileUrl={cfDocxSignedUrl}
-                    fileName={`${docx?.name}_cf.docx`}
+                    fileUrl={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${session?.user?.token}`}
+                    fileName={`${pdf?.name}.pdf`}
                   /> */}
                   <BoxUploadButton
                     fileUrl={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${session?.user?.token}`}
@@ -424,8 +424,8 @@ export function CheckAndDownload({
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
                   </Button>
                   {/* <OneDriveUploadButton
-                    fileUrl={cfDocxSignedUrl}
-                    fileName={`${docx?.name}_cf.docx`}
+                    fileUrl={txtSignedUrl}
+                    fileName={`${txtFile?.name}.txt`}
                   /> */}
                   <BoxUploadButton
                     fileUrl={txtSignedUrl}
