@@ -9,8 +9,8 @@ export default function EarningsPage() {
   const [activeTab, setActiveTab] = useState('earnings')
 
   return (
-    <div className='bg-[#F7F5FF] h-screen'>
-      <div className='mt-8 ml-8 w-4/5'>
+    <div className='h-full flex-1 flex-col p-4 md:flex space-y-3'>
+      <div>
         <Tabs
           key={activeTab}
           defaultValue={activeTab}
@@ -18,7 +18,7 @@ export default function EarningsPage() {
             setActiveTab(value)
           }}
         >
-          <TabsList>
+          <TabsList className='rounded-md bg-primary/5'>
             <TabsTrigger value='earnings'>Earnings</TabsTrigger>
             <TabsTrigger value='withdrawals'>Withdrawals</TabsTrigger>
           </TabsList>

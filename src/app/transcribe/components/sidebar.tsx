@@ -123,93 +123,87 @@ export function SidebarNav() {
 
   return (
     <div className='flex-1'>
-      <nav className='grid items-start px-2 text-md font-medium lg:px-4 mt-4'>
-        <h2 className='mb-2 text-lg font-semibold tracking-tight'>Dashboard</h2>
-        {sidebarItems.map((item, index) => {
-          const isActive = pathname === item.href
-          return (
-            <Link
-              key={index}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
-                isActive ? 'text-primary bg-primary/10' : 'hover:text-primary'
-              }`}
-            >
-              {item.name}
-              {item.badgeCount !== undefined && (
-                <p className='ml-auto flex font-normal mr-1'>
-                  {item.badgeCount}
-                </p>
-              )}
-            </Link>
-          )
-        })}
-        <h2 className='mb-2 text-lg font-semibold tracking-tight mt-10'>
-          Statistics
-        </h2>
-        <Link
-          href='/transcribe/earnings'
-          className={`flex items-center gap-2 rounded-lg px-3 py-2 transition-all ${
-            pathname === '/transcribe/earnings'
-              ? 'text-primary bg-primary/10'
-              : 'hover:text-primary'
-          }`}
-        >
-          <DollarSign className='h-5 w-5' />
-          Balance Earnings
-          <div className='ml-auto flex items-center'>
-            <p className='font-normal mr-1'>
+      <nav className='grid items-start text-md font-medium px-2 lg:px-4 py-4'>
+        <div className='pb-5 border-b-2 border-customBorder'>
+          <h2 className='mb-2.5 text-lg font-semibold tracking-tight'>
+            Dashboard
+          </h2>
+          {sidebarItems.map((item, index) => {
+            const isActive = pathname === item.href
+            return (
+              <Link
+                key={index}
+                href={item.href}
+                className={`flex items-center gap-2.5 rounded-md px-3 py-2 transition-all ${
+                  isActive ? 'text-primary bg-primary/10' : 'hover:text-primary'
+                }`}
+              >
+                {item.name}
+                {item.badgeCount !== undefined && (
+                  <p className='ml-auto flex font-normal mr-1'>
+                    {item.badgeCount}
+                  </p>
+                )}
+              </Link>
+            )
+          })}
+        </div>
+
+        <div className='py-3 border-b-2 border-customBorder'>
+          <h2 className='mb-2.5 text-lg font-semibold tracking-tight'>
+            Statistics
+          </h2>
+          <Link
+            href='/transcribe/earnings'
+            className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 transition-all ${
+              pathname === '/transcribe/earnings'
+                ? 'text-primary bg-primary/10'
+                : 'hover:text-primary'
+            }`}
+          >
+            <div className='flex gap-1.5 items-center'>
+              <DollarSign className='h-5 w-5' />
+              Balance Earnings
+            </div>
+            <p className='font-normal'>
               ${earnings?.CURRENT_BALANCE?.toFixed(2)}
             </p>
-          </div>
-        </Link>
-        {/* <div
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all`}
-                >
-                    <Star className='h-5 w-5' />
-                    Grade
-                    <div className='ml-auto flex items-center'>
-                        <p className='font-normal mr-1'>3.5</p>
-                    </div>
-                </div> */}
-        <div>
-          <div
-            className={`flex items-center gap-2 rounded-lg px-3 py-2 transition-all`}
-          >
-            <Star className='h-5 w-5' />
-            Submitted today
-            <div className='ml-auto flex items-center'>
-              <p className='font-normal mr-1'>
+          </Link>
+          <div className='flex flex-col gap-y-2 px-3 py-2'>
+            <div className='flex items-center justify-between gap-2 rounded-md'>
+              <div className='flex gap-1.5 items-center'>
+                <Star className='h-5 w-5' />
+                <span>Submitted Today</span>
+              </div>
+              <p className='font-normal'>
                 {earnings?.TODAY_CREDITED_HOURS?.toFixed(2)}
               </p>
             </div>
+            <p className='text-xs text-gray-700'>
+              Get a $5 bonus by submitting 4 hours by 2:30PM EDT (US).
+            </p>
           </div>
-          <p style={{ fontSize: '12px', marginLeft: '13px' }}>
-            Get a $5 bonus by submitting 4 hours by 2:30PM EDT (US).
-          </p>
         </div>
 
-        <h2 className='mb-2 text-lg font-semibold tracking-tight mt-10'>
-          More
-        </h2>
-        <Link
-          href='/transcribe-guide'
-          className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary`}
-        >
-          <DollarSign className='h-5 w-5' />
-          Guides
-          <div className='ml-auto flex items-center'>
-            <ChevronDown className='h-5 w-5 -rotate-90 font-normal' />
-          </div>
-        </Link>
-        <Link
-          href='/settings/personal-info'
-          className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary`}
-        >
-          <Settings className='h-5 w-5' />
-          Settings
-          <ChevronDown className='h-5 w-5 ml-auto flex -rotate-90 font-normal' />
-        </Link>
+        <div className='pt-3'>
+          <h2 className='mb-2.5 text-lg font-semibold tracking-tight'>More</h2>
+          <Link
+            href='/transcriber-guide'
+            className={`flex items-center gap-2.5 px-3 pt-1 pb-2 transition-all hover:text-primary`}
+          >
+            <DollarSign className='h-5 w-5' />
+            Guides
+            <ChevronDown className='h-5 w-5 ml-auto flex -rotate-90 font-normal' />
+          </Link>
+          <Link
+            href='/settings/personal-info'
+            className={`flex items-center gap-2.5 px-3 py-1.5 transition-all hover:text-primary`}
+          >
+            <Settings className='h-5 w-5' />
+            Settings
+            <ChevronDown className='h-5 w-5 ml-auto flex -rotate-90 font-normal' />
+          </Link>
+        </div>
       </nav>
     </div>
   )
