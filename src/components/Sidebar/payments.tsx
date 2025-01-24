@@ -53,7 +53,7 @@ export function SidebarNav() {
 
   return (
     <div className='flex-1'>
-      <nav className='grid items-start text-md font-medium px-2 lg:px-4 pt-4'>
+      <nav className='grid items-start text-md font-medium px-2 lg:px-4 py-4'>
         <div className='pb-5 border-b-2 border-customBorder'>
           <h2 className='mb-2.5 text-lg font-semibold tracking-tight'>Teams</h2>
           <TeamSwitcher />

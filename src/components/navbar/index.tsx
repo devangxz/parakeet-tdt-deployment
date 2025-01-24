@@ -340,15 +340,17 @@ const Navbar = () => {
 
                 {session ? (
                   <div className='flex items-center space-x-8'>
-                    <span className='flex items-center border-primary border-2 justify-center px-3.5 py-2 text-sm font-medium text-primary rounded-[32px] cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02]'>
-                      <Link
-                        href='/files/upload'
-                        className='flex items-center gap-2'
-                      >
-                        <Upload className='w-4 h-4' />
-                        Upload File
-                      </Link>
-                    </span>
+                    {isCustomerOrAdmin && (
+                      <span className='flex items-center border-primary border-2 justify-center px-3.5 py-2 text-sm font-medium text-primary rounded-[32px] cursor-pointer transition-all duration-200 hover:opacity-90 hover:scale-[1.02]'>
+                        <Link
+                          href='/files/upload'
+                          className='flex items-center gap-2'
+                        >
+                          <Upload className='w-4 h-4' />
+                          Upload File
+                        </Link>
+                      </span>
+                    )}
                     {isCustomerOrAdmin ? <Profile /> : <TranscriberProfile />}
                   </div>
                 ) : (

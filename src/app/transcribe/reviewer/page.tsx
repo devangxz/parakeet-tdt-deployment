@@ -29,30 +29,24 @@ function HistoryFile({ history }: { history: any }) {
 
   return (
     <TableRow>
-      <TableCell className='w-[400px]'>
-        <div className='flex'>
-          <div className='ml-5'>
-            <div className='mb-2'>{filename}</div>
-            <div className='grid grid-flow-col gap-1'>
-              <Badge
-                variant='outline'
-                className='font-semibold text-[10px] text-green-600'
-              >
-                {diff}
-              </Badge>
-            </div>
-          </div>
-        </div>
+      <TableCell className='px-4 py-3'>
+        <div className='mb-2 font-medium'>{filename}</div>
+        <Badge
+          variant='outline'
+          className='font-semibold text-[10px] text-green-600'
+        >
+          {diff}
+        </Badge>
       </TableCell>
-      <TableCell>
+      <TableCell className='px-4 py-3'>
         <p>${(duration * 0.8).toFixed(2)}</p>
         <p>{duration}</p>
       </TableCell>
-      <TableCell>
+      <TableCell className='px-4 py-3'>
         <p>{timeString},</p>
         <p>{dateString}</p>
       </TableCell>
-      <TableCell>
+      <TableCell className='px-4 py-3'>
         <p>Verified</p>
         <p>3-Star</p>
       </TableCell>
@@ -91,19 +85,29 @@ export default function QCPage() {
   }, [])
 
   return (
-    <div className='bg-[#F7F5FF] h-screen'>
-      <div className='mt-8 ml-8 w-4/5'>
-        <h1 className='text-lg font-semibold mb-5'>
-          Review history ({historyFiles?.length})
+    <div className='h-full flex-1 flex-col p-4 md:flex space-y-3'>
+      <div>
+        <h1 className='text-lg font-semibold md:text-xl'>
+          Review History ({historyFiles?.length})
         </h1>
+      </div>
 
-        <Table className='bg-white rounded-xl border-gray-200'>
+      <div className='rounded-md border-2 border-customBorder bg-white'>
+        <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Details</TableHead>
-              <TableHead>Price/Duration</TableHead>
-              <TableHead>Submitted on</TableHead>
-              <TableHead>Rating</TableHead>
+              <TableHead className='h-fit p-4 text-left align-middle font-medium text-[15px]'>
+                Details
+              </TableHead>
+              <TableHead className='h-fit p-4 text-left align-middle font-medium text-[15px]'>
+                Price/Duration
+              </TableHead>
+              <TableHead className='h-fit p-4 text-left align-middle font-medium text-[15px]'>
+                Submitted on
+              </TableHead>
+              <TableHead className='h-fit p-4 text-left align-middle font-medium text-[15px]'>
+                Rating
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -114,7 +118,7 @@ export default function QCPage() {
             ) : (
               <TableRow>
                 <TableCell colSpan={4} className='h-24 text-center'>
-                  No results.
+                  No results
                 </TableCell>
               </TableRow>
             )}

@@ -1,6 +1,6 @@
 'use client'
 
-import NextImage from 'next/image'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -10,28 +10,26 @@ import { Button } from '@/components/ui/button'
 export default function Header() {
   const router = useRouter()
   return (
-    <header className='bg-white px-4 flex justify-between items-center py-2 shadow'>
-      <div>
-        <div className='flex items-center w-28 justify-between'>
-          <div className='flex h-8 items-center px-4 lg:h-[60px] lg:px-6'>
-            <Link
-              href='/'
-              className='flex items-center justify-center gap-2 font-semibold'
-            >
-              <NextImage
+    <div className='sticky top-0 z-50 bg-white border-b-2 border-customBorder'>
+      <div className='flex justify-between items-center px-2 lg:px-4 py-4'>
+        <div className='flex items-center justify-center gap-5'>
+          <Link href='/'>
+            <div className='flex items-center justify-center gap-2'>
+              <Image
+                loading='lazy'
                 src='/assets/images/logo.svg'
-                alt='scribie'
-                width={30}
-                height={30}
+                alt='Scribie'
+                width={36}
+                height={36}
               />
-              <span className='text-2xl'>scribie</span>
-            </Link>
-          </div>
-          <span>Transcriber</span>
+              <span className='inline font-semibold lg:text-3xl text-lg'>
+                scribie
+              </span>
+            </div>
+          </Link>
+          <span className='text-gray-700 font-medium text-lg'>Transcriber</span>
         </div>
-      </div>
-      <div className='flex gap-5'>
-        <div className='mr-2'>
+        <div className='flex gap-4'>
           <Button
             variant='default'
             className='w-full'
@@ -39,11 +37,9 @@ export default function Header() {
           >
             Dashboard
           </Button>
-        </div>
-        <div>
-          <TranscriberProfile />
+          <TranscriberProfile />{' '}
         </div>
       </div>
-    </header>
+    </div>
   )
 }

@@ -152,7 +152,7 @@ export default function TeamSwitcher({ className }: TeamSwitcherProps) {
           aria-expanded={open}
           aria-label='Select a team'
           className={cn(
-            'w-[250px] justify-between not-rounded bg-primary/10 text-primary border-primary/0 px-3',
+            'w-full justify-between not-rounded bg-primary/10 text-primary border-primary/0 px-3',
             className
           )}
         >
