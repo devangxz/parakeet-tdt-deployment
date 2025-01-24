@@ -22,8 +22,6 @@ const Sidebar = ({
 }: SidebarProps) => {
   const pathname = usePathname()
   const [creditsBalance, setCreditsBalance] = useState(0)
-  const [isFoldersOpen, setIsFoldersOpen] = useState(false) // Add this state
-
   const fetchCreditsBalance = async () => {
     try {
       const response = await getCreditBalanceAction()
@@ -40,48 +38,48 @@ const Sidebar = ({
   }, [])
 
   return (
-    <div className={`flex-1 ${isFoldersOpen ? 'h-full' : ''}`}>
-      <nav className='grid items-start text-md font-medium px-2 lg:px-4 py-4'>
-        {showTeams && (
-          <div className='pb-5 border-b-2 border-customBorder'>
-            <h2 className='mb-2.5 text-lg font-semibold tracking-tight'>Teams</h2>
-            <TeamSwitcher />
-          </div>
-        )}
-
-        <div className='py-3 border-b-2 border-customBorder'>
-          <SidebarItems
-            sidebarItems={sidebarItems}
-            heading={heading}
-            pathname={pathname || ''}
-            onFoldersToggle={setIsFoldersOpen} // Pass this to SidebarItems
-          />
-        </div>
-
-        <div className='pt-3'>
-          <h2 className='mb-2.5 text-lg font-semibold tracking-tight'>More</h2>
-          <Link
-            href='/settings/credits'
-            className={`flex items-center gap-2.5 px-3 pt-1 pb-2 transition-all hover:text-primary`}
-          >
-            <Database className='h-5 w-5' />
-            Credits
-            <div className='ml-auto flex items-center' test-id='credit-balance'>
-              <p className='font-normal mr-1'>${creditsBalance}</p>
-              <ChevronDown className='h-5 w-5 -rotate-90 font-normal' />
+    <div className={`flex flex-col`}>
+      <nav className="flex-1 overflow-hidden">
+        <div className="h-full px-2 lg:px-4 py-4">
+          {showTeams && (
+            <div className="pb-5 border-b-2 border-customBorder">
+              <h2 className="mb-2.5 text-lg font-semibold tracking-tight">Teams</h2>
+              <TeamSwitcher />
             </div>
-          </Link>
-          <Link
-            href='/settings/personal-info'
-            className={`flex items-center gap-2.5 px-3 py-1.5 transition-all hover:text-primary`}
-          >
-            <Settings className='h-5 w-5' />
-            Settings
-            <ChevronDown className='h-5 w-5 ml-auto flex -rotate-90 font-normal' />
-          </Link>
+          )}
+
+          <div className="py-3 border-b-2 border-customBorder overflow-y-auto">
+            <SidebarItems
+              sidebarItems={sidebarItems}
+              heading={heading}
+              pathname={pathname || ''}
+            />
+          </div>
+
+          <div className='pt-3'>
+            <h2 className='mb-2.5 text-lg font-semibold tracking-tight'>More</h2>
+            <Link
+              href='/settings/credits'
+              className={`flex items-center gap-2.5 px-3 pt-1 pb-2 transition-all hover:text-primary`}
+            >
+              <Database className='h-5 w-5' />
+              Credits
+              <div className='ml-auto flex items-center' test-id='credit-balance'>
+                <p className='font-normal mr-1'>${creditsBalance}</p>
+                <ChevronDown className='h-5 w-5 -rotate-90 font-normal' />
+              </div>
+            </Link>
+            <Link
+              href='/settings/personal-info'
+              className={`flex items-center gap-2.5 px-3 py-1.5 transition-all hover:text-primary`}
+            >
+              <Settings className='h-5 w-5' />
+              Settings
+              <ChevronDown className='h-5 w-5 ml-auto flex -rotate-90 font-normal' />
+            </Link>
+          </div>
         </div>
       </nav>
-
     </div >
   )
 }
@@ -92,7 +90,6 @@ export type props = {
   sidebarItems: SidebarItemType[]
   heading: string
   pathname: string
-  onFoldersToggle: (isOpen: boolean) => void
 }
 
 interface FileNode {
@@ -112,7 +109,7 @@ const FileTreeNode = ({ data, expandedNodes, setExpandedNodes }: {
 
   return (
     <div className="min-w-0">
-      <div className="flex items-center gap-1 pr-2">
+      <div className="flex items-center gap-1 pr-2 hover:bg-accent/50 rounded-md">
         <button
           onClick={() => {
             if (hasChildren) {
@@ -125,13 +122,17 @@ const FileTreeNode = ({ data, expandedNodes, setExpandedNodes }: {
           className="p-2 shrink-0"
         >
           <ChevronDown
-            className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-0' : '-rotate-90'
-              }`}
+            className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-0' : '-rotate-90'}`}
           />
         </button>
-        <div className="flex items-center gap-2 py-1 min-w-0 flex-1 hover:text-[#8143E5]">
+        <div className="flex items-center gap-2 py-1 min-w-0 flex-1">
           <Folder className="h-4 w-4 shrink-0" />
-          <Link href={`/files/all-files?folderId=${data.id}`} className="text-sm truncate">{data.name}</Link>
+          <Link
+            href={`/files/all-files?folderId=${data.id}`}
+            className="text-sm truncate block w-full hover:text-primary"
+          >
+            {data.name}
+          </Link>
         </div>
       </div>
       {isOpen && hasChildren && (
@@ -151,7 +152,7 @@ const FileTreeNode = ({ data, expandedNodes, setExpandedNodes }: {
 }
 
 export function SidebarItems(props: props) {
-  const { heading, sidebarItems, pathname, onFoldersToggle } = props
+  const { heading, sidebarItems, pathname } = props
   const [expandedNodes, setExpandedNodes] = useState<Record<number, boolean>>({})
   const [rootFolders, setRootFolders] = useState<FileNode[]>([])
   const [isRootExpanded, setIsRootExpanded] = useState(false)
@@ -170,14 +171,9 @@ export function SidebarItems(props: props) {
     fetchFolders()
   }, [])
 
-  useEffect(() => {
-    // Update parent component with root folders expansion state
-    onFoldersToggle(isRootExpanded)
-  }, [isRootExpanded, onFoldersToggle])
-
   return (
     <>
-      <div>
+      <div className={`${isRootExpanded ? 'h-[calc(100vh-24rem)]' : ''}  overflow-y-auto`}>
 
         <h2 className='mb-2.5 text-lg font-semibold tracking-tight'>{heading}</h2>
 

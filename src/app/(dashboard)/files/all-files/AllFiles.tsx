@@ -794,29 +794,31 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbLink href={`/files/all-files`}>
-                  My WorkSpace
+                <BreadcrumbLink>
+                  <Link href={`/files/all-files`}>My Workspace</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               {parentFolders?.map((item, index: number) => (
                 <BreadcrumbItem key={item?.id}>
                   {0 == index && <BreadcrumbSeparator />}
-                  <BreadcrumbLink
-                    href={`/files/all-files?folderId=${item?.id}`}
-                  >
-                    {item?.name}
+                  <BreadcrumbLink>
+                    <Link href={`/files/all-files?folderId=${item?.id}`}>{item?.name}</Link>
                   </BreadcrumbLink>
                   {parentFolders?.length - 1 > index && <BreadcrumbSeparator />}
                 </BreadcrumbItem>
               ))}
             </BreadcrumbList>
           </Breadcrumb>
-          <div>
+          <div className='flex items-center gap-x-2'>
             <Button
-              onClick={() => setIsCreateFolderDialogOpen(true)}
-              variant='outline'
+              variant="outline"
               className='not-rounded gap-2 border-2 border-customBorder'
+              onClick={() => router.push(`/files/all-files${parentFolders?.[parentFolders.length - 1]?.parentId ? `?folderId=${parentFolders[parentFolders.length - 1].parentId}` : ''}`)}
+              disabled={!folderId}
             >
+              <Undo2Icon size={18} />
+            </Button>
+            <Button onClick={() => setIsCreateFolderDialogOpen(true)} variant="outline" className='not-rounded gap-2 border-2 border-customBorder'>
               Create folder
               <FolderPlusIcon size={18} />
             </Button>
@@ -824,56 +826,13 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
         </div>
 
         <DataTable
-          data={
-            [
-              ...(allFiles ?? []),
-              ...(allFolders ?? []),
-            ] as unknown as CustomFile[]
-          }
+          data={[...(allFiles ?? []), ...(allFolders ?? [])] as unknown as CustomFile[]}
           columns={columns as ColumnDef<CustomFile, unknown>[]}
           onSelectedRowsChange={handleSelectedRowsChange}
+          onFileDrop={handleFileDrop}
         />
       </div>
-      <br />
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink>
-              <Link href={`/files/all-files`}>My Workspace</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          {parentFolders?.map((item, index: number) => (
-            <BreadcrumbItem key={item?.id}>
-              {0 == index && <BreadcrumbSeparator />}
-              <BreadcrumbLink>
-                <Link href={`/files/all-files?folderId=${item?.id}`}>{item?.name}</Link>
-              </BreadcrumbLink>
-              {parentFolders?.length - 1 > index && <BreadcrumbSeparator />}
-            </BreadcrumbItem>
-          ))}
-        </BreadcrumbList>
-      </Breadcrumb>
-      {/* <br /> */}
-      <div className='my-2 flex items-center'>
-        <Button
-          variant="outline"
-          className='not-rounded mr-2'
-          onClick={() => router.push(`/files/all-files${parentFolders?.[parentFolders.length - 1]?.parentId ? `?folderId=${parentFolders[parentFolders.length - 1].parentId}` : ''}`)}
-          disabled={!folderId}
-        >
-          <Undo2Icon size={18} />
-        </Button>
-        <Button onClick={() => setIsCreateFolderDialogOpen(true)} variant="outline" className='not-rounded gap-2'>
-          Create folder
-          <FolderPlusIcon size={18} />
-        </Button>
-      </div>
-      <DataTable
-        data={[...(allFiles ?? []), ...(allFolders ?? [])] as unknown as CustomFile[]}
-        columns={columns as ColumnDef<CustomFile, unknown>[]}
-        onSelectedRowsChange={handleSelectedRowsChange}
-        onFileDrop={handleFileDrop}
-      />
+
       {
         selectedFile && toggleCheckAndDownload && (
           <CheckAndDownload
