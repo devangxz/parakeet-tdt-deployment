@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import { Download, FileWarning, FolderClosed, FolderPlusIcon, Undo2Icon, X } from 'lucide-react'
+import { FileWarning, FolderClosed, FolderPlusIcon, Undo2Icon, X, } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Session } from 'next-auth'
@@ -138,7 +138,8 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
   })
   const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false)
   const [isMoveFileDialogOpen, setIsMoveFileDialogOpen] = useState(false)
-  const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false)
+  const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] =
+    useState(false)
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -252,7 +253,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
     const res = await deleteFolderAction(folderId)
     if (res.success && allFolders) {
       toast.success('Folder deleted successfully')
-      const newFolders = allFolders.filter(folder => folder.id !== folderId)
+      const newFolders = allFolders.filter((folder) => folder.id !== folderId)
       setAllFolders(newFolders)
       toast.dismiss(toastId)
     } else {
@@ -485,11 +486,11 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
             <div className='flex items-center'>
               <Button
                 variant='order'
-                className="format-button w-[140px]"
+                className='format-button w-[140px]'
                 onClick={() => {
                   setSelectedFolder({
                     id: Number(row.original.id),
-                    name: row.original.name
+                    name: row.original.name,
                   })
                   setIsRenameDialogOpen(true)
                 }}
@@ -508,7 +509,10 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align='end'>
-                  <DropdownMenuItem className='text-red-500' onClick={() => handleDeleteFolder(Number(row.original.id))}>
+                  <DropdownMenuItem
+                    className='text-red-500'
+                    onClick={() => handleDeleteFolder(Number(row.original.id))}
+                  >
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -708,135 +712,142 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
   }
 
   return (
-    <div>
-      <div className='flex items-center justify-between space-y-2'>
-        <div>
-          <h1 className='text-lg font-semibold md:text-lg'>
-            All ({(allFiles?.length || 0) + (allFolders?.length || 0)})
-          </h1>
-        </div>
-        <div className='flex items-center space-x-2'>
-          {fileIdsLength !== null && (
-            <span className='rounded-md bg-purple-200 flex items-center gap-[4px] h-10 text-indigo-600 px-[10px] text-[13px]'>
-              {fileIdsLength} <span>Selected</span>{' '}
-              <a href='/files/all-files'>
-                <X width={13} height={13} />
-              </a>
-            </span>
-          )}
-          <div className='flex items-center'>
-            {bulkLoading ? (
-              <Button
-                disabled
-                variant='order'
-                className='format-button w-[140px]'
-              >
-                Please wait
-                <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-              </Button>
-            ) : (
-              <Button
-                variant='order'
-                className='format-button text-black w-[140px]'
-                onClick={() =>
-                  orderBulkFile(session?.user?.orderType as string)
-                }
-              >
-                {session && session.user?.orderType !== 'TRANSCRIPTION'
-                  ? 'Format'
-                  : 'Transcribe'}
-              </Button>
+    <>
+      <div className='h-full flex-1 flex-col p-4 md:flex'>
+        <div className='flex items-start justify-between mb-1'>
+          <div>
+            <h1 className='text-lg font-semibold md:text-lg'>
+              All ({(allFiles?.length || 0) + (allFolders?.length || 0)})
+            </h1>
+          </div>
+          <div className='flex items-center space-x-2'>
+            {fileIdsLength !== null && (
+              <span className='rounded-md bg-primary/10 flex items-center gap-[4px] text-primary p-[8px] text-[13px]'>
+                {fileIdsLength} <span>Selected</span>{' '}
+                <a href='/files/all-files'>
+                  <X width={13} height={13} />
+                </a>
+              </span>
             )}
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            <div className='flex items-center'>
+              {bulkLoading ? (
+                <Button
+                  disabled
+                  variant='order'
+                  className='format-button w-[140px]'
+                >
+                  Please wait
+                  <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+                </Button>
+              ) : (
                 <Button
                   variant='order'
-                  className='h-9 w-8 p-0 format-icon-button'
+                  className='format-button text-black w-[140px]'
+                  onClick={() =>
+                    orderBulkFile(session?.user?.orderType as string)
+                  }
                 >
-                  <span className='sr-only'>Open menu</span>
-                  <ChevronDownIcon className='h-4 w-4' />
+                  {session && session.user?.orderType !== 'TRANSCRIPTION'
+                    ? 'Format'
+                    : 'Transcribe'}
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align='end'>
-                {session?.user?.orderType !== 'TRANSCRIPTION' && (
-                  <DropdownMenuItem
-                    onClick={() => orderBulkFile('TRANSCRIPTION')}
+              )}
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant='order'
+                    className='h-9 w-8 p-0 format-icon-button'
                   >
-                    Transcribe
+                    <span className='sr-only'>Open menu</span>
+                    <ChevronDownIcon className='h-4 w-4' />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align='end'>
+                  {session?.user?.orderType !== 'TRANSCRIPTION' && (
+                    <DropdownMenuItem
+                      onClick={() => orderBulkFile('TRANSCRIPTION')}
+                    >
+                      Transcribe
+                    </DropdownMenuItem>
+                  )}
+
+                  <DropdownMenuItem
+                    onClick={() => setIsDownloadDialogOpen(true)}
+                  >
+                    Download
                   </DropdownMenuItem>
-                )}
 
-                <DropdownMenuItem
-                  onClick={() => setIsDownloadDialogOpen(true)}
-                >
-                  Download
-                </DropdownMenuItem>
-
-                <DropdownMenuItem
-                  className='text-red-500'
-                  onClick={handleBulkDelete}
-                >
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuItem
+                    className='text-red-500'
+                    onClick={handleBulkDelete}
+                  >
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
-      </div>
-      <br />
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink>
-              <Link href={`/files/all-files`}>My Workspace</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          {parentFolders?.map((item, index: number) => (
-            <BreadcrumbItem key={item?.id}>
-              {0 == index && <BreadcrumbSeparator />}
-              <BreadcrumbLink>
-                <Link href={`/files/all-files?folderId=${item?.id}`}>{item?.name}</Link>
-              </BreadcrumbLink>
-              {parentFolders?.length - 1 > index && <BreadcrumbSeparator />}
-            </BreadcrumbItem>
-          ))}
-        </BreadcrumbList>
-      </Breadcrumb>
-      {/* <br /> */}
-      <div className='my-2 flex items-center'>
-        <Button
-          variant="outline"
-          className='not-rounded mr-2'
-          onClick={() => router.push(`/files/all-files${parentFolders?.[parentFolders.length - 1]?.parentId ? `?folderId=${parentFolders[parentFolders.length - 1].parentId}` : ''}`)}
-          disabled={!folderId}
-        >
-          <Undo2Icon size={18} />
-        </Button>
-        <Button onClick={() => setIsCreateFolderDialogOpen(true)} variant="outline" className='not-rounded gap-2'>
-          Create folder
-          <FolderPlusIcon size={18} />
-        </Button>
-      </div>
-      <DataTable
-        data={[...(allFiles ?? []), ...(allFolders ?? [])] as unknown as CustomFile[]}
-        columns={columns as ColumnDef<CustomFile, unknown>[]}
-        onSelectedRowsChange={handleSelectedRowsChange}
-        onFileDrop={handleFileDrop}
-      />
-      {selectedFile && toggleCheckAndDownload && (
-        <CheckAndDownload
-          id={selectedFile.fileId || ''}
-          orderId={selectedFile.orderId || ''}
-          orderType={selectedFile.orderType || ''}
-          filename={selectedFile.name || ''}
-          toggleCheckAndDownload={toggleCheckAndDownload}
-          setToggleCheckAndDownload={setToggleCheckAndDownload}
-          session={session as Session}
-          txtSignedUrl={signedUrls.txtSignedUrl || ''}
-          cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
+
+        <div className='space-y-2 mb-3'>
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink>
+                  <Link href={`/files/all-files`}>My Workspace</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              {parentFolders?.map((item, index: number) => (
+                <BreadcrumbItem key={item?.id}>
+                  {0 == index && <BreadcrumbSeparator />}
+                  <BreadcrumbLink>
+                    <Link href={`/files/all-files?folderId=${item?.id}`}>{item?.name}</Link>
+                  </BreadcrumbLink>
+                  {parentFolders?.length - 1 > index && <BreadcrumbSeparator />}
+                </BreadcrumbItem>
+              ))}
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className='flex items-center gap-x-2'>
+            <Button
+              variant="outline"
+              className='not-rounded gap-2 border-2 border-customBorder'
+              onClick={() => router.push(`/files/all-files${parentFolders?.[parentFolders.length - 1]?.parentId ? `?folderId=${parentFolders[parentFolders.length - 1].parentId}` : ''}`)}
+              disabled={!folderId}
+            >
+              <Undo2Icon size={18} />
+            </Button>
+            <Button onClick={() => setIsCreateFolderDialogOpen(true)} variant="outline" className='not-rounded gap-2 border-2 border-customBorder'>
+              Create folder
+              <FolderPlusIcon size={18} />
+            </Button>
+          </div>
+        </div>
+
+        <DataTable
+          data={[...(allFiles ?? []), ...(allFolders ?? [])] as unknown as CustomFile[]}
+          columns={columns as ColumnDef<CustomFile, unknown>[]}
+          onSelectedRowsChange={handleSelectedRowsChange}
+          onFileDrop={handleFileDrop}
         />
-      )}
+      </div>
+
+      {
+        selectedFile && toggleCheckAndDownload && (
+          <CheckAndDownload
+            id={selectedFile.fileId || ''}
+            orderId={selectedFile.orderId || ''}
+            orderType={selectedFile.orderType || ''}
+            filename={selectedFile.name || ''}
+            toggleCheckAndDownload={toggleCheckAndDownload}
+            setToggleCheckAndDownload={setToggleCheckAndDownload}
+            session={session as Session}
+            txtSignedUrl={signedUrls.txtSignedUrl || ''}
+            cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
+          />
+        )
+      }
       <DraftTranscriptFileDialog
         open={openDraftTranscriptDialog}
         onClose={() => setDraftTranscriptDialog(false)}
@@ -892,12 +903,9 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
       <DownloadModal
         isDownloadDialogOpen={isDownloadDialogOpen}
         setIsDownloadDialogOpen={setIsDownloadDialogOpen}
-        fileIds={
-          selectedFiles
-            .map((file) => file.id) || []
-        }
+        fileIds={selectedFiles.map((file) => file.id) || []}
       />
-    </div>
+    </>
   )
 }
 export default AllFiles

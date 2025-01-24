@@ -595,7 +595,7 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
   }
 
   return (
-    <div className='bg-primary flex flex-col p-[12px] items-center justify-center rounded-[12px] border shadow-sm text-white'>
+    <div className='bg-primary flex flex-col p-[12px] items-center justify-center rounded-md border shadow-sm text-primary-foreground min-h-[245px]'>
       <Dropzone onDrop={onDrop} multiple>
         {({ getRootProps, getInputProps, isDragActive }) => (
           <div
@@ -603,7 +603,7 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
               onClick: (event) => event.stopPropagation(),
             })}
             className={cn(
-              'group relative grid h-52 w-full place-items-center rounded-lg border-2 border-dashed border-white px-5 py-2.5 text-center transition',
+              'group relative grid w-full min-h-[215px] place-items-center rounded-md border-2 border-dashed border-primary-foreground px-5 py-2.5 text-center transition',
               'ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
               isDragActive && 'border-white/50'
             )}
@@ -611,13 +611,13 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
             <input {...getInputProps()} />
             {isDragActive ? (
               <div className='self-center flex flex-col items-center justify-center gap-4 sm:px-5'>
-                <div className='rounded-full border border-dashed border-white p-3'>
+                <div className='rounded-full border border-dashed border-primary-foreground p-3'>
                   <UploadIcon
-                    className='size-7 text-white'
+                    className='size-7 text-primary-foreground'
                     aria-hidden='true'
                   />
                 </div>
-                <p className='font-medium text-white'>
+                <p className='font-medium text-primary-foreground'>
                   Drop files or folders here
                 </p>
               </div>
@@ -651,7 +651,7 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
                       <label
                         data-testid='file-uploader'
                         htmlFor='fileInput'
-                        className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
+                        className='justify-center px-5 py-2 bg-primary-foreground rounded-[32px] cursor-pointer hover:bg-gray-100'
                       >
                         Choose Files
                       </label>
@@ -675,7 +675,7 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
                   <label
                     data-testid='folder-uploader'
                     htmlFor='folderInput'
-                    className='justify-center px-5 py-2 bg-white rounded-[32px] cursor-pointer hover:bg-gray-200'
+                    className='justify-center px-5 py-2 bg-primary-foreground rounded-[32px] cursor-pointer hover:bg-gray-100'
                   >
                     Choose Folder
                   </label>

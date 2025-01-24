@@ -1,4 +1,5 @@
 'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
 import React, { useState, useEffect } from 'react'
 import { toast } from 'sonner'
@@ -137,56 +138,62 @@ const Page = () => {
   }
 
   return (
-    <div className='w-[80%] space-y-[1.25rem]'>
-      <div className='w-[70%]'>
-        <HeadingDescription heading='PayPal Account' />
-      </div>
+    <div className='lg:w-[70%] flex flex-1 flex-col p-4 gap-5'>
+      <HeadingDescription heading='PayPal Account' />
 
-      <hr />
-
-      <div>
-        <p>Your current PayPal account is:</p>
-        <div className='border border-2 p-3 rounded-[5px] mt-2 mb-4'>{id}</div>
-        <p>
-          To change your PayPal account, click the button below and login so
-          that we can check your Verified status. A{' '}
-          <a
-            href='https://www.paypal.com/be/cgi-bin/webscr?cmd=p/gen/verification-faq-outside'
-            target='_blank'
-            className='text-primary underline'
+      <div className='space-y-4'>
+        <div>
+          <p>Your current PayPal account is:</p>
+          <div className='border-2 border-customBorder p-3 rounded-md mt-2 mb-4'>
+            {id}
+          </div>
+        </div>
+        <div>
+          <p>
+            To change your PayPal account, click the button below and login so
+            that we can check your Verified status. A{' '}
+            <a
+              href='https://www.paypal.com/be/cgi-bin/webscr?cmd=p/gen/verification-faq-outside'
+              target='_blank'
+              className='text-primary underline'
+            >
+              Verified PayPal account
+            </a>{' '}
+            (linked to a bank account or credit card) is a necessary
+            requirement. The process is as follows:
+          </p>
+          <ul
+            className='list-circle mt-3 mb-4 ml-6'
+            style={{ listStyleType: 'circle' }}
           >
-            Verified PayPal account
-          </a>{' '}
-          (linked to a bank account or credit card) is a necessary requirement.
-          The process is as follows:
-        </p>
-        <ul
-          className='list-circle mt-3 mb-4 ml-6'
-          style={{ listStyleType: 'circle' }}
-        >
-          <li>Click on Log In With PayPal button and complete the process.</li>
-          <li>Take selfie with a government issued identification.</li>
-          <li>
-            Email the selfie to support@scribie.com from your new PayPal account
-            email.
-          </li>
-        </ul>
-        <p>
-          We may have questions regarding your Scribie account and it has to be
-          in good standing for updation.
-        </p>
+            <li>
+              Click on Log In With PayPal button and complete the process.
+            </li>
+            <li>Take selfie with a government issued identification.</li>
+            <li>
+              Email the selfie to support@scribie.com from your new PayPal
+              account email.
+            </li>
+          </ul>
+          <p>
+            We may have questions regarding your Scribie account and it has to
+            be in good standing for updation.
+          </p>
+        </div>
+        <div>
+          {loginLoading ? (
+            <Button disabled variant='default'>
+              Log In with PayPal
+              <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+            </Button>
+          ) : (
+            <Button type='submit' onClick={handleLogin} variant='default'>
+              Log In with PayPal
+            </Button>
+          )}
+        </div>
       </div>
 
-      {loginLoading ? (
-        <Button disabled>
-          Please wait
-          <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-        </Button>
-      ) : (
-        <Button type='submit' onClick={handleLogin}>
-          Log In with PayPal
-        </Button>
-      )}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
           <DialogHeader>

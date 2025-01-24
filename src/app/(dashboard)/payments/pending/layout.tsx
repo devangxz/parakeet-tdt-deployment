@@ -3,7 +3,6 @@ import { Metadata } from 'next'
 import AuthenticatedFooter from '@/components/authenticated-footer'
 import PaymentsNavbar from '@/components/navbar/payments'
 import { SidebarNav } from '@/components/Sidebar/payments'
-import { Separator } from '@/components/ui/separator'
 
 export const metadata: Metadata = {
   title: 'Invoices',
@@ -16,22 +15,23 @@ interface PaymentsLayoutProps {
 
 export default function PaymentsLayout({ children }: PaymentsLayoutProps) {
   return (
-    <>
+    <div className='flex min-h-screen flex-col'>
       <PaymentsNavbar />
-      <div className='w-[100%] min-h-screen m-auto my-8 px-2 lg:px-4'>
-        <div className='space-y-0.5'>
-          <h2 className='text-2xl font-bold tracking-tight'>Payments</h2>
-          <p className='text-muted-foreground'>Manage your payments</p>
-        </div>
-        <Separator className='my-6' />
-        <div className='flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0'>
-          <aside className='lg:w-[250px]'>
+      <div className='space-y-0.5 border-b-2 border-customBorder px-2 lg:px-4 pt-3 pb-4'>
+        <h1 className='text-2xl font-bold'>Payments</h1>
+        <p className='text-gray-700'>Manage your payments</p>
+      </div>
+      <div className='flex flex-1'>
+        <div className='hidden border-r-2 border-customBorder md:block md:w-[220px] lg:w-[280px]'>
+          <aside className='sticky top-[69.5px]'>
             <SidebarNav />
           </aside>
-          <div className='flex-1'>{children}</div>
         </div>
+        <main className='flex-1'>
+          <div className='h-full bg-muted/40'>{children}</div>
+        </main>
       </div>
       <AuthenticatedFooter />
-    </>
+    </div>
   )
 }

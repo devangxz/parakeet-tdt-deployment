@@ -126,7 +126,11 @@ export function DataTable<TData, TValue>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} colSpan={header.colSpan}>
+                  <TableHead
+                    key={header.id}
+                    colSpan={header.colSpan}
+                    className='h-fit p-4 text-left align-middle font-medium text-[15px]'
+                  >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -152,7 +156,7 @@ export function DataTable<TData, TValue>({
                     `}
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
+                      <TableCell className='px-4 py-3' key={cell.id}>
                         {cell.column.id === 'name' ? (
                           <div>
                             {'parentId' in rowData ? (
@@ -186,7 +190,7 @@ export function DataTable<TData, TValue>({
                   colSpan={columns.length}
                   className='h-24 text-center'
                 >
-                  No results.
+                  No results
                 </TableCell>
               </TableRow>
             )}
