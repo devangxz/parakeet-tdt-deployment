@@ -19,7 +19,7 @@ export async function GET() {
     authUrl.searchParams.append('response_type', 'code');
     authUrl.searchParams.append('client_id', ONEDRIVE_CLIENT_ID);
     authUrl.searchParams.append('redirect_uri', `${SITE_URL}/auth/one-drive/callback`);
-    authUrl.searchParams.append('scope', 'files.read offline_access');
+    authUrl.searchParams.append('scope', 'files.read, Files.ReadWrite.All, Files.ReadWrite, offline_access');
     authUrl.searchParams.append('state', state);
 
     return NextResponse.redirect(authUrl.toString());

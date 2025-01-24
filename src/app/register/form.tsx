@@ -59,7 +59,7 @@ const SignupForm = () => {
     defaultValues: {
       firstName: '',
       lastName: '',
-      userType: '',
+      userType: 'customer',
       phone: '',
       industry: '',
       otherIndustry: '',
@@ -74,7 +74,7 @@ const SignupForm = () => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       if (!captcha) {
-        toast.error(`Please validate recaptcha.`)
+        toast.error('Please validate recaptcha.')
         return
       }
       const referralCode = searchParams?.get('rc') || ''
@@ -105,15 +105,15 @@ const SignupForm = () => {
         })
 
         if (result && result.ok) {
-          const response = await fetch('/api/auth/session')
-          const session = await response.json()
+          const sessionRes = await fetch('/api/auth/session')
+          const session = await sessionRes.json()
           if (session && session.user) {
             const redirectUrl = getRedirectPathByRole(session.user.role)
             window.location.href = redirectUrl
           }
         } else {
           const tId = toast.success(
-            `User Created Successfully, please login to your account`
+            'User Created Successfully, please login to your account'
           )
           toast.dismiss(tId)
         }
@@ -350,61 +350,65 @@ const SignupForm = () => {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name='industry'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Select Industry</FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          setShowOtherIndustryInput(value === 'Other')
-                          field.onChange(value)
-                        }}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <div className='relative'>
-                            <Building2 className='absolute left-3 top-[12px] h-4 w-4 text-muted-foreground' />
-                            <SelectTrigger className='pl-9'>
-                              <SelectValue placeholder='Select Industry' />
-                            </SelectTrigger>
-                          </div>
-                        </FormControl>
-                        <SelectContent>
-                          {INDUSTRIES.map((industry) => (
-                            <SelectItem key={industry} value={industry}>
-                              {industry}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {form.watch('userType') === 'customer' && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name='industry'
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Select Industry</FormLabel>
+                          <Select
+                            onValueChange={(value) => {
+                              setShowOtherIndustryInput(value === 'Other')
+                              field.onChange(value)
+                            }}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <div className='relative'>
+                                <Building2 className='absolute left-3 top-[12px] h-4 w-4 text-muted-foreground' />
+                                <SelectTrigger className='pl-9'>
+                                  <SelectValue placeholder='Select Industry' />
+                                </SelectTrigger>
+                              </div>
+                            </FormControl>
+                            <SelectContent>
+                              {INDUSTRIES.map((industry) => (
+                                <SelectItem key={industry} value={industry}>
+                                  {industry}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                {showOtherIndustryInput && (
-                  <FormField
-                    control={form.control}
-                    name='otherIndustry'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Other Industry</FormLabel>
-                        <FormControl>
-                          <div className='relative'>
-                            <Building2 className='absolute left-3 top-[12px] h-4 w-4 text-muted-foreground' />
-                            <Input
-                              className='pl-9'
-                              placeholder='Please specify'
-                              {...field}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
+                    {showOtherIndustryInput && (
+                      <FormField
+                        control={form.control}
+                        name='otherIndustry'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Other Industry</FormLabel>
+                            <FormControl>
+                              <div className='relative'>
+                                <Building2 className='absolute left-3 top-[12px] h-4 w-4 text-muted-foreground' />
+                                <Input
+                                  className='pl-9'
+                                  placeholder='Please specify'
+                                  {...field}
+                                />
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     )}
-                  />
+                  </>
                 )}
               </div>
 

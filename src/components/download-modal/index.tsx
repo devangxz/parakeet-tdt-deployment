@@ -135,6 +135,11 @@ const DownloadModal = ({
                 </DialogDescription>
             </DialogHeader>
             {(step === 1 && !isLoading) && <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                    <p className="text-sm text-blue-600 border border-blue-200 rounded p-2 bg-blue-50">
+                        For formatting orders only <span className="font-bold">Microsoft Word</span> and <span className="font-bold">PDF</span> will be downloaded.
+                    </p>
+                </div>
                 <div className="flex items-center space-x-2">
                     <Checkbox checked={selectedTypes['microsoft-word']} onCheckedChange={(isChecked) => setSelectedTypes({ ...selectedTypes, 'microsoft-word': !!isChecked })} id="microsoft-word" />
                     <Label htmlFor="microsoft-word">Microsoft Word</Label>

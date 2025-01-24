@@ -9,7 +9,7 @@ export async function uploadToOneDrive(
         }
 
         // Upload through server proxy to handle CORS
-        const response = await fetch('/api/one-drive', {
+        const response = await fetch('/one-drive', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

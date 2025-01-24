@@ -2,13 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import {
-  Download,
-  FileWarning,
-  FolderClosed,
-  FolderPlusIcon,
-  X,
-} from 'lucide-react'
+import { FileWarning, FolderClosed, FolderPlusIcon, Undo2Icon, X, } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Session } from 'next-auth'
@@ -20,6 +14,7 @@ import { DataTable } from './components/data-table'
 import { CheckAndDownload } from '../delivered/components/check-download'
 import { getAllFilesAction } from '@/app/actions/all-files'
 import { downloadMp3 } from '@/app/actions/file/download-mp3'
+import { moveFileAction } from '@/app/actions/files/move'
 import { getFolders } from '@/app/actions/folders'
 import { deleteFolderAction } from '@/app/actions/folders/delete'
 import { getFolderHierarchy } from '@/app/actions/folders/parent'
@@ -165,6 +160,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
 
   const fetchAllFiles = async () => {
     try {
+      setIsAllFilesLoading(true)
       const response = await getAllFilesAction(
         folderId,
         fileIds?.join(',') || null
@@ -195,7 +191,9 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
   }
 
   const fetchAllFolders = async () => {
+
     try {
+      setIsAllFoldersLoading(true)
       const folders = await getFolders(folderId || 'null')
       if (!folders?.success) {
         throw new Error(folders?.message)
@@ -217,7 +215,8 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
 
   const fetchParentFolders = async () => {
     try {
-      const folders = await getFolderHierarchy(folderId ?? '')
+      setIsLoading(false)
+      const folders = await getFolderHierarchy(folderId ?? 'null')
       if (!folders?.success) {
         throw new Error(folders?.message)
       }
@@ -602,21 +601,21 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
                   </DropdownMenuItem>
                   {getStatus(row.original.status)?.label !==
                     'Draft Transcript' && (
-                    <DropdownMenuItem
-                      className='text-red-500'
-                      onClick={() => {
-                        setSeletedFile({
-                          fileId: row.original.id,
-                          name: row.original.name,
-                          orderId: row.original?.orderId?.toString() ?? '',
-                          orderType: row.original?.orderType ?? '',
-                        })
-                        setOpenDeleteDialog(true)
-                      }}
-                    >
-                      Delete
-                    </DropdownMenuItem>
-                  )}
+                      <DropdownMenuItem
+                        className='text-red-500'
+                        onClick={() => {
+                          setSeletedFile({
+                            fileId: row.original.id,
+                            name: row.original.name,
+                            orderId: row.original?.orderId?.toString() ?? '',
+                            orderType: row.original?.orderType ?? '',
+                          })
+                          setOpenDeleteDialog(true)
+                        }}
+                      >
+                        Delete
+                      </DropdownMenuItem>
+                    )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -699,13 +698,26 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
     }
   }
 
+  const handleFileDrop = async (fileId: string, folderId: number) => {
+    const toastId = toast.loading('Moving file...')
+    try {
+      await moveFileAction(fileId, folderId)
+      await fetchAllFiles()
+      toast.dismiss(toastId)
+      toast.success('File moved successfully')
+    } catch (error) {
+      toast.dismiss(toastId)
+      toast.error('Failed to move file')
+    }
+  }
+
   return (
     <>
       <div className='h-full flex-1 flex-col p-4 md:flex'>
         <div className='flex items-start justify-between mb-1'>
           <div>
             <h1 className='text-lg font-semibold md:text-lg'>
-              All ({allFiles?.length})
+              All ({(allFiles?.length || 0) + (allFolders?.length || 0)})
             </h1>
           </div>
           <div className='flex items-center space-x-2'>
@@ -822,20 +834,61 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
           onSelectedRowsChange={handleSelectedRowsChange}
         />
       </div>
-
-      {selectedFile && toggleCheckAndDownload && (
-        <CheckAndDownload
-          id={selectedFile.fileId || ''}
-          orderId={selectedFile.orderId || ''}
-          orderType={selectedFile.orderType || ''}
-          filename={selectedFile.name || ''}
-          toggleCheckAndDownload={toggleCheckAndDownload}
-          setToggleCheckAndDownload={setToggleCheckAndDownload}
-          session={session as Session}
-          txtSignedUrl={signedUrls.txtSignedUrl || ''}
-          cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
-        />
-      )}
+      <br />
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink>
+              <Link href={`/files/all-files`}>My Workspace</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          {parentFolders?.map((item, index: number) => (
+            <BreadcrumbItem key={item?.id}>
+              {0 == index && <BreadcrumbSeparator />}
+              <BreadcrumbLink>
+                <Link href={`/files/all-files?folderId=${item?.id}`}>{item?.name}</Link>
+              </BreadcrumbLink>
+              {parentFolders?.length - 1 > index && <BreadcrumbSeparator />}
+            </BreadcrumbItem>
+          ))}
+        </BreadcrumbList>
+      </Breadcrumb>
+      {/* <br /> */}
+      <div className='my-2 flex items-center'>
+        <Button
+          variant="outline"
+          className='not-rounded mr-2'
+          onClick={() => router.push(`/files/all-files${parentFolders?.[parentFolders.length - 1]?.parentId ? `?folderId=${parentFolders[parentFolders.length - 1].parentId}` : ''}`)}
+          disabled={!folderId}
+        >
+          <Undo2Icon size={18} />
+        </Button>
+        <Button onClick={() => setIsCreateFolderDialogOpen(true)} variant="outline" className='not-rounded gap-2'>
+          Create folder
+          <FolderPlusIcon size={18} />
+        </Button>
+      </div>
+      <DataTable
+        data={[...(allFiles ?? []), ...(allFolders ?? [])] as unknown as CustomFile[]}
+        columns={columns as ColumnDef<CustomFile, unknown>[]}
+        onSelectedRowsChange={handleSelectedRowsChange}
+        onFileDrop={handleFileDrop}
+      />
+      {
+        selectedFile && toggleCheckAndDownload && (
+          <CheckAndDownload
+            id={selectedFile.fileId || ''}
+            orderId={selectedFile.orderId || ''}
+            orderType={selectedFile.orderType || ''}
+            filename={selectedFile.name || ''}
+            toggleCheckAndDownload={toggleCheckAndDownload}
+            setToggleCheckAndDownload={setToggleCheckAndDownload}
+            session={session as Session}
+            txtSignedUrl={signedUrls.txtSignedUrl || ''}
+            cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
+          />
+        )
+      }
       <DraftTranscriptFileDialog
         open={openDraftTranscriptDialog}
         onClose={() => setDraftTranscriptDialog(false)}
