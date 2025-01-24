@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
+import logger from '@/lib/logger'
 
 export async function POST(req: Request) {
     try {
@@ -28,15 +29,15 @@ export async function POST(req: Request) {
 
         // Create upload session for OneDrive
         const createSessionResponse = await axios.post(
-            'https://graph.microsoft.com/v1.0/me/drive/root:/Documents/' + fileName + ':/createUploadSession',
-            {},
+            `https://graph.microsoft.com/v1.0/me/drive/root:/${encodeURIComponent(fileName)}:/createUploadSession`,
+            {}, // Empty body
             {
                 headers: {
                     Authorization: `Bearer ${accessToken}`,
                     'Content-Type': 'application/json'
                 }
             }
-        )
+        );
 
         const { uploadUrl } = createSessionResponse.data
 
@@ -47,14 +48,15 @@ export async function POST(req: Request) {
             {
                 headers: {
                     'Content-Type': 'application/octet-stream',
-                    'Content-Length': fileResponse.data.length
+                    'Content-Length': fileResponse.data.length,
+                    'Content-Range': `bytes 0-${fileResponse.data.length - 1}/${fileResponse.data.length}`
                 }
             }
         )
 
         return NextResponse.json(uploadResponse.data)
     } catch (error) {
-        console.error('Error uploading file to OneDrive:', error)
+        logger.error(`Error uploading file to OneDrive: ${error}`)
 
         return NextResponse.json(
             { error: 'Failed to upload file' },
