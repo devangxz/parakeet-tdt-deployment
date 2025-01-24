@@ -10,7 +10,7 @@ import { orderController } from '../controllers'
 import { getOrderRating } from '@/app/actions/order/rating'
 import { BoxUploadButton } from '@/components/box-upload-button'
 import { DropboxUploadButton } from '@/components/dropbox-upload-button'
-import OneDriveUploadButton from '@/components/one-drive-upload-button'
+// import OneDriveUploadButton from '@/components/one-drive-upload-button'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -255,10 +255,10 @@ export function CheckAndDownload({
                   >
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
                   </Button>
-                  <OneDriveUploadButton
+                  {/* <OneDriveUploadButton
                     fileUrl={cfDocxSignedUrl}
                     fileName={`${docx?.name}_cf.docx`}
-                  />
+                  /> */}
                   <BoxUploadButton
                     fileUrl={cfDocxSignedUrl}
                     fileName={`${docx?.name}_cf.docx`}
@@ -295,10 +295,10 @@ export function CheckAndDownload({
                   >
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
                   </Button>
-                  <OneDriveUploadButton
+                  {/* <OneDriveUploadButton
                     fileUrl={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${session?.user?.token}`}
                     fileName={`${pdf?.name}_cf.pdf`}
-                  />
+                  /> */}
                   <BoxUploadButton
                     fileUrl={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${session?.user?.token}`}
                     fileName={`${pdf?.name}_cf.pdf`}
@@ -343,10 +343,10 @@ export function CheckAndDownload({
                   >
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
                   </Button>
-                  <OneDriveUploadButton
+                  {/* <OneDriveUploadButton
                     fileUrl={`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${session?.user?.token}`}
                     fileName={`${docx?.name}.docx`}
-                  />
+                  /> */}
                   <BoxUploadButton
                     fileUrl={`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${session?.user?.token}`}
                     fileName={`${docx?.name}.docx`}
@@ -383,10 +383,10 @@ export function CheckAndDownload({
                   >
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
                   </Button>
-                  <OneDriveUploadButton
+                  {/* <OneDriveUploadButton
                     fileUrl={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${session?.user?.token}`}
                     fileName={`${pdf?.name}.pdf`}
-                  />
+                  /> */}
                   <BoxUploadButton
                     fileUrl={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${session?.user?.token}`}
                     fileName={`${pdf?.name}.pdf`}
@@ -423,10 +423,10 @@ export function CheckAndDownload({
                   >
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
                   </Button>
-                  <OneDriveUploadButton
+                  {/* <OneDriveUploadButton
                     fileUrl={txtSignedUrl}
                     fileName={`${txtFile?.name}.txt`}
-                  />
+                  /> */}
                   <BoxUploadButton
                     fileUrl={txtSignedUrl}
                     fileName={`${txtFile?.name}.txt`}
