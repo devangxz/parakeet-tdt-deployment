@@ -173,6 +173,16 @@ const createShortcutControls = (
     if (!quill) return
     // You'll need to pass the appropriate parameters for adjustTimestamps
     adjustTimestamps(quill, 0, quill.getSelection())
+  },
+  playAt75Speed: () => {
+    if (!audioPlayer.current) return
+    audioPlayer.current.playbackRate = 0.75
+    audioPlayer.current.play()
+  },
+  playAt100Speed: () => {
+    if (!audioPlayer.current) return
+    audioPlayer.current.playbackRate = 1.0
+    audioPlayer.current.play()
   }
 })
 
