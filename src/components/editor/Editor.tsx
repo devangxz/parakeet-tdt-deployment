@@ -36,11 +36,20 @@ interface EditorProps {
 }
 
 interface UndoRedoItem {
-    ops: Op[];
-    selection?: { index: number; length: number };
+    delta: Delta;
+    oldDelta: Delta;
+    beforeSelection: Range | null;
+    afterSelection: Range | null;
+}
+ 
+interface Range {
+    index: number;
+    length: number;
 }
 
-export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled }: EditorProps) {
+type Sources = 'user' | 'api' | 'silent';
+
+export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, selection, searchHighlight, highlightWordsEnabled }: EditorProps) {
     const ctms = initialCtms; // Make CTMs constant
     const quillRef = useRef<ReactQuill>(null)
     const [alignments, setAlignments] = useState<AlignmentType[]>([])
@@ -50,11 +59,22 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     const lastHighlightedRef = useRef<number | null>(null);
     const [undoStack, setUndoStack] = useState<UndoRedoItem[]>([]);
     const [redoStack, setRedoStack] = useState<UndoRedoItem[]>([]);
+    const beforeSelectionRef = useRef<Range | null>(null);
+    const [currentSelection, setCurrentSelection] = useState<Range | null>(null);    
     const TYPING_PAUSE = 500; // Half second pause indicates word completion
+    const STACK_LIMIT = 100;
 
     const quillModules = {
         history: false,
         toolbar: false,
+    };
+
+    // Selection change handler
+    const handleSelectionChange = (selection: Range | null, source: Sources) => {
+        if (source === 'user') {
+            beforeSelectionRef.current = currentSelection;
+            setCurrentSelection(selection);
+        }
     };
 
     const characterIndexToWordIndex = (text: string, charIndex: number): number => {
@@ -362,35 +382,38 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     useEffect(() => {
         const quill = quillRef.current?.getEditor();
         if (!quill || !alignmentWorker.current) return;
-    
+     
         const handleTextChange = (delta: Delta, oldDelta: Delta, source: string) => {
             if (source !== 'user') return;
-    
-            // Store only the new change delta (raw ops).
-            if (delta.ops?.some(op => op.insert || op.delete || op.retain)) {
-                setUndoStack(prev => [
-                    ...prev,
-                    {
-                        ops: delta.ops,
-                        selection: quill.getSelection() ?? undefined
-                    }
-                ]);
-                setRedoStack([]); // Clear redo stack whenever there's a new user edit
-            }
-
+            const quill = quillRef.current?.getEditor();
+            if (!quill) return;
+     
+            const newItem: UndoRedoItem = {
+                delta: new Delta(delta.ops),
+                oldDelta: new Delta(oldDelta.ops),
+                beforeSelection: beforeSelectionRef.current,
+                afterSelection: quill.getSelection()
+            };
+     
+            setUndoStack(prev => {
+                const newStack = [...prev];
+                if (newStack.length >= STACK_LIMIT) newStack.shift();
+                newStack.push(newItem);
+                return newStack;
+            });
+            setRedoStack([]);
             scheduleAlignmentUpdate();
         };
-    
+     
         quill.on('text-change', handleTextChange);
-    
+     
         return () => {
             quill.off('text-change', handleTextChange);
             if (typingTimer) clearTimeout(typingTimer);
         };
-    }, [alignments, ctms, typingTimer]);
-
-    useEffect(() => {
-        // Override execCommand to stop browser's native undo/redo
+     }, [alignments, ctms, typingTimer, scheduleAlignmentUpdate]);
+     
+     useEffect(() => {
         const originalExecCommand = document.execCommand;
         document.execCommand = function(command, ...args) {
             if (command === 'undo' || command === 'redo') {
@@ -398,106 +421,83 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             }
             return originalExecCommand.call(this, command, ...args);
         };
-
+     
         const quill = quillRef.current?.getEditor();
         if (!quill) return;
-
+     
         const editorRoot = quill.root;
-        editorRoot.addEventListener(
-            'beforeinput',
-            e => {
-                if (e.inputType === 'historyUndo' || e.inputType === 'historyRedo') {
-                    e.preventDefault();
-                }
-            },
-            true
-        );
-
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Undo
-            if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-
-                if (undoStack.length === 0) return;
-                const lastItem = undoStack[undoStack.length - 1];
-                setUndoStack(prev => prev.slice(0, -1));
-
-                // Convert the stored raw ops back into a Delta
-                const lastDelta = new Delta(lastItem.ops);
-
-                // Compute its inverse and apply it
-                const invertedDelta = lastDelta.invert(quill.getContents());
-                quill.updateContents(invertedDelta);
-
-                // Save the 'forward' delta in redo stack so we can reapply it
-                setRedoStack(prev => [
-                    ...prev,
-                    {
-                        ops: lastDelta.ops,
-                        selection: quill.getSelection() ?? undefined
-                    }
-                ]);
-
-                // Restore selection if you like
-                if (lastItem.selection) {
-                    quill.setSelection(lastItem.selection);
-                }
-
-                scheduleAlignmentUpdate();
-            }
-
-            // Redo (Ctrl+Y or Ctrl+Shift+Z)
-            if (
-                ((e.metaKey || e.ctrlKey) && e.key === 'y') ||
-                ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z')
-            ) {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-
-                if (redoStack.length === 0) return;
-                const lastItem = redoStack[redoStack.length - 1];
-                setRedoStack(prev => prev.slice(0, -1));
-
-                // Convert stored raw ops back into a Delta
-                const redoDelta = new Delta(lastItem.ops);
-
-                // Save the current state to undo stack before applying redo
-                setUndoStack(prev => [
-                    ...prev,
-                    {
-                        ops: redoDelta.ops,
-                        selection: quill.getSelection() ?? undefined
-                    }
-                ]);
-
-                quill.updateContents(redoDelta);
-
-                if (lastItem.selection) {
-                    quill.setSelection(lastItem.selection);
-                }
-
-                scheduleAlignmentUpdate();
-            }
-        };
-
         const handleBeforeInput = (e: InputEvent) => {
             if (e.inputType === 'historyUndo' || e.inputType === 'historyRedo') {
                 e.preventDefault();
             }
         };
-
-        // Attach at capture phase at document level
+     
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Undo
+            if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+     
+                if (undoStack.length === 0) return;
+                const item = undoStack[undoStack.length - 1];
+                setUndoStack(prev => prev.slice(0, -1));
+     
+                // Invert based on the old doc state
+                const revertDelta = item.delta.invert(item.oldDelta);
+                quill.updateContents(revertDelta);
+     
+                setRedoStack(prev => {
+                    const newStack = [...prev];
+                    if (newStack.length >= STACK_LIMIT) newStack.shift();
+                    newStack.push(item);
+                    return newStack;
+                });
+     
+                if (item.beforeSelection) {
+                    quill.setSelection(item.beforeSelection.index, item.beforeSelection.length);
+                }
+     
+                scheduleAlignmentUpdate();
+            }
+     
+            // Redo
+            if (((e.metaKey || e.ctrlKey) && e.key === 'y') || 
+                ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z')) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+     
+                if (redoStack.length === 0) return;
+                const item = redoStack[redoStack.length - 1];
+                setRedoStack(prev => prev.slice(0, -1));
+     
+                // Reapply original delta
+                quill.updateContents(item.delta);
+     
+                setUndoStack(prev => {
+                    const newStack = [...prev];
+                    if (newStack.length >= STACK_LIMIT) newStack.shift();
+                    newStack.push(item);
+                    return newStack;
+                });
+     
+                if (item.afterSelection) {
+                    quill.setSelection(item.afterSelection.index, item.afterSelection.length);
+                }
+     
+                scheduleAlignmentUpdate();
+            }
+        };
+     
         document.addEventListener('keydown', handleKeyDown, true);
         editorRoot.addEventListener('beforeinput', handleBeforeInput, true);
-
+     
         return () => {
             document.execCommand = originalExecCommand;
             document.removeEventListener('keydown', handleKeyDown, true);
             editorRoot.removeEventListener('beforeinput', handleBeforeInput, true);
         };
-    }, [undoStack, redoStack]);
-    
+    }, [undoStack, redoStack, scheduleAlignmentUpdate]);
+
     useEffect(() => {
         if (!highlightWordsEnabled) {
             clearHighlights();
@@ -755,7 +755,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                 onChange={handleContentChange}
                 formats={['size', 'background', 'font', 'color', 'bold', 'italics']}
                 className='h-full'
-                onChangeSelection={setSelectionHandler}
+                onChangeSelection={handleSelectionChange}
                 onBlur={handleBlur}
                 onFocus={handleFocus}
             />
