@@ -23,7 +23,7 @@ const config = {
       },
       colors: {
         // Your custom colors
-        customBorder: '#EEE9FF',
+        customBorder: '#e6dfff',
         darkCustomBorder: '#aaa9ad',
 
         // Standard shadcn colors

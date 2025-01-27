@@ -6,33 +6,61 @@ import { Icons } from '@/components/icons'
 import { Button } from '@/components/ui/button'
 
 export default function AuthenticatedFooter() {
-  const router = useRouter();
+  const router = useRouter()
   return (
-    <footer className='flex items-center justify-between border-t-2 border-customBorder lg:h-[100px] lg:px-1'>
-      <div className='flex flex-wrap items-center gap-2 font-semibold'>
-        <Button variant='link' className='text-[#8A8A8A] font-normal' onClick={()=>router.push("/")}>
+    <footer className='flex items-center justify-between border-t-2 border-customBorder px-2 lg:px-4 py-4'>
+      <div className='flex flex-wrap items-center gap-x-8 font-semibold'>
+        <Button
+          variant='link'
+          className='text-gray-700 hover:text-primary hover:border-primary font-normal p-0 h-fit'
+          onClick={() => router.push('/')}
+        >
           Home
         </Button>
-        <Button variant='link' className='text-[#8A8A8A] font-normal' onClick={()=>router.push("/")}>
+        <Button
+          variant='link'
+          className='text-gray-700 hover:text-primary hover:border-primary font-normal p-0 h-fit'
+          onClick={() => router.push('/about-us')}
+        >
           About
         </Button>
-        <Button variant='link' className='text-[#8A8A8A] font-normal' onClick={()=>router.push("/#pricing")}>
+        <Button
+          variant='link'
+          className='text-gray-700 hover:text-primary hover:border-primary font-normal p-0 h-fit'
+          onClick={() => router.push('/#pricing')}
+        >
           Pricing
         </Button>
-        <Button variant='link' className='text-[#8A8A8A] font-normal' onClick={()=>router.push("/terms")}>
+        <Button
+          variant='link'
+          className='text-gray-700 hover:text-primary hover:border-primary font-normal p-0 h-fit'
+          onClick={() => router.push('/terms')}
+        >
           Terms
         </Button>
-        <Button variant='link' className='text-[#8A8A8A] font-normal' onClick={()=>router.push("/privacy-policy")}>
+        <Button
+          variant='link'
+          className='text-gray-700 hover:text-primary hover:border-primary font-normal p-0 h-fit'
+          onClick={() => router.push('/privacy-policy')}
+        >
           Privacy
         </Button>
-        <Button variant='link' className='text-[#8A8A8A] font-normal' onClick={()=>router.push("/contact")}>
+        <Button
+          variant='link'
+          className='text-gray-700 hover:text-primary hover:border-primary font-normal p-0 h-fit'
+          onClick={() => router.push('/contact')}
+        >
           Contact
         </Button>
-        <Button variant='link' className='text-[#8A8A8A] font-normal' onClick={()=>router.push("/faq")}>
-          FAQ
+        <Button
+          variant='link'
+          className='text-gray-700 hover:text-primary hover:border-primary font-normal p-0 h-fit'
+          onClick={() => router.push('/faq')}
+        >
+          FAQs
         </Button>
       </div>
-      <div className='hidden lg:flex items-center gap-6 font-semibold'>
+      <div className='hidden lg:flex items-center gap-x-8 font-semibold'>
         <Button variant='default' size='icon' className='h-6 w-6'>
           <Icons.twitter className='h-3 w-3' />
         </Button>

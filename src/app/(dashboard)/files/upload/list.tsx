@@ -526,17 +526,15 @@ const FileList = ({
 
   return (
     <div className='h-full flex-1 flex-col md:flex'>
-      <div className='flex items-center justify-between space-y-2 mb-4'>
-        <div>
-          <h1 className='text-lg font-semibold md:text-lg'>
-            Uploads ({pendingFiles?.length})
-          </h1>
-        </div>
+      <div className='flex items-start justify-between mb-3'>
+        <h2 className='text-lg font-semibold md:text-xl'>
+          Uploads ({pendingFiles?.length})
+        </h2>
         <div className='flex items-center'>
           {(session?.user?.role === 'ADMIN' || session?.user?.adminAccess) && (
             <Button
               variant='order'
-              className='not-rounded text-black w-[140px] mr-3'
+              className='not-rounded text-black w-[140px]'
               onClick={async () => {
                 try {
                   if (selectedFiles.length === 0) {

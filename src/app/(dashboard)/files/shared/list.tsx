@@ -331,10 +331,10 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
 
   return (
     <>
-      <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex bg-muted/40'>
-        <div className='flex items-center justify-between space-y-2'>
+      <div className='h-full flex-1 flex-col p-4 md:flex space-y-1'>
+        <div className='flex items-start justify-between'>
           <div>
-            <h1 className='text-lg font-semibold md:text-lg'>
+            <h1 className='text-lg font-semibold md:text-xl'>
               Shared Files ({sharedFiles?.length})
             </h1>
           </div>
@@ -343,7 +343,7 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
               session?.user?.adminAccess) && (
               <Button
                 variant='order'
-                className='not-rounded text-black w-[140px] mr-3'
+                className='not-rounded text-black w-[140px]'
                 onClick={async () => {
                   try {
                     if (selectedFiles.length === 0) {

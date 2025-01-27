@@ -602,8 +602,8 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
   }, [isUploading, authenticate, showPicker])
 
   return (
-    <div className='bg-white flex flex-col p-[12px] items-center justify-center rounded-[12px] border-2 border-primary shadow-sm'>
-      <div className='group relative w-full flex rounded-lg px-5 py-2.5 text-center transition min-h-[13rem]'>
+    <div className='bg-primary-foreground flex flex-col p-[12px] items-center justify-center rounded-md border-2 border-customBorder shadow-sm min-h-[245px]'>
+      <div className='group relative w-full flex rounded-md px-5 py-2.5 text-center transition'>
         <div className='self-center w-full flex flex-col items-center justify-center gap-4 sm:px-5'>
           <div className='flex items-center gap-1 text-base font-medium leading-6 text-gray-800'>
             <div className='relative w-10 h-10 flex items-center justify-center'>

@@ -65,8 +65,8 @@ export default function Page() {
     {
       icon: <Map className='h-5 w-5' />,
       title: 'Visit Us',
-      description: '44 Tehama St',
-      secondaryInfo: 'San Francisco, CA 94105',
+      description: '2261 Market Street, #22612,',
+      secondaryInfo: 'San Francisco, CA 94114, United States',
     },
   ]
 

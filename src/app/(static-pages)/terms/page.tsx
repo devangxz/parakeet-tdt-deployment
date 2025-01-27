@@ -158,8 +158,8 @@ export default function Page() {
               <p className='text-gray-600'>
                 Thanks for using our products and services
                 (&ldquo;Services&rdquo;). The Services are provided by Scribie
-                Technologies, Inc. (&ldquo;Scribie&rdquo;), located at 44 Tehama
-                St., San Francisco, CA 94105, United States.
+                Technologies Inc. (&ldquo;Scribie&rdquo;), located at 2261
+                Market Street, #22612, San Francisco, CA 94114, United States.
               </p>
               <p className='text-gray-600'>
                 By using our Services, you are agreeing to these terms including

@@ -27,33 +27,31 @@ export default function QCPage() {
   }
 
   return (
-    <>
-      <div className='bg-[#F7F5FF] h-screen'>
-        <div className='mt-8 ml-8 w-4/5'>
-          <Tabs
-            key={activeTab}
-            defaultValue={activeTab}
-            onValueChange={(value) => {
-              setActiveTab(value)
-            }}
-          >
-            <TabsList>
-              <TabsTrigger value='available'>Available</TabsTrigger>
-              <TabsTrigger value='assigned'>Assigned</TabsTrigger>
-              <TabsTrigger value='history'>History</TabsTrigger>
-            </TabsList>
-            <TabsContent value='available'>
-              <AvailableFilesPage changeTab={changeTab} />
-            </TabsContent>
-            <TabsContent value='assigned'>
-              <AssignedFilesPage changeTab={changeTab} />
-            </TabsContent>
-            <TabsContent value='history'>
-              <HistoryFilesPage />
-            </TabsContent>
-          </Tabs>
-        </div>
+    <div className='h-full flex-1 flex-col p-4 md:flex space-y-3'>
+      <div>
+        <Tabs
+          key={activeTab}
+          defaultValue={activeTab}
+          onValueChange={(value) => {
+            setActiveTab(value)
+          }}
+        >
+          <TabsList className='rounded-md bg-primary/5'>
+            <TabsTrigger value='available'>Available</TabsTrigger>
+            <TabsTrigger value='assigned'>Assigned</TabsTrigger>
+            <TabsTrigger value='history'>History</TabsTrigger>
+          </TabsList>
+          <TabsContent value='available'>
+            <AvailableFilesPage changeTab={changeTab} />
+          </TabsContent>
+          <TabsContent value='assigned'>
+            <AssignedFilesPage changeTab={changeTab} />
+          </TabsContent>
+          <TabsContent value='history'>
+            <HistoryFilesPage />
+          </TabsContent>
+        </Tabs>
       </div>
-    </>
+    </div>
   )
 }

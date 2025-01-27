@@ -1,4 +1,5 @@
 'use client'
+
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import React, { useState } from 'react'
@@ -58,82 +59,91 @@ const Page = () => {
   }
 
   return (
-    <div className='w-[80%] space-y-[1.25rem]'>
-      <div className='w-[70%]'>
+    <div className='lg:w-[70%] flex flex-1 flex-col p-4'>
+      <div className='space-y-4'>
         <HeadingDescription heading='Update Password' />
+
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className='space-y-2.5'
+            autoComplete='off'
+          >
+            <FormField
+              control={form.control}
+              name='password'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Current Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      autoComplete='off'
+                      placeholder='Password'
+                      type='password'
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='newpassword'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>New Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='newpassword'
+                      type='password'
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='confirmPassword'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirm Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder='Confirm Password'
+                      type='password'
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className='flex justify-end pt-2'>
+              <div>
+                {loading ? (
+                  <Button
+                    type='submit'
+                    disabled
+                    variant='default'
+                    className='w-full'
+                  >
+                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                    Update
+                  </Button>
+                ) : (
+                  <Button type='submit' variant='default' className='w-full'>
+                    Update
+                  </Button>
+                )}
+              </div>
+            </div>
+          </form>
+        </Form>
       </div>
-
-      <hr />
-
-      <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className='space-y-6 w-[70%]'
-          autoComplete='off'
-        >
-          <FormField
-            control={form.control}
-            name='password'
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Current Password</FormLabel>
-                <FormControl>
-                  <Input
-                    autoComplete='off'
-                    placeholder='Password'
-                    type='password'
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name='newpassword'
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>New Password</FormLabel>
-                <FormControl>
-                  <Input placeholder='newpassword' type='password' {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name='confirmPassword'
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Confirm Password</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder='Confirm Password'
-                    type='password'
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className='my-[1.5rem] flex justify-end'>
-            {loading ? (
-              <Button disabled>
-                <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                Update
-              </Button>
-            ) : (
-              <Button type='submit' className='w-[4rem] h-[2.5rem]'>
-                Update
-              </Button>
-            )}
-          </div>
-        </form>
-      </Form>
     </div>
   )
 }
