@@ -40,6 +40,8 @@ interface UndoRedoItem {
     selection?: { index: number; length: number };
 }
 
+const STACK_LIMIT = 100;
+
 export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled }: EditorProps) {
     const ctms = initialCtms; // Make CTMs constant
     const quillRef = useRef<ReactQuill>(null)
@@ -368,14 +370,18 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     
             // Store only the new change delta (raw ops).
             if (delta.ops?.some(op => op.insert || op.delete || op.retain)) {
-                setUndoStack(prev => [
-                    ...prev,
-                    {
+                setUndoStack(prev => {
+                    const newStack = [...prev];
+                    if (newStack.length >= STACK_LIMIT) {
+                        newStack.shift(); // Remove oldest item
+                    }
+                    newStack.push({
                         ops: delta.ops,
                         selection: quill.getSelection() ?? undefined
-                    }
-                ]);
-                setRedoStack([]); // Clear redo stack whenever there's a new user edit
+                    });
+                    return newStack;
+                });
+                setRedoStack([]);
             }
 
             scheduleAlignmentUpdate();
