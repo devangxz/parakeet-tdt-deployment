@@ -48,19 +48,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         toolbar: false,
     };
 
-    useEffect(() => {
-        getEditedSegmentsRef.current = () => {
-          const segments = alignments
-            .filter(al => al.case === 'mismatch')
-            .flatMap(al => {
-              const start = Math.floor(al.start);
-              const end = Math.ceil(al.end);
-              return Array.from({ length: end - start }, (_, i) => start + i);
-            });
-          return segments;
-        };
-    }, [alignments]);    
-
     const characterIndexToWordIndex = (text: string, charIndex: number): number => {
         const textUpToIndex = text.slice(0, charIndex);
         const endsWithSpace = textUpToIndex.endsWith(' ');
@@ -322,9 +309,10 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             );
       
             alignmentWorker.current.onmessage = (e) => {
-                const newAlignments = e.data.alignments;
+                const { alignments: newAlignments, wer, editedSegments } = e.data;
                 setAlignments(newAlignments);
-                console.log('Updated alignments:', newAlignments, 'WER:', e.data.wer);
+                getEditedSegmentsRef.current = () => editedSegments;
+                console.log('Updated alignments:', newAlignments, 'WER:', wer);
             };
       
             console.log('Web Worker initialized successfully.');
