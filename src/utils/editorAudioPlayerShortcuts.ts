@@ -40,7 +40,8 @@ interface DefaultShortcuts {
     capitalizeFirstLetter: string;
     uppercaseWord: string;
     lowercaseWord: string;
-
+    playAt75Speed: string;
+    playAt100Speed: string;
     // playFromStartOfNextParagraph: string;
     // playFromStartOfPreviousParagraph: string;
     // moveLeftByACharacter: string;
@@ -135,6 +136,8 @@ export interface ShortcutControls {
     uppercaseWord: () => void;
     lowercaseWord: () => void;
     joinWithNextParagraph: () => void;
+    playAt75Speed: () => void;
+    playAt100Speed: () => void;
     // playFromStartOfNextParagraph: () => void;
     // playFromStartOfPreviousParagraph: () => void;
     // moveLeftByACharacter: () => void;
@@ -228,9 +231,10 @@ const defaultShortcuts: DefaultShortcuts = {
     // focusOnVolumeTextBox: "Control+Alt+V",
     increasePlaybackSpeed: "Control+Alt+ArrowUp",
     decreasePlaybackSpeed: "Control+Alt+ArrowDown",
-    // focusOnPlaybackSpeedTextBox: "Control+Alt+S",
     playAudioFromTheStartOfCurrentParagraph: "Control+N",
     joinWithNextParagraph: "Alt+J",
+    playAt75Speed: "Control+Q",
+    playAt100Speed: "Control+W",
     // playFromStartOfNextParagraph: "Control+Shift+N",
     // playFromStartOfPreviousParagraph: "Control+Alt+Shift+N",
     // moveLeftByACharacter: "Control+H",
@@ -280,8 +284,6 @@ const defaultShortcuts: DefaultShortcuts = {
     // increaseFontSize: "Control+Shift+ArrowUp",
     // decreaseFontSize: "Control+Shift+ArrowDown",
     // capitalizeFirstLetterOfEachWordInSelection: "Control+Alt+U",
-    // searchWordUnderCursor: "Alt+S",
-    // defineWordUnderCursor: "Alt+D",
     // whitelistPhraseContainingSelectedWord: "Alt+W",
     // blacklistPhraseContainingSelectedWord: "Alt+B",
     // jumpAudioAndCursorToARandomParagraphInCurrentPart: "Alt+R",
