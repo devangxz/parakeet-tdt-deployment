@@ -23,7 +23,7 @@ interface EditorProps {
     selection: CustomerQuillSelection | null
     searchHighlight: CustomerQuillSelection | null
     highlightWordsEnabled: boolean;
-    getEditedSegmentsRef: React.MutableRefObject<() => number[]>;
+    setEditedSegments: (segments: Set<number>) => void;
 }
 
 interface HistoryState {
@@ -31,7 +31,7 @@ interface HistoryState {
     selection?: { index: number; length: number };
 }
 
-export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, getEditedSegmentsRef }: EditorProps) {
+export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, setEditedSegments }: EditorProps) {
     const ctms = initialCtms; // Make CTMs constant
     const quillRef = useRef<ReactQuill>(null)
     const [alignments, setAlignments] = useState<AlignmentType[]>([])
@@ -311,7 +311,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             alignmentWorker.current.onmessage = (e) => {
                 const { alignments: newAlignments, wer, editedSegments } = e.data;
                 setAlignments(newAlignments);
-                getEditedSegmentsRef.current = () => editedSegments;
+                setEditedSegments(new Set(editedSegments));
                 console.log('Updated alignments:', newAlignments, 'WER:', wer);
             };
       
