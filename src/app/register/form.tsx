@@ -335,14 +335,15 @@ const SignupForm = () => {
                               Customer
                             </FormLabel>
                           </FormItem>
-                          <FormItem className='flex items-center space-x-2 space-y-0'>
+                          {/* Hiding transcriber option for now */}
+                          {/* <FormItem className='flex items-center space-x-2 space-y-0'>
                             <FormControl>
                               <RadioGroupItem value='transcriber' />
                             </FormControl>
                             <FormLabel className='font-normal'>
                               Transcriber
                             </FormLabel>
-                          </FormItem>
+                          </FormItem> */}
                         </RadioGroup>
                       </FormControl>
                       <FormMessage />
