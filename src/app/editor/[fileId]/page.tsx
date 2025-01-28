@@ -9,6 +9,7 @@ import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
+import { setPlayStatsAction } from '@/app/actions/editor/set-play-stats'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
@@ -139,7 +140,7 @@ function EditorPage() {
   const [searchHighlight, setSearchHighlight] = useState<{ index: number; length: number } | null>(null);
   const [highlightWordsEnabled, setHighlightWordsEnabled] = useState(true);
   const lastTrackedSecondRef = useRef(-1)
-  const [playStats, setPlayStats] = useState<{listenCount: number[]}>({ listenCount: [] })
+  const [playStats, setPlayStats] = useState<PlayStats>({ listenCount: [] })
   const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set());
   const getEditedSegmentsRef = useRef<() => number[]>(() => []);
   const [waveformUrl, setWaveformUrl] = useState('')
@@ -147,6 +148,10 @@ function EditorPage() {
   interface PlayerEvent {
     t: number
     s: number
+  }
+
+  interface PlayStats {
+    listenCount: number[];
   }
 
   const setSelectionHandler = () => {
@@ -158,6 +163,7 @@ function EditorPage() {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [playerEvents, setPlayerEvents] = useState<PlayerEvent[]>([])
 
   const isActive = usePreventMultipleTabs((params?.fileId as string) || '')
@@ -299,6 +305,7 @@ function EditorPage() {
 
       saveChanges: () => {
         capitalizeWord(quillRef)
+        savePlayStats()
         handleSave({
           getEditorText,
           orderDetails,
@@ -311,7 +318,7 @@ function EditorPage() {
 
     }
     return controls as ShortcutControls
-  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, findText, replaceText, matchCase, lastSearchIndex])
+  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, findText, replaceText, matchCase, lastSearchIndex, playStats])
 
   useShortcuts(shortcutControls)
 
@@ -358,7 +365,7 @@ function EditorPage() {
       setStep,
       setTranscript,
       setCtms,
-      setPlayerEvents,
+      setPlayStats,
     })
   }, [])
 
@@ -391,6 +398,17 @@ function EditorPage() {
     }
   }, [orderDetails.fileId])  
 
+  const savePlayStats = async () => {
+    const segments = getEditedSegmentsRef.current()
+    if (orderDetails.userId && orderDetails.fileId) {
+      await setPlayStatsAction({
+        fileId: orderDetails.fileId,
+        listenCount: playStats.listenCount,
+        editedSegments: segments
+      })
+    }
+  }  
+
   useEffect(() => {
     const interval = setInterval(async () => {
       await handleSave(
@@ -404,10 +422,11 @@ function EditorPage() {
         },
         false
       )
+      savePlayStats()
     }, 1000 * 60 * AUTOSAVE_INTERVAL)
 
     return () => clearInterval(interval)
-  }, [getEditorText, orderDetails, notes, step, cfd])
+  }, [getEditorText, orderDetails, notes, step, cfd, playStats])
 
   const getHeatmapColor = (count: number) => {
     const colors = [

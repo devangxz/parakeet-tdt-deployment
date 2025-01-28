@@ -414,13 +414,11 @@ export default memo(function Header({
 
   const fetchAudioUrl = async () => {
     try {
-      console.log('Fetching audio URL for fileId:', orderDetails.fileId)
       const { success, signedUrl } = await getSignedUrlAction(
         `${orderDetails.fileId}.mp3`,
         Math.max(Number(orderDetails.duration) * 4, 1800)
       )
       if (success && signedUrl) {
-        console.log('Got signed URL:', signedUrl)
         setAudioUrl(signedUrl)
       } else {
         throw new Error('Failed to fetch audio file')

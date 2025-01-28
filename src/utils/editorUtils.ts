@@ -9,6 +9,7 @@ import axiosInstance from './axios'
 import { CTMType } from './getFormattedTranscript'
 import { secondsToTs } from './secondsToTs'
 import { getFrequentTermsAction } from '@/app/actions/editor/frequent-terms'
+import { getPlayStatsAction } from '@/app/actions/editor/get-play-stats'
 import { getOrderDetailsAction } from '@/app/actions/editor/order-details'
 import { reportFileAction } from '@/app/actions/editor/report-file'
 import { submitQCAction } from '@/app/actions/editor/submit-qc'
@@ -32,6 +33,10 @@ export type ButtonLoading = {
     mp3: boolean
     download: boolean
     frequentTerms: boolean
+}
+
+export interface PlayStats {
+  listenCount: number[];
 }
 
 const usableColors = [
@@ -387,7 +392,7 @@ type FetchFileDetailsParams = {
     setStep: React.Dispatch<React.SetStateAction<string>>
     setTranscript: React.Dispatch<React.SetStateAction<string>>
     setCtms: React.Dispatch<React.SetStateAction<CTMType[]>>
-    setPlayerEvents: React.Dispatch<React.SetStateAction<PlayerEvent[]>>
+    setPlayStats: React.Dispatch<React.SetStateAction<PlayStats>>
 }
 
 const fetchFileDetails = async ({
@@ -397,7 +402,7 @@ const fetchFileDetails = async ({
     setStep,
     setTranscript,
     setCtms,
-    setPlayerEvents,
+    setPlayStats,
 }: FetchFileDetailsParams) => {
     try {
         const orderRes = await getOrderDetailsAction(params?.fileId as string)
@@ -447,9 +452,14 @@ const fetchFileDetails = async ({
         }
         setCtms(transcriptRes.data.result.ctms)
 
-        // const playerEventRes = await axios.get(`/api/editor/player-events?orderId=${orderRes.data.orderId}`);
-
-        setPlayerEvents([]) // TODO: Implement player events
+        const playStats = await getPlayStatsAction(params?.fileId as string)
+      
+        if (playStats.success && playStats.data) {
+          setPlayStats({
+            listenCount: playStats.data.listenCount as number[]
+          })
+        }
+        
         return orderRes.orderDetails
     } catch (error) {
         console.log(error)
