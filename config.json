@@ -2,10 +2,7 @@
   "nameLength": 35,
   "minPasswordLength": 8,
   "maxPasswordLength": 256,
-  "userTypes": [
-    "customer",
-    "transcriber"
-  ],
+  "userTypes": ["customer", "transcriber"],
   "industries": [
     "Video",
     "Legal",
@@ -92,13 +89,13 @@
   },
   "transcriber_rates": {
     "general_qc": {
-      "high": 9,
+      "high": 8,
       "medium": 7,
-      "low": 5
+      "low": 4
     },
     "legal_qc": {
       "high": 8,
-      "medium": 8,
+      "medium": 7,
       "low": 4
     }
   },
@@ -123,10 +120,7 @@
     "background conversation",
     "overlapping conversation"
   ],
-  "order_types": [
-    "TRANSCRIPTION",
-    "TRANSCRIPTION_FORMATTING"
-  ],
+  "order_types": ["TRANSCRIPTION", "TRANSCRIPTION_FORMATTING"],
   "file_upload_limit_in_hour": 10,
   "rates": [
     {
@@ -206,11 +200,7 @@
       "audio/vnd.wave",
       "audio/x-pn-wav"
     ],
-    ".wma": [
-      "audio/x-ms-wma",
-      "audio/wma",
-      "audio/x-wma"
-    ],
+    ".wma": ["audio/x-ms-wma", "audio/wma", "audio/x-wma"],
     ".aac": [
       "audio/aac",
       "audio/x-aac",
@@ -220,11 +210,7 @@
       "audio/mpeg4-generic",
       "audio/vnd.dlna.adts"
     ],
-    ".flac": [
-      "audio/flac",
-      "audio/x-flac",
-      "audio/vnd.flac"
-    ],
+    ".flac": ["audio/flac", "audio/x-flac", "audio/vnd.flac"],
     ".ogg": [
       "audio/ogg",
       "audio/x-ogg",
@@ -233,24 +219,9 @@
       "application/ogg",
       "application/x-ogg"
     ],
-    ".aif": [
-      "audio/aiff",
-      "audio/x-aiff",
-      "audio/x-aifc",
-      "audio/aif"
-    ],
-    ".aiff": [
-      "audio/aiff",
-      "audio/x-aiff",
-      "audio/x-aifc",
-      "audio/aif"
-    ],
-    ".amr": [
-      "audio/amr",
-      "audio/AMR",
-      "audio/amr-wb",
-      "audio/x-amr"
-    ],
+    ".aif": ["audio/aiff", "audio/x-aiff", "audio/x-aifc", "audio/aif"],
+    ".aiff": ["audio/aiff", "audio/x-aiff", "audio/x-aifc", "audio/aif"],
+    ".amr": ["audio/amr", "audio/AMR", "audio/amr-wb", "audio/x-amr"],
     ".opus": [
       "audio/opus",
       "audio/x-opus",
@@ -265,12 +236,7 @@
       "audio/mpeg4-generic",
       "audio/x-hx-aac-adts"
     ],
-    ".wmv": [
-      "video/x-ms-wmv",
-      "video/wmv",
-      "video/x-wmv",
-      "video/vnd.ms-wmv"
-    ],
+    ".wmv": ["video/x-ms-wmv", "video/wmv", "video/x-wmv", "video/vnd.ms-wmv"],
     ".avi": [
       "video/x-msvideo",
       "video/avi",
@@ -284,12 +250,7 @@
       "application/x-shockwave-flash",
       "flv-application/octet-stream"
     ],
-    ".mpg": [
-      "video/mpeg",
-      "video/mpg",
-      "video/x-mpeg",
-      "video/mpeg-system"
-    ],
+    ".mpg": ["video/mpeg", "video/mpg", "video/x-mpeg", "video/mpeg-system"],
     ".mpeg": [
       "video/mpeg",
       "video/mpg",
@@ -304,22 +265,14 @@
       "video/mpeg4",
       "application/mp4"
     ],
-    ".m4v": [
-      "video/x-m4v",
-      "video/mp4",
-      "video/mpeg4"
-    ],
+    ".m4v": ["video/x-m4v", "video/mp4", "video/mpeg4"],
     ".mov": [
       "video/quicktime",
       "video/x-quicktime",
       "video/mov",
       "video/x-sgi-movie"
     ],
-    ".webm": [
-      "video/webm",
-      "audio/webm",
-      "video/x-webm"
-    ],
+    ".webm": ["video/webm", "audio/webm", "video/x-webm"],
     ".3gp": [
       "video/3gpp",
       "audio/3gpp",
@@ -328,37 +281,22 @@
       "application/3gpp",
       "video/3gp"
     ],
-    ".3ga": [
-      "audio/3gpp",
-      "audio/3gpp2",
-      "audio/3ga",
-      "audio/x-3ga"
-    ],
+    ".3ga": ["audio/3gpp", "audio/3gpp2", "audio/3ga", "audio/x-3ga"],
     ".mts": [
       "video/mp2t",
       "video/vnd.dlna.mpeg-tts",
       "video/mts",
       "video/avchd"
     ],
-    ".ogv": [
-      "video/ogg",
-      "video/x-ogg",
-      "application/ogg"
-    ],
+    ".ogv": ["video/ogg", "video/x-ogg", "application/ogg"],
     ".mkv": [
       "video/x-matroska",
       "video/mkv",
       "video/x-mkv",
       "application/x-matroska"
     ],
-    ".mxf": [
-      "video/mxf",
-      "application/mxf",
-      "video/x-mxf"
-    ],
-    ".zip": [
-      "application/zip"
-    ]
+    ".mxf": ["video/mxf", "application/mxf", "video/x-mxf"],
+    ".zip": ["application/zip"]
   },
   "multi_part_upload_chunk_size": 20971520,
   "org_remotelegal": "REMOTELEGAL",
