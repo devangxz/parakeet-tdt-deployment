@@ -31,12 +31,23 @@ const PlayStatsVisualization: React.FC<PlayStatsVisualizationProps> = ({
     return colors[Math.min(count, 5)];
   };
 
+  const getOptimalInterval = (duration: number): number => {
+    const hours = duration / 3600;
+    
+    if (hours <= 0.5) return 300;     // 5 min intervals for <= 30 mins
+    if (hours <= 1) return 600;       // 10 min intervals for <= 1 hour
+    if (hours <= 2) return 900;       // 15 min intervals for <= 2 hours
+    if (hours <= 3) return 1800;      // 30 min intervals for <= 3 hours
+    if (hours <= 6) return 3600;      // 1 hour intervals for <= 6 hours
+    return 7200;                      // 2 hour intervals for > 6 hours
+  };
+
   const generateTimeMarkers = () => {
-    const interval = 60 * 10; // 10 minute intervals
+    const interval = getOptimalInterval(duration);
     const markers = [];
     let currentTime = interval;
     
-    while (currentTime < duration) {
+    while (currentTime < duration - interval/2) {
       const percentage = (currentTime / duration) * 100;
       markers.push({
         time: currentTime,

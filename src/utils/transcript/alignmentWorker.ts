@@ -179,7 +179,7 @@ function calculateWER(alignments: AlignmentType[], ctms: CTMType[]) {
 
 function getEditedSegments(alignments: AlignmentType[]): number[] {
   return alignments
-    .filter(al => al.case === 'mismatch')
+    .filter(al => al.type === 'ctm' && al.case === 'mismatch')
     .flatMap(al => {
       const start = Math.floor(al.start);
       const end = Math.ceil(al.end);
