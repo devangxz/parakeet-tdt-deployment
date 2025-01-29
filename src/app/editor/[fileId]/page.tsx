@@ -9,9 +9,12 @@ import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
+import { setPlayStatsAction } from '@/app/actions/editor/set-play-stats'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
 import Header from '@/components/editor/Header'
+import PlayStatsVisualization from '@/components/editor/PlayStatsVisualization'
 import SectionSelector from '@/components/editor/SectionSelector'
 import {
   DiffTabComponent,
@@ -41,7 +44,6 @@ import {
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   CTMType,
-  updatePlayedPercentage,
   regenDocx,
   fetchFileDetails,
   handleSave,
@@ -139,10 +141,13 @@ function EditorPage() {
   const [selection, setSelection] = useState<CustomerQuillSelection | null>(null)
   const [searchHighlight, setSearchHighlight] = useState<{ index: number; length: number } | null>(null);
   const [highlightWordsEnabled, setHighlightWordsEnabled] = useState(true);
+  const lastTrackedSecondRef = useRef(-1)
+  const [playStats, setPlayStats] = useState<PlayStats>({ listenCount: [] })
+  const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set());
+  const [waveformUrl, setWaveformUrl] = useState('')
 
-  interface PlayerEvent {
-    t: number
-    s: number
+  interface PlayStats {
+    listenCount: number[];
   }
 
   const setSelectionHandler = () => {
@@ -153,8 +158,6 @@ function EditorPage() {
       setSelection({ index: range.index, length: range.length })
     }
   }
-
-  const [playerEvents, setPlayerEvents] = useState<PlayerEvent[]>([])
 
   const isActive = usePreventMultipleTabs((params?.fileId as string) || '')
 
@@ -307,19 +310,19 @@ function EditorPage() {
 
       saveChanges: () => {
         autoCapitalizeSentences(quillRef)
+        savePlayStats()
         handleSave({
           getEditorText,
           orderDetails,
           notes,
           cfd,
           setButtonLoading,
-          playerEvents,
         })
       }
 
     }
     return controls as ShortcutControls
-  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, findText, replaceText, matchCase, lastSearchIndex])
+  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, findText, replaceText, matchCase, lastSearchIndex, playStats, editedSegments])
 
   useShortcuts(shortcutControls)
 
@@ -366,7 +369,7 @@ function EditorPage() {
       setStep,
       setTranscript,
       setCtms,
-      setPlayerEvents,
+      setPlayStats,
       setAsrTranscript,
     })
   }, [])
@@ -383,8 +386,32 @@ function EditorPage() {
     setAudioPlayer(audioPlayer)
   }, [])
 
-  const [audioPlayed, setAudioPlayed] = useState(new Set<number>())
-  const [playedPercentage, setPlayedPercentage] = useState(0)
+  useEffect(() => {
+    const fetchWaveform = async () => {
+      try {
+        const res = await getSignedUrlAction(`${orderDetails.fileId}_wf.png`, 300)
+        if (res.success && res.signedUrl) {
+          setWaveformUrl(res.signedUrl)
+        }
+      } catch (error) {
+        console.error('Failed to load waveform:', error)
+      }
+    }
+    
+    if (orderDetails.fileId) {
+      fetchWaveform()
+    }
+  }, [orderDetails.fileId])  
+
+  const savePlayStats = async () => {
+    if (orderDetails.userId && orderDetails.fileId) {
+      await setPlayStatsAction({
+        fileId: orderDetails.fileId,
+        listenCount: playStats.listenCount,
+        editedSegments: Array.from(editedSegments)
+      })
+    }
+  }  
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -395,40 +422,49 @@ function EditorPage() {
           notes,
           cfd,
           setButtonLoading,
-          playerEvents,
         },
         false
       )
+      savePlayStats()
     }, 1000 * 60 * AUTOSAVE_INTERVAL)
 
     return () => clearInterval(interval)
-  }, [getEditorText, orderDetails, notes, step, cfd])
+  }, [getEditorText, orderDetails, notes, step, cfd, playStats, editedSegments])
+
+  useEffect(() => {
+    setPlayStats(() => ({
+      listenCount: new Array(Math.ceil(audioDuration)).fill(0)
+    }))
+  }, [audioDuration])
 
   useEffect(() => {
     const handleTimeUpdate = () => {
       if (!audioPlayer) return
-      const currentTime = Math.floor(audioPlayer.currentTime)
-      setAudioPlayed((prev) => new Set(prev.add(currentTime)))
-      updatePlayedPercentage(audioPlayer, audioPlayed, setPlayedPercentage)
-      // Cast target to HTMLAudioElement to access currentTime
-      // const target = e.target as HTMLAudioElement //TODO: Implement this
-      // setPlayerEvents(prev => [...prev, { t: (new Date()).getTime(), s: target.currentTime }])
-    }
-
-    const handlePlayEnd = () => {
-      updatePlayedPercentage(audioPlayer, audioPlayed, setPlayedPercentage)
+      const currentSecond = Math.floor(audioPlayer.currentTime)
+      
+      // Only update stats if we've moved to a new second
+      if (currentSecond !== lastTrackedSecondRef.current) {
+        lastTrackedSecondRef.current = currentSecond
+        
+        setPlayStats(prev => {
+          const newListenCount = [...prev.listenCount]
+          newListenCount[currentSecond] = (newListenCount[currentSecond] || 0) + 1
+          return { listenCount: newListenCount }
+        })
+      }  
     }
 
     audioPlayer?.addEventListener('timeupdate', handleTimeUpdate)
-    audioPlayer?.addEventListener('ended', handlePlayEnd)
 
     return () => {
       audioPlayer?.removeEventListener('timeupdate', handleTimeUpdate)
-      audioPlayer?.removeEventListener('ended', handlePlayEnd)
     }
-  }, [audioPlayer, audioPlayed])
+  }, [audioPlayer])
 
-  const getPlayedPercentage = () => playedPercentage
+  const getPlayedPercentage = () => {
+    const playedSections = playStats.listenCount.filter(count => count > 0).length
+    return Math.round((playedSections / playStats.listenCount.length) * 100)
+  }
 
   const getEditorMode = useCallback((editorMode: string) => {
     setEditorMode(editorMode)
@@ -436,9 +472,7 @@ function EditorPage() {
 
   const getEditorModeOptions = async () => {
     try {
-      // const response = await axiosInstance.get(`${BACKEND_URL}/get-options/${orderDetails.orderId}`);
       setEditorMode('Manual')
-      // setEditorModeOptions(response.data.options);
     } catch (error) {
       toast.error('Error fetching editor mode options')
     }
@@ -575,7 +609,6 @@ function EditorPage() {
         submitting={submitting}
         setIsSubmitModalOpen={setIsSubmitModalOpen}
         setSubmitting={setSubmitting}
-        playerEvents={playerEvents}
         setPdfUrl={setPdfUrl}
         setRegenCount={setRegenCount}
         setFileToUpload={setFileToUpload}
@@ -583,6 +616,7 @@ function EditorPage() {
         toggleFindAndReplace={toggleFindAndReplace}
         highlightWordsEnabled={highlightWordsEnabled}
         setHighlightWordsEnabled={setHighlightWordsEnabled}
+        waveformUrl={waveformUrl}
       />
       <div className='flex flex-col flex-1 overflow-hidden'>
         <div className='flex justify-between px-16 mt-2 flex-shrink-0'></div>
@@ -635,6 +669,7 @@ function EditorPage() {
                         selection={selection}
                         searchHighlight={searchHighlight}
                         highlightWordsEnabled={highlightWordsEnabled}
+                        setEditedSegments={setEditedSegments}
                       />
 
                       <DiffTabComponent diff={diff} />
@@ -771,39 +806,69 @@ function EditorPage() {
           </div>
         </div>
 
-        <Dialog open={isSubmitModalOpen} onOpenChange={setIsSubmitModalOpen}>
-          <DialogContent>
+        <Dialog 
+          open={isSubmitModalOpen} 
+          onOpenChange={(open) => {
+            setIsSubmitModalOpen(open)
+            if (!open) {
+              setSubmitting(false)
+            }
+          }}
+        >
+          <DialogContent className="max-w-4xl">
             <DialogHeader>
               <DialogTitle>Submit</DialogTitle>
               <DialogDescription>
                 Please confirm that you want to submit the transcript
               </DialogDescription>
-              <Button
-                onClick={() => {
-                  if (!quillRef?.current) return
-                  const quill = quillRef.current.getEditor()
-                  handleSubmit({
-                    orderDetails,
-                    step,
-                    editorMode,
-                    fileToUpload,
-                    setButtonLoading,
-                    getPlayedPercentage,
-                    router,
-                    quill,
-                  })
-                  setSubmitting(false)
-                  setIsSubmitModalOpen(false)
-                }}
-                disabled={buttonLoading.submit}
-                className='ml-2'
-              >
-                {' '}
-                {buttonLoading.submit && (
-                  <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                )}{' '}
-                Confirm
-              </Button>
+
+              <div className="py-4">
+                <p className="text-sm text-gray-500 mb-2">
+                  Audio Playback Coverage: <span className="font-medium">{getPlayedPercentage()}%</span>
+                </p>
+                <PlayStatsVisualization 
+                  waveformUrl={waveformUrl}
+                  playStats={playStats}
+                  editedSegments={editedSegments}
+                  duration={audioDuration}
+                />                
+              </div>
+
+              <div className="flex justify-end gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSubmitting(false)
+                    setIsSubmitModalOpen(false)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (!quillRef?.current) return
+                    const quill = quillRef.current.getEditor()      
+                    handleSubmit({
+                      orderDetails,
+                      step,
+                      editorMode,
+                      fileToUpload,
+                      setButtonLoading,
+                      getPlayedPercentage,
+                      router,
+                      quill,
+                    })
+                    setSubmitting(false)
+                    setIsSubmitModalOpen(false)
+                  }}
+                  disabled={buttonLoading.submit}
+                >
+                  {buttonLoading.submit && (
+                    <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Confirm
+                </Button>
+              </div>
             </DialogHeader>
           </DialogContent>
         </Dialog>

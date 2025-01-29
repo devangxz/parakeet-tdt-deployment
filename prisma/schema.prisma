@@ -79,6 +79,7 @@ model User {
   SharedFileTo              SharedFile[]            @relation("SharedFilesTo")
   UploadSessions            UploadSession[]
   ApiKey                    ApiKey?
+  PlayStats                 PlayStats[]
 
   @@index([role])
   @@index([email])
@@ -139,6 +140,7 @@ model File {
   FileVersion               FileVersion[]
   SharedFile                SharedFile[]
   converted                 Boolean?      @map("converted")
+  PlayStats                 PlayStats[]
 
   @@index([userId])
   @@index([fileId])
@@ -665,6 +667,25 @@ model YouTubeFile {
   @@index([fileId])
   @@map("scb_youtube_files")
 }
+
+model PlayStats {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @map("user_id")
+  fileId         String   @map("file_id")
+  listenCount    Json     @map("listen_count")
+  editedSegments Json     @map("edited_segments")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @default(now()) @map("updated_at")
+  
+  user User @relation(fields: [userId], references: [id])
+  file File @relation(fields: [fileId], references: [fileId])
+
+  @@unique([userId, fileId])
+  @@index([userId])  
+  @@index([fileId])
+  @@map("scb_play_stats")
+}
+
 
 //  ███████ ███    ██ ██    ██ ███    ███ ███████
 //  ██      ████   ██ ██    ██ ████  ████ ██

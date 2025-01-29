@@ -183,11 +183,6 @@ const createShortcutControls = (
   }
 })
 
-interface PlayerEvent {
-  t: number
-  s: number
-}
-
 interface NewPlayerProps {
   getAudioPlayer?: (audioPlayer: HTMLAudioElement | null) => void
   quillRef: React.RefObject<ReactQuill> | undefined
@@ -199,7 +194,6 @@ interface NewPlayerProps {
   submitting: boolean
   setIsSubmitModalOpen: React.Dispatch<React.SetStateAction<boolean>>
   setSubmitting: React.Dispatch<React.SetStateAction<boolean>>
-  playerEvents: PlayerEvent[]
   setPdfUrl: React.Dispatch<React.SetStateAction<string>>
   setRegenCount: React.Dispatch<React.SetStateAction<number>>
   setFileToUpload: React.Dispatch<
@@ -217,6 +211,7 @@ interface NewPlayerProps {
   toggleFindAndReplace: () => void
   highlightWordsEnabled: boolean;
   setHighlightWordsEnabled: (enabled: boolean) => void;
+  waveformUrl: string
 }
 
 export default memo(function Header({
@@ -230,7 +225,6 @@ export default memo(function Header({
   submitting,
   setIsSubmitModalOpen,
   setSubmitting,
-  playerEvents,
   setPdfUrl,
   setRegenCount,
   setFileToUpload,
@@ -238,12 +232,12 @@ export default memo(function Header({
   toggleFindAndReplace,
   highlightWordsEnabled,
   setHighlightWordsEnabled,
+  waveformUrl
 }: NewPlayerProps) {
   const [currentValue, setCurrentValue] = useState(0)
   const [currentTime, setCurrentTime] = useState('00:00')
   const [audioDuration, setAudioDuration] = useState(0)
   const audioPlayer = useRef<HTMLAudioElement>(null)
-  const [waveformUrl, setWaveformUrl] = useState('')
   const [isPlayerLoaded, setIsPlayerLoaded] = useState(false)
   const [selection, setSelection] = useState<{
     index: number
@@ -424,30 +418,13 @@ export default memo(function Header({
 
   useShortcuts(shortcutControls as ShortcutControls)
 
-  const fetchWaveform = async () => {
-    try {
-      const res = await getSignedUrlAction(`${orderDetails.fileId}_wf.png`, 300)
-      if (res.success && res.signedUrl) {
-        setWaveformUrl(res.signedUrl)
-      } else {
-        throw new Error('Failed to load waveform')
-      }
-    } catch (error) {
-      setWaveformUrl('/assets/images/fallback-waveform.png')
-    } finally {
-      setIsPlayerLoaded(true)
-    }
-  }
-
   const fetchAudioUrl = async () => {
     try {
-      console.log('Fetching audio URL for fileId:', orderDetails.fileId)
       const { success, signedUrl } = await getSignedUrlAction(
         `${orderDetails.fileId}.mp3`,
         Math.max(Number(orderDetails.duration) * 4, 1800)
       )
       if (success && signedUrl) {
-        console.log('Got signed URL:', signedUrl)
         setAudioUrl(signedUrl)
       } else {
         throw new Error('Failed to fetch audio file')
@@ -460,7 +437,6 @@ export default memo(function Header({
 
   useEffect(() => {
     if (!orderDetails.fileId) return
-    fetchWaveform()
     fetchAudioUrl()
   }, [orderDetails.fileId])
 
@@ -1633,7 +1609,6 @@ export default memo(function Header({
                       notes,
                       cfd,
                       setButtonLoading,
-                      playerEvents,
                     })
                   }
                   }

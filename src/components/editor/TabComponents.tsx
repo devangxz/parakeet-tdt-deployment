@@ -23,9 +23,10 @@ interface EditorTabComponentProps {
     selection: CustomerQuillSelection | null
     searchHighlight: CustomerQuillSelection | null
     highlightWordsEnabled: boolean;
-}
+    setEditedSegments: (segments: Set<number>) => void;
+  }
 
-export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled }: EditorTabComponentProps) => (
+export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuration, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, setEditedSegments }: EditorTabComponentProps) => (
     <TabsContent className='h-full mt-0 overflow-hidden' value='transcribe'>
         <div className='bg-white border border-gray-200 border-t-0 rounded-b-lg px-1 py-2 h-[99%] relative overflow-hidden'>
             {!transcript && (
@@ -49,6 +50,7 @@ export const EditorTabComponent = ({ transcript, ctms, audioPlayer, audioDuratio
                         selection={selection}
                         searchHighlight={searchHighlight}
                         highlightWordsEnabled={highlightWordsEnabled}
+                        setEditedSegments={setEditedSegments}
                     />
                 </div>
             )}
