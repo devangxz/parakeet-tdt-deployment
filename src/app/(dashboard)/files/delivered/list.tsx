@@ -21,6 +21,7 @@ import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
 import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
+import DownloadModal from '@/components/download-modal'
 import RenameFileDialog from '@/components/file-rename-dialog'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -84,6 +85,8 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
     txtSignedUrl: '',
     cfDocxSignedUrl: '',
   })
+  const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false)
+
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
@@ -275,7 +278,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   filename: '',
                   docType:
                     session?.user?.organizationName.toLowerCase() ===
-                    'remotelegal'
+                      'remotelegal'
                       ? 'CUSTOM_FORMATTING_DOC'
                       : 'TRANSCRIPTION_DOC',
                 },
@@ -373,10 +376,10 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   `/editor/${row.original.id}`,
                   '_blank',
                   'toolbar=no,location=no,menubar=no,width=' +
-                    window.screen.width +
-                    ',height=' +
-                    window.screen.height +
-                    ',left=0,top=0'
+                  window.screen.width +
+                  ',height=' +
+                  window.screen.height +
+                  ',left=0,top=0'
                 )
               }
             >
@@ -509,25 +512,25 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
           <div className='flex items-center'>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-              <Button
-                variant='order'
-                className='not-rounded text-black w-[140px]'
-                onClick={async () => {
-                  try {
-                    if (selectedFiles.length === 0) {
-                      toast.error('Please select at least one file')
-                      return
+                <Button
+                  variant='order'
+                  className='not-rounded text-black w-[140px]'
+                  onClick={async () => {
+                    try {
+                      if (selectedFiles.length === 0) {
+                        toast.error('Please select at least one file')
+                        return
+                      }
+                      await navigator.clipboard.writeText(selectedFiles.join(','))
+                      toast.success('File Ids copied to clipboard')
+                    } catch (error) {
+                      toast.error('Failed to copy file Ids')
                     }
-                    await navigator.clipboard.writeText(selectedFiles.join(','))
-                    toast.success('File Ids copied to clipboard')
-                  } catch (error) {
-                    toast.error('Failed to copy file Ids')
-                  }
-                }}
-              >
-                Copy file Ids
-              </Button>
-            )}
+                  }}
+                >
+                  Copy file Ids
+                </Button>
+              )}
             <Button
               variant='order'
               className='format-button text-black w-[140px]'
@@ -558,6 +561,14 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   }}
                 >
                   Share Files
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (!selectedFiles.length) return toast.error('Please select at least one file')
+                    setIsDownloadDialogOpen(true)
+                  }}
+                >
+                  Download
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className='text-red-500'
@@ -631,6 +642,11 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
         onClose={() => setOpenShareFileDialog(false)}
         fileIds={fileIds}
         filenames={filenames}
+      />
+      <DownloadModal
+        isDownloadDialogOpen={isDownloadDialogOpen}
+        setIsDownloadDialogOpen={setIsDownloadDialogOpen}
+        fileIds={selectedFiles || []}
       />
     </>
   )
