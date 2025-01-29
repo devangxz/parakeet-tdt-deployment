@@ -14,6 +14,7 @@ import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
 import Header from '@/components/editor/Header'
+import PlayStatsVisualization from '@/components/editor/PlayStatsVisualization'
 import SectionSelector from '@/components/editor/SectionSelector'
 import {
   DiffTabComponent,
@@ -430,18 +431,6 @@ function EditorPage() {
     return () => clearInterval(interval)
   }, [getEditorText, orderDetails, notes, step, cfd, playStats, editedSegments])
 
-  const getHeatmapColor = (count: number) => {
-    const colors = [
-      '#f3f4f6', // gray for unplayed
-      '#fef9c3', // light yellow
-      '#fde047', // yellow
-      '#fb923c', // orange  
-      '#ef4444', // red
-      '#b91c1c'  // dark red
-    ]
-    return colors[Math.min(count, 5)]
-  }
-
   useEffect(() => {
     setPlayStats(() => ({
       listenCount: new Array(Math.ceil(audioDuration)).fill(0)
@@ -837,39 +826,12 @@ function EditorPage() {
                 <p className="text-sm text-gray-500 mb-2">
                   Audio Playback Coverage: <span className="font-medium">{getPlayedPercentage()}%</span>
                 </p>
-                <div className="space-y-1">
-                  <div 
-                    className="h-12 rounded-md overflow-hidden border relative"
-                    style={{
-                      backgroundImage: `url(${waveformUrl})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center'
-                    }}
-                  >
-                    {/* Heatmap layer */}
-                    <div className="absolute inset-0 flex">
-                      {playStats.listenCount.map((count, i) => (
-                        <div
-                          key={i}
-                          className="h-full flex-1 relative flex items-center justify-center"
-                          style={{
-                            backgroundColor: getHeatmapColor(count),
-                            opacity: 0.7,
-                          }}
-                        >
-                          {editedSegments.has(i) && (
-                            <div 
-                              className="absolute w-2 h-2 rounded-full bg-red-500"
-                              style={{
-                                boxShadow: '0 0 4px rgba(239, 68, 68, 0.5)'
-                              }}
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <PlayStatsVisualization 
+                  waveformUrl={waveformUrl}
+                  playStats={playStats}
+                  editedSegments={editedSegments}
+                  duration={audioDuration}
+                />                
               </div>
 
               <div className="flex justify-end gap-2 mt-4">
