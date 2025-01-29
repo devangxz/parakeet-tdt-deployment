@@ -52,7 +52,7 @@ export default function Toolbar({
         <Tooltip>
             <TooltipTrigger>
                 <PlayerButton
-                    icon={<ThickArrowRightIcon />}
+                    icon={<ThickArrowRightIcon className='w-4 h-4' />}
                     onClick={playNextBlankInstance}
                     tooltip='Play next blank'
                 />
@@ -65,7 +65,7 @@ export default function Toolbar({
         <Tooltip>
             <TooltipTrigger>
                 <PlayerButton
-                    icon={<ThickArrowLeftIcon />}
+                    icon={<ThickArrowLeftIcon className='w-4 h-4' />}
                     onClick={playPreviousBlankInstance}
                     tooltip='Play previous blank'
                 />
@@ -78,7 +78,7 @@ export default function Toolbar({
         <Tooltip>
             <TooltipTrigger>
                 <PlayerButton
-                    icon={<TextAlignLeftIcon />}
+                    icon={<TextAlignLeftIcon className='w-4 h-4' />}
                     tooltip='Play audio from the start of current paragraph'
                     onClick={playCurrentParagraphInstance}
                 />
@@ -93,7 +93,7 @@ export default function Toolbar({
                 <Dialog>
                     <DialogTrigger asChild>
                         <PlayerButton
-                            icon={<TimerIcon />}
+                            icon={<TimerIcon className='w-4 h-4' />}
                             onClick={setSelectionHandler}
                             tooltip='Adjust timestamps'
                         />
@@ -129,7 +129,7 @@ export default function Toolbar({
         <Tooltip>
             <TooltipTrigger>
                 <PlayerButton
-                    icon={<ZoomInIcon />}
+                    icon={<ZoomInIcon className='w-4 h-4' />}
                     tooltip='Increase font size'
                     onClick={increaseFontSize}
                 />
@@ -142,7 +142,7 @@ export default function Toolbar({
         <Tooltip>
             <TooltipTrigger>
                 <PlayerButton
-                    icon={<ZoomOutIcon />}
+                    icon={<ZoomOutIcon className='w-4 h-4' />}
                     tooltip='Decrease font size'
                     onClick={decreaseFontSize}
                 />
@@ -155,7 +155,7 @@ export default function Toolbar({
         <Tooltip>
             <TooltipTrigger>
                 <PlayerButton
-                    icon={<ClockIcon />}
+                    icon={<ClockIcon className='w-4 h-4' />}
                     tooltip='Insert timestamps'
                     onClick={insertTimestampBlankAtCursorPositionInstance}
                 />
@@ -168,7 +168,7 @@ export default function Toolbar({
         <Tooltip>
             <TooltipTrigger>
                 <PlayerButton
-                    icon={<MagnifyingGlassIcon />}
+                    icon={<MagnifyingGlassIcon className='w-4 h-4' />}
                     tooltip='Find and replace'
                     onClick={toggleFindAndReplace}
                 />
@@ -181,7 +181,7 @@ export default function Toolbar({
         <Tooltip>
             <TooltipTrigger>
                 <PlayerButton
-                    icon={highlightWordsEnabled ? <LightningBoltIcon /> : <LightningBoltIcon className="opacity-50" />}
+                    icon={highlightWordsEnabled ? <LightningBoltIcon className='w-4 h-4' /> : <LightningBoltIcon className='opacity-50 w-4 h-4' />}
                     tooltip='Word Highlight'
                     onClick={() => setHighlightWordsEnabled(!highlightWordsEnabled)}
                 />
@@ -196,7 +196,7 @@ export default function Toolbar({
                 <Tooltip>
                     <TooltipTrigger>
                         <PlayerButton
-                            icon={<SpaceEvenlyVerticallyIcon />}
+                            icon={<SpaceEvenlyVerticallyIcon className='w-4 h-4' />}
                             tooltip='Mark section'
                             onClick={markSection}
                         />
@@ -209,7 +209,7 @@ export default function Toolbar({
                 <Tooltip>
                     <TooltipTrigger>
                         <PlayerButton
-                            icon={<PersonIcon />}
+                            icon={<PersonIcon className='w-4 h-4' />}
                             tooltip='Mark examinee'
                             onClick={markExaminee}
                         />
@@ -222,7 +222,7 @@ export default function Toolbar({
                 <Tooltip>
                     <TooltipTrigger>
                         <PlayerButton
-                            icon={<Pencil2Icon />}
+                            icon={<Pencil2Icon className='w-4 h-4' />}
                             tooltip='Insert swear in line'
                             onClick={insertSwearInLine}
                         />
@@ -235,7 +235,7 @@ export default function Toolbar({
                 <Tooltip>
                     <TooltipTrigger>
                         <PlayerButton
-                            icon={<Pencil1Icon />}
+                            icon={<Pencil1Icon className='w-4 h-4' />}
                             tooltip='Insert interpreter swear in line'
                             onClick={insertInterpreterSwearInLine}
                         />
