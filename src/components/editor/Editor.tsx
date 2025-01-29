@@ -50,7 +50,7 @@ interface Range {
 
 type Sources = 'user' | 'api' | 'silent';
 
-export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, selection, searchHighlight, highlightWordsEnabled, setEditedSegments }: EditorProps) {
+export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, setEditedSegments }: EditorProps) {
     const ctms = initialCtms; // Make CTMs constant
     const quillRef = useRef<ReactQuill>(null)
     const [alignments, setAlignments] = useState<AlignmentType[]>([])
@@ -75,6 +75,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         if (source === 'user') {
             beforeSelectionRef.current = currentSelection;
             setCurrentSelection(selection);
+            setSelectionHandler();
         }
     };
 
