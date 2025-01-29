@@ -76,11 +76,6 @@ import {
   regenDocx,
 } from '@/utils/editorUtils'
 
-interface PlayerEvent {
-  t: number
-  s: number
-}
-
 interface TopbarProps {
   quillRef: React.RefObject<ReactQuill> | undefined
   editorModeOptions: string[]
@@ -91,7 +86,6 @@ interface TopbarProps {
   submitting: boolean
   setIsSubmitModalOpen: React.Dispatch<React.SetStateAction<boolean>>
   setSubmitting: React.Dispatch<React.SetStateAction<boolean>>
-  playerEvents: PlayerEvent[]
   setPdfUrl: React.Dispatch<React.SetStateAction<string>>
   setRegenCount: React.Dispatch<React.SetStateAction<number>>
   setFileToUpload: React.Dispatch<
@@ -118,7 +112,6 @@ export default memo(function Topbar({
   submitting,
   setIsSubmitModalOpen,
   setSubmitting,
-  playerEvents,
   setPdfUrl,
   setRegenCount,
   setFileToUpload,
@@ -862,7 +855,6 @@ export default memo(function Topbar({
                       notes,
                       cfd,
                       setButtonLoading,
-                      playerEvents,
                     })
                   }}
                 >

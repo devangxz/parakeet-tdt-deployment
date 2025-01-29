@@ -177,6 +177,16 @@ function calculateWER(alignments: AlignmentType[], ctms: CTMType[]) {
   return wer;
 }
 
+function getEditedSegments(alignments: AlignmentType[]): number[] {
+  return alignments
+    .filter(al => al.type === 'ctm' && al.case === 'mismatch')
+    .flatMap(al => {
+      const start = Math.floor(al.start);
+      const end = Math.ceil(al.end);
+      return Array.from({ length: end - start }, (_, i) => start + i);
+    });
+}
+
 /**
  * This updates (or re-generates) alignments given a new text input.
  */
@@ -345,5 +355,6 @@ self.onmessage = (e) => {
     const { newText, currentAlignments, ctms } = e.data;
     const updatedAlignments = updateAlignments(newText, currentAlignments, ctms);
     const wer = calculateWER(updatedAlignments, ctms);
-    self.postMessage({ alignments: updatedAlignments, wer: Number(wer.toFixed(2)) });
+    const editedSegments = getEditedSegments(updatedAlignments);
+    self.postMessage({ alignments: updatedAlignments, editedSegments, wer: Number(wer.toFixed(2)) });
 };

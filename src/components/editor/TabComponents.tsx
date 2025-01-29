@@ -23,6 +23,7 @@ interface EditorTabComponentProps {
   selection: CustomerQuillSelection | null
   searchHighlight: CustomerQuillSelection | null
   highlightWordsEnabled: boolean
+  setEditedSegments: (segments: Set<number>) => void
 }
 
 export const EditorTabComponent = ({
@@ -38,8 +39,12 @@ export const EditorTabComponent = ({
   selection,
   searchHighlight,
   highlightWordsEnabled,
+  setEditedSegments,
 }: EditorTabComponentProps) => (
-  <TabsContent className='h-full mt-0 overflow-hidden pb-[41px]' value='transcribe'>
+  <TabsContent
+    className='h-full mt-0 overflow-hidden pb-[41px]'
+    value='transcribe'
+  >
     <div className='h-full relative overflow-hidden'>
       {!transcript && (
         <div className='h-full flex items-center justify-center'>
@@ -48,6 +53,7 @@ export const EditorTabComponent = ({
         </div>
       )}
       {transcript && (
+        <div className='h-full overflow-hidden'>
           <Editor
             orderDetails={orderDetails}
             getQuillRef={getQuillRef}
@@ -61,7 +67,9 @@ export const EditorTabComponent = ({
             selection={selection}
             searchHighlight={searchHighlight}
             highlightWordsEnabled={highlightWordsEnabled}
+            setEditedSegments={setEditedSegments}
           />
+        </div>
       )}
     </div>
   </TabsContent>

@@ -18,7 +18,6 @@ import { toast } from 'sonner'
 
 import PlayerButton from './PlayerButton'
 import Toolbar from './Toolbar'
-import { getSpeakerNamesAction } from '@/app/actions/editor/get-speaker-names'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import {
@@ -42,7 +41,8 @@ import formatDuration from '@/utils/formatDuration'
 
 const createShortcutControls = (
   audioPlayer: React.RefObject<HTMLAudioElement>,
-  quill: Quill | null
+  quill: Quill | null,
+  setVolumePercentage: React.Dispatch<React.SetStateAction<number>>
 ): ShortcutControls => ({
   togglePlay: () => {
     if (!audioPlayer.current) return
@@ -69,14 +69,10 @@ const createShortcutControls = (
   decreaseFontSize: () => {},
   repeatLastFind: () => {},
   increaseVolume: () => {
-    if (audioPlayer.current) {
-      audioPlayer.current.volume = Math.min(1, audioPlayer.current.volume + 0.1)
-    }
+    setVolumePercentage((prevVol: number) => prevVol + 10)
   },
   decreaseVolume: () => {
-    if (audioPlayer.current) {
-      audioPlayer.current.volume = Math.max(0, audioPlayer.current.volume - 0.1)
-    }
+    setVolumePercentage((prevVol: number) => prevVol - 10)
   },
   increasePlaybackSpeed: () => {
     if (audioPlayer.current) {
@@ -121,49 +117,51 @@ const createShortcutControls = (
     // You'll need to pass the appropriate parameters for adjustTimestamps
     adjustTimestamps(quill, 0, quill.getSelection())
   },
+  playAt75Speed: () => {
+    if (!audioPlayer.current) return
+    audioPlayer.current.playbackRate = 0.75
+    audioPlayer.current.play()
+  },
+  playAt100Speed: () => {
+    if (!audioPlayer.current) return
+    audioPlayer.current.playbackRate = 1.0
+    audioPlayer.current.play()
+  },
 })
 
 interface HeaderProps {
   getAudioPlayer?: (audioPlayer: HTMLAudioElement | null) => void
   quillRef: React.RefObject<ReactQuill> | undefined
   orderDetails: OrderDetails
-  submitting: boolean
-  setIsSubmitModalOpen: React.Dispatch<React.SetStateAction<boolean>>
   toggleFindAndReplace: () => void
   highlightWordsEnabled: boolean
   setHighlightWordsEnabled: (enabled: boolean) => void
+  waveformUrl: string
 }
 
 export default memo(function Header({
   getAudioPlayer,
   quillRef,
   orderDetails,
-  submitting,
-  setIsSubmitModalOpen,
   toggleFindAndReplace,
   highlightWordsEnabled,
   setHighlightWordsEnabled,
+  waveformUrl,
 }: HeaderProps) {
   const [currentValue, setCurrentValue] = useState(0)
   const [currentTime, setCurrentTime] = useState('00:00')
   const [audioDuration, setAudioDuration] = useState(0)
   const audioPlayer = useRef<HTMLAudioElement>(null)
-  const [waveformUrl, setWaveformUrl] = useState('')
   const [isPlayerLoaded, setIsPlayerLoaded] = useState(false)
   const [selection, setSelection] = useState<{
     index: number
     length: number
   } | null>(null)
   const [adjustTimestampsBy, setAdjustTimestampsBy] = useState('0')
-  const [isSpeakerNameModalOpen, setIsSpeakerNameModalOpen] = useState(false)
-  const [speakerName, setSpeakerName] = useState<{
-    [key: string]: string
-  } | null>(null)
   const [step, setStep] = useState<string>('')
   const [cfd, setCfd] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
   const [speed, setSpeed] = useState(100)
-  const [volume, setVolume] = useState(100)
   const [fontSize, setFontSize] = useState(() => {
     if (typeof window !== 'undefined' && quillRef?.current) {
       const quill = quillRef.current.getEditor()
@@ -172,6 +170,11 @@ export default memo(function Header({
     }
     return 16
   })
+  const [volumePercentage, setVolumePercentage] = useState(100)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const gainNodeRef = useRef<GainNode | null>(null)
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null)
+  const [isAudioInitialized, setIsAudioInitialized] = useState(false)
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -266,37 +269,21 @@ export default memo(function Header({
     () =>
       createShortcutControls(
         audioPlayer,
-        quillRef?.current?.getEditor() || null
+        quillRef?.current?.getEditor() || null,
+        setVolumePercentage
       ),
     [audioPlayer, quillRef]
   )
 
   useShortcuts(shortcutControls as ShortcutControls)
 
-  const fetchWaveform = async () => {
-    try {
-      const res = await getSignedUrlAction(`${orderDetails.fileId}_wf.png`, 300)
-      if (res.success && res.signedUrl) {
-        setWaveformUrl(res.signedUrl)
-      } else {
-        throw new Error('Failed to load waveform')
-      }
-    } catch (error) {
-      setWaveformUrl('/assets/images/fallback-waveform.png')
-    } finally {
-      setIsPlayerLoaded(true)
-    }
-  }
-
   const fetchAudioUrl = async () => {
     try {
-      console.log('Fetching audio URL for fileId:', orderDetails.fileId)
       const { success, signedUrl } = await getSignedUrlAction(
         `${orderDetails.fileId}.mp3`,
         Math.max(Number(orderDetails.duration) * 4, 1800)
       )
       if (success && signedUrl) {
-        console.log('Got signed URL:', signedUrl)
         setAudioUrl(signedUrl)
       } else {
         throw new Error('Failed to fetch audio file')
@@ -309,7 +296,6 @@ export default memo(function Header({
 
   useEffect(() => {
     if (!orderDetails.fileId) return
-    fetchWaveform()
     fetchAudioUrl()
   }, [orderDetails.fileId])
 
@@ -428,88 +414,6 @@ export default memo(function Header({
 
   useShortcuts(editorShortcutControls)
 
-  const toggleSpeakerName = async () => {
-    try {
-      if (quillRef && quillRef.current) {
-        // Removed !speakerName condition to re-fetch every time
-        const quill = quillRef.current.getEditor()
-        const text = quill.getText()
-        const speakerRegex = /\d{1,2}:\d{2}:\d{2}\.\d\s+(S\d+):/g
-        const speakerOrder: string[] = []
-        let match
-
-        // Collect speakers in order of appearance
-        while ((match = speakerRegex.exec(text)) !== null) {
-          const speaker = match[1]
-          if (!speakerOrder.includes(speaker)) {
-            speakerOrder.push(speaker)
-          }
-        }
-
-        const response = await getSpeakerNamesAction(orderDetails.fileId)
-        const speakerNamesList = response.data
-        const newSpeakerNames: Record<string, string> = {}
-
-        // Map speaker names based on order of appearance
-        speakerOrder.forEach((speaker) => {
-          const speakerNumber = parseInt(speaker.replace('S', '')) - 1
-          // Preserve existing speaker names if they exist
-          if (speakerName && speakerName[speaker]) {
-            newSpeakerNames[speaker] = speakerName[speaker]
-          } else if (
-            speakerNamesList &&
-            speakerNamesList[speakerNumber] &&
-            (speakerNamesList[speakerNumber].fn ||
-              speakerNamesList[speakerNumber].ln)
-          ) {
-            const { fn, ln } = speakerNamesList[speakerNumber]
-            newSpeakerNames[speaker] = `${fn} ${ln}`.trim()
-          } else {
-            newSpeakerNames[speaker] = `Speaker ${speakerNumber + 1}`
-          }
-        })
-
-        // Add any remaining speakers from the API that weren't in the transcript
-        const maxSpeakerNumber = Math.max(
-          ...speakerOrder.map((s) => parseInt(s.replace('S', ''))),
-          speakerNamesList.length
-        )
-
-        for (let i = 1; i <= maxSpeakerNumber; i++) {
-          const speaker = `S${i}`
-          if (!newSpeakerNames[speaker]) {
-            if (speakerName && speakerName[speaker]) {
-              newSpeakerNames[speaker] = speakerName[speaker]
-            } else if (
-              speakerNamesList &&
-              speakerNamesList[i - 1] &&
-              (speakerNamesList[i - 1].fn || speakerNamesList[i - 1].ln)
-            ) {
-              const { fn, ln } = speakerNamesList[i - 1]
-              newSpeakerNames[speaker] = `${fn} ${ln}`.trim()
-            } else {
-              newSpeakerNames[speaker] = `Speaker ${i}`
-            }
-          }
-        }
-
-        setSpeakerName(newSpeakerNames) // Replace instead of merge with previous state
-      }
-      setIsSpeakerNameModalOpen(!isSpeakerNameModalOpen)
-    } catch (error) {
-      toast.error('An error occurred while opening the speaker name modal')
-    }
-  }
-
-  useEffect(() => {
-    if (submitting && orderDetails.status === 'QC_ASSIGNED') {
-      toggleSpeakerName()
-    }
-    if (submitting && orderDetails.status !== 'QC_ASSIGNED') {
-      setIsSubmitModalOpen(true)
-    }
-  }, [submitting])
-
   const insertTimestampBlankAtCursorPositionInstance = useCallback(() => {
     insertTimestampBlankAtCursorPosition(
       audioPlayer.current,
@@ -521,19 +425,13 @@ export default memo(function Header({
     const audio = audioPlayer.current
     if (!audio) return
 
-    const handleVolumeChange = () => {
-      setVolume(Math.round(audio.volume * 100))
-    }
-
     const handleRateChange = () => {
       setSpeed(Math.round(audio.playbackRate * 100))
     }
 
-    audio.addEventListener('volumechange', handleVolumeChange)
     audio.addEventListener('ratechange', handleRateChange)
 
     return () => {
-      audio.removeEventListener('volumechange', handleVolumeChange)
       audio.removeEventListener('ratechange', handleRateChange)
     }
   }, [audioPlayer])
@@ -631,6 +529,49 @@ export default memo(function Header({
     toast.success('Inserted swear in line text')
   }
 
+  const initializeAudio = useCallback(() => {
+    if (!isAudioInitialized && audioPlayer.current) {
+      try {
+        audioContextRef.current = new (window.AudioContext ||
+          (window as { webkitAudioContext?: typeof AudioContext })
+            .webkitAudioContext ||
+          AudioContext)()
+        sourceNodeRef.current =
+          audioContextRef.current.createMediaElementSource(audioPlayer.current)
+        gainNodeRef.current = audioContextRef.current.createGain()
+
+        sourceNodeRef.current.connect(gainNodeRef.current)
+        gainNodeRef.current.connect(audioContextRef.current.destination)
+
+        // Set initial gain based on audio element's volume
+        if (gainNodeRef.current && audioPlayer.current) {
+          gainNodeRef.current.gain.value = audioPlayer.current.volume
+        }
+
+        setIsAudioInitialized(true)
+      } catch (error) {
+        console.error('Failed to initialize Web Audio API:', error)
+      }
+    }
+  }, [isAudioInitialized])
+
+  // Update gain node when volume changes
+  useEffect(() => {
+    if (isAudioInitialized && gainNodeRef.current && audioPlayer.current) {
+      gainNodeRef.current.gain.value = volumePercentage / 100
+    }
+  }, [isAudioInitialized, volumePercentage])
+
+  // Cleanup Web Audio API on unmount
+  useEffect(
+    () => () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close()
+      }
+    },
+    []
+  )
+
   return (
     <div className='border bg-white border-customBorder rounded-md relative'>
       {!isPlayerLoaded && (
@@ -692,6 +633,8 @@ export default memo(function Header({
           className='hidden'
           src={audioUrl}
           preload='auto'
+          crossOrigin='anonymous'
+          onPlay={initializeAudio}
         ></audio>
 
         <div className='flex items-center h-full'>
@@ -848,7 +791,7 @@ export default memo(function Header({
               </div>
               <div className='inline-flex items-center bg-primary/10 text-primary rounded-md px-1 text-xs font-semibold shadow-sm ring-1 ring-inset ring-primary/20'>
                 <span className='mr-0.5'>Volume: </span>
-                <span>{volume}%</span>
+                <span>{volumePercentage}%</span>
               </div>
               <div className='inline-flex items-center bg-primary/10 text-primary rounded-md px-1 text-xs font-semibold shadow-sm ring-1 ring-inset ring-primary/20'>
                 <span className='mr-0.5'>Font: </span>

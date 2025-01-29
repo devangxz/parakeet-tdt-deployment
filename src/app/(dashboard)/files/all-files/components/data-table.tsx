@@ -30,14 +30,17 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
   onSelectedRowsChange?: (selectedRows: TData[]) => void
+  onFileDrop?: (fileId: string, folderId: number) => void
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   onSelectedRowsChange,
+  onFileDrop,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
+  const [draggedOverFolderId, setDraggedOverFolderId] = React.useState<number | null>(null)
 
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
@@ -79,6 +82,42 @@ export function DataTable<TData, TValue>({
     }
   }, [rowSelection])
 
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, fileId: string) => {
+    e.dataTransfer.setData('text/plain', fileId)
+    // Create a custom drag image
+    const dragImage = e.currentTarget.cloneNode(true) as HTMLDivElement
+    dragImage.style.cssText = `
+      position: absolute;
+      top: -1000px;
+      padding: 4px 8px;
+      background: white;
+      border-radius: 6px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      height: 55px;
+      display: flex;
+      align-items: center;
+    `
+    document.body.appendChild(dragImage)
+    e.dataTransfer.setDragImage(dragImage, 0, 0)
+    setTimeout(() => document.body.removeChild(dragImage), 0)
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, folderId: number) => {
+    e.preventDefault()
+    setDraggedOverFolderId(folderId)
+  }
+
+  const handleDragLeave = () => {
+    setDraggedOverFolderId(null)
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, folderId: number) => {
+    e.preventDefault()
+    const fileId = e.dataTransfer.getData('text/plain')
+    setDraggedOverFolderId(null)
+    onFileDrop?.(fileId, folderId)
+  }
+
   return (
     <div className='space-y-4'>
       <div className='rounded-md border-2 border-customBorder bg-white'>
@@ -95,9 +134,9 @@ export function DataTable<TData, TValue>({
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -105,25 +144,46 @@ export function DataTable<TData, TValue>({
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                  className={`${
-                    calculateDifferenceInHours(row.getValue('date')) <= 1 &&
-                    'bg-[#FFFBEB]'
-                  }`}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className='px-4 py-3'>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                const rowData = row.original as { id: string; parentId?: string; date?: string }
+                return (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && 'selected'}
+                    className={`
+                      ${rowData.date && calculateDifferenceInHours(new Date(row.getValue('date') as string)) <= 1 && 'bg-[#FFFBEB]'}
+                      ${draggedOverFolderId === Number(rowData.id) ? 'bg-blue-50' : ''}
+                    `}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell className='px-4 py-3' key={cell.id}>
+                        {cell.column.id === 'name' ? (
+                          <div>
+                            {'parentId' in rowData ? (
+                              <div
+                                onDragOver={(e) => handleDragOver(e, Number(rowData.id))}
+                                onDragLeave={handleDragLeave}
+                                onDrop={(e) => handleDrop(e, Number(rowData.id))}
+                              >
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </div>
+                            ) : (
+                              <div
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, rowData.id)}
+                              >
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          flexRender(cell.column.columnDef.cell, cell.getContext())
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                )
+              })
             ) : (
               <TableRow>
                 <TableCell
