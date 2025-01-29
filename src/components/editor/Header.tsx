@@ -183,11 +183,6 @@ const createShortcutControls = (
   }
 })
 
-interface PlayerEvent {
-  t: number
-  s: number
-}
-
 interface NewPlayerProps {
   getAudioPlayer?: (audioPlayer: HTMLAudioElement | null) => void
   quillRef: React.RefObject<ReactQuill> | undefined
@@ -199,7 +194,6 @@ interface NewPlayerProps {
   submitting: boolean
   setIsSubmitModalOpen: React.Dispatch<React.SetStateAction<boolean>>
   setSubmitting: React.Dispatch<React.SetStateAction<boolean>>
-  playerEvents: PlayerEvent[]
   setPdfUrl: React.Dispatch<React.SetStateAction<string>>
   setRegenCount: React.Dispatch<React.SetStateAction<number>>
   setFileToUpload: React.Dispatch<
@@ -231,7 +225,6 @@ export default memo(function Header({
   submitting,
   setIsSubmitModalOpen,
   setSubmitting,
-  playerEvents,
   setPdfUrl,
   setRegenCount,
   setFileToUpload,
@@ -1616,7 +1609,6 @@ export default memo(function Header({
                       notes,
                       cfd,
                       setButtonLoading,
-                      playerEvents,
                     })
                   }
                   }

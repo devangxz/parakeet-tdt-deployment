@@ -145,11 +145,6 @@ function EditorPage() {
   const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set());
   const [waveformUrl, setWaveformUrl] = useState('')
 
-  interface PlayerEvent {
-    t: number
-    s: number
-  }
-
   interface PlayStats {
     listenCount: number[];
   }
@@ -162,9 +157,6 @@ function EditorPage() {
       setSelection({ index: range.index, length: range.length })
     }
   }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [playerEvents, setPlayerEvents] = useState<PlayerEvent[]>([])
 
   const isActive = usePreventMultipleTabs((params?.fileId as string) || '')
 
@@ -324,7 +316,6 @@ function EditorPage() {
           notes,
           cfd,
           setButtonLoading,
-          playerEvents,
         })
       }
 
@@ -430,7 +421,6 @@ function EditorPage() {
           notes,
           cfd,
           setButtonLoading,
-          playerEvents,
         },
         false
       )
@@ -630,7 +620,6 @@ function EditorPage() {
         submitting={submitting}
         setIsSubmitModalOpen={setIsSubmitModalOpen}
         setSubmitting={setSubmitting}
-        playerEvents={playerEvents}
         setPdfUrl={setPdfUrl}
         setRegenCount={setRegenCount}
         setFileToUpload={setFileToUpload}
