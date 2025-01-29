@@ -275,7 +275,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   filename: '',
                   docType:
                     session?.user?.organizationName.toLowerCase() ===
-                      'remotelegal'
+                    'remotelegal'
                       ? 'CUSTOM_FORMATTING_DOC'
                       : 'TRANSCRIPTION_DOC',
                 },
@@ -373,10 +373,10 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   `/editor/${row.original.id}`,
                   '_blank',
                   'toolbar=no,location=no,menubar=no,width=' +
-                  window.screen.width +
-                  ',height=' +
-                  window.screen.height +
-                  ',left=0,top=0'
+                    window.screen.width +
+                    ',height=' +
+                    window.screen.height +
+                    ',left=0,top=0'
                 )
               }
             >
@@ -499,8 +499,8 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
 
   return (
     <>
-      <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex bg-muted/40'>
-        <div className='flex items-center justify-between space-y-2'>
+      <div className='h-full flex-1 flex-col p-4 md:flex space-y-1'>
+        <div className='flex items-start justify-between'>
           <div>
             <h1 className='text-lg font-semibold md:text-lg'>
               Delivered ({deliveredFiles?.length})
@@ -509,25 +509,25 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
           <div className='flex items-center'>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-                <Button
-                  variant='order'
-                  className='not-rounded text-black w-[140px] mr-3'
-                  onClick={async () => {
-                    try {
-                      if (selectedFiles.length === 0) {
-                        toast.error('Please select at least one file')
-                        return
-                      }
-                      await navigator.clipboard.writeText(selectedFiles.join(','))
-                      toast.success('File Ids copied to clipboard')
-                    } catch (error) {
-                      toast.error('Failed to copy file Ids')
+              <Button
+                variant='order'
+                className='not-rounded text-black w-[140px]'
+                onClick={async () => {
+                  try {
+                    if (selectedFiles.length === 0) {
+                      toast.error('Please select at least one file')
+                      return
                     }
-                  }}
-                >
-                  Copy file Ids
-                </Button>
-              )}
+                    await navigator.clipboard.writeText(selectedFiles.join(','))
+                    toast.success('File Ids copied to clipboard')
+                  } catch (error) {
+                    toast.error('Failed to copy file Ids')
+                  }
+                }}
+              >
+                Copy file Ids
+              </Button>
+            )}
             <Button
               variant='order'
               className='format-button text-black w-[140px]'

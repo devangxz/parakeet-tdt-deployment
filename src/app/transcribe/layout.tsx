@@ -1,5 +1,6 @@
 import Header from './components/header'
 import { SidebarNav } from './components/sidebar'
+import AuthenticatedFooter from '@/components/authenticated-footer'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 export default function TranscribeLayout({
@@ -9,14 +10,19 @@ export default function TranscribeLayout({
 }) {
   return (
     <TooltipProvider>
-      <Header />
-      <div className='grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]'>
-        <div className='hidden border-r-2 border-customBorder md:block'>
-          <div className='flex h-full max-h-screen flex-col gap-2'>
-            <SidebarNav />
+      <div className='flex min-h-screen flex-col'>
+        <Header />
+        <div className='flex flex-1'>
+          <div className='hidden border-r-2 border-customBorder md:block md:w-[220px] lg:w-[280px]'>
+            <aside className='sticky top-[69.5px]'>
+              <SidebarNav />
+            </aside>
           </div>
+          <main className='flex-1'>
+            <div className='h-full bg-muted/40'>{children}</div>
+          </main>
         </div>
-        <div className='flex flex-col'>{children}</div>
+        <AuthenticatedFooter />
       </div>
     </TooltipProvider>
   )

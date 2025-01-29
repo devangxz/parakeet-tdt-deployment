@@ -1,4 +1,5 @@
 'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
 import React, { useState } from 'react'
 import { toast } from 'sonner'
@@ -45,7 +46,7 @@ const defaultInitState = DEFAULT_USER_OPTIONS
 
 const optionsArray: orderOption[] = [
   {
-    heading: 'Rush order',
+    heading: 'Rush Order',
     description:
       'All files are prioritized for completion. Get your files delivered up to 3x faster.',
     orderKey: 'exd',
@@ -66,7 +67,7 @@ const optionsArray: orderOption[] = [
     controller: (callback: () => void) => callback(),
   },
   {
-    heading: 'Audio Time-coding',
+    heading: 'Audio Time-Coding',
     description:
       'The audio timestamp will be added before each paragraph. New paragraphs are started at every change of speaker or at every 3 minutes, whichever is earlier.',
     orderKey: 'ts',
@@ -160,190 +161,196 @@ const Page = ({ options }: { options: OptionProps }) => {
   }
 
   return (
-    <div className='w-[80%] space-y-[1.5rem]'>
-      <div className='w-[70%] space-y-[1.5rem]'>
+    <div className='lg:w-[70%] flex flex-1 flex-col p-4 gap-5'>
+      <div className='border-b-2 border-customBorder space-y-4 pb-6'>
         <HeadingDescription
-          heading='Human transcript order options'
+          heading='Human Transcript Order Options'
           description='The following options for human transcript orders can be set. 
 These values are used when an invoice is generated and can be changed further on the invoice page. 
 Please read the blog post here to learn more about these options.'
         />
-        {optionsArray.map((option, index) => (
-          <div key={index} className='w-[100%] flex items-center gap-[1.25rem]'>
-            {option.orderKey && (
-              <Switch
-                checked={
-                  orderOptions[option.orderKey as keyof orderOptoinsType] == 1
-                }
-                onCheckedChange={(isChecked) => {
-                  setOrderOptions({
-                    ...orderOptions,
-                    [option.orderKey as keyof orderOptoinsType]: isChecked
-                      ? 1
-                      : 0,
-                  })
-                }}
-              />
-            )}
-            <div>
-              <div className='font-semibold'>{option.heading}</div>
-              <div className='text-gray-600 text-sm not-italic font-normal leading-5'>
-                {option.description}
+        <div className='space-y-4'>
+          {optionsArray.map((option, index) => (
+            <div key={index} className='flex items-center gap-4'>
+              {option.orderKey && (
+                <Switch
+                  checked={
+                    orderOptions[option.orderKey as keyof orderOptoinsType] == 1
+                  }
+                  onCheckedChange={(isChecked) => {
+                    setOrderOptions({
+                      ...orderOptions,
+                      [option.orderKey as keyof orderOptoinsType]: isChecked
+                        ? 1
+                        : 0,
+                    })
+                  }}
+                />
+              )}
+              <div className='space-y-0.5'>
+                <div className='font-semibold'>{option.heading}</div>
+                <div className='text-gray-500 text-sm not-italic font-normal leading-5'>
+                  {option.description}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      <hr />
-
-      <div className='space-y-[2rem]'>
-        <div className='w-[100%] flex items-center gap-[1.25rem]'>
-          <Switch
-            checked={orderOptions.sif === 1}
-            onCheckedChange={(isChecked) => {
-              setOrderOptions({
-                ...orderOptions,
-                sif: isChecked ? 1 : 0,
-              })
-            }}
-          />
-          <div>
-            <div className='font-semibold'>Speaker Tracking</div>
-            <div className='text-gray-600 text-sm not-italic font-normal leading-5'>
-              The speaker initial will be added before each paragraph. The names
-              of speakers, as provided or as spoken in the audio, will be used.
-              Speaker 1, Speaker 2 and so on will be used if none are available.
-            </div>
-          </div>
-        </div>
-        <div className='space-y-[1rem]'>
-          <HeadingDescription heading='Speaker Name Format' />
-          <RadioGroup
-            onValueChange={(value) =>
-              setOrderOptions({ ...orderOptions, si: Number(value) })
-            }
-            value={orderOptions.si.toString()}
-            className='flex gap-[3rem]'
-            disabled={orderOptions.sif === 0}
-            test-id='speaker-name-format'
-          >
-            <div className='flex items-center space-x-2'>
-              <RadioGroupItem value='0' id='Initials' />
-              <Label
-                htmlFor='nitials'
-                className='text-gray-900 text-sm not-italic font-medium leading-3'
-              >
-                Initials
-              </Label>
-            </div>
-
-            <div className='flex items-center space-x-2'>
-              <RadioGroupItem value='1' id='Full_names' />
-              <Label
-                htmlFor='Full_names'
-                className='text-gray-900 text-sm not-italic font-medium leading-3'
-              >
-                Full names
-              </Label>
-            </div>
-          </RadioGroup>
-        </div>
-
-        <div className='w-[70%]'>
-          <HeadingDescription
-            heading='Transcript template'
-            description='The templates used for formatting the delivery transcript document(s). For custom templates please Contact Support'
-          />
-          <div className='flex items-center justify-between gap-[3rem] w-[100%]'>
-            <Select
-              onValueChange={(value) => {
-                setOrderOptions({ ...orderOptions, tmp: Number(value) })
+      <div className='border-b-2 border-customBorder space-y-4 pb-6'>
+        <HeadingDescription heading='Speaker' />
+        <div className='space-y-4'>
+          <div className='flex items-center gap-4'>
+            <Switch
+              checked={orderOptions.sif === 1}
+              onCheckedChange={(isChecked) => {
+                setOrderOptions({
+                  ...orderOptions,
+                  sif: isChecked ? 1 : 0,
+                })
               }}
-              value={orderOptions.tmp.toString()}
-            >
-              <SelectTrigger className='w-[40%]'>
-                <SelectValue placeholder='Select an option' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {templates.map((template, index) => (
-                    <SelectItem key={index} value={template.id.toString()}>
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className='space-y-[1rem] flex items-center justify-between'>
-          <div className='space-y-[1rem]'>
-            <HeadingDescription
-              heading='Spelling Type'
-              description='The templates used for formatting the delivery transcript document(s).'
             />
+            <div className='space-y-0.5'>
+              <div className='font-semibold'>Speaker Tracking</div>
+              <div className='text-gray-500 text-sm not-italic font-normal leading-5'>
+                The speaker initial will be added before each paragraph. The
+                names of speakers, as provided or as spoken in the audio, will
+                be used. Speaker 1, Speaker 2 and so on will be used if none are
+                available.
+              </div>
+            </div>
+          </div>
+          <div className='space-y-3'>
+            <h3 className='font-semibold'>Speaker Name Format</h3>
             <RadioGroup
               onValueChange={(value) =>
-                setOrderOptions({ ...orderOptions, sp: value })
+                setOrderOptions({ ...orderOptions, si: Number(value) })
               }
-              defaultValue={orderOptions.sp}
+              value={orderOptions.si.toString()}
               className='flex gap-[3rem]'
-              value={orderOptions.sp}
-              test-id='spelling-type'
+              disabled={orderOptions.sif === 0}
+              test-id='speaker-name-format'
             >
               <div className='flex items-center space-x-2'>
-                <RadioGroupItem value='en_US' id='american' />
+                <RadioGroupItem value='0' id='Initials' />
                 <Label
-                  htmlFor='american'
+                  htmlFor='nitials'
                   className='text-gray-900 text-sm not-italic font-medium leading-3'
                 >
-                  American
+                  Initials
                 </Label>
               </div>
 
               <div className='flex items-center space-x-2'>
-                <RadioGroupItem value='en_AU' id='australian' />
+                <RadioGroupItem value='1' id='Full_names' />
                 <Label
-                  htmlFor='australian'
+                  htmlFor='Full_names'
                   className='text-gray-900 text-sm not-italic font-medium leading-3'
                 >
-                  Australian
-                </Label>
-              </div>
-
-              <div className='flex items-center space-x-2'>
-                <RadioGroupItem value='en_GB' id='british' />
-                <Label
-                  htmlFor='british'
-                  className='text-gray-900 text-sm not-italic font-medium leading-3'
-                >
-                  British
-                </Label>
-              </div>
-
-              <div className='flex items-center space-x-2'>
-                <RadioGroupItem value='en_CA' id='canadian' />
-                <Label
-                  htmlFor='canadian'
-                  className='text-gray-900 text-sm not-italic font-medium leading-3'
-                >
-                  Canadian
+                  Full names
                 </Label>
               </div>
             </RadioGroup>
           </div>
-          <div className='my-[1.5rem] flex justify-end'>
+        </div>
+      </div>
+
+      <div className='border-b-2 border-customBorder space-y-4 pb-6'>
+        <HeadingDescription
+          heading='Transcript Template'
+          description='The templates used for formatting the delivery transcript document(s). For custom templates please Contact Support.'
+        />
+        <div className='flex items-center justify-between'>
+          <Select
+            onValueChange={(value) => {
+              setOrderOptions({ ...orderOptions, tmp: Number(value) })
+            }}
+            value={orderOptions.tmp.toString()}
+          >
+            <SelectTrigger className='w-[40%]'>
+              <SelectValue placeholder='Select an option' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {templates.map((template, index) => (
+                  <SelectItem key={index} value={template.id.toString()}>
+                    {template.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className='border-b-2 border-customBorder space-y-4 pb-6'>
+        <HeadingDescription
+          heading='Spelling Type'
+          description='The templates used for formatting the delivery transcript document(s).'
+        />
+
+        <div className='flex items-center justify-between'>
+          <RadioGroup
+            onValueChange={(value) =>
+              setOrderOptions({ ...orderOptions, sp: value })
+            }
+            defaultValue={orderOptions.sp}
+            className='flex gap-[3rem]'
+            value={orderOptions.sp}
+            test-id='spelling-type'
+          >
+            <div className='flex items-center space-x-2'>
+              <RadioGroupItem value='en_US' id='american' />
+              <Label
+                htmlFor='american'
+                className='text-gray-900 text-sm not-italic font-medium leading-3'
+              >
+                American
+              </Label>
+            </div>
+
+            <div className='flex items-center space-x-2'>
+              <RadioGroupItem value='en_AU' id='australian' />
+              <Label
+                htmlFor='australian'
+                className='text-gray-900 text-sm not-italic font-medium leading-3'
+              >
+                Australian
+              </Label>
+            </div>
+
+            <div className='flex items-center space-x-2'>
+              <RadioGroupItem value='en_GB' id='british' />
+              <Label
+                htmlFor='british'
+                className='text-gray-900 text-sm not-italic font-medium leading-3'
+              >
+                British
+              </Label>
+            </div>
+
+            <div className='flex items-center space-x-2'>
+              <RadioGroupItem value='en_CA' id='canadian' />
+              <Label
+                htmlFor='canadian'
+                className='text-gray-900 text-sm not-italic font-medium leading-3'
+              >
+                Canadian
+              </Label>
+            </div>
+          </RadioGroup>
+          <div>
             {loadingOptions ? (
-              <Button disabled>
+              <Button disabled variant='default' className='w-full'>
                 <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
                 Save
               </Button>
             ) : (
               <Button
                 onClick={() => orderOptionsSubmit()}
-                className='w-[4rem] h-[2.5rem]'
+                variant='default'
+                className='w-full'
               >
                 Save
               </Button>
@@ -352,14 +359,10 @@ Please read the blog post here to learn more about these options.'
         </div>
       </div>
 
-      <hr />
-
-      <div className='w-[100%] space-y-[1rem]'>
-        <div className='text-gray-900 text-sm not-italic font-medium leading-5'>
-          Default instructions
-        </div>
+      <div className='space-y-4'>
+        <HeadingDescription heading='Default Instructions' />
         <div className='flex items-center justify-between'>
-          <div>
+          <div className='space-y-1'>
             <Textarea
               id='myTextArea'
               onChange={(event) => {
@@ -369,20 +372,21 @@ Please read the blog post here to learn more about these options.'
               value={defaultInstruction}
               rows={5}
             />
-            <div className='text-gray-600 text-sm not-italic font-normal leading-5'>
+            <div className='text-gray-500 text-sm not-italic font-normal leading-5'>
               Terms, acronyms, keywords, names of places, speaker names etc.
             </div>
           </div>
-          <div className='my-[1.5rem]'>
+          <div>
             {loadingInstructions ? (
-              <Button disabled>
+              <Button disabled variant='default' className='w-full'>
                 <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
                 Save
               </Button>
             ) : (
               <Button
                 onClick={() => handleDefaultInstruction()}
-                className='w-[4rem] h-[2.5rem]'
+                variant='default'
+                className='w-full'
               >
                 Save
               </Button>

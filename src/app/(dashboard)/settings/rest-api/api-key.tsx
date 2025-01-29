@@ -1,4 +1,5 @@
 'use client'
+
 import { ReloadIcon } from '@radix-ui/react-icons'
 import React, { useState } from 'react'
 import { toast } from 'sonner'
@@ -82,18 +83,17 @@ const Page = ({ apiKeys }: { apiKeys: OptionProps }) => {
   }
 
   return (
-    <div className='w-[80%] space-y-[1.25rem]'>
-      <div className='w-[70%]'>
+    <div className='lg:w-[70%] flex flex-1 flex-col p-4 gap-5'>
+      <div
+        className={`${
+          apiKey ? 'border-b-2 border-customBorder pb-6' : ''
+        } space-y-4`}
+      >
         <HeadingDescription
           heading='API Key'
           description='The API key is required to access our REST API. The following is your key.'
         />
-      </div>
-
-      <hr />
-
-      <>
-        <div className=''>
+        <div className='pt-2 space-y-2.5'>
           <div className='grid w-full items-center gap-1.5'>
             <Label htmlFor='apiKey'>API Key</Label>
             <Input
@@ -104,72 +104,89 @@ const Page = ({ apiKeys }: { apiKeys: OptionProps }) => {
             />
           </div>
 
-          {apiKey && (
-            <>
-              <Button className='mt-5 mr-5' onClick={handleCopyApiKey}>
-                Copy
-              </Button>
+          <div className='flex justify-end pt-2'>
+            <div className='flex items-center gap-x-2'>
+              {apiKey && (
+                <>
+                  <Button
+                    variant='default'
+                    className='w-full'
+                    onClick={handleCopyApiKey}
+                  >
+                    Copy
+                  </Button>
 
-              {isRemoving ? (
-                <Button disabled className='mt-5'>
+                  {isRemoving ? (
+                    <Button disabled variant='destructive' className='w-full'>
+                      Remove
+                      <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+                    </Button>
+                  ) : (
+                    <Button
+                      className='w-full'
+                      variant='destructive'
+                      onClick={handleRemoveApiKey}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </>
+              )}
+
+              {isLoading ? (
+                <Button disabled variant='default' className='w-full'>
                   Please wait
                   <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
                 </Button>
               ) : (
                 <Button
-                  className='mt-5 mr-5'
-                  variant='destructive'
-                  onClick={handleRemoveApiKey}
+                  variant='default'
+                  className='w-full'
+                  onClick={handleGenerateApiKey}
                 >
-                  Remove
-                </Button>
-              )}
-            </>
-          )}
-
-          {isLoading ? (
-            <Button disabled className='mt-5'>
-              Please wait
-              <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-            </Button>
-          ) : (
-            <Button className='mt-5' onClick={handleGenerateApiKey}>
-              {apiKey ? 'Regenerate' : 'Generate'}
-            </Button>
-          )}
-        </div>
-      </>
-      {apiKey && (
-        <>
-          <hr />
-
-          <>
-            <h1 className='text-lg font-semibold md:text-lg'>Webhook</h1>
-            <div className=''>
-              <div className='grid w-full items-center gap-1.5'>
-                <Label htmlFor='apiKey'>URL</Label>
-                <Input
-                  id='apiKey'
-                  type='text'
-                  placeholder='https://example.com/webhook'
-                  value={webhook ?? ''}
-                  onChange={(e) => setWebhook(e.target.value)}
-                />
-              </div>
-
-              {isUpdating ? (
-                <Button disabled className='mt-5'>
-                  Please wait
-                  <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-                </Button>
-              ) : (
-                <Button className='mt-5' onClick={handleUpdateWebhook}>
-                  Update
+                  {apiKey ? 'Regenerate' : 'Generate'}
                 </Button>
               )}
             </div>
-          </>
-        </>
+          </div>
+        </div>
+      </div>
+
+      {apiKey && (
+        <div className='space-y-4'>
+          <HeadingDescription heading='Webhook' />
+          <div className='pt-2 space-y-2.5'>
+            <div className='grid w-full items-center gap-1.5'>
+              <Label htmlFor='apiKey'>URL</Label>
+              <Input
+                id='apiKey'
+                type='text'
+                placeholder='https://example.com/webhook'
+                value={webhook ?? ''}
+                onChange={(e) => setWebhook(e.target.value)}
+              />
+            </div>
+
+            <div className='flex justify-end pt-2'>
+              <div>
+                {isUpdating ? (
+                  <Button disabled variant='default' className='w-full'>
+                    Update
+                    <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+                  </Button>
+                ) : (
+                  <Button
+                    variant='default'
+                    className='w-full'
+                    onClick={handleUpdateWebhook}
+                  >
+                    Update
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

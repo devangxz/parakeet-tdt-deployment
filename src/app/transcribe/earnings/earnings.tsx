@@ -65,35 +65,11 @@ function EarningsDetails({
 }) {
   return (
     <div className='flex flex-col items-center'>
-      <p className='text-muted-foreground text-md font-medium mb-3'>{title}</p>
+      <p className='font-medium mb-3'>{title}</p>
       <p className='text-xl'>
         {showDollar ? '$' : ''}
         {amount}
       </p>
-    </div>
-  )
-}
-
-function EarningsBreakup({
-  title,
-  amount,
-  link,
-  linkText,
-}: {
-  title: string
-  amount: string
-  link: string
-  linkText: string
-}) {
-  return (
-    <div className='flex justify-between items-center mt-3 text-md'>
-      <p>
-        {title}{' '}
-        <Link className='text-indigo-600' href={link}>
-          ({linkText})
-        </Link>
-      </p>
-      <p>${amount}</p>
     </div>
   )
 }
@@ -241,8 +217,8 @@ export default function EarningsPage() {
 
   return (
     <>
-      <div className='bg-white border rounded-xl'>
-        <div className='flex justify-between px-10 py-8'>
+      <div className='bg-white border-2 border-customBorder rounded-md'>
+        <div className='flex justify-between p-4'>
           <EarningsDetails
             showDollar={false}
             title='Total Credited hours'
@@ -262,25 +238,10 @@ export default function EarningsPage() {
           />
         </div>
       </div>
-      <div className='bg-white border rounded-xl mt-4'>
-        <div className='flex justify-between px-10 py-5'>
-          <div>
-            <h2 className='text-lg font-semibold'>Withdraw</h2>
-            <ul className='list-disc ml-5'>
-              <li className='text-muted-foreground'>
-                Withdrawals of $30 of higher are{' '}
-                <strong className='text-[#161616]'>free</strong>.
-              </li>
-              <li className='text-muted-foreground'>
-                For withdrawals below $30 a fee of 2% will be charged.
-              </li>
-              <li className='text-muted-foreground'>
-                Payment processing will happen weekly and will take 7-14
-                Business days after the withdrawals are done.
-              </li>
-            </ul>
-          </div>
-          <div className='flex flex-col justify-end'>
+      <div className='bg-white border-2 border-customBorder rounded-md mt-5'>
+        <div className='p-4'>
+          <div className='flex justify-between items-start mb-1'>
+            <h2 className='text-lg font-semibold md:text-xl'>Withdraw</h2>
             <Button
               className='not-rounded'
               onClick={async () => {
@@ -294,154 +255,219 @@ export default function EarningsPage() {
             >
               Submit Withdrawals Request
             </Button>
-            <Dialog open={open} onOpenChange={() => setOpen(false)}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Withdrawals Confirmation</DialogTitle>
-                  <DialogDescription className='py-5 text-center'>
-                    Please review the details below and confirm
-                  </DialogDescription>
-                  <div className='flex justify-center items-center'>
-                    <Table className='text-center'>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className='text-center'>Details</TableHead>
-                          <TableHead className='text-center'>Amount</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        <TableRow>
-                          <TableCell className='font-medium'>Amount</TableCell>
-                          <TableCell>
-                            ${earnings?.CURRENT_BALANCE.toFixed(2).toString()}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className='font-medium'>Fee</TableCell>
-                          <TableCell>
-                            $
-                            {earnings
-                              ? earnings?.CURRENT_BALANCE <
-                                FREE_WITHDRAWAL_AMOUNT
-                                ? (
-                                    earnings?.CURRENT_BALANCE *
-                                    CHARGE_ON_LOW_WITHDRAWAL_AMOUNT
-                                  ).toFixed(2)
-                                : '0.00'
-                              : '0.00'}
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                      <TableFooter>
-                        <TableRow>
-                          <TableCell colSpan={1}>Net Amount</TableCell>
-                          <TableCell>
-                            $
-                            {earnings
-                              ? earnings.CURRENT_BALANCE <
-                                FREE_WITHDRAWAL_AMOUNT
-                                ? (
-                                    earnings.CURRENT_BALANCE *
-                                    (1 - CHARGE_ON_LOW_WITHDRAWAL_AMOUNT)
-                                  ).toFixed(2)
-                                : earnings.CURRENT_BALANCE.toFixed(2)
-                              : '0'}
-                          </TableCell>
-                        </TableRow>
-                      </TableFooter>
-                    </Table>
-                  </div>
-                  <p className='text-center py-5'>
-                    The funds will be sent to &apos;{session?.user?.email}
-                    &apos;.
-                  </p>
-                  <DialogClose>
-                    <Button onClick={handleWithdrawalRequest}>Confirm</Button>
-                  </DialogClose>
-                </DialogHeader>
-              </DialogContent>
-            </Dialog>
           </div>
+
+          <ul className='list-disc ml-5'>
+            <li className='text-gray-600'>
+              Withdrawals of $30 or higher are{' '}
+              <strong className='text-[#161616]'>free</strong>.
+            </li>
+            <li className='text-gray-600'>
+              For withdrawals below $30 a fee of 2% will be charged.
+            </li>
+            <li className='text-gray-600'>
+              Payment processing will happen weekly and will take 7-14 Business
+              days after the withdrawals are done.
+            </li>
+          </ul>
+
+          <Dialog open={open} onOpenChange={() => setOpen(false)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Withdrawals Confirmation</DialogTitle>
+                <DialogDescription className='py-5 text-center'>
+                  Please review the details below and confirm
+                </DialogDescription>
+                <div className='flex justify-center items-center'>
+                  <Table className='text-center'>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className='text-center'>Details</TableHead>
+                        <TableHead className='text-center'>Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className='font-medium'>Amount</TableCell>
+                        <TableCell>
+                          ${earnings?.CURRENT_BALANCE.toFixed(2).toString()}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className='font-medium'>Fee</TableCell>
+                        <TableCell>
+                          $
+                          {earnings
+                            ? earnings?.CURRENT_BALANCE < FREE_WITHDRAWAL_AMOUNT
+                              ? (
+                                  earnings?.CURRENT_BALANCE *
+                                  CHARGE_ON_LOW_WITHDRAWAL_AMOUNT
+                                ).toFixed(2)
+                              : '0.00'
+                            : '0.00'}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                    <TableFooter>
+                      <TableRow>
+                        <TableCell colSpan={1}>Net Amount</TableCell>
+                        <TableCell>
+                          $
+                          {earnings
+                            ? earnings.CURRENT_BALANCE < FREE_WITHDRAWAL_AMOUNT
+                              ? (
+                                  earnings.CURRENT_BALANCE *
+                                  (1 - CHARGE_ON_LOW_WITHDRAWAL_AMOUNT)
+                                ).toFixed(2)
+                              : earnings.CURRENT_BALANCE.toFixed(2)
+                            : '0'}
+                        </TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  </Table>
+                </div>
+                <p className='text-center py-5'>
+                  The funds will be sent to &apos;{session?.user?.email}
+                  &apos;.
+                </p>
+                <DialogClose>
+                  <Button onClick={handleWithdrawalRequest}>Confirm</Button>
+                </DialogClose>
+              </DialogHeader>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
-      <div className='bg-white border rounded-xl mt-4 px-10 py-5'>
+      <div className='bg-white border-2 border-customBorder rounded-md mt-5 p-4'>
         <div>
-          <h2 className='text-lg font-semibold'>Earnings breakup</h2>
-          <div className='w-3/5'>
-            <div className='flex justify-between items-center text-muted-foreground text-md mt-2 mb-5'>
-              <p>Category</p>
-              <p>Amount</p>
-            </div>
-            <EarningsBreakup
-              title='Transcriptions'
-              amount={earnings?.TR_LEGACY?.toFixed(2).toString() || '0'}
-              link='/transcribe/transcriber'
-              linkText='Details'
-            />
-            <EarningsBreakup
-              title='Reviews'
-              amount={earnings?.RV_LEGACY?.toFixed(2).toString() || '0'}
-              link='/transcribe/reviewer'
-              linkText='Details'
-            />
-            <EarningsBreakup
-              title='Proofreading'
-              amount={earnings?.PR_LEGACY?.toFixed(2).toString() || '0'}
-              link='/transcribe/proofreader'
-              linkText='Details'
-            />
-            <EarningsBreakup
-              title='QCs'
-              amount={earnings?.QC?.toFixed(2).toString() || '0'}
-              link='/transcribe/qc'
-              linkText='Details'
-            />
-            <EarningsBreakup
-              title='CF Reviews'
-              amount={earnings?.REVIEW?.toFixed(2).toString() || '0'}
-              link='/transcribe/legal-cf-reviewer'
-              linkText='Details'
-            />
-            <EarningsBreakup
-              title='Customer bonus'
-              amount={earnings?.CB?.toFixed(2).toString() || '0'}
-              link='#'
-              linkText='help'
-            />
-            <div className='flex justify-between items-center mt-3 text-md'>
-              <div className='flex'>
-                <p>Bonus</p>
-                <p
-                  className='text-indigo-600 ml-2 cursor-pointer'
-                  onClick={handleBonusDetails}
-                >
-                  (Details)
-                </p>
-              </div>
-
-              <p>${earnings?.DB?.toFixed(2).toString() || '0'}</p>
-            </div>
-            <div className='flex justify-between items-center mt-3 text-md'>
-              <div className='flex'>
-                <p>Misc Earnings</p>
-                <p
-                  className='text-indigo-600 ml-2 cursor-pointer'
-                  onClick={handleMiscEarningsDetails}
-                >
-                  (Details)
-                </p>
-              </div>
-
-              <p>${earnings?.ME?.toFixed(2).toString() || '0'}</p>
-            </div>
-            <hr className='my-5' />
-            <div className='flex justify-between items-center mt-3 text-lg text-black'>
-              <p>Total:</p>
-              <p>${earnings?.TOTAL?.toFixed(2).toString() || '0.00'}</p>
-            </div>
+          <h2 className='text-lg font-semibold md:text-xl mb-4'>
+            Earnings Breakup
+          </h2>
+          <div className='w-2/5'>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className='h-fit pb-2'>Category</TableHead>
+                  <TableHead className='text-left h-fit pb-2'>Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className='text-base'>
+                <TableRow>
+                  <TableCell>
+                    Transcriptions{' '}
+                    <Link
+                      className='text-primary'
+                      href='/transcribe/transcriber'
+                    >
+                      (Details)
+                    </Link>
+                  </TableCell>
+                  <TableCell className='text-left'>
+                    ${earnings?.TR_LEGACY?.toFixed(2).toString() || '0'}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>
+                    Reviews{' '}
+                    <Link className='text-primary' href='/transcribe/reviewer'>
+                      (Details)
+                    </Link>
+                  </TableCell>
+                  <TableCell className='text-left'>
+                    ${earnings?.RV_LEGACY?.toFixed(2).toString() || '0'}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>
+                    Proofreading{' '}
+                    <Link
+                      className='text-primary'
+                      href='/transcribe/proofreader'
+                    >
+                      (Details)
+                    </Link>
+                  </TableCell>
+                  <TableCell className='text-left'>
+                    ${earnings?.PR_LEGACY?.toFixed(2).toString() || '0'}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>
+                    QCs{' '}
+                    <Link className='text-primary' href='/transcribe/qc'>
+                      (Details)
+                    </Link>
+                  </TableCell>
+                  <TableCell className='text-left'>
+                    ${earnings?.QC?.toFixed(2).toString() || '0'}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>
+                    CF Reviews{' '}
+                    <Link
+                      className='text-primary'
+                      href='/transcribe/legal-cf-reviewer'
+                    >
+                      (Details)
+                    </Link>
+                  </TableCell>
+                  <TableCell className='text-left'>
+                    ${earnings?.REVIEW?.toFixed(2).toString() || '0'}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>
+                    Customer Bonus{' '}
+                    <Link className='text-primary' href='#'>
+                      (help)
+                    </Link>
+                  </TableCell>
+                  <TableCell className='text-left'>
+                    ${earnings?.CB?.toFixed(2).toString() || '0'}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>
+                    Bonus{' '}
+                    <span
+                      className='text-primary cursor-pointer'
+                      onClick={handleBonusDetails}
+                    >
+                      (Details)
+                    </span>
+                  </TableCell>
+                  <TableCell className='text-left'>
+                    ${earnings?.DB?.toFixed(2).toString() || '0'}
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>
+                    Misc Earnings{' '}
+                    <span
+                      className='text-primary cursor-pointer'
+                      onClick={handleMiscEarningsDetails}
+                    >
+                      (Details)
+                    </span>
+                  </TableCell>
+                  <TableCell className='text-left'>
+                    ${earnings?.ME?.toFixed(2).toString() || '0'}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+              <TableFooter>
+                <TableRow className='text-base'>
+                  <TableCell>Total</TableCell>
+                  <TableCell className='text-left'>
+                    ${earnings?.TOTAL?.toFixed(2).toString() || '0.00'}
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
           </div>
         </div>
-      </div>
+      </div>{' '}
       <Dialog
         open={earningsDetailsDialog}
         onOpenChange={() => setEarningsDetailsDialog(false)}

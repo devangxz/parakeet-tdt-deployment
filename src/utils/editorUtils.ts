@@ -393,6 +393,7 @@ type FetchFileDetailsParams = {
     setTranscript: React.Dispatch<React.SetStateAction<string>>
     setCtms: React.Dispatch<React.SetStateAction<CTMType[]>>
     setPlayStats: React.Dispatch<React.SetStateAction<PlayStats>>
+    setAsrTranscript: React.Dispatch<React.SetStateAction<string>>
 }
 
 const fetchFileDetails = async ({
@@ -403,6 +404,7 @@ const fetchFileDetails = async ({
     setTranscript,
     setCtms,
     setPlayStats,
+    setAsrTranscript,
 }: FetchFileDetailsParams) => {
     try {
         const orderRes = await getOrderDetailsAction(params?.fileId as string)
@@ -447,6 +449,7 @@ const fetchFileDetails = async ({
         ]
         if (transcript) {
             setTranscript(transcript)
+            setAsrTranscript(transcriptRes.data.result.asrTranscript)
         } else {
             setTranscript(transcriptRes.data.result.transcript)
         }
@@ -517,7 +520,7 @@ const handleSave = async (
         const paragraphs = transcript
             .split('\n')
             .filter((paragraph) => paragraph.trim() !== '')
-        
+
         // Helper function to detect meta-only paragraphs
         const isMetaOnlyParagraph = (text: string) => {
             const trimmed = text.trim()
@@ -528,7 +531,7 @@ const handleSave = async (
         for (const paragraph of paragraphs) {
             // Skip validation for meta-only paragraphs
             if (isMetaOnlyParagraph(paragraph)) continue;
-            
+
             if (
                 !paragraphRegex.test(paragraph) &&
                 orderDetails.orderType !== 'TRANSCRIPTION_FORMATTING'
@@ -582,27 +585,26 @@ const handleSave = async (
     }
 }
 
-const capitalizeWord = (quillRef: React.RefObject<ReactQuill> | undefined) => {
-    if (quillRef?.current) {
-        const quill = quillRef.current.getEditor();
-        const text = quill.getText();
+const autoCapitalizeSentences = (quillRef: React.RefObject<ReactQuill> | undefined) => {
+  if (quillRef?.current) {
+      const quill = quillRef.current.getEditor();
+      const text = quill.getText();
 
-        // Find all matches using regex
-        const regex = /\.\s+([a-z])/g;
-        let match;
+      // Match sentence endings followed by spaces and a lowercase letter
+      const regex = /([.!?])\s+([a-z])/g;
+      let match;
 
-        while ((match = regex.exec(text)) !== null) {
-            const index = match.index + 2; // +2 to account for the period and space
-            const length = 1; // length of the character to capitalize
+      while ((match = regex.exec(text)) !== null) {
+          // Calculate dynamic index based on full match length
+          const charIndex = match.index + match[0].length - 1;
+          const lowercaseChar = match[2];
+          const uppercaseChar = lowercaseChar.toUpperCase();
 
-            // Get the character to capitalize
-            const char = match[1].toUpperCase();
-
-            // Use Quill's deleteText and insertText methods
-            quill.deleteText(index, length, 'user');
-            quill.insertText(index, char, 'user');
-        }
-    }
+          // Replace the lowercase character
+          quill.deleteText(charIndex, 1, 'user');
+          quill.insertText(charIndex, uppercaseChar, 'user');
+      }
+  }
 }
 
 type HandleSubmitParams = {
@@ -863,7 +865,7 @@ const adjustTimestamps = (
         .join('\n\n')
 
     quill.deleteText(selection.index, selection.length, 'user')
-    quill.insertText(selection.index, adjustedText, 'user')
+    quill.insertText(selection.index, adjustedText, { bold: true }, 'user')
 
     toast.success('Timestamps adjusted successfully.')
 }
@@ -1071,7 +1073,7 @@ const replaceTextHandler = (
     }
 }
 
-const insertTimestampAndSpeakerInitialAtStartOfCurrentLine = (
+const insertTimestampAndSpeaker = (
     audioPlayer: HTMLAudioElement | null,
     quill: Quill | undefined
 ) => {
@@ -1099,7 +1101,7 @@ const insertTimestampAndSpeakerInitialAtStartOfCurrentLine = (
     }
 
     const speakerText = ' S1: ';
-    quill.insertText(paragraphStart, formattedTime + speakerText, 'user');
+    quill.insertText(paragraphStart, formattedTime + speakerText, { bold: true }, 'user');
 
     // Select just the speaker number for easy editing
     const speakerNumberStart = paragraphStart + formattedTime.length + 2; // +2 for ' S'
@@ -1125,14 +1127,14 @@ const insertTimestampBlankAtCursorPosition = (
 
     if (isStartOfParagraph) {
         // Call the other function instead
-        insertTimestampAndSpeakerInitialAtStartOfCurrentLine(audioPlayer, quill);
+        insertTimestampAndSpeaker(audioPlayer, quill);
         return;
     }
 
     const currentTime = audioPlayer.currentTime
     const formattedTime = `[${secondsToTs(currentTime, true, 1)}] ____ `
 
-    quill.insertText(cursorPosition, formattedTime, 'user');    
+    quill.insertText(cursorPosition, formattedTime, { color: '#FF0000' }, 'user');
     quill.setSelection(cursorPosition + formattedTime.length, 0)
 }
 
@@ -1143,18 +1145,18 @@ const scrollEditorToPos = (quill: Quill, pos: number) => {
     const lineOffset = line.offset();
     const bounds = quill.getBounds(lineOffset);
     if (!bounds) return;
-    
+
     const editorContainer = quill.root.closest('.ql-editor');
     if (!editorContainer) return;
-    
+
     // Get positions relative to editor container
     const rect = line.domNode.getBoundingClientRect();
     const containerRect = editorContainer.getBoundingClientRect();
-    
+
     // Check if line's bottom is beyond 80% of container height
     const lineBottomRelative = rect.bottom - containerRect.top;
     const threshold = containerRect.height * 0.8;
-    
+
     if (lineBottomRelative > threshold) {
         editorContainer.scrollTo({
             top: editorContainer.scrollTop + bounds.top - 50, // scroll to put line near top
@@ -1187,7 +1189,7 @@ export {
     searchAndSelect,
     replaceTextHandler,
     insertTimestampBlankAtCursorPosition,
-    insertTimestampAndSpeakerInitialAtStartOfCurrentLine,
-    capitalizeWord
+    insertTimestampAndSpeaker,
+    autoCapitalizeSentences
 }
 export type { CTMType }

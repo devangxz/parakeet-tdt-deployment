@@ -479,10 +479,10 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
   }
 
   return (
-    <div className='bg-white flex flex-col p-[12px] items-center justify-center rounded-[12px] border-2 border-primary shadow-sm'>
-      <div className='group relative w-full flex rounded-lg px-5 py-2.5 text-center transition min-h-[13rem]'>
-        <div className='self-center w-full flex flex-col items-center justify-center gap-4 sm:px-5'>
-          <div className='flex items-center gap-1 text-base font-medium leading-6 text-gray-800'>
+    <div className='bg-primary-foreground flex flex-col p-[12px] items-center justify-center rounded-md border-2 border-customBorder shadow-sm min-h-[245px]'>
+      <div className='group relative w-full flex rounded-md text-center transition'>
+        <div className='self-center w-full flex flex-col items-center justify-center gap-y-3'>
+          <div className='flex items-center gap-1 text-base font-medium leading-6'>
             <div className='relative w-10 h-10 flex items-center justify-center'>
               <Image
                 src='/assets/images/upload/link.svg'
@@ -495,23 +495,25 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             </div>
             <h4 className='flex items-center'>Link Importer</h4>
           </div>
-          <div className='text-xs self-stretch mt-4 leading-5 text-center text-gray-800 max-md:mr-1 max-md:max-w-full'>
-            Please enter the link to the media file in the box below, one per
-            line. Please note that the file must be publicly accessible to be
-            imported.
-          </div>
-          <form onSubmit={handleImport} className='w-full flex flex-col gap-3'>
-            <textarea
-              value={urls}
-              onChange={(e) => setUrls(e.target.value)}
-              placeholder='Enter audio/video file download links, one per line, e.g. https://scribie.com/samples/example.mp3'
-              className='w-full px-4 py-2.5 rounded-lg border border-primary/30 placeholder:text-gray-500 focus:outline-none focus:border-primary text-sm resize-none text-gray-900 overflow-hidden'
-              style={{
-                minHeight: '80px',
-                height: `${Math.max(80, urls.split('\n').length * 24)}px`,
-                overflowY: 'hidden',
-              }}
-            />
+          <form onSubmit={handleImport} className='w-full flex flex-col gap-y-3'>
+            <div className='w-full space-y-1'>
+              <p className='ml-[2px] text-xs self-stretch leading-5 text-start text-gray-700'>
+                Please enter the link to the media file in the box below, one
+                per line. Please note that the file must be publicly accessible
+                to be imported.
+              </p>
+              <textarea
+                value={urls}
+                onChange={(e) => setUrls(e.target.value)}
+                placeholder='Enter audio/video file download links, one per line, e.g. https://scribie.com/samples/example.mp3'
+                className='w-full px-4 py-2.5 rounded-md border border-customBorder placeholder:text-gray-500 focus:outline-none focus:border-primary text-sm resize-none text-gray-900 overflow-hidden'
+                style={{
+                  minHeight: '80px',
+                  height: `${Math.max(80, urls.split('\n').length * 24)}px`,
+                  overflowY: 'hidden',
+                }}
+              />
+            </div>
             <div className='flex justify-center'>
               <button
                 type='submit'

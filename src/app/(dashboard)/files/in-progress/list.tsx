@@ -367,33 +367,33 @@ export default function InprogressFilesPage({ files }: ListProps) {
 
   return (
     <>
-      <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex bg-muted/40'>
-        <div className='flex items-center justify-between space-y-2'>
+      <div className='h-full flex-1 flex-col p-4 md:flex space-y-3'>
+        <div className='flex items-start justify-between'>
           <div>
-            <h1 className='text-lg font-semibold md:text-lg'>In Progress</h1>
+            <h1 className='text-lg font-semibold md:text-xl'>In Progress</h1>
           </div>
           <div>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-                <Button
-                  variant='order'
-                  className='not-rounded text-black w-[140px] mr-3'
-                  onClick={async () => {
-                    try {
-                      if (selectedFiles.length === 0) {
-                        toast.error('Please select at least one file')
-                        return
-                      }
-                      await navigator.clipboard.writeText(selectedFiles.join(','))
-                      toast.success('File Ids copied to clipboard')
-                    } catch (error) {
-                      toast.error('Failed to copy file Ids')
+              <Button
+                variant='order'
+                className='not-rounded text-black w-[140px]'
+                onClick={async () => {
+                  try {
+                    if (selectedFiles.length === 0) {
+                      toast.error('Please select at least one file')
+                      return
                     }
-                  }}
-                >
-                  Copy file Ids
-                </Button>
-              )}
+                    await navigator.clipboard.writeText(selectedFiles.join(','))
+                    toast.success('File Ids copied to clipboard')
+                  } catch (error) {
+                    toast.error('Failed to copy file Ids')
+                  }
+                }}
+              >
+                Copy file Ids
+              </Button>
+            )}
           </div>
         </div>
         <DataTable

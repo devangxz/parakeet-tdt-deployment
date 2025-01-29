@@ -13,6 +13,7 @@ import {
   TrackPreviousIcon,
   TrackNextIcon,
   DropdownMenuIcon,
+  ArrowUpIcon,
 } from '@radix-ui/react-icons'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
@@ -84,7 +85,7 @@ import DefaultShortcuts, {
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   adjustTimestamps,
-  capitalizeWord,
+  autoCapitalizeSentences,
   downloadMP3,
   getFrequentTermsHandler,
   handleSave,
@@ -97,7 +98,8 @@ import formatDuration from '@/utils/formatDuration'
 
 const createShortcutControls = (
   audioPlayer: React.RefObject<HTMLAudioElement>,
-  quill: Quill | null
+  quill: Quill | null,
+  setVolumePercentage: React.Dispatch<React.SetStateAction<number>>
 ): ShortcutControls => ({
   togglePlay: () => {
     if (!audioPlayer.current) return
@@ -117,21 +119,17 @@ const createShortcutControls = (
   playPreviousBlank: () => { },
   playAudioAtCursorPosition: () => { },
   insertTimestampBlankAtCursorPosition: () => { },
-  insertTimestampAndSpeakerInitialAtStartOfCurrentLine: () => { },
+  insertTimestampAndSpeaker: () => { },
   googleSearchSelectedWord: () => { },
   defineSelectedWord: () => { },
   increaseFontSize: () => { },
   decreaseFontSize: () => { },
   repeatLastFind: () => { },
   increaseVolume: () => {
-    if (audioPlayer.current) {
-      audioPlayer.current.volume = Math.min(1, audioPlayer.current.volume + 0.1)
-    }
+    setVolumePercentage((prevVol: number) => prevVol + 10)
   },
   decreaseVolume: () => {
-    if (audioPlayer.current) {
-      audioPlayer.current.volume = Math.max(0, audioPlayer.current.volume - 0.1)
-    }
+    setVolumePercentage((prevVol: number) => prevVol - 10)
   },
   increasePlaybackSpeed: () => {
     if (audioPlayer.current) {
@@ -172,6 +170,16 @@ const createShortcutControls = (
     if (!quill) return
     // You'll need to pass the appropriate parameters for adjustTimestamps
     adjustTimestamps(quill, 0, quill.getSelection())
+  },
+  playAt75Speed: () => {
+    if (!audioPlayer.current) return
+    audioPlayer.current.playbackRate = 0.75
+    audioPlayer.current.play()
+  },
+  playAt100Speed: () => {
+    if (!audioPlayer.current) return
+    audioPlayer.current.playbackRate = 1.0
+    audioPlayer.current.play()
   }
 })
 
@@ -308,6 +316,11 @@ export default memo(function Header({
   const [videoUrl, setVideoUrl] = useState('')
   const [speed, setSpeed] = useState(100)
   const [isToolbarDropdownOpen, setIsToolbarDropdownOpen] = useState(false)
+  const [volumePercentage, setVolumePercentage] = useState(100)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const gainNodeRef = useRef<GainNode | null>(null)
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null)
+  const [isAudioInitialized, setIsAudioInitialized] = useState(false)
 
   // Add this function to handle dropdown toggle
   const handleToolbarDropdownToggle = () => {
@@ -406,7 +419,7 @@ export default memo(function Header({
   const decreaseFontSize = () => adjustFontSize(false)
 
   const shortcutControls = useMemo(
-    () => createShortcutControls(audioPlayer, quillRef?.current?.getEditor() || null),
+    () => createShortcutControls(audioPlayer, quillRef?.current?.getEditor() || null, setVolumePercentage),
     [audioPlayer, quillRef]
   )
 
@@ -1084,6 +1097,59 @@ export default memo(function Header({
     toast.success('Inserted swear in line text');
   }
 
+  const handleSwapSpeakers = (currentIndex: number) => {
+    if (!speakerName || currentIndex === 0) return;
+
+    const entries = Object.entries(speakerName);
+    const currentKey = entries[currentIndex][0];
+    const previousKey = entries[currentIndex - 1][0];
+
+    setSpeakerName(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        [currentKey]: prev[previousKey],
+        [previousKey]: prev[currentKey]
+      };
+    });
+  };
+  // Initialize Web Audio API
+  const initializeAudio = useCallback(() => {
+    if (!isAudioInitialized && audioPlayer.current) {
+      try {
+        audioContextRef.current = new (window.AudioContext || (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext || AudioContext)()
+        sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioPlayer.current)
+        gainNodeRef.current = audioContextRef.current.createGain()
+
+        sourceNodeRef.current.connect(gainNodeRef.current)
+        gainNodeRef.current.connect(audioContextRef.current.destination)
+
+        // Set initial gain based on audio element's volume
+        if (gainNodeRef.current && audioPlayer.current) {
+          gainNodeRef.current.gain.value = audioPlayer.current.volume
+        }
+
+        setIsAudioInitialized(true)
+      } catch (error) {
+        console.error('Failed to initialize Web Audio API:', error)
+      }
+    }
+  }, [isAudioInitialized])
+
+  // Update gain node when volume changes
+  useEffect(() => {
+    if (isAudioInitialized && gainNodeRef.current && audioPlayer.current) {
+      gainNodeRef.current.gain.value = volumePercentage / 100
+    }
+  }, [isAudioInitialized, volumePercentage])
+
+  // Cleanup Web Audio API on unmount
+  useEffect(() => () => {
+    if (audioContextRef.current) {
+      audioContextRef.current.close()
+    }
+  }, [])
+
   return (
     <div className='min-h-24 relative mx-2'>
       {!isPlayerLoaded && (
@@ -1145,6 +1211,8 @@ export default memo(function Header({
           className='hidden'
           src={audioUrl}
           preload="auto"
+          crossOrigin="anonymous"
+          onPlay={initializeAudio}
         ></audio>
 
         <div className='flex items-center h-full'>
@@ -1331,6 +1399,13 @@ export default memo(function Header({
                 <span>Speed:</span>
                 <div className="ml-2 flex items-center gap-1">
                   <span className="text-sm font-medium">{speed}</span>
+                  <span className="text-sm text-gray-500">%</span>
+                </div>
+              </div>
+              <div className='flex items-center border border-gray-200 rounded-md px-3 py-1 h-9'>
+                <span>Volume:</span>
+                <div className="ml-2 flex items-center gap-1">
+                  <span className="text-sm font-medium">{volumePercentage}</span>
                   <span className="text-sm text-gray-500">%</span>
                 </div>
               </div>
@@ -1534,7 +1609,7 @@ export default memo(function Header({
 
                 <Button
                   onClick={() => {
-                    capitalizeWord(quillRef)
+                    autoCapitalizeSentences(quillRef)
                     handleSave({
                       getEditorText,
                       orderDetails,
@@ -1615,13 +1690,25 @@ export default memo(function Header({
                   className='flex items-center justify-start space-x-2'
                 >
                   <Label htmlFor={key}>{key}:</Label>
-                  <Input
-                    disabled={!checkSpeakerOrder(speakerName)}
-                    id={key}
-                    value={value}
-                    onChange={(e) => handleSpeakerNameChange(e, key)}
-                    className='w-4/5'
-                  />
+                  <div className="relative flex items-center w-4/5">
+                    <Input
+                      disabled={!checkSpeakerOrder(speakerName)}
+                      id={key}
+                      value={value}
+                      onChange={(e) => handleSpeakerNameChange(e, key)}
+                      className='w-full'
+                    />
+                    {index > 0 && (
+                      <button
+                        onClick={() => handleSwapSpeakers(index)}
+                        title='Swap with previous speaker'
+                        className='absolute right-2 p-1 hover:bg-gray-100 rounded-full transition-colors'
+                        type="button"
+                      >
+                        <ArrowUpIcon className="h-4 w-4 text-gray-500" />
+                      </button>
+                    )}
+                  </div>
                   {index === Object.entries(speakerName).length - 1 && (
                     <button
                       onClick={addSpeakerName}

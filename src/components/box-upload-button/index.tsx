@@ -18,7 +18,7 @@ export function BoxUploadButton({ fileUrl, fileName }: BoxUploadButtonProps) {
         const toastId = toast.loading('Uploading to Box...')
 
         try {
-            const tokenResponse = await fetch('/api/box/token')
+            const tokenResponse = await fetch('/box/token')
             let token = tokenResponse.ok ? (await tokenResponse.json()).token : null
 
             if (!token) {
@@ -50,7 +50,7 @@ export function BoxUploadButton({ fileUrl, fileName }: BoxUploadButtonProps) {
                 })
 
                 // Get token after auth
-                const newTokenResponse = await fetch('/api/box/token')
+                const newTokenResponse = await fetch('/box/token')
                 token = (await newTokenResponse.json()).token
             }
 

@@ -91,7 +91,7 @@ const MoveFileModal = ({
     }
 
     return <Dialog open={isMoveFileDialogOpen} onOpenChange={setIsMoveFileDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="max-h-[80vh]">
             <DialogHeader>
                 <div className='flex items-center'>
                     <button onClick={() => setCurrentFolderId(currentFolder?.parentId || null)} className="mr-2 hover:bg-gray-200 p-1 rounded-lg">

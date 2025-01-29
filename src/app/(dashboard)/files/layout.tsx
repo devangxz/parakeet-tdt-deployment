@@ -1,4 +1,5 @@
 'use client'
+
 import {
   ListChecks,
   Clock3,
@@ -28,7 +29,7 @@ export default function FilesLayout({
     },
     {
       href: '/files/in-progress',
-      name: 'In progress',
+      name: 'In Progress',
       icon: Clock3,
       isActive: false,
     },
@@ -52,23 +53,25 @@ export default function FilesLayout({
     },
     {
       href: '/files/shared',
-      name: 'Shared with me',
+      name: 'Shared With Me',
       icon: Share2,
       isActive: false,
     },
   ]
   return (
-    <>
+    <div className='flex min-h-screen flex-col'>
       <PaymentsNavbar />
-      <div className='grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]'>
-        <div className='hidden border-r-2 border-customBorder md:block'>
-          <div className='flex h-full max-h-screen flex-col gap-2'>
+      <div className='flex flex-1'>
+        <div className='hidden border-r-2 border-customBorder md:block md:w-[220px] lg:w-[280px]'>
+          <aside className='sticky top-[69.5px]'>
             <Sidebar sidebarItems={sidebarItems} />
-          </div>
+          </aside>
         </div>
-        <div className='flex flex-col'>{children}</div>
+        <main className='flex-1'>
+          <div className='h-full bg-muted/40'>{children}</div>
+        </main>
       </div>
       <AuthenticatedFooter />
-    </>
+    </div>
   )
 }

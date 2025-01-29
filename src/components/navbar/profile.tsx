@@ -1,4 +1,5 @@
 'use client'
+
 import { ChevronDown } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
@@ -23,23 +24,26 @@ const getInitials = (name: string) => {
   } else {
     initials += nameParts[0].charAt(1)
   }
-
   return initials.toUpperCase()
 }
 
 const Profile = () => {
   const router = useRouter()
   const { data: session } = useSession()
+
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button variant='outline' className='relative h-8 w-8 rounded-full'>
-          <Avatar className='h-9 w-[3.5rem]'>
-            <AvatarFallback>
+        <Button
+          variant='outline'
+          className='relative flex items-center justify-center h-9 pl-1 pr-2 bg-primary/10 rounded-ful border border-primary'
+        >
+          <Avatar className='h-8 w-8 border-0'>
+            <AvatarFallback className='text-sm font-medium bg-transparent border-0'>
               {getInitials(session?.user?.name ?? 'NA')}
-              <ChevronDown className='ml-1 h-4 w-4' />
             </AvatarFallback>
           </Avatar>
+          <ChevronDown className='h-4 w-4 text-gray-700' />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className='w-56' align='end' forceMount>
@@ -80,7 +84,7 @@ const Profile = () => {
           Contact Support
         </DropdownMenuItem>
         <DropdownMenuItem
-          className='text-red-500'
+          className='text-red-500 hover:text-red-500'
           onClick={() =>
             signOut({ callbackUrl: process.env.NEXT_PUBLIC_SITE_URL })
           }

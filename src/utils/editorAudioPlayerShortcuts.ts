@@ -21,7 +21,7 @@ interface DefaultShortcuts {
     jumpAudioAndCursorForwardBy3Seconds: string;
     playAudioAtCursorPosition: string;
     insertTimestampBlankAtCursorPosition: string;
-    insertTimestampAndSpeakerInitialAtStartOfCurrentLine: string;
+    insertTimestampAndSpeaker: string;
     googleSearchSelectedWord: string;
     defineSelectedWord: string;
     increaseFontSize: string;
@@ -40,7 +40,8 @@ interface DefaultShortcuts {
     capitalizeFirstLetter: string;
     uppercaseWord: string;
     lowercaseWord: string;
-
+    playAt75Speed: string;
+    playAt100Speed: string;
     // playFromStartOfNextParagraph: string;
     // playFromStartOfPreviousParagraph: string;
     // moveLeftByACharacter: string;
@@ -111,7 +112,7 @@ export interface ShortcutControls {
     jumpAudioAndCursorForwardBy3Seconds: () => void;
     playAudioAtCursorPosition: () => void;
     insertTimestampBlankAtCursorPosition: () => void;
-    insertTimestampAndSpeakerInitialAtStartOfCurrentLine: () => void;
+    insertTimestampAndSpeaker: () => void;
     googleSearchSelectedWord: () => void;
     defineSelectedWord: () => void;
     increaseFontSize: () => void;
@@ -135,6 +136,8 @@ export interface ShortcutControls {
     uppercaseWord: () => void;
     lowercaseWord: () => void;
     joinWithNextParagraph: () => void;
+    playAt75Speed: () => void;
+    playAt100Speed: () => void;
     // playFromStartOfNextParagraph: () => void;
     // playFromStartOfPreviousParagraph: () => void;
     // moveLeftByACharacter: () => void;
@@ -211,7 +214,7 @@ const defaultShortcuts: DefaultShortcuts = {
     jumpAudioAndCursorForwardBy3Seconds: "Shift+F9",
     playAudioAtCursorPosition: "Shift+F10",
     insertTimestampBlankAtCursorPosition: "F12",
-    insertTimestampAndSpeakerInitialAtStartOfCurrentLine: "Shift+F12",
+    insertTimestampAndSpeaker: "Shift+F12",
     googleSearchSelectedWord: isMac ? 'Alt+ß' : 'Alt+S',
     defineSelectedWord: isMac ? 'Alt+ð' : 'Alt+D',
     increaseFontSize: 'Control+Shift+ArrowUp',
@@ -228,9 +231,10 @@ const defaultShortcuts: DefaultShortcuts = {
     // focusOnVolumeTextBox: "Control+Alt+V",
     increasePlaybackSpeed: "Control+Alt+ArrowUp",
     decreasePlaybackSpeed: "Control+Alt+ArrowDown",
-    // focusOnPlaybackSpeedTextBox: "Control+Alt+S",
     playAudioFromTheStartOfCurrentParagraph: "Control+N",
     joinWithNextParagraph: "Alt+J",
+    playAt75Speed: "Control+Q",
+    playAt100Speed: "Control+W",
     // playFromStartOfNextParagraph: "Control+Shift+N",
     // playFromStartOfPreviousParagraph: "Control+Alt+Shift+N",
     // moveLeftByACharacter: "Control+H",
@@ -280,8 +284,6 @@ const defaultShortcuts: DefaultShortcuts = {
     // increaseFontSize: "Control+Shift+ArrowUp",
     // decreaseFontSize: "Control+Shift+ArrowDown",
     // capitalizeFirstLetterOfEachWordInSelection: "Control+Alt+U",
-    // searchWordUnderCursor: "Alt+S",
-    // defineWordUnderCursor: "Alt+D",
     // whitelistPhraseContainingSelectedWord: "Alt+W",
     // blacklistPhraseContainingSelectedWord: "Alt+B",
     // jumpAudioAndCursorToARandomParagraphInCurrentPart: "Alt+R",
