@@ -563,7 +563,10 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   Share Files
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => setIsDownloadDialogOpen(true)}
+                  onClick={() => {
+                    if (!selectedFiles.length) return toast.error('Please select at least one file')
+                    setIsDownloadDialogOpen(true)
+                  }}
                 >
                   Download
                 </DropdownMenuItem>
