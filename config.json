@@ -89,9 +89,9 @@
   },
   "transcriber_rates": {
     "general_qc": {
-      "high": 8,
-      "medium": 7,
-      "low": 4
+      "high": 10,
+      "medium": 8,
+      "low": 6
     },
     "legal_qc": {
       "high": 8,
