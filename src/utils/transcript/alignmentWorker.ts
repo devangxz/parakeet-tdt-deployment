@@ -124,15 +124,16 @@ function markExactMatches(alignments: AlignmentType[], ctms: CTMType[]) {
 
         // Exact matching by start/end
         if (ctm.start === alignment.start && ctm.end === alignment.end) {
+            const isWordMatch = ctm.word.toLowerCase() === alignment.word.toLowerCase();
+
             alignments[alignIndex] = {
                 ...alignment,
                 ctmIndex,
-                case: ctm.word.toLowerCase() === alignment.word.toLowerCase() ? 'success' : 'mismatch'
+                case: isWordMatch ? 'success' : 'mismatch'
             };
             ctmIndex++;
             alignIndex++;
         } else if (alignment.start < ctm.start) {
-            // No match found for this alignment
             alignments[alignIndex] = {
                 ...alignment,
                 ctmIndex: -1,
@@ -144,7 +145,6 @@ function markExactMatches(alignments: AlignmentType[], ctms: CTMType[]) {
         }
     }
 
-    // Mark remaining alignments as mismatches
     while (alignIndex < alignments.length) {
         const alignment = alignments[alignIndex];
         if (alignment.type === 'ctm') {
@@ -242,12 +242,14 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[], c
                 // Replacement: keep the old alignment's timing but new text
                 // Also update its new char offsets
                 const { startPos, endPos } = newTokens[newTokenIndex];
+                const isMetaOrPunct = isMetaContent(segmentWords[0]) || isPunctuation(segmentWords[0]);
+
                 const replaced: AlignmentType = {
                     ...lastRemovedAlignment!,
                     word: segmentWords[0],
                     punct: segmentWords[0],
-                    source: 'user',
-                    type: 'ctm',
+                    source: isMetaOrPunct ? 'meta' : 'user',
+                    type: isMetaOrPunct ? 'meta' : 'ctm',
                     start: lastRemovedAlignment!.start,
                     end: lastRemovedAlignment!.end,
                     conf: lastRemovedAlignment!.conf,
@@ -278,7 +280,7 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[], c
                             }
                         }
 
-                        const { startPos, endPos } = newTokens[newTokenIndex];
+                        const { startPos, endPos } = newTokens[newTokenIndex];                        
                         newAlignments.push({
                             word,
                             type: 'meta', 
