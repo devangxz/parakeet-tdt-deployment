@@ -905,7 +905,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
         </div>
         <Separator />
       </div>
-      <div className='flex items-center justify-end gap-5 py-3 px-10 sticky bottom-0 right-0 w-full bg-white border-t-2 border-customBorder'>
+      <div className='flex items-center justify-end gap-5 p-4 sticky bottom-0 right-0 w-full bg-white border-t-2 border-customBorder'>
         {paymentSuccess ? (
           <Button
             className='w-[170px]'
@@ -915,19 +915,15 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
           </Button>
         ) : (
           <>
-            {activeStep !== 1 && (
-              <Button
-                className='w-[170px] border-primary border-2 text-primary rounded-[32px] transition-all duration-200 hover:opacity-90'
-                variant='outline'
-                onClick={
-                  activeStep === 1
-                    ? () => router.push('/files/upload')
-                    : prevStep
-                }
-              >
-                {activeStep === 1 ? 'Back to Dashboard' : 'Back'}
-              </Button>
-            )}
+            <Button
+              className='w-[170px] border-primary border-2 text-primary rounded-[32px] transition-all duration-200 hover:opacity-90'
+              variant='outline'
+              onClick={
+                activeStep === 1 ? () => router.push('/files/upload') : prevStep
+              }
+            >
+              {activeStep === 1 ? 'Back to Dashboard' : 'Back'}
+            </Button>
             {loadingPay ? (
               <Button disabled className='w-[170px]'>
                 Please wait

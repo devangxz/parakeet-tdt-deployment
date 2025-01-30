@@ -72,7 +72,7 @@ const createShortcutControls = (
     setVolumePercentage((prevVol: number) => prevVol + 10)
   },
   decreaseVolume: () => {
-    setVolumePercentage((prevVol: number) => prevVol - 10)
+    setVolumePercentage((prevVol: number) => Math.max(0, prevVol - 10))
   },
   increasePlaybackSpeed: () => {
     if (audioPlayer.current) {
