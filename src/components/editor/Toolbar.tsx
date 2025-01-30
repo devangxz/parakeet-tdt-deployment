@@ -223,12 +223,12 @@ export default function Toolbar({
                     <TooltipTrigger>
                         <PlayerButton
                             icon={<Pencil2Icon className='w-4 h-4' />}
-                            tooltip='Insert swear in line'
+                            tooltip='Insert witness swear in line'
                             onClick={insertSwearInLine}
                         />
                     </TooltipTrigger>
                     <TooltipContent>
-                        <p>Insert swear in line</p>
+                        <p>Insert witness swear in line</p>
                     </TooltipContent>
                 </Tooltip>
 
@@ -241,7 +241,7 @@ export default function Toolbar({
                         />
                     </TooltipTrigger>
                     <TooltipContent>
-                        <p>Insert swear in line</p>
+                        <p>Insert interpreter swear in line</p>
                     </TooltipContent>
                 </Tooltip>
             </>
