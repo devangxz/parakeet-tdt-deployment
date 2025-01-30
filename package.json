@@ -25,7 +25,11 @@
     "dev-conversion-worker": "ts-node -P tsconfig.conversionWorker.json src/workers/conversionWorker.ts",
     "dev-asr-worker": "ts-node -P tsconfig.asrWorker.json src/workers/asrWorker.ts",
     "dev-llm-worker": "ts-node -P tsconfig.llmWorker.json src/workers/llmWorker.ts",
-    "dev-manage-workers": "ts-node -P tsconfig.worker.json src/scripts/manageWorkers.ts"
+    "dev-manage-workers": "ts-node -P tsconfig.worker.json src/scripts/manageWorkers.ts",
+    "dev-seed": "npx prisma db seed"
+  },
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.663.0",

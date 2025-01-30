@@ -18,6 +18,7 @@ const config = {
         DAYA: process.env.DAYA_WEBHOOK_URL,
         TARUN: process.env.TARUN_WEBHOOK_URL,
         PRASAD: process.env.PRASAD_WEBHOOK_URL,
+        KAUTILYA: process.env.KAUTILYA_WEBHOOK_URL,
     },
     allowedFileTypes: [
         ".mp3", ".wav", ".wma", ".aac", ".flac", ".ogg", ".aif", ".aiff", ".amr", ".opus", ".m4a",
