@@ -38,7 +38,7 @@ const services = [
     ],
     testimonial: {
       text: 'I am a court reporter and use Scribie for deposition transcripts. The accuracy and quick turnaround save me so much time. I will be a lifetime customer! 😊',
-      author: 'Ginger Driden',
+      author: 'Ginger',
       role: 'Court Reporter',
     },
   },
@@ -60,7 +60,7 @@ const services = [
     ],
     testimonial: {
       text: "Very impressed that you got all the scholars' names mentioned in the interview spelled correctly! Thank you for the great work!",
-      author: 'Gwendolynne Reid',
+      author: 'Gwendolynne',
       role: 'Academic Researcher',
     },
   },
@@ -82,7 +82,7 @@ const services = [
     ],
     testimonial: {
       text: 'Wonderful work and attention to detail, and quick turnaround. The transcriber found the correct spelling of a cree phrase, got names and caught small elements.',
-      author: 'John Hampton',
+      author: 'John',
       role: 'Video Producer',
     },
   },
@@ -104,7 +104,7 @@ const services = [
     ],
     testimonial: {
       text: 'Thanks for reaching out. Thanks for being a trusted business partner for so many wonderful years.',
-      author: 'Katherine Volk',
+      author: 'Katherine',
       role: 'Ministry Coordinator',
     },
   },
@@ -126,7 +126,7 @@ const services = [
     ],
     testimonial: {
       text: 'Thank you for the excellent work! While scanning through it, I noticed I had missed a few names, so I really appreciate you ensuring accurate spelling throughout!',
-      author: 'David Margittai',
+      author: 'David',
       role: 'Podcast Host',
     },
   },
@@ -148,7 +148,7 @@ const services = [
     ],
     testimonial: {
       text: 'Thank you – this is completely amazing! Thank you for the accuracy,fast turnaround, and taking the time to get the places right too. Really grateful.',
-      author: 'Olivia Lane-Nott',
+      author: 'Olivia',
       role: 'Marketing Director',
     },
   },
@@ -170,7 +170,7 @@ const services = [
     ],
     testimonial: {
       text: 'Wonderful transcription. Scribie followed my instructions perfectly and had amazing accuracy for my poor audio quality.',
-      author: 'Elli Wynter',
+      author: 'Elli',
       role: 'Content Creator',
     },
   },

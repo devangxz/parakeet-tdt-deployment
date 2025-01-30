@@ -33,6 +33,7 @@ interface EditorProps {
     selection: CustomerQuillSelection | null
     searchHighlight: CustomerQuillSelection | null
     highlightWordsEnabled: boolean;
+    setEditedSegments: (segments: Set<number>) => void;
 }
 
 interface UndoRedoItem {
@@ -49,7 +50,7 @@ interface Range {
 
 type Sources = 'user' | 'api' | 'silent';
 
-export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, selection, searchHighlight, highlightWordsEnabled }: EditorProps) {
+export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, setEditedSegments }: EditorProps) {
     const ctms = initialCtms; // Make CTMs constant
     const quillRef = useRef<ReactQuill>(null)
     const [alignments, setAlignments] = useState<AlignmentType[]>([])
@@ -74,6 +75,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         if (source === 'user') {
             beforeSelectionRef.current = currentSelection;
             setCurrentSelection(selection);
+            setSelectionHandler();
         }
     };
 
@@ -361,9 +363,10 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             );
       
             alignmentWorker.current.onmessage = (e) => {
-                const newAlignments = e.data.alignments;
+                const { alignments: newAlignments, wer, editedSegments } = e.data;
                 setAlignments(newAlignments);
-                console.log('Updated alignments:', newAlignments, 'WER:', e.data.wer);
+                setEditedSegments(new Set(editedSegments));
+                console.log('Updated alignments:', newAlignments, 'WER:', wer);
             };
       
             console.log('Web Worker initialized successfully.');

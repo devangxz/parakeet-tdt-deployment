@@ -9,6 +9,7 @@ import axiosInstance from './axios'
 import { CTMType } from './getFormattedTranscript'
 import { secondsToTs } from './secondsToTs'
 import { getFrequentTermsAction } from '@/app/actions/editor/frequent-terms'
+import { getPlayStatsAction } from '@/app/actions/editor/get-play-stats'
 import { getOrderDetailsAction } from '@/app/actions/editor/order-details'
 import { reportFileAction } from '@/app/actions/editor/report-file'
 import { submitQCAction } from '@/app/actions/editor/submit-qc'
@@ -32,6 +33,10 @@ export type ButtonLoading = {
     mp3: boolean
     download: boolean
     frequentTerms: boolean
+}
+
+export interface PlayStats {
+  listenCount: number[];
 }
 
 const usableColors = [
@@ -387,7 +392,7 @@ type FetchFileDetailsParams = {
     setStep: React.Dispatch<React.SetStateAction<string>>
     setTranscript: React.Dispatch<React.SetStateAction<string>>
     setCtms: React.Dispatch<React.SetStateAction<CTMType[]>>
-    setPlayerEvents: React.Dispatch<React.SetStateAction<PlayerEvent[]>>
+    setPlayStats: React.Dispatch<React.SetStateAction<PlayStats>>
     setAsrTranscript: React.Dispatch<React.SetStateAction<string>>
 }
 
@@ -398,7 +403,7 @@ const fetchFileDetails = async ({
     setStep,
     setTranscript,
     setCtms,
-    setPlayerEvents,
+    setPlayStats,
     setAsrTranscript,
 }: FetchFileDetailsParams) => {
     try {
@@ -450,9 +455,14 @@ const fetchFileDetails = async ({
         }
         setCtms(transcriptRes.data.result.ctms)
 
-        // const playerEventRes = await axios.get(`/api/editor/player-events?orderId=${orderRes.data.orderId}`);
-
-        setPlayerEvents([]) // TODO: Implement player events
+        const playStats = await getPlayStatsAction(params?.fileId as string)
+      
+        if (playStats.success && playStats.data) {
+          setPlayStats({
+            listenCount: playStats.data.listenCount as number[]
+          })
+        }
+        
         return orderRes.orderDetails
     } catch (error) {
         console.log(error)
@@ -472,18 +482,12 @@ const fetchFileDetails = async ({
     }
 }
 
-interface PlayerEvent {
-    t: number
-    s: number
-}
-
 type HandleSaveParams = {
     getEditorText: () => string
     orderDetails: OrderDetails
     notes: string
     cfd: string
     setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
-    playerEvents: PlayerEvent[]
 }
 
 const handleSave = async (
@@ -493,7 +497,6 @@ const handleSave = async (
         notes,
         cfd,
         setButtonLoading,
-        playerEvents,
     }: HandleSaveParams,
     showToast = true
 ) => {
@@ -536,24 +539,12 @@ const handleSave = async (
             }
         }
 
-        //TODO: Implement this
-        // Get last saved index from localStorage
-        // const lastSavedIndex = parseInt(localStorage.getItem(`${orderDetails.fileId}_lastEventIndex`) || '-1');
-
-        // Get only new events since last save
-        // const newEvents = playerEvents.slice(lastSavedIndex + 1);
-
-        // Save current last index
-        // localStorage.setItem(`${orderDetails.fileId}_lastEventIndex`, (playerEvents.length - 1).toString());
-
         // Save notes and other data
-
         await axiosInstance.post(`${FILE_CACHE_URL}/save-transcript`, {
             fileId: orderDetails.fileId,
             transcript,
             cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
             orderId: orderDetails.orderId,
-            // playerEvents: newEvents // Send only new events
         })
 
         if (showToast) {

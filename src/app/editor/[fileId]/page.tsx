@@ -9,9 +9,12 @@ import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
+import { setPlayStatsAction } from '@/app/actions/editor/set-play-stats'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
 import Header from '@/components/editor/Header'
+import PlayStatsVisualization from '@/components/editor/PlayStatsVisualization'
 import SectionSelector from '@/components/editor/SectionSelector'
 import {
   DiffTabComponent,
@@ -20,6 +23,7 @@ import {
 } from '@/components/editor/TabComponents'
 import { Tabs, TabsList, TabsTrigger } from '@/components/editor/Tabs'
 import renderTitleInputs from '@/components/editor/TitleInputs'
+import Topbar from '@/components/editor/Topbar'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -41,7 +45,6 @@ import {
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   CTMType,
-  updatePlayedPercentage,
   regenDocx,
   fetchFileDetails,
   handleSave,
@@ -112,7 +115,6 @@ function EditorPage() {
   const [step, setStep] = useState<string>('')
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [timeoutCount, setTimeoutCount] = useState('')
   const [buttonLoading, setButtonLoading] = useState({
     download: false,
     upload: false,
@@ -139,10 +141,13 @@ function EditorPage() {
   const [selection, setSelection] = useState<CustomerQuillSelection | null>(null)
   const [searchHighlight, setSearchHighlight] = useState<{ index: number; length: number } | null>(null);
   const [highlightWordsEnabled, setHighlightWordsEnabled] = useState(true);
+  const lastTrackedSecondRef = useRef(-1)
+  const [playStats, setPlayStats] = useState<PlayStats>({ listenCount: [] })
+  const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set());
+  const [waveformUrl, setWaveformUrl] = useState('')
 
-  interface PlayerEvent {
-    t: number
-    s: number
+  interface PlayStats {
+    listenCount: number[];
   }
 
   const setSelectionHandler = () => {
@@ -153,8 +158,6 @@ function EditorPage() {
       setSelection({ index: range.index, length: range.length })
     }
   }
-
-  const [playerEvents, setPlayerEvents] = useState<PlayerEvent[]>([])
 
   const isActive = usePreventMultipleTabs((params?.fileId as string) || '')
 
@@ -205,10 +208,13 @@ function EditorPage() {
     )
   }
 
-  const searchAndSelectInstance = (searchText: string, selection: {
-    index: number
-    length: number
-  } | null) => {
+  const searchAndSelectInstance = (
+    searchText: string,
+    selection: {
+      index: number
+      length: number
+    } | null
+  ) => {
     if (!quillRef?.current) return
     const quill = quillRef.current.getEditor()
     searchAndSelect(
@@ -226,10 +232,13 @@ function EditorPage() {
     )
   }
 
-  const searchAndSelectReverseInstance = (searchText: string, selection: {
-    index: number
-    length: number
-  } | null) => {
+  const searchAndSelectReverseInstance = (
+    searchText: string,
+    selection: {
+      index: number
+      length: number
+    } | null
+  ) => {
     if (!quillRef?.current) return
     const quill = quillRef.current.getEditor()
     searchAndSelect(
@@ -248,7 +257,7 @@ function EditorPage() {
   }
 
   const toggleFindAndReplace = useCallback(() => {
-    setFindAndReplaceOpen(prev => !prev)
+    setFindAndReplaceOpen((prev) => !prev)
     setSelectionHandler()
     setTimeout(() => {
       if (findInputRef.current) {
@@ -265,7 +274,10 @@ function EditorPage() {
             const quill = quillRef.current.getEditor()
             const selection = quill.getSelection()
             if (selection) {
-              const selectedText = quill.getText(selection.index, selection.length)
+              const selectedText = quill.getText(
+                selection.index,
+                selection.length
+              )
               if (selectedText) {
                 setFindText(selectedText)
                 setSelection(null)
@@ -307,19 +319,18 @@ function EditorPage() {
 
       saveChanges: () => {
         autoCapitalizeSentences(quillRef)
+        savePlayStats()
         handleSave({
           getEditorText,
           orderDetails,
           notes,
           cfd,
           setButtonLoading,
-          playerEvents,
         })
-      }
-
+      },
     }
     return controls as ShortcutControls
-  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, findText, replaceText, matchCase, lastSearchIndex])
+  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, findText, replaceText, matchCase, lastSearchIndex, playStats, editedSegments])
 
   useShortcuts(shortcutControls)
 
@@ -366,15 +377,15 @@ function EditorPage() {
       setStep,
       setTranscript,
       setCtms,
-      setPlayerEvents,
+      setPlayStats,
       setAsrTranscript,
     })
   }, [])
 
   const handleTabChange = () => {
-    const contentText = content.map(op =>
-      typeof op.insert === 'string' ? op.insert : ''
-    ).join('')
+    const contentText = content
+      .map((op) => (typeof op.insert === 'string' ? op.insert : ''))
+      .join('')
     const diff = diffWords(asrTranscript || transcript, contentText)
     setDiff(diff)
   }
@@ -383,8 +394,32 @@ function EditorPage() {
     setAudioPlayer(audioPlayer)
   }, [])
 
-  const [audioPlayed, setAudioPlayed] = useState(new Set<number>())
-  const [playedPercentage, setPlayedPercentage] = useState(0)
+  useEffect(() => {
+    const fetchWaveform = async () => {
+      try {
+        const res = await getSignedUrlAction(`${orderDetails.fileId}_wf.png`, 300)
+        if (res.success && res.signedUrl) {
+          setWaveformUrl(res.signedUrl)
+        }
+      } catch (error) {
+        console.error('Failed to load waveform:', error)
+      }
+    }
+    
+    if (orderDetails.fileId) {
+      fetchWaveform()
+    }
+  }, [orderDetails.fileId])  
+
+  const savePlayStats = async () => {
+    if (orderDetails.userId && orderDetails.fileId) {
+      await setPlayStatsAction({
+        fileId: orderDetails.fileId,
+        listenCount: playStats.listenCount,
+        editedSegments: Array.from(editedSegments)
+      })
+    }
+  }  
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -395,40 +430,49 @@ function EditorPage() {
           notes,
           cfd,
           setButtonLoading,
-          playerEvents,
         },
         false
       )
+      savePlayStats()
     }, 1000 * 60 * AUTOSAVE_INTERVAL)
 
     return () => clearInterval(interval)
-  }, [getEditorText, orderDetails, notes, step, cfd])
+  }, [getEditorText, orderDetails, notes, step, cfd, playStats, editedSegments])
+
+  useEffect(() => {
+    setPlayStats(() => ({
+      listenCount: new Array(Math.ceil(audioDuration)).fill(0)
+    }))
+  }, [audioDuration])
 
   useEffect(() => {
     const handleTimeUpdate = () => {
       if (!audioPlayer) return
-      const currentTime = Math.floor(audioPlayer.currentTime)
-      setAudioPlayed((prev) => new Set(prev.add(currentTime)))
-      updatePlayedPercentage(audioPlayer, audioPlayed, setPlayedPercentage)
-      // Cast target to HTMLAudioElement to access currentTime
-      // const target = e.target as HTMLAudioElement //TODO: Implement this
-      // setPlayerEvents(prev => [...prev, { t: (new Date()).getTime(), s: target.currentTime }])
-    }
-
-    const handlePlayEnd = () => {
-      updatePlayedPercentage(audioPlayer, audioPlayed, setPlayedPercentage)
+      const currentSecond = Math.floor(audioPlayer.currentTime)
+      
+      // Only update stats if we've moved to a new second
+      if (currentSecond !== lastTrackedSecondRef.current) {
+        lastTrackedSecondRef.current = currentSecond
+        
+        setPlayStats(prev => {
+          const newListenCount = [...prev.listenCount]
+          newListenCount[currentSecond] = (newListenCount[currentSecond] || 0) + 1
+          return { listenCount: newListenCount }
+        })
+      }  
     }
 
     audioPlayer?.addEventListener('timeupdate', handleTimeUpdate)
-    audioPlayer?.addEventListener('ended', handlePlayEnd)
 
     return () => {
       audioPlayer?.removeEventListener('timeupdate', handleTimeUpdate)
-      audioPlayer?.removeEventListener('ended', handlePlayEnd)
     }
-  }, [audioPlayer, audioPlayed])
+  }, [audioPlayer])
 
-  const getPlayedPercentage = () => playedPercentage
+  const getPlayedPercentage = () => {
+    const playedSections = playStats.listenCount.filter(count => count > 0).length
+    return Math.round((playedSections / playStats.listenCount.length) * 100)
+  }
 
   const getEditorMode = useCallback((editorMode: string) => {
     setEditorMode(editorMode)
@@ -436,9 +480,7 @@ function EditorPage() {
 
   const getEditorModeOptions = async () => {
     try {
-      // const response = await axiosInstance.get(`${BACKEND_URL}/get-options/${orderDetails.orderId}`);
       setEditorMode('Manual')
-      // setEditorModeOptions(response.data.options);
     } catch (error) {
       toast.error('Error fetching editor mode options')
     }
@@ -472,42 +514,6 @@ function EditorPage() {
   const getQuillRef = (quillRef: React.RefObject<ReactQuill>) => {
     setQuillRef(quillRef)
   }
-
-  useEffect(() => {
-    let timer: NodeJS.Timeout
-
-    const updateRemainingTime = () => {
-      const remainingSeconds = parseInt(orderDetails.remainingTime)
-      if (remainingSeconds > 0) {
-        const hours = Math.floor(remainingSeconds / 3600)
-        const minutes = Math.floor((remainingSeconds % 3600) / 60)
-        const seconds = remainingSeconds % 60
-
-        const formattedTime = [
-          hours.toString().padStart(2, '0'),
-          minutes.toString().padStart(2, '0'),
-          seconds.toString().padStart(2, '0'),
-        ].join(':')
-
-        setTimeoutCount(formattedTime)
-        orderDetails.remainingTime = (remainingSeconds - 1).toString()
-
-        timer = setTimeout(updateRemainingTime, 1000)
-      } else {
-        setTimeoutCount('00:00:00')
-      }
-    }
-
-    if (orderDetails.status === 'QC_ASSIGNED') {
-      updateRemainingTime()
-    }
-
-    return () => {
-      if (timer) {
-        clearTimeout(timer)
-      }
-    }
-  }, [orderDetails])
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value
@@ -550,48 +556,41 @@ function EditorPage() {
   }, [matchSelection, matchCase])
 
   return (
-    <div className='bg-[#F7F5FF] h-screen flex flex-col overflow-hidden'>
-      <div className="mx-2 mt-2">
-        <div className='flex justify-between bg-white rounded-t-lg'>
-          <p className='font-semibold px-2'>{orderDetails.filename}</p>
-          {orderDetails.status === 'QC_ASSIGNED' && (
-            <span
-              className={`text-red-600 ${orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
-                } mr-2`}
-            >
-              {timeoutCount}
-            </span>
-          )}
-        </div>
-      </div>
-      <Header
-        getAudioPlayer={getAudioPlayer}
+    <div className='bg-secondary h-screen flex flex-col p-1 gap-y-1'>
+      <Topbar
         quillRef={quillRef}
-        editorMode={editorMode}
         editorModeOptions={editorModeOptions}
         getEditorMode={getEditorMode}
+        editorMode={editorMode}
         notes={notes}
         orderDetails={orderDetails}
         submitting={submitting}
         setIsSubmitModalOpen={setIsSubmitModalOpen}
         setSubmitting={setSubmitting}
-        playerEvents={playerEvents}
         setPdfUrl={setPdfUrl}
         setRegenCount={setRegenCount}
         setFileToUpload={setFileToUpload}
         fileToUpload={fileToUpload}
+      />
+
+      <Header
+        getAudioPlayer={getAudioPlayer}
+        quillRef={quillRef}
+        orderDetails={orderDetails}
         toggleFindAndReplace={toggleFindAndReplace}
         highlightWordsEnabled={highlightWordsEnabled}
         setHighlightWordsEnabled={setHighlightWordsEnabled}
+        waveformUrl={waveformUrl}
       />
-      <div className='flex flex-col flex-1 overflow-hidden'>
-        <div className='flex justify-between px-16 mt-2 flex-shrink-0'></div>
-        <div className='flex flex-col items-center flex-1 overflow-hidden'>
+
+      <div className='flex h-full overflow-hidden'>
+        <div className='flex h-full flex-col items-center flex-1 overflow-hidden'>
           <div
-            className={`flex ${step !== 'QC' && editorMode === 'Editor'
-              ? 'justify-between'
-              : 'justify-center'
-              } px-3 h-full`}
+            className={`flex ${
+              step !== 'QC' && editorMode === 'Editor'
+                ? 'justify-between'
+                : 'justify-center'
+            } w-full h-full`}
           >
             {step !== 'QC' && editorMode === 'Editor' && (
               <SectionSelector
@@ -599,83 +598,99 @@ function EditorPage() {
                 sectionChangeHandler={sectionChangeHandler}
               />
             )}
-            <div className='flex flex-col justify-between h-full'>
-              <div className='flex w-[100vw] px-2 h-full'>
-                <div className='w-4/5 h-full pb-12'>
-                  {selectedSection === 'proceedings' && (
-                    <Tabs
-                      onValueChange={handleTabChange}
-                      defaultValue='transcribe'
-                      className='h-full'
-                    >
-                      <div className='flex bg-white border border-gray-200 rounded-t-lg text-md font-medium h-12'>
-                        <TabsList>
-                          <TabsTrigger className='text-base' value='transcribe'>
-                            Transcribe
-                          </TabsTrigger>
-                          <TabsTrigger className='text-base' value='diff'>
-                            Diff
-                          </TabsTrigger>
-                          <TabsTrigger className='text-base' value='info'>
-                            Info
-                          </TabsTrigger>
-                        </TabsList>
-                      </div>
-
-                      <EditorTabComponent
-                        content={content}
-                        setContent={setContent}
-                        orderDetails={orderDetails}
-                        transcript={transcript}
-                        ctms={ctms}
-                        audioPlayer={audioPlayer}
-                        audioDuration={audioDuration}
-                        getQuillRef={getQuillRef}
-                        setSelectionHandler={setSelectionHandler}
-                        selection={selection}
-                        searchHighlight={searchHighlight}
-                        highlightWordsEnabled={highlightWordsEnabled}
-                      />
-
-                      <DiffTabComponent diff={diff} />
-
-                      <InfoTabComponent orderDetails={orderDetails} />
-                    </Tabs>
-                  )}
-
-                  {selectedSection === 'title' && (
-                    <div className='bg-white border border-gray-200 rounded-2xl min-h-96 px-5 py-5 overflow-y-scroll h-[99%] no-scrollbar'>
-                      <div>{renderTitleInputs(cfd, setCfd)}</div>
+            <div className='flex w-full gap-x-1'>
+              <div
+                className={`bg-white border border-customBorder ${
+                  step !== 'QC' && editorMode === 'Editor'
+                    ? 'rounded-r-md'
+                    : 'rounded-md'
+                } w-[80%]`}
+              >
+                {selectedSection === 'proceedings' && (
+                  <Tabs
+                    onValueChange={handleTabChange}
+                    defaultValue='transcribe'
+                    className='h-full'
+                  >
+                    <div className='flex border-b border-customBorder text-md font-medium'>
+                      <TabsList className='px-2 gap-x-7'>
+                        <TabsTrigger
+                          className='text-base px-0 pt-2 pb-[6.5px]'
+                          value='transcribe'
+                        >
+                          Transcribe
+                        </TabsTrigger>
+                        <TabsTrigger
+                          className='text-base px-0 pt-2 pb-[6.5px]'
+                          value='diff'
+                        >
+                          Diff
+                        </TabsTrigger>
+                        <TabsTrigger
+                          className='text-base px-0 pt-2 pb-[6.5px]'
+                          value='info'
+                        >
+                          Info
+                        </TabsTrigger>
+                      </TabsList>
                     </div>
-                  )}
 
-                  {selectedSection === 'case-details' && (
-                    <div className='bg-white border border-gray-200 rounded-2xl min-h-96 px-5 py-5 overflow-y-scroll h-[99%] no-scrollbar'>
-                      {renderCaseDetailsInputs(cfd, setCfd)}
-                    </div>
-                  )}
+                    <EditorTabComponent
+                      content={content}
+                      setContent={setContent}
+                      orderDetails={orderDetails}
+                      transcript={transcript}
+                      ctms={ctms}
+                      audioPlayer={audioPlayer}
+                      audioDuration={audioDuration}
+                      getQuillRef={getQuillRef}
+                      setSelectionHandler={setSelectionHandler}
+                      selection={selection}
+                      searchHighlight={searchHighlight}
+                      highlightWordsEnabled={highlightWordsEnabled}
+                      setEditedSegments={setEditedSegments}
+                    />
 
-                  {selectedSection === 'certificates' && (
-                    <div className='bg-white border border-gray-200 rounded-2xl min-h-96 px-5 py-5 overflow-y-scroll h-[99%] no-scrollbar'>
-                      {renderCertificationInputs(cfd, setCfd)}
-                    </div>
-                  )}
-                </div>
-                <div className='w-1/5'>
-                  <div className={`fixed w-[19%] ${findAndReplaceOpen ? 'h-[83%]' : 'h-[84%]'} flex flex-col ${findAndReplaceOpen ? 'gap-2' : ''} ml-2`}>
-                    <div
-                      className={`bg-white rounded-lg border overflow-hidden transition-all duration-200 ease-in-out ${findAndReplaceOpen ? 'opacity-100 translate-y-0 h-[49%]' : 'opacity-0 -translate-y-4 pointer-events-none h-0 m-0'}`}>
-                      <div className='px-4 py-3 font-medium text-base border-b flex justify-between items-center'>
+                    <DiffTabComponent diff={diff} />
+
+                    <InfoTabComponent orderDetails={orderDetails} />
+                  </Tabs>
+                )}
+                {selectedSection === 'title' && (
+                  <div className='p-2 overflow-y-scroll h-full'>
+                    <div>{renderTitleInputs(cfd, setCfd)}</div>
+                  </div>
+                )}
+                {selectedSection === 'case-details' && (
+                  <div className='p-2 overflow-y-scroll h-full'>
+                    {renderCaseDetailsInputs(cfd, setCfd)}
+                  </div>
+                )}
+                {selectedSection === 'certificates' && (
+                  <div className='p-2 overflow-y-scroll h-full'>
+                    {renderCertificationInputs(cfd, setCfd)}
+                  </div>
+                )}
+              </div>
+              <div className='w-[20%]'>
+                <div
+                  className={`flex flex-col h-full ${
+                    findAndReplaceOpen ? 'gap-y-1' : ''
+                  }`}
+                >
+                  {findAndReplaceOpen && (
+                    <div className='bg-white border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out h-[50%]'>
+                      <div className='font-medium text-md border-b border-customBorder flex justify-between items-center p-2'>
                         <span>Find & Replace</span>
                         <button
                           onClick={() => setFindAndReplaceOpen(false)}
-                          className="p-1 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                          className='p-1 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors'
                         >
-                          <Cross1Icon className="h-4 w-4" />
+                          <Cross1Icon className='h-4 w-4' />
                         </button>
                       </div>
-                      <div className='px-4 py-8 space-y-4'>
-                        <div className="relative">
+                      <div className='space-y-3 px-2 py-[10px]'>
+                        <div className='relative'>
                           <Input
                             placeholder='Find...'
                             value={findText}
@@ -683,7 +698,7 @@ function EditorPage() {
                             ref={findInputRef}
                           />
                           {findText && (
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                            <span className='absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500'>
                               {matchCount} matches
                             </span>
                           )}
@@ -697,45 +712,55 @@ function EditorPage() {
                           <Label className='flex items-center space-x-2'>
                             <Checkbox
                               checked={matchCase}
-                              onCheckedChange={(checked) => setMatchCase(checked === true)}
+                              onCheckedChange={(checked) =>
+                                setMatchCase(checked === true)
+                              }
                             />
                             <span>Match case</span>
                           </Label>
                           <Label className='flex items-center space-x-2'>
                             <Checkbox
                               checked={matchSelection}
-                              onCheckedChange={(checked) => setMatchSelection(checked === true)}
+                              onCheckedChange={(checked) =>
+                                setMatchSelection(checked === true)
+                              }
                             />
                             <span>Selection</span>
                           </Label>
                         </div>
-                        <div className="flex flex-col w-full gap-2">
-                          <div className='inline-flex w-full rounded-md' role="group">
+                        <div className='flex flex-col w-full gap-2'>
+                          <div
+                            className='inline-flex w-full rounded-md'
+                            role='group'
+                          >
                             <button
                               onClick={findPreviousHandler}
-                              className="flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-l-3xl rounded-r-none border-r-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                              className='flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-l-3xl rounded-r-none border-r-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50'
                             >
                               Previous
                             </button>
                             <button
                               onClick={() => {
-                                findHandler();
+                                findHandler()
                               }}
-                              className="flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-r-3xl rounded-l-none border-l border-white/20 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                              className='flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-r-3xl rounded-l-none border-l border-white/20 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50'
                             >
                               Next
                             </button>
                           </div>
-                          <div className='inline-flex w-full rounded-md' role="group">
+                          <div
+                            className='inline-flex w-full rounded-md'
+                            role='group'
+                          >
                             <button
                               onClick={replaceOneHandler}
-                              className="flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-l-3xl rounded-r-none border-r-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                              className='flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-l-3xl rounded-r-none border-r-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50'
                             >
                               Replace
                             </button>
                             <button
                               onClick={replaceAllHandler}
-                              className="flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-r-3xl rounded-l-none border-l border-white/20 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                              className='flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-r-3xl rounded-l-none border-l border-white/20 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50'
                             >
                               Replace All
                             </button>
@@ -743,26 +768,30 @@ function EditorPage() {
                         </div>
                       </div>
                     </div>
+                  )}
 
-                    <div className={`bg-white rounded-lg border overflow-hidden transition-all duration-200 ease-in-out ${findAndReplaceOpen ? 'h-[49%]' : 'h-[98%]'}`}>
-                      <div className='px-4 font-medium h-12 text-base border-b flex items-center'>
-                        Notes
-                      </div>
-                      <div className='pt-4 pb-6 px-1 h-[calc(100%-48px)]'>
-                        <Textarea
-                          placeholder='Start typing...'
-                          className='resize-none h-full w-full border-none outline-none focus:outline-none focus-visible:ring-0 shadow-none mb-2'
-                          value={notes}
-                          onChange={handleNotesChange}
-                        />
-                      </div>
+                  <div
+                    className={`bg-white border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out ${
+                      findAndReplaceOpen ? 'h-[50%]' : 'h-full'
+                    }`}
+                  >
+                    <div className='font-medium text-md border-b border-customBorder flex items-center p-2'>
+                      Notes
+                    </div>
+                    <div className='h-[calc(100%-41px)] overflow-hidden'>
+                      <Textarea
+                        placeholder='Start typing...'
+                        className='py-[10px] px-2 resize-none h-full w-full border-none outline-none focus:outline-none focus-visible:ring-0 shadow-none'
+                        value={notes}
+                        onChange={handleNotesChange}
+                      />
                     </div>
                   </div>
                 </div>
               </div>
             </div>
             {step !== 'QC' && editorMode === 'Editor' && (
-              <div className='bg-blue-500 w-1/3 rounded-2xl border border-gray-200 overflow-hidden'>
+              <div className='bg-white w-[20%] rounded-md border border-customBorder overflow-hidden p-2 ml-1'>
                 <div className='overflow-y-scroll h-full'>
                   <RenderPDFDocument key={regenCount} file={pdfUrl} />
                 </div>
@@ -771,39 +800,69 @@ function EditorPage() {
           </div>
         </div>
 
-        <Dialog open={isSubmitModalOpen} onOpenChange={setIsSubmitModalOpen}>
-          <DialogContent>
+        <Dialog 
+          open={isSubmitModalOpen} 
+          onOpenChange={(open) => {
+            setIsSubmitModalOpen(open)
+            if (!open) {
+              setSubmitting(false)
+            }
+          }}
+        >
+          <DialogContent className="max-w-4xl">
             <DialogHeader>
               <DialogTitle>Submit</DialogTitle>
               <DialogDescription>
                 Please confirm that you want to submit the transcript
               </DialogDescription>
-              <Button
-                onClick={() => {
-                  if (!quillRef?.current) return
-                  const quill = quillRef.current.getEditor()
-                  handleSubmit({
-                    orderDetails,
-                    step,
-                    editorMode,
-                    fileToUpload,
-                    setButtonLoading,
-                    getPlayedPercentage,
-                    router,
-                    quill,
-                  })
-                  setSubmitting(false)
-                  setIsSubmitModalOpen(false)
-                }}
-                disabled={buttonLoading.submit}
-                className='ml-2'
-              >
-                {' '}
-                {buttonLoading.submit && (
-                  <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                )}{' '}
-                Confirm
-              </Button>
+
+              <div className="py-4">
+                <p className="text-sm text-gray-500 mb-2">
+                  Audio Playback Coverage: <span className="font-medium">{getPlayedPercentage()}%</span>
+                </p>
+                <PlayStatsVisualization 
+                  waveformUrl={waveformUrl}
+                  playStats={playStats}
+                  editedSegments={editedSegments}
+                  duration={audioDuration}
+                />                
+              </div>
+
+              <div className="flex justify-end gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSubmitting(false)
+                    setIsSubmitModalOpen(false)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (!quillRef?.current) return
+                    const quill = quillRef.current.getEditor()      
+                    handleSubmit({
+                      orderDetails,
+                      step,
+                      editorMode,
+                      fileToUpload,
+                      setButtonLoading,
+                      getPlayedPercentage,
+                      router,
+                      quill,
+                    })
+                    setSubmitting(false)
+                    setIsSubmitModalOpen(false)
+                  }}
+                  disabled={buttonLoading.submit}
+                >
+                  {buttonLoading.submit && (
+                    <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Confirm
+                </Button>
+              </div>
             </DialogHeader>
           </DialogContent>
         </Dialog>
