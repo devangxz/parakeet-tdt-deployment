@@ -1,6 +1,5 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { Change } from 'diff'
-import { Op } from 'quill/core'
 import ReactQuill from 'react-quill'
 
 import Diff from './Diff'
@@ -17,8 +16,6 @@ interface EditorTabComponentProps {
   audioDuration: number
   getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void
   orderDetails: OrderDetails
-  content: Op[]
-  setContent: (content: Op[]) => void
   setSelectionHandler: () => void
   selection: CustomerQuillSelection | null
   searchHighlight: CustomerQuillSelection | null
@@ -33,8 +30,6 @@ export const EditorTabComponent = ({
   audioDuration,
   getQuillRef,
   orderDetails,
-  content,
-  setContent,
   setSelectionHandler,
   selection,
   searchHighlight,
@@ -61,8 +56,6 @@ export const EditorTabComponent = ({
             ctms={ctms}
             audioPlayer={audioPlayer}
             duration={audioDuration}
-            content={content}
-            setContent={setContent}
             setSelectionHandler={setSelectionHandler}
             selection={selection}
             searchHighlight={searchHighlight}

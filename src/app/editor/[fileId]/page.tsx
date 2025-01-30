@@ -4,7 +4,6 @@ import { Cross1Icon, ReloadIcon } from '@radix-ui/react-icons'
 import { Change, diffWords } from 'diff'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { Op } from 'quill/core'
 import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
@@ -129,7 +128,6 @@ function EditorPage() {
   const [quillRef, setQuillRef] = useState<React.RefObject<ReactQuill>>()
   const [asrTranscript, setAsrTranscript] = useState('')
 
-  const [content, setContent] = useState<Op[]>([])
   const [findText, setFindText] = useState('')
   const [replaceText, setReplaceText] = useState('')
   const [matchCase, setMatchCase] = useState(false)
@@ -383,9 +381,9 @@ function EditorPage() {
   }, [])
 
   const handleTabChange = () => {
-    const contentText = content
-      .map((op) => (typeof op.insert === 'string' ? op.insert : ''))
-      .join('')
+    if (!quillRef?.current) return
+    const quill = quillRef.current.getEditor()
+    const contentText = quill.getText() // Get text directly from editor
     const diff = diffWords(asrTranscript || transcript, contentText)
     setDiff(diff)
   }
@@ -636,8 +634,6 @@ function EditorPage() {
                     </div>
 
                     <EditorTabComponent
-                      content={content}
-                      setContent={setContent}
                       orderDetails={orderDetails}
                       transcript={transcript}
                       ctms={ctms}

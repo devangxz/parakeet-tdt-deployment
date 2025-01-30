@@ -27,8 +27,6 @@ interface EditorProps {
     duration: number
     getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void
     orderDetails: OrderDetails
-    content: Op[]
-    setContent: (content: Op[]) => void
     setSelectionHandler: () => void
     selection: CustomerQuillSelection | null
     searchHighlight: CustomerQuillSelection | null
@@ -50,7 +48,7 @@ interface Range {
 
 type Sources = 'user' | 'api' | 'silent';
 
-export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, setEditedSegments }: EditorProps) {
+export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, setEditedSegments }: EditorProps) {
     const ctms = initialCtms; // Make CTMs constant
     const quillRef = useRef<ReactQuill>(null)
     const [alignments, setAlignments] = useState<AlignmentType[]>([])
@@ -139,12 +137,9 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         return formattedContent;
     };
 
-    useEffect(() => {
-        if (!content.length) {
-            const formattedContent = getFormattedContent(transcript);
-            setContent(formattedContent);
-        }
-    }, [content.length, transcript]);
+    const { content: initialContent } = useMemo(() => (
+        { content: getFormattedContent(transcript) }
+    ), [transcript])
 
     const handleEditorClick = useCallback(() => {
         const quill = quillRef.current?.getEditor()
@@ -323,13 +318,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     ]);
 
     useShortcuts(shortcutControls);
-
-    const handleContentChange = useCallback(() => {
-        const quill = quillRef.current?.getEditor()
-        if (!quill) return
-        
-        setContent(quill.getContents().ops)
-    }, [orderDetails.fileId])
 
     const clearHighlights = useCallback(() => {
         requestAnimationFrame(() => {
@@ -754,8 +742,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                 ref={quillRef}
                 theme='snow'
                 modules={quillModules}
-                value={{ ops: content }}
-                onChange={handleContentChange}
+                defaultValue={{ ops: initialContent }}
                 formats={['size', 'background', 'font', 'color', 'bold', 'italics']}
                 className='h-full'
                 onChangeSelection={handleSelectionChange}
