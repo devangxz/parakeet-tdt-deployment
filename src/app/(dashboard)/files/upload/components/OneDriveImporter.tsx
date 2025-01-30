@@ -29,6 +29,7 @@ import {
   handleRetryableError,
   calculateOverallProgress,
   refreshToken,
+  sanitizeFileName,
 } from '@/utils/uploadUtils'
 import { getAllowedFileExtensions } from '@/utils/validateFileType'
 
@@ -370,7 +371,7 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
 
       return {
         id: response.data.id,
-        name: response.data.name,
+        name: sanitizeFileName(response.data.name),
         size: response.data.size,
         mimeType: response.data.file?.mimeType || 'invalid',
       }

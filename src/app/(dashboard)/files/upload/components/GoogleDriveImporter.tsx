@@ -28,6 +28,7 @@ import {
   handleRetryableError,
   calculateOverallProgress,
   refreshToken,
+  sanitizeFileName,
 } from '@/utils/uploadUtils'
 import { getAllowedMimeTypes } from '@/utils/validateFileType'
 
@@ -369,39 +370,48 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
       return
     }
 
-    const selectedFiles = data.docs
-
-    const filesUnderSizeLimit = selectedFiles.filter(
-      (file: GoogleDriveFile) => {
-        const size = parseInt(file.sizeBytes)
-        if (size > MAX_FILE_SIZE) {
-          toast.error(
-            `File "${file.name}" was rejected due to exceeding 10GB size limit.`
-          )
-          return false
-        }
-        return true
-      }
-    )
-    if (filesUnderSizeLimit.length === 0) {
-      if (selectedFiles.length > 1) {
-        toast.error(
-          'No valid files selected. Please select supported audio or video files under 10GB in size'
-        )
-      }
-      return
-    }
-
-    setIsUploading(true)
-    setUploadingFiles(
-      filesUnderSizeLimit.map((file: GoogleDriveFile) => ({
-        name: file.name,
-        size: parseInt(file.sizeBytes),
-        fileId: file.id,
-      }))
-    )
-
     try {
+      let selectedFiles = data.docs
+
+      selectedFiles = selectedFiles.map((file) => {
+        const sanitizedName = sanitizeFileName(file.name)
+        if (sanitizedName === file.name) return file
+
+        file.name = sanitizedName
+
+        return file
+      })
+
+      const filesUnderSizeLimit = selectedFiles.filter(
+        (file: GoogleDriveFile) => {
+          const size = parseInt(file.sizeBytes)
+          if (size > MAX_FILE_SIZE) {
+            toast.error(
+              `File "${file.name}" was rejected due to exceeding 10GB size limit.`
+            )
+            return false
+          }
+          return true
+        }
+      )
+      if (filesUnderSizeLimit.length === 0) {
+        if (selectedFiles.length > 1) {
+          toast.error(
+            'No valid files selected. Please select supported audio or video files under 10GB in size'
+          )
+        }
+        return
+      }
+
+      setIsUploading(true)
+      setUploadingFiles(
+        filesUnderSizeLimit.map((file: GoogleDriveFile) => ({
+          name: file.name,
+          size: parseInt(file.sizeBytes),
+          fileId: file.id,
+        }))
+      )
+
       initializeSSEConnection(
         () => onUploadSuccess(true),
         () => setIsUploading(false)
