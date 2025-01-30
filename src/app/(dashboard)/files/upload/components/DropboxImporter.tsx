@@ -28,6 +28,7 @@ import { generateUniqueId } from '@/utils/generateUniqueId'
 import {
   handleRetryableError,
   calculateOverallProgress,
+  sanitizeFileName,
 } from '@/utils/uploadUtils'
 import {
   getAllowedFileExtensions,
@@ -357,6 +358,15 @@ const DropboxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             toast.error('Please select one or more files to import')
             return
           }
+
+          files = files.map((file) => {
+            const sanitizedName = sanitizeFileName(file.name)
+            if (sanitizedName === file.name) return file
+
+            file.name = sanitizedName
+
+            return file
+          })
 
           const filesUnderSizeLimit = files.filter((file) => {
             const size = parseInt(String(file.bytes))

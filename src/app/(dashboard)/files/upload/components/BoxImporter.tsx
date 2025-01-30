@@ -28,6 +28,7 @@ import {
   handleRetryableError,
   calculateOverallProgress,
   refreshToken,
+  sanitizeFileName,
 } from '@/utils/uploadUtils'
 import validateFileType, {
   getFileTypeFromExtension,
@@ -375,25 +376,34 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
       return
     }
 
-    const filesUnderSizeLimit = files.filter((file) => {
-      if (file.size > MAX_FILE_SIZE) {
-        toast.error(
-          `File "${file.name}" was rejected due to exceeding 10GB size limit.`
-        )
-        return false
-      }
-      return true
-    })
-    if (filesUnderSizeLimit.length === 0) {
-      if (files.length > 1) {
-        toast.error(
-          'No valid files selected. Please select supported audio or video files under 10GB in size'
-        )
-      }
-      return
-    }
-
     try {
+      files = files.map((file) => {
+        const sanitizedName = sanitizeFileName(file.name)
+        if (sanitizedName === file.name) return file
+
+        file.name = sanitizedName
+
+        return file
+      })
+
+      const filesUnderSizeLimit = files.filter((file) => {
+        if (file.size > MAX_FILE_SIZE) {
+          toast.error(
+            `File "${file.name}" was rejected due to exceeding 10GB size limit.`
+          )
+          return false
+        }
+        return true
+      })
+      if (filesUnderSizeLimit.length === 0) {
+        if (files.length > 1) {
+          toast.error(
+            'No valid files selected. Please select supported audio or video files under 10GB in size'
+          )
+        }
+        return
+      }
+
       const filesWithTypes = filesUnderSizeLimit.map((file) => ({
         ...file,
         type: getFileTypeFromExtension(file.name),
