@@ -35,7 +35,8 @@
     ".next/types/**/*.ts",
     "types/next-auth.d.ts",
     "./.next/types/**/*.ts",
-    "src/utils/transcript/diff_match_patch.js"
+    "src/utils/transcript/diff_match_patch.js",
+    "prisma/seed.ts"
   ],
   "exclude": [
     "node_modules"

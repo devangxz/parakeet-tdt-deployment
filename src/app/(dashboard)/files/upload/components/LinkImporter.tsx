@@ -20,6 +20,7 @@ import { generateUniqueId } from '@/utils/generateUniqueId'
 import {
   handleRetryableError,
   calculateOverallProgress,
+  sanitizeFileName,
 } from '@/utils/uploadUtils'
 
 const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
@@ -37,7 +38,8 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
       const urlObj = new URL(url)
       const pathSegments = urlObj.pathname.split('/')
       const fileName = pathSegments[pathSegments.length - 1]
-      return decodeURIComponent(fileName || 'imported-file')
+      const decodedFileName = decodeURIComponent(fileName || 'imported-file')
+      return sanitizeFileName(decodedFileName)
     } catch {
       return 'imported-file'
     }
@@ -495,7 +497,10 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             </div>
             <h4 className='flex items-center'>Link Importer</h4>
           </div>
-          <form onSubmit={handleImport} className='w-full flex flex-col gap-y-3'>
+          <form
+            onSubmit={handleImport}
+            className='w-full flex flex-col gap-y-3'
+          >
             <div className='w-full space-y-1'>
               <p className='ml-[2px] text-xs self-stretch leading-5 text-start text-gray-700'>
                 Please enter the link to the media file in the box below, one

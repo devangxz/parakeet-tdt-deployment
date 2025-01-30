@@ -736,11 +736,9 @@ export default memo(function Topbar({
 
         {orderDetails.status === 'QC_ASSIGNED' && (
           <span
-            className={`text-red-600 ${
-              editorMode === 'Editor' && step !== 'QC'
-                ? ''
-                : 'absolute left-1/2 transform -translate-x-1/2'
-            } ${orderDetails.remainingTime === '0' ? 'animate-pulse' : ''}`}
+            className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${
+              orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
+            }`}
           >
             {timeoutCount}
           </span>
@@ -795,7 +793,12 @@ export default memo(function Topbar({
           {session?.user?.role === 'CUSTOMER' && (
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant='outline'>Re-Review</Button>
+                <Button
+                  variant='outline'
+                  className='flex items-center border-primary border-2 justify-center px-2 py-1 text-sm font-medium text-primary rounded-[32px] cursor-pointer transition-all duration-200 hover:opacity-90'
+                >
+                  Re-Review
+                </Button>
               </DialogTrigger>
               <DialogContent className='w-2/5'>
                 <DialogHeader>
@@ -825,7 +828,7 @@ export default memo(function Topbar({
 
           <div className='flex'>
             {!['CUSTOMER', 'OM', 'ADMIN'].includes(
-              session?.user?.email ?? ''
+              session?.user?.role ?? ''
             ) && (
               <Button
                 onClick={() => setSubmitting(true)}
@@ -840,10 +843,18 @@ export default memo(function Topbar({
               onOpenChange={handleDropdownMenuOpenChange}
             >
               <DropdownMenuTrigger className='focus-visible:ring-0 outline-none'>
-                <Button className='px-2 format-icon-button focus-visible:ring-0 outline-none'>
+                <Button
+                  className={`${
+                    !['CUSTOMER', 'OM', 'ADMIN'].includes(
+                      session?.user?.role ?? ''
+                    )
+                      ? 'px-2 format-icon-button'
+                      : ''
+                  } focus-visible:ring-0 outline-none`}
+                >
                   <span className='sr-only'>Open menu</span>
                   <ChevronDownIcon className='h-4 w-4' />
-                </Button>{' '}
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align='end' className='w-30'>
                 <DropdownMenuItem
@@ -887,12 +898,13 @@ export default memo(function Topbar({
                 >
                   Download MP3
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={requestExtension}>
-                  Request Extension
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={requestExtension}>
-                  Request Extension
-                </DropdownMenuItem>
+                {!['CUSTOMER', 'OM', 'ADMIN'].includes(
+                  session?.user?.role || ''
+                ) && (
+                  <DropdownMenuItem onClick={requestExtension}>
+                    Request Extension
+                  </DropdownMenuItem>
+                )}
                 {session?.user?.role !== 'CUSTOMER' && (
                   <DropdownMenuItem onClick={() => setReportModalOpen(true)}>
                     Report

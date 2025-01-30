@@ -724,6 +724,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                     value={instructions.instructions}
                     onChange={(e) => handleInstructionsChange(e.target.value)}
                     rows={4}
+                    className='focus-visible:ring-0'
                   />
                   <div className='text-sm text-[#8A8A8A] mt-2'>
                     Please enter special instructions, terms, acronyms,
@@ -1129,7 +1130,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
         </div>
         <Separator />
       </div>
-      <div className='flex items-center justify-end gap-5 py-3 px-10 sticky bottom-0 right-0 w-full bg-white border-t-2 border-customBorder'>
+      <div className='flex items-center justify-end gap-5 p-4 sticky bottom-0 right-0 w-full bg-white border-t-2 border-customBorder'>
         {paymentSuccess ? (
           <Button
             className='w-[170px]'

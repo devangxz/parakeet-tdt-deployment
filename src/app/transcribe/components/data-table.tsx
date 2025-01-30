@@ -126,7 +126,7 @@ export function DataTable<TData, TValue>({
                           <TableRow>
                             <TableCell
                               colSpan={columns.length}
-                              className='px-4 py-3'
+                              className='p-0 px-3 pb-4'
                             >
                               {subComponent}
                             </TableCell>
