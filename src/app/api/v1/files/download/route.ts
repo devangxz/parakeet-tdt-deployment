@@ -1,13 +1,30 @@
-'use server'
-
+export const dynamic = 'force-dynamic'
 import { FileTag } from '@prisma/client'
+import { NextRequest, NextResponse } from 'next/server'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { authenticateRequest } from '@/services/auth-service/authenticate-api'
 import { getFileVersionSignedURLFromS3 } from '@/utils/backend-helper'
 
-export async function getFileTxtSignedUrl(fileId: string) {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url)
+    const fileId = searchParams.get('fileId')
+
+    const user = await authenticateRequest(req as NextRequest)
+
+    if (!user) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (!fileId) {
+      return NextResponse.json(
+        { message: 'File Id is required' },
+        { status: 400 }
+      )
+    }
+
     const file = await prisma.file.findFirst({
       where: {
         fileId: fileId,
@@ -15,10 +32,10 @@ export async function getFileTxtSignedUrl(fileId: string) {
     })
 
     if (!file) {
-      return {
+      return NextResponse.json({
         success: false,
         message: 'File not found',
-      }
+      })
     }
 
     let fileVersion = ''
@@ -48,10 +65,10 @@ export async function getFileTxtSignedUrl(fileId: string) {
         !customerDeliveredFileVersion ||
         !customerDeliveredFileVersion.s3VersionId
       ) {
-        return {
+        return NextResponse.json({
           success: false,
           message: 'Transcript not found',
-        }
+        })
       }
 
       fileVersion = customerDeliveredFileVersion.s3VersionId
@@ -66,16 +83,16 @@ export async function getFileTxtSignedUrl(fileId: string) {
       `${file.filename}.txt`
     )
 
-    return {
+    return NextResponse.json({
       success: true,
       message: 'Downloaded Successfully',
       signedUrl,
-    }
+    })
   } catch (error) {
     logger.error(`Failed to send txt file ${error}`)
-    return {
+    return NextResponse.json({
       success: false,
       message: 'An error occurred. Please try again after some time.',
-    }
+    })
   }
 }
