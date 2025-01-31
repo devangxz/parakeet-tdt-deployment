@@ -59,7 +59,8 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     const [undoStack, setUndoStack] = useState<UndoRedoItem[]>([]);
     const [redoStack, setRedoStack] = useState<UndoRedoItem[]>([]);
     const beforeSelectionRef = useRef<Range | null>(null);
-    const [currentSelection, setCurrentSelection] = useState<Range | null>(null);    
+    const [currentSelection, setCurrentSelection] = useState<Range | null>(null);  
+    const [isTyping, setIsTyping] = useState(false);  
     const TYPING_PAUSE = 500; // Half second pause indicates word completion
     const STACK_LIMIT = 100;
 
@@ -293,6 +294,26 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         quill.setSelection(paraStart + 1, 0);
      }, [quillRef]);
 
+     const clearLastHighlight = useCallback(() => {
+        console.log('Clearing last highlight');
+        const quill = quillRef.current?.getEditor();
+        if (!quill || lastHighlightedRef.current === null) {
+            console.log('No quill or no last highlight to clear');
+            return;
+        }
+     
+        const oldAl = alignments[lastHighlightedRef.current];
+        console.log('Found alignment to clear:', oldAl);
+        if (oldAl.startPos !== undefined && oldAl.endPos !== undefined) {
+            console.log(`Clearing highlight from ${oldAl.startPos} to ${oldAl.endPos}`);
+            quill.formatText(oldAl.startPos, oldAl.endPos - oldAl.startPos, {
+                background: null,
+            });
+        }
+        lastHighlightedRef.current = null;
+        console.log('Last highlight reference cleared');
+     }, [alignments]);     
+
     const shortcutControls = useMemo(() => {
         const controls: Partial<ShortcutControls> = {
             playAudioAtCursorPosition: handlePlayAudioAtCursorPositionShortcut,
@@ -354,6 +375,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                 const { alignments: newAlignments, wer, editedSegments } = e.data;
                 setAlignments(newAlignments);
                 setEditedSegments(new Set(editedSegments));
+                setIsTyping(false);
                 console.log('Updated alignments:', newAlignments, 'WER:', wer);
             };
       
@@ -376,9 +398,25 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
      
         const handleTextChange = (delta: Delta, oldDelta: Delta, source: string) => {
             if (source !== 'user') return;
+            setIsTyping(true);
+
             const quill = quillRef.current?.getEditor();
             if (!quill) return;
-     
+
+            if(lastHighlightedRef.current) {
+                const oldAl = alignments[lastHighlightedRef.current];
+                const oldStartPos = oldAl.startPos;
+                const oldEndPos = oldAl.endPos;
+                
+                if (oldStartPos !== undefined && oldEndPos !== undefined) {
+                    const newStartPos = delta.transformPosition(oldStartPos);
+                    const newEndPos = delta.transformPosition(oldEndPos);
+                    quill.formatText(newStartPos, newEndPos - newStartPos, { background: null });
+                }
+
+                lastHighlightedRef.current = null;
+            }
+
             const newItem: UndoRedoItem = {
                 delta: new Delta(delta.ops),
                 oldDelta: new Delta(oldDelta.ops),
@@ -428,7 +466,9 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
                 e.preventDefault();
                 e.stopImmediatePropagation();
-     
+                setIsTyping(true);  
+                clearLastHighlight(); 
+         
                 if (undoStack.length === 0) return;
                 const item = undoStack[undoStack.length - 1];
                 setUndoStack(prev => prev.slice(0, -1));
@@ -456,7 +496,9 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                 ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z')) {
                 e.preventDefault();
                 e.stopImmediatePropagation();
-     
+                setIsTyping(true);      
+                clearLastHighlight(); 
+    
                 if (redoStack.length === 0) return;
                 const item = redoStack[redoStack.length - 1];
                 setRedoStack(prev => prev.slice(0, -1));
@@ -502,24 +544,24 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         const handleTimeUpdate = () => {            
             const quill = quillRef.current?.getEditor();
 
-            if (!quill || !highlightWordsEnabled) return;
-        
+            console.log('Time update handler running', {
+                highlightWordsEnabled,
+                isTyping,
+                currentTime: audioPlayer.currentTime,
+                alignmentsLength: alignments.length,
+                lastHighlighted: lastHighlightedRef.current
+            });
+
+            if (!quill || !highlightWordsEnabled || isTyping) return;
+
             const currentTime = audioPlayer.currentTime;
             const currentWordIndex = getAlignmentIndexByTime(alignments, currentTime, lastHighlightedRef.current);
             
             // Skip if same word
             if (currentWordIndex === lastHighlightedRef.current) return;
         
-            // Un-highlight the old word
-            if (lastHighlightedRef.current !== null) {
-                const oldAl = alignments[lastHighlightedRef.current];
-                if (oldAl.startPos !== undefined && oldAl.endPos !== undefined) {
-                    quill.formatText(oldAl.startPos, oldAl.endPos - oldAl.startPos, {
-                        background: null,
-                    });
-                }
-            }
-        
+            clearLastHighlight();
+            
             // Highlight the new word
             const newAl = alignments[currentWordIndex];
             if (newAl.startPos !== undefined && newAl.endPos !== undefined) {
@@ -528,7 +570,9 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                 });
             }
         
-            lastHighlightedRef.current = currentWordIndex;
+            if (!isTyping) {
+                lastHighlightedRef.current = currentWordIndex;
+            }
         };
 
         audioPlayer.addEventListener('timeupdate', handleTimeUpdate);
@@ -536,7 +580,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         return () => {
             audioPlayer.removeEventListener('timeupdate', handleTimeUpdate);
         };
-    }, [alignments, audioPlayer, highlightWordsEnabled]);
+    }, [alignments, audioPlayer, highlightWordsEnabled, isTyping]);
 
     useEffect(() => {
         initEditor()
