@@ -36,7 +36,7 @@ export type ButtonLoading = {
 }
 
 export interface PlayStats {
-  listenCount: number[];
+    listenCount: number[];
 }
 
 const usableColors = [
@@ -456,13 +456,13 @@ const fetchFileDetails = async ({
         setCtms(transcriptRes.data.result.ctms)
 
         const playStats = await getPlayStatsAction(params?.fileId as string)
-      
+
         if (playStats.success && playStats.data) {
-          setPlayStats({
-            listenCount: playStats.data.listenCount as number[]
-          })
+            setPlayStats({
+                listenCount: playStats.data.listenCount as number[]
+            })
         }
-        
+
         return orderRes.orderDetails
     } catch (error) {
         console.log(error)
@@ -567,25 +567,25 @@ const handleSave = async (
 }
 
 const autoCapitalizeSentences = (quillRef: React.RefObject<ReactQuill> | undefined) => {
-  if (quillRef?.current) {
-      const quill = quillRef.current.getEditor();
-      const text = quill.getText();
+    if (quillRef?.current) {
+        const quill = quillRef.current.getEditor();
+        const text = quill.getText();
 
-      // Match sentence endings followed by spaces and a lowercase letter
-      const regex = /([.!?])\s+([a-z])/g;
-      let match;
+        // Match sentence endings followed by spaces and a lowercase letter
+        const regex = /([.!?])\s+([a-z])/g;
+        let match;
 
-      while ((match = regex.exec(text)) !== null) {
-          // Calculate dynamic index based on full match length
-          const charIndex = match.index + match[0].length - 1;
-          const lowercaseChar = match[2];
-          const uppercaseChar = lowercaseChar.toUpperCase();
+        while ((match = regex.exec(text)) !== null) {
+            // Calculate dynamic index based on full match length
+            const charIndex = match.index + match[0].length - 1;
+            const lowercaseChar = match[2];
+            const uppercaseChar = lowercaseChar.toUpperCase();
 
-          // Replace the lowercase character
-          quill.deleteText(charIndex, 1, 'user');
-          quill.insertText(charIndex, uppercaseChar, 'user');
-      }
-  }
+            // Replace the lowercase character
+            quill.deleteText(charIndex, 1, 'user');
+            quill.insertText(charIndex, uppercaseChar, 'user');
+        }
+    }
 }
 
 type HandleSubmitParams = {
@@ -602,7 +602,8 @@ type HandleSubmitParams = {
     router: {
         push: (path: string) => void
     }
-    quill: Quill
+    quill: Quill,
+    finalizerComment: string
 }
 
 const checkTranscriptForAllowedMeta = (quill: Quill) => {
@@ -642,6 +643,7 @@ const handleSubmit = async ({
     getPlayedPercentage,
     router,
     quill,
+    finalizerComment
 }: HandleSubmitParams) => {
     if (!orderDetails || !orderDetails.orderId || !step) return
     const toastId = toast.loading(`Submitting Transcription...`)
@@ -665,7 +667,8 @@ const handleSubmit = async ({
             await submitReviewAction(
                 Number(orderDetails.orderId),
                 orderDetails.fileId,
-                transcript
+                transcript,
+                finalizerComment
             )
         } else {
             await submitQCAction({
