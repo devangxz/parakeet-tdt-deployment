@@ -13,7 +13,7 @@ import { sendTemplateMail } from '@/lib/ses'
 import { getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 
-export async function submitFinalize(transcriberId: number, order: Order) {
+export async function submitFinalize(transcriberId: number, order: Order, finalizerComment: string) {
   logger.info(`--> OrderTranscriptionCFFlow:submitFinalize ${order.fileId}`)
   try {
     if (order.orderType != OrderType.TRANSCRIPTION_FORMATTING) {
@@ -92,6 +92,7 @@ export async function submitFinalize(transcriberId: number, order: Order) {
         deliveredBy: transcriberId,
         status: OrderStatus.PRE_DELIVERED,
         updatedAt: new Date(),
+        finalizerComment: finalizerComment.trim() || null,
       },
     })
 

@@ -11,7 +11,7 @@ import prisma from '@/lib/prisma'
 import { submitFinalize } from '@/services/editor-service/submit-finalize-file'
 import submitReview from '@/services/editor-service/submit-review-file'
 
-export async function submitReviewAction(orderId: number, fileId: string, transcript: string) {
+export async function submitReviewAction(orderId: number, fileId: string, transcript: string, finalizerComment: string) {
   logger.info('--> submitFinalize')
 
   try {
@@ -62,7 +62,7 @@ export async function submitReviewAction(orderId: number, fileId: string, transc
         }
       }
     } else {
-      const { success, message } = await submitFinalize(transcriberId, order)
+      const { success, message } = await submitFinalize(transcriberId, order, finalizerComment)
       if (!success) {
         return {
           success: false,
