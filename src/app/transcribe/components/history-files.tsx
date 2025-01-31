@@ -361,7 +361,6 @@ export default function HistoryFilesPage() {
 
   const finalizerCommentHandler = async (fileId: string) => {
     const res = await getFinalizerComments(fileId)
-    console.log(res)
     if (res.success && res.finalizerComment) {
       setFinalizerComments(res.finalizerComment)
       setFinalizerCommentModalOpen(true)
