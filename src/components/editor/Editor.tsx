@@ -62,6 +62,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
     const beforeSelectionRef = useRef<Range | null>(null);
     const [currentSelection, setCurrentSelection] = useState<Range | null>(null);  
     const [isTyping, setIsTyping] = useState(false);  
+    const [alignmentWorkerRunning, setAlignmentWorkerRunning] = useState(false);
     const TYPING_PAUSE = 500; // Half second pause indicates word completion
     const STACK_LIMIT = 100;
 
@@ -351,6 +352,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         if (typingTimer) clearTimeout(typingTimer);
         setTypingTimer(
             setTimeout(() => {
+                setAlignmentWorkerRunning(true);
                 alignmentWorker.current?.postMessage({
                     newText: quill.getText(),
                     currentAlignments: alignments,
@@ -372,6 +374,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                 setAlignments(newAlignments);
                 setEditedSegments(new Set(editedSegments));
                 setIsTyping(false);
+                setAlignmentWorkerRunning(false);
                 console.log('Updated alignments:', newAlignments, 'WER:', wer);
             };
       
@@ -536,7 +539,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
 
     const timeUpdateHandler = useCallback(debounce(() => {
         const quill = quillRef.current?.getEditor();
-        if (!quill || !highlightWordsEnabled || isTyping || !audioPlayer) return;
+        if (!quill || !highlightWordsEnabled || isTyping || !audioPlayer || alignmentWorkerRunning) return;
     
         const currentTime = audioPlayer.currentTime;
         const currentWordIndex = getAlignmentIndexByTime(alignments, currentTime, lastHighlightedRef.current);
