@@ -143,6 +143,7 @@ function EditorPage() {
   const [playStats, setPlayStats] = useState<PlayStats>({ listenCount: [] })
   const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set());
   const [waveformUrl, setWaveformUrl] = useState('')
+  const [finalizerComment, setFinalizerComment] = useState('')
 
   interface PlayStats {
     listenCount: number[];
@@ -403,11 +404,11 @@ function EditorPage() {
         console.error('Failed to load waveform:', error)
       }
     }
-    
+
     if (orderDetails.fileId) {
       fetchWaveform()
     }
-  }, [orderDetails.fileId])  
+  }, [orderDetails.fileId])
 
   const savePlayStats = async () => {
     if (orderDetails.userId && orderDetails.fileId) {
@@ -417,7 +418,7 @@ function EditorPage() {
         editedSegments: Array.from(editedSegments)
       })
     }
-  }  
+  }
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -447,17 +448,17 @@ function EditorPage() {
     const handleTimeUpdate = () => {
       if (!audioPlayer) return
       const currentSecond = Math.floor(audioPlayer.currentTime)
-      
+
       // Only update stats if we've moved to a new second
       if (currentSecond !== lastTrackedSecondRef.current) {
         lastTrackedSecondRef.current = currentSecond
-        
+
         setPlayStats(prev => {
           const newListenCount = [...prev.listenCount]
           newListenCount[currentSecond] = (newListenCount[currentSecond] || 0) + 1
           return { listenCount: newListenCount }
         })
-      }  
+      }
     }
 
     audioPlayer?.addEventListener('timeupdate', handleTimeUpdate)
@@ -584,11 +585,10 @@ function EditorPage() {
       <div className='flex h-full overflow-hidden'>
         <div className='flex h-full flex-col items-center flex-1 overflow-hidden'>
           <div
-            className={`flex ${
-              step !== 'QC' && editorMode === 'Editor'
-                ? 'justify-between'
-                : 'justify-center'
-            } w-full h-full`}
+            className={`flex ${step !== 'QC' && editorMode === 'Editor'
+              ? 'justify-between'
+              : 'justify-center'
+              } w-full h-full`}
           >
             {step !== 'QC' && editorMode === 'Editor' && (
               <SectionSelector
@@ -598,11 +598,10 @@ function EditorPage() {
             )}
             <div className='flex w-full gap-x-1'>
               <div
-                className={`bg-white border border-customBorder ${
-                  step !== 'QC' && editorMode === 'Editor'
-                    ? 'rounded-r-md'
-                    : 'rounded-md'
-                } w-[80%]`}
+                className={`bg-white border border-customBorder ${step !== 'QC' && editorMode === 'Editor'
+                  ? 'rounded-r-md'
+                  : 'rounded-md'
+                  } w-[80%]`}
               >
                 {selectedSection === 'proceedings' && (
                   <Tabs
@@ -670,9 +669,8 @@ function EditorPage() {
               </div>
               <div className='w-[20%]'>
                 <div
-                  className={`flex flex-col h-full ${
-                    findAndReplaceOpen ? 'gap-y-1' : ''
-                  }`}
+                  className={`flex flex-col h-full ${findAndReplaceOpen ? 'gap-y-1' : ''
+                    }`}
                 >
                   {findAndReplaceOpen && (
                     <div className='bg-white border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out h-[50%]'>
@@ -767,9 +765,8 @@ function EditorPage() {
                   )}
 
                   <div
-                    className={`bg-white border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out ${
-                      findAndReplaceOpen ? 'h-[50%]' : 'h-full'
-                    }`}
+                    className={`bg-white border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out ${findAndReplaceOpen ? 'h-[50%]' : 'h-full'
+                      }`}
                   >
                     <div className='font-medium text-md border-b border-customBorder flex items-center p-2'>
                       Notes
@@ -796,8 +793,8 @@ function EditorPage() {
           </div>
         </div>
 
-        <Dialog 
-          open={isSubmitModalOpen} 
+        <Dialog
+          open={isSubmitModalOpen}
           onOpenChange={(open) => {
             setIsSubmitModalOpen(open)
             if (!open) {
@@ -816,13 +813,21 @@ function EditorPage() {
                 <p className="text-sm text-gray-500 mb-2">
                   Audio Playback Coverage: <span className="font-medium">{getPlayedPercentage()}%</span>
                 </p>
-                <PlayStatsVisualization 
+                <PlayStatsVisualization
                   waveformUrl={waveformUrl}
                   playStats={playStats}
                   editedSegments={editedSegments}
                   duration={audioDuration}
-                />                
+                />
               </div>
+
+              {orderDetails.status === 'FINALIZER_ASSIGNED' && <div className='mt-4'>
+                <Label htmlFor='finalizer-comment' className="text-sm text-gray-500">
+                  Comments for CF reviewer:
+                </Label>
+                <div className='h-2' />
+                <Textarea value={finalizerComment} onChange={(e) => { setFinalizerComment(e.target.value) }} id='finalizer-comment' placeholder="Comments for CF reviewer..." />
+              </div>}
 
               <div className="flex justify-end gap-2 mt-4">
                 <Button
@@ -837,7 +842,7 @@ function EditorPage() {
                 <Button
                   onClick={() => {
                     if (!quillRef?.current) return
-                    const quill = quillRef.current.getEditor()      
+                    const quill = quillRef.current.getEditor()
                     handleSubmit({
                       orderDetails,
                       step,
@@ -847,6 +852,7 @@ function EditorPage() {
                       getPlayedPercentage,
                       router,
                       quill,
+                      finalizerComment
                     })
                     setSubmitting(false)
                     setIsSubmitModalOpen(false)

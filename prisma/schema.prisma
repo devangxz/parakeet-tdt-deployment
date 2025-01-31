@@ -236,6 +236,7 @@ model Order {
   comments        String?
   reReview        Boolean?      @default(false) @map("re_review")
   reReviewComment String?       @map("re_review_comment")
+  finalizerComment String?       @map("finalizer_comment")
 
   // Relations
   File       File?           @relation(fields: [fileId], references: [fileId])

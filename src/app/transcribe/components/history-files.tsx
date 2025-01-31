@@ -3,12 +3,14 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
 import { diffWords } from 'diff'
+import { ChevronDownIcon } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './data-table'
 import { determinePwerLevel, determineRate } from './utils'
+import { getFinalizerComments } from '@/app/actions/cf/finalizeComment'
 import { getCompareFiles } from '@/app/actions/om/get-compare-files'
 import { getHistoryQCFiles } from '@/app/actions/qc/history'
 import { Badge } from '@/components/ui/badge'
@@ -20,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   Tooltip,
   TooltipContent,
@@ -46,6 +49,9 @@ export default function HistoryFilesPage() {
   >({})
   const [diff, setDiff] = useState('')
   const [isDiffModalOpen, setIsDiffModalOpen] = useState(false)
+  const [finalizerComments, setFinalizerComments] = useState('')
+  const [docxDiff, setDocxDiff] = useState<{ operation: string, text: string }[]>([])
+  const [finalizerCommentModalOpen, setFinalizerCommentModalOpen] = useState(false)
   const pathname = usePathname()
   const isLegalQCPage = pathname === '/transcribe/legal-qc'
 
@@ -73,8 +79,8 @@ export default function HistoryFilesPage() {
               assignment.status === 'COMPLETED'
                 ? assignment.completedTs?.toISOString()
                 : assignment.status === 'ACCEPTED'
-                ? assignment.acceptedTs?.toISOString()
-                : assignment.cancelledTs?.toISOString()
+                  ? assignment.acceptedTs?.toISOString()
+                  : assignment.cancelledTs?.toISOString()
             )
 
             return {
@@ -264,7 +270,7 @@ export default function HistoryFilesPage() {
       header: 'Actions',
       enableHiding: false,
       cell: ({ row }) => (
-        <div className='flex items-center gap-4'>
+        <div className='flex items-center'>
           {loadingFileOrder[row.original.index] ? (
             <Button
               disabled
@@ -275,15 +281,35 @@ export default function HistoryFilesPage() {
               <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
             </Button>
           ) : (
-            <Button
-              className='not-rounded w-[140px]'
-              variant='order'
-              onClick={() =>
-                diffHandler(row.original.fileId, row.original.index)
-              }
-            >
-              Diff
-            </Button>
+            <>
+              <Button
+                className={`not-rounded w-[140px] ${row.original.jobType === 'REVIEW' ? 'format-button' : ''}`}
+                variant='order'
+                style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+                onClick={() =>
+                  diffHandler(row.original.fileId, row.original.index)
+                }
+              >
+                Diff
+              </Button>
+              {row.original.jobType === 'REVIEW' && <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant='order'
+                    className='h-9 w-8 p-0 format-icon-button'
+                  >
+                    <span className='sr-only'>Open menu</span>
+                    <ChevronDownIcon className='h-4 w-4' />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align='end'>
+                  <DropdownMenuItem onClick={() => finalizerCommentHandler(row.original.fileId)}>
+                    Finalizer Comments
+                  </DropdownMenuItem>
+
+                </DropdownMenuContent>
+              </DropdownMenu>}
+            </>
           )}
         </div>
       ),
@@ -333,6 +359,19 @@ export default function HistoryFilesPage() {
     }
   }
 
+  const finalizerCommentHandler = async (fileId: string) => {
+    const res = await getFinalizerComments(fileId)
+    if (res.success && res.finalizerComment) {
+      setFinalizerComments(res.finalizerComment)
+      setFinalizerCommentModalOpen(true)
+      if (res.diffData) setDocxDiff(res.diffData)
+    } else if (res.success && !res.finalizerComment) {
+      toast.error('No finalizer comment found.')
+    } else if (!res.success) {
+      toast.error('Failed to fetch finalizer comment.')
+    }
+  }
+
   return (
     <>
       <DataTable
@@ -355,6 +394,42 @@ export default function HistoryFilesPage() {
               <div dangerouslySetInnerHTML={{ __html: diff }} />
             </DialogDescription>
           </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={finalizerCommentModalOpen} onOpenChange={setFinalizerCommentModalOpen}>
+        <DialogContent className='sm:max-w-[792px]'>
+          <DialogHeader>
+            <DialogTitle>Finalizer feedback</DialogTitle>
+            <DialogDescription>Comments from the finalizer on your file.</DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <p className="text-sm font-medium text-gray-500 mb-2">Comments made by finalizer:</p>
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 shadow-sm">
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">{finalizerComments}</p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <p className="text-sm font-medium text-gray-500 mb-2">Changes made by finalizer:</p>
+            <div className="max-h-[400px] overflow-y-auto rounded-lg border border-gray-200 p-4">
+              <pre className="whitespace-pre-wrap break-words text-sm">
+                {docxDiff.map((diff, index) => (
+                  <span
+                    key={index}
+                    className={
+                      diff.operation === 'removed'
+                        ? 'bg-red-100 line-through'
+                        : diff.operation === 'added'
+                          ? 'bg-green-100'
+                          : ''
+                    }
+                  >
+                    {diff.text}
+                  </span>
+                ))}
+              </pre>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>
