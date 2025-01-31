@@ -1,5 +1,6 @@
 'use client'
 
+import debounce from 'lodash/debounce'
 import { Delta, Op } from 'quill/core'
 import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react'
 import ReactQuill from 'react-quill'
@@ -295,23 +296,18 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
      }, [quillRef]);
 
      const clearLastHighlight = useCallback(() => {
-        console.log('Clearing last highlight');
         const quill = quillRef.current?.getEditor();
         if (!quill || lastHighlightedRef.current === null) {
-            console.log('No quill or no last highlight to clear');
             return;
         }
      
         const oldAl = alignments[lastHighlightedRef.current];
-        console.log('Found alignment to clear:', oldAl);
         if (oldAl.startPos !== undefined && oldAl.endPos !== undefined) {
-            console.log(`Clearing highlight from ${oldAl.startPos} to ${oldAl.endPos}`);
             quill.formatText(oldAl.startPos, oldAl.endPos - oldAl.startPos, {
                 background: null,
             });
         }
         lastHighlightedRef.current = null;
-        console.log('Last highlight reference cleared');
      }, [alignments]);     
 
     const shortcutControls = useMemo(() => {
@@ -538,49 +534,36 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         }
     }, [highlightWordsEnabled, clearHighlights]);
 
-    useEffect(() => {
-        if (!audioPlayer) return;
+    const timeUpdateHandler = useCallback(debounce(() => {
+        const quill = quillRef.current?.getEditor();
+        if (!quill || !highlightWordsEnabled || isTyping || !audioPlayer) return;
+    
+        const currentTime = audioPlayer.currentTime;
+        const currentWordIndex = getAlignmentIndexByTime(alignments, currentTime, lastHighlightedRef.current);
         
-        const handleTimeUpdate = () => {            
-            const quill = quillRef.current?.getEditor();
-
-            console.log('Time update handler running', {
-                highlightWordsEnabled,
-                isTyping,
-                currentTime: audioPlayer.currentTime,
-                alignmentsLength: alignments.length,
-                lastHighlighted: lastHighlightedRef.current
+        if (currentWordIndex === lastHighlightedRef.current) return;
+    
+        clearLastHighlight();
+        
+        const newAl = alignments[currentWordIndex];
+        if (newAl?.startPos !== undefined && newAl?.endPos !== undefined) {
+            quill.formatText(newAl.startPos, newAl.endPos - newAl.startPos, {
+                background: 'yellow',
             });
-
-            if (!quill || !highlightWordsEnabled || isTyping) return;
-
-            const currentTime = audioPlayer.currentTime;
-            const currentWordIndex = getAlignmentIndexByTime(alignments, currentTime, lastHighlightedRef.current);
-            
-            // Skip if same word
-            if (currentWordIndex === lastHighlightedRef.current) return;
-        
-            clearLastHighlight();
-            
-            // Highlight the new word
-            const newAl = alignments[currentWordIndex];
-            if (newAl.startPos !== undefined && newAl.endPos !== undefined) {
-                quill.formatText(newAl.startPos, newAl.endPos - newAl.startPos, {
-                    background: 'yellow',
-                });
-            }
-        
             if (!isTyping) {
                 lastHighlightedRef.current = currentWordIndex;
             }
-        };
-
-        audioPlayer.addEventListener('timeupdate', handleTimeUpdate);
-        
+        }
+    }, 100), [alignments, highlightWordsEnabled, isTyping, clearLastHighlight]);
+    
+    useEffect(() => {
+        if (!audioPlayer) return;
+        audioPlayer.addEventListener('timeupdate', timeUpdateHandler);
         return () => {
-            audioPlayer.removeEventListener('timeupdate', handleTimeUpdate);
+            timeUpdateHandler.cancel();
+            audioPlayer.removeEventListener('timeupdate', timeUpdateHandler);
         };
-    }, [alignments, audioPlayer, highlightWordsEnabled, isTyping]);
+    }, [timeUpdateHandler, audioPlayer]);
 
     useEffect(() => {
         initEditor()
