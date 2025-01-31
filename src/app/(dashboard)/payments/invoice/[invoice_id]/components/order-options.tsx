@@ -51,7 +51,7 @@ export function OrderOptions({
             )}
           </CollapsibleTrigger>
         </div>
-        <div className='text-md font-normal'>{`+${rate.toFixed(2)} / min`}</div>
+        <div className='text-md font-normal'>{`+$${rate.toFixed(2)} / min`}</div>
       </div>
       <CollapsibleContent className='mt-3 font-normal text-sm text-[#8A8A8A]'>
         {description}

@@ -33,9 +33,9 @@ import { Textarea } from '@/components/ui/textarea'
 
 type FormData = {
   [key in
-    | 'fd_create_templateid'
-    | 'fd_update_templateid'
-    | 'fd_delete_templateid']: string
+  | 'fd_create_templateid'
+  | 'fd_update_templateid'
+  | 'fd_delete_templateid']: string
 }
 
 // New component for template management
@@ -621,12 +621,12 @@ export default function DevTools() {
                   <SelectContent>
                     <SelectItem value='asr'>ASR</SelectItem>
                     <SelectItem value='qc'>QC</SelectItem>
-                    <SelectItem value='cf'>CF</SelectItem>
-                    <SelectItem value='cf_rev'>CF Rev</SelectItem>
-                    <SelectItem value='cf_docx'>CF Docx</SelectItem>
+                    <SelectItem value='rev_docx'>Review Docx</SelectItem>
+                    <SelectItem value='finalizer_docx'>Finalizer Docx</SelectItem>
                     <SelectItem value='ris'>RIS</SelectItem>
                     <SelectItem value='ctms'>CTMS</SelectItem>
                     <SelectItem value='mp3'>MP3</SelectItem>
+                    <SelectItem value='mp4'>MP4</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button onClick={handleDownloadFromS3Click} disabled={loading}>

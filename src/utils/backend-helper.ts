@@ -1091,7 +1091,7 @@ export async function getFileVersionSignedURLFromS3(
   const command = new GetObjectCommand({
     Bucket: customBucketName || bucketName,
     Key: key,
-    VersionId: versionId,
+    VersionId: versionId || undefined,
     ResponseContentDisposition: `attachment; filename=${encodedFilename}`,
   })
 

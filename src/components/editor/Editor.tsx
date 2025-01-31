@@ -27,12 +27,11 @@ interface EditorProps {
     duration: number
     getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void
     orderDetails: OrderDetails
-    content: Op[]
-    setContent: (content: Op[]) => void
     setSelectionHandler: () => void
     selection: CustomerQuillSelection | null
     searchHighlight: CustomerQuillSelection | null
     highlightWordsEnabled: boolean;
+    setEditedSegments: (segments: Set<number>) => void;
 }
 
 interface UndoRedoItem {
@@ -49,7 +48,7 @@ interface Range {
 
 type Sources = 'user' | 'api' | 'silent';
 
-export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, content, setContent, selection, searchHighlight, highlightWordsEnabled }: EditorProps) {
+export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, setEditedSegments }: EditorProps) {
     const ctms = initialCtms; // Make CTMs constant
     const quillRef = useRef<ReactQuill>(null)
     const [alignments, setAlignments] = useState<AlignmentType[]>([])
@@ -74,6 +73,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         if (source === 'user') {
             beforeSelectionRef.current = currentSelection;
             setCurrentSelection(selection);
+            setSelectionHandler();
         }
     };
 
@@ -137,12 +137,9 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         return formattedContent;
     };
 
-    useEffect(() => {
-        if (!content.length) {
-            const formattedContent = getFormattedContent(transcript);
-            setContent(formattedContent);
-        }
-    }, [content.length, transcript]);
+    const { content: initialContent } = useMemo(() => (
+        { content: getFormattedContent(transcript) }
+    ), [transcript])
 
     const handleEditorClick = useCallback(() => {
         const quill = quillRef.current?.getEditor()
@@ -322,13 +319,6 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
 
     useShortcuts(shortcutControls);
 
-    const handleContentChange = useCallback(() => {
-        const quill = quillRef.current?.getEditor()
-        if (!quill) return
-        
-        setContent(quill.getContents().ops)
-    }, [orderDetails.fileId])
-
     const clearHighlights = useCallback(() => {
         requestAnimationFrame(() => {
             const quill = quillRef.current?.getEditor();
@@ -361,9 +351,10 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             );
       
             alignmentWorker.current.onmessage = (e) => {
-                const newAlignments = e.data.alignments;
+                const { alignments: newAlignments, wer, editedSegments } = e.data;
                 setAlignments(newAlignments);
-                console.log('Updated alignments:', newAlignments, 'WER:', e.data.wer);
+                setEditedSegments(new Set(editedSegments));
+                console.log('Updated alignments:', newAlignments, 'WER:', wer);
             };
       
             console.log('Web Worker initialized successfully.');
@@ -751,8 +742,7 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
                 ref={quillRef}
                 theme='snow'
                 modules={quillModules}
-                value={{ ops: content }}
-                onChange={handleContentChange}
+                defaultValue={{ ops: initialContent }}
                 formats={['size', 'background', 'font', 'color', 'bold', 'italics']}
                 className='h-full'
                 onChangeSelection={handleSelectionChange}

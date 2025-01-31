@@ -1,8 +1,6 @@
 'use client'
 
 import {
-  CaretDownIcon,
-  Cross1Icon,
   ReloadIcon,
   PlayIcon,
   PauseIcon,
@@ -12,61 +10,15 @@ import {
   SpeakerLoudIcon,
   TrackPreviousIcon,
   TrackNextIcon,
-  DropdownMenuIcon,
-  ArrowUpIcon,
 } from '@radix-ui/react-icons'
-import { PlusIcon } from 'lucide-react'
-import { useSession } from 'next-auth/react'
 import Quill from 'quill'
 import { useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
-import ConfigureShortcutsDialog from './ConfigureShortcutsDialog'
-import DownloadDocxDialog from './DownloadDocxDialog'
-import FrequentTermsDialog from './FrequentTermsDialog'
 import PlayerButton from './PlayerButton'
-import ReportDialog from './ReportDialog'
-import ShortcutsReferenceDialog from './ShortcutsReferenceDialog'
 import Toolbar from './Toolbar'
-import UploadDocxDialog from './UploadDocxDialog'
-import { Button } from '../ui/button'
-import { Checkbox } from '../ui/checkbox'
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '../ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '../ui/dropdown-menu'
-import { Input } from '../ui/input'
-import { Label } from '../ui/label'
-import { RadioGroup, RadioGroupItem } from '../ui/radio-group'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select'
-import { Textarea } from '../ui/textarea'
-import { getFormattingOptionsAction } from '@/app/actions/editor/get-formatting-options'
-import { getSpeakerNamesAction } from '@/app/actions/editor/get-speaker-names'
-import { requestReReviewAction } from '@/app/actions/editor/re-review'
-import { requestExtensionAction } from '@/app/actions/editor/request-extension'
-import { setFormattingOptionsAction } from '@/app/actions/editor/set-formatting-options'
-import { updateSpeakerNameAction } from '@/app/actions/editor/update-speaker-name'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
-import { getTextFile } from '@/app/actions/get-text-file'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import {
   TooltipProvider,
@@ -75,24 +27,15 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import 'rc-slider/assets/index.css'
-import { FILE_CACHE_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
-import DefaultShortcuts, {
-  getAllShortcuts,
-  setShortcut,
+import {
   ShortcutControls,
   useShortcuts,
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   adjustTimestamps,
-  autoCapitalizeSentences,
-  downloadMP3,
-  getFrequentTermsHandler,
-  handleSave,
   insertTimestampBlankAtCursorPosition,
   navigateAndPlayBlanks,
   playCurrentParagraphTimestamp,
-  regenDocx,
 } from '@/utils/editorUtils'
 import formatDuration from '@/utils/formatDuration'
 
@@ -115,21 +58,21 @@ const createShortcutControls = (
       audioPlayer.current.currentTime += seconds
     }
   },
-  playNextBlank: () => { },
-  playPreviousBlank: () => { },
-  playAudioAtCursorPosition: () => { },
-  insertTimestampBlankAtCursorPosition: () => { },
-  insertTimestampAndSpeaker: () => { },
-  googleSearchSelectedWord: () => { },
-  defineSelectedWord: () => { },
-  increaseFontSize: () => { },
-  decreaseFontSize: () => { },
-  repeatLastFind: () => { },
+  playNextBlank: () => {},
+  playPreviousBlank: () => {},
+  playAudioAtCursorPosition: () => {},
+  insertTimestampBlankAtCursorPosition: () => {},
+  insertTimestampAndSpeaker: () => {},
+  googleSearchSelectedWord: () => {},
+  defineSelectedWord: () => {},
+  increaseFontSize: () => {},
+  decreaseFontSize: () => {},
+  repeatLastFind: () => {},
   increaseVolume: () => {
     setVolumePercentage((prevVol: number) => prevVol + 10)
   },
   decreaseVolume: () => {
-    setVolumePercentage((prevVol: number) => prevVol - 10)
+    setVolumePercentage((prevVol: number) => Math.max(0, prevVol - 10))
   },
   increasePlaybackSpeed: () => {
     if (audioPlayer.current) {
@@ -138,21 +81,24 @@ const createShortcutControls = (
   },
   decreasePlaybackSpeed: () => {
     if (audioPlayer.current) {
-      audioPlayer.current.playbackRate = Math.max(0.1, audioPlayer.current.playbackRate - 0.1)
+      audioPlayer.current.playbackRate = Math.max(
+        0.1,
+        audioPlayer.current.playbackRate - 0.1
+      )
     }
   },
-  playAudioFromTheStartOfCurrentParagraph: () => { },
-  capitalizeFirstLetter: () => { },
-  uppercaseWord: () => { },
-  lowercaseWord: () => { },
-  joinWithNextParagraph: () => { },
-  findNextOccurrenceOfString: () => { },
-  findThePreviousOccurrenceOfString: () => { },
-  replaceNextOccurrenceOfString: () => { },
-  replaceAllOccurrencesOfString: () => { },
-  saveChanges: () => { },
+  playAudioFromTheStartOfCurrentParagraph: () => {},
+  capitalizeFirstLetter: () => {},
+  uppercaseWord: () => {},
+  lowercaseWord: () => {},
+  joinWithNextParagraph: () => {},
+  findNextOccurrenceOfString: () => {},
+  findThePreviousOccurrenceOfString: () => {},
+  replaceNextOccurrenceOfString: () => {},
+  replaceAllOccurrencesOfString: () => {},
+  saveChanges: () => {},
   jumpAudioAndCursorForwardBy3Seconds: () => {
-    if (audioPlayer.current) audioPlayer.current.currentTime += 3;
+    if (audioPlayer.current) audioPlayer.current.currentTime += 3
   },
   playNextBlankInstance: () => {
     if (!quill || !audioPlayer.current) return
@@ -180,151 +126,55 @@ const createShortcutControls = (
     if (!audioPlayer.current) return
     audioPlayer.current.playbackRate = 1.0
     audioPlayer.current.play()
-  }
+  },
 })
 
-interface PlayerEvent {
-  t: number
-  s: number
-}
-
-interface NewPlayerProps {
+interface HeaderProps {
   getAudioPlayer?: (audioPlayer: HTMLAudioElement | null) => void
   quillRef: React.RefObject<ReactQuill> | undefined
-  editorModeOptions: string[]
-  getEditorMode: (editorMode: string) => void
-  editorMode: string
-  notes: string
   orderDetails: OrderDetails
-  submitting: boolean
-  setIsSubmitModalOpen: React.Dispatch<React.SetStateAction<boolean>>
-  setSubmitting: React.Dispatch<React.SetStateAction<boolean>>
-  playerEvents: PlayerEvent[]
-  setPdfUrl: React.Dispatch<React.SetStateAction<string>>
-  setRegenCount: React.Dispatch<React.SetStateAction<number>>
-  setFileToUpload: React.Dispatch<
-    React.SetStateAction<{
-      renamedFile: File | null
-      originalFile: File | null
-      isUploaded?: boolean
-    }>
-  >
-  fileToUpload: {
-    renamedFile: File | null
-    originalFile: File | null
-    isUploaded?: boolean
-  },
   toggleFindAndReplace: () => void
-  highlightWordsEnabled: boolean;
-  setHighlightWordsEnabled: (enabled: boolean) => void;
+  highlightWordsEnabled: boolean
+  setHighlightWordsEnabled: (enabled: boolean) => void
+  waveformUrl: string
 }
 
 export default memo(function Header({
   getAudioPlayer,
   quillRef,
-  editorModeOptions,
-  getEditorMode,
-  editorMode,
-  notes,
   orderDetails,
-  submitting,
-  setIsSubmitModalOpen,
-  setSubmitting,
-  playerEvents,
-  setPdfUrl,
-  setRegenCount,
-  setFileToUpload,
-  fileToUpload,
   toggleFindAndReplace,
   highlightWordsEnabled,
   setHighlightWordsEnabled,
-}: NewPlayerProps) {
+  waveformUrl,
+}: HeaderProps) {
   const [currentValue, setCurrentValue] = useState(0)
   const [currentTime, setCurrentTime] = useState('00:00')
   const [audioDuration, setAudioDuration] = useState(0)
   const audioPlayer = useRef<HTMLAudioElement>(null)
-  const [waveformUrl, setWaveformUrl] = useState('')
   const [isPlayerLoaded, setIsPlayerLoaded] = useState(false)
   const [selection, setSelection] = useState<{
     index: number
     length: number
   } | null>(null)
   const [adjustTimestampsBy, setAdjustTimestampsBy] = useState('0')
-  const [newEditorMode, setNewEditorMode] = useState<string>('')
-  const [notesOpen, setNotesOpen] = useState(true)
-  const [shortcuts, setShortcuts] = useState<
-    { key: string; shortcut: string }[]
-  >([])
-  const [position, setPosition] = useState({ x: 100, y: 100 })
-  const [videoPlayerOpen, setVideoPlayerOpen] = useState(false)
-  const [revertTranscriptOpen, setRevertTranscriptOpen] = useState(false)
-  const [isSpeakerNameModalOpen, setIsSpeakerNameModalOpen] = useState(false)
-  const [speakerName, setSpeakerName] = useState<{
-    [key: string]: string
-  } | null>(null)
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const [autoCapitalize, setAutoCapitalize] = useState(true)
-  const autoCapitalizeRef = useRef(autoCapitalize)
-  const previousEditorContentRef = useRef('')
-  const [isShortcutsReferenceModalOpen, setIsShortcutsReferenceModalOpen] =
-    useState(false)
-  const [isConfigureShortcutsModalOpen, setIsConfigureShortcutsModalOpen] =
-    useState(false)
-  const { data: session } = useSession()
-  const [isFormattingOptionsModalOpen, setIsFormattingOptionsModalOpen] =
-    useState(false)
-  const [formattingOptions, setFormattingOptions] = useState({
-    timeCoding: true,
-    speakerTracking: true,
-    nameFormat: 'initials',
-  })
-  const [reportModalOpen, setReportModalOpen] = useState(false)
-  const [reportDetails, setReportDetails] = useState({
-    reportOption: '',
-    reportComment: '',
-  })
-  const [buttonLoading, setButtonLoading] = useState({
-    download: false,
-    upload: false,
-    submit: false,
-    save: false,
-    report: false,
-    regenDocx: false,
-    mp3: false,
-    frequentTerms: false,
-  })
-  const [allPublicTemplates, setAllPublicTemplates] = useState<
-    { name: string; id: string }[]
-  >([])
-  const [currentTemplate, setCurrentTemplate] = useState('1')
-
-  const [existingOptions, setExistingOptions] = useState<string>('')
-  const [frequentTermsModalOpen, setFrequentTermsModalOpen] = useState(false)
-  const [frequentTermsData, setFrequentTermsData] = useState({
-    autoGenerated: '',
-    edited: '',
-  })
   const [step, setStep] = useState<string>('')
   const [cfd, setCfd] = useState('')
-  const [downloadableType, setDownloadableType] = useState('no-marking')
-  const [asrFileUrl, setAsrFileUrl] = useState('')
-  const [qcFileUrl, setQcFileUrl] = useState('')
-  const [LLMFileUrl, setLLMFileUrl] = useState('')
-  const [reReviewComment, setReReviewComment] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
-  const [videoUrl, setVideoUrl] = useState('')
   const [speed, setSpeed] = useState(100)
-  const [isToolbarDropdownOpen, setIsToolbarDropdownOpen] = useState(false)
+  const [fontSize, setFontSize] = useState(() => {
+    if (typeof window !== 'undefined' && quillRef?.current) {
+      const quill = quillRef.current.getEditor()
+      const container = quill.container as HTMLElement
+      return parseInt(window.getComputedStyle(container).fontSize)
+    }
+    return 16
+  })
   const [volumePercentage, setVolumePercentage] = useState(100)
   const audioContextRef = useRef<AudioContext | null>(null)
   const gainNodeRef = useRef<GainNode | null>(null)
   const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null)
   const [isAudioInitialized, setIsAudioInitialized] = useState(false)
-
-  // Add this function to handle dropdown toggle
-  const handleToolbarDropdownToggle = () => {
-    setIsToolbarDropdownOpen(!isToolbarDropdownOpen)
-  }
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -405,11 +255,9 @@ export default memo(function Header({
       const quill = quillRef.current.getEditor()
       const container = quill.container as HTMLElement
       const currentSize = parseInt(window.getComputedStyle(container).fontSize)
-      if (increase) {
-        container.style.fontSize = `${currentSize + 2}px`
-      } else {
-        container.style.fontSize = `${currentSize - 2}px`
-      }
+      const newSize = increase ? currentSize + 2 : currentSize - 2
+      container.style.fontSize = `${newSize}px`
+      setFontSize(Math.max(newSize, 0))
     },
     [quillRef]
   )
@@ -418,36 +266,24 @@ export default memo(function Header({
   const decreaseFontSize = () => adjustFontSize(false)
 
   const shortcutControls = useMemo(
-    () => createShortcutControls(audioPlayer, quillRef?.current?.getEditor() || null, setVolumePercentage),
+    () =>
+      createShortcutControls(
+        audioPlayer,
+        quillRef?.current?.getEditor() || null,
+        setVolumePercentage
+      ),
     [audioPlayer, quillRef]
   )
 
   useShortcuts(shortcutControls as ShortcutControls)
 
-  const fetchWaveform = async () => {
-    try {
-      const res = await getSignedUrlAction(`${orderDetails.fileId}_wf.png`, 300)
-      if (res.success && res.signedUrl) {
-        setWaveformUrl(res.signedUrl)
-      } else {
-        throw new Error('Failed to load waveform')
-      }
-    } catch (error) {
-      setWaveformUrl('/assets/images/fallback-waveform.png')
-    } finally {
-      setIsPlayerLoaded(true)
-    }
-  }
-
   const fetchAudioUrl = async () => {
     try {
-      console.log('Fetching audio URL for fileId:', orderDetails.fileId)
       const { success, signedUrl } = await getSignedUrlAction(
         `${orderDetails.fileId}.mp3`,
         Math.max(Number(orderDetails.duration) * 4, 1800)
       )
       if (success && signedUrl) {
-        console.log('Got signed URL:', signedUrl)
         setAudioUrl(signedUrl)
       } else {
         throw new Error('Failed to fetch audio file')
@@ -460,7 +296,6 @@ export default memo(function Header({
 
   useEffect(() => {
     if (!orderDetails.fileId) return
-    fetchWaveform()
     fetchAudioUrl()
   }, [orderDetails.fileId])
 
@@ -545,7 +380,7 @@ export default memo(function Header({
   }, [])
 
   const handleMouseMoveOnWaveform = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (typeof document === "undefined") return; // Ensure code runs only in the browser
+    if (typeof document === 'undefined') return // Ensure code runs only in the browser
 
     const rect = e.currentTarget.getBoundingClientRect()
     const x = e.clientX - rect.left
@@ -564,56 +399,6 @@ export default memo(function Header({
     }
   }
 
-  const getFormattingOptions = async () => {
-    try {
-      const response = await getFormattingOptionsAction(
-        Number(orderDetails.orderId)
-      )
-      const { options, templates, currentTemplate } = response
-      setFormattingOptions({
-        timeCoding: options.ts === 1,
-        speakerTracking: options.sif === 1,
-        nameFormat: options.si === 0 ? 'initials' : 'full-names',
-      })
-      if (templates) {
-        setAllPublicTemplates(
-          templates?.map((temp: { name: string; id: number }) => ({
-            ...temp,
-            id: temp.id.toString(),
-          }))
-        )
-      }
-      if (currentTemplate) {
-        setCurrentTemplate(currentTemplate?.id.toString())
-      }
-      setExistingOptions(JSON.stringify(options))
-    } catch (error) {
-      toast.error('Failed to fetch formatting options')
-    }
-  }
-
-  useEffect(() => {
-    if (orderDetails.orderId) {
-      getFormattingOptions()
-    }
-  }, [orderDetails.orderId])
-
-  useEffect(() => {
-    setShortcuts(getAllShortcuts())
-  }, [])
-
-  const updateShortcut = (
-    action: keyof DefaultShortcuts,
-    newShortcut: string
-  ) => {
-    setShortcut(action, newShortcut)
-    setShortcuts(getAllShortcuts())
-  }
-
-  useEffect(() => {
-    autoCapitalizeRef.current = autoCapitalize
-  }, [autoCapitalize])
-
   const editorShortcutControls = useMemo(() => {
     const controls: Partial<ShortcutControls> = {
       playNextBlank: playNextBlankInstance,
@@ -628,374 +413,6 @@ export default memo(function Header({
   ])
 
   useShortcuts(editorShortcutControls)
-
-  useEffect(() => {
-    const syncVideoWithAudio = () => {
-      if (!audioPlayer || !audioPlayer.current || !videoRef.current) return
-      const player = audioPlayer.current
-      videoRef.current.volume = 0
-
-      const handleAudioPlay = () => videoRef.current?.play()
-      const handleAudioPause = () => videoRef.current?.pause()
-
-      player.addEventListener('play', handleAudioPlay)
-      player.addEventListener('pause', handleAudioPause)
-
-      player.addEventListener('seeking', () => {
-        if (videoRef.current) videoRef.current.currentTime = player.currentTime
-      })
-
-      return () => {
-        player.removeEventListener('play', handleAudioPlay)
-        player.removeEventListener('pause', handleAudioPause)
-      }
-    }
-
-    if (videoPlayerOpen) {
-      const cleanup = syncVideoWithAudio()
-      const interval = setInterval(() => {
-        if (!audioPlayer || !audioPlayer.current || !videoRef.current) return
-        if (videoRef.current.currentTime !== audioPlayer.current.currentTime) {
-          videoRef.current.currentTime = audioPlayer.current.currentTime
-        }
-      }, 1000)
-
-      return () => {
-        cleanup?.()
-        clearInterval(interval)
-      }
-    }
-  }, [audioPlayer, videoRef, videoPlayerOpen])
-
-  const toggleVideo = async () => {
-    try {
-      if (!videoUrl) {
-        const { success, signedUrl } = await getSignedUrlAction(`${orderDetails.fileId}.mp4`, 3600)
-        if (success && signedUrl) {
-          setVideoUrl(signedUrl)
-        } else {
-          throw new Error('Failed to fetch video file')
-        }
-
-      }
-      setVideoPlayerOpen(!videoPlayerOpen)
-    } catch (error) {
-      toast.error('Failed to fetch video file')
-    }
-  }
-
-  const handleAutoCapitalize = useCallback(
-    (
-      delta: {
-        ops: {
-          insert?: string | object
-          delete?: number
-          retain?: number
-          attributes?: { [key: string]: unknown }
-        }[]
-      },
-      oldDelta: {
-        ops: {
-          insert?: string | object
-          delete?: number
-          retain?: number
-          attributes?: { [key: string]: unknown }
-        }[]
-      },
-      source: 'api' | 'user' | 'silent'
-    ) => {
-      if (!quillRef?.current || !autoCapitalizeRef.current || source !== 'user')
-        return
-
-      const quill = quillRef.current.getEditor()
-      const newText = quill.getText()
-      if (newText === previousEditorContentRef.current) return
-
-      const change = delta.ops[0]
-
-      const shouldCapitalize = (index: number): boolean =>
-        index === 0 || (index > 0 && /[.!?]\s$/.test(newText.slice(0, index)))
-
-      const capitalizeChar = (index: number): void => {
-        const char = newText[index]
-        if (/^[a-zA-Z]$/.test(char) && char !== char.toUpperCase()) {
-          quill.deleteText(index, 1)
-          quill.insertText(index, char.toUpperCase(), quill.getFormat())
-          quill.setSelection(index + 1, 0)
-        }
-      }
-
-      if (
-        'insert' in change ||
-        ('retain' in change &&
-          newText.length > previousEditorContentRef.current.length)
-      ) {
-        const insertIndex = 'retain' in change ? change.retain || 0 : 0
-        if (shouldCapitalize(insertIndex)) {
-          capitalizeChar(insertIndex)
-        }
-      } else if ('delete' in change) {
-        const deleteIndex = 'retain' in change ? change.retain || 0 : 0
-        if (deleteIndex > 0 && shouldCapitalize(deleteIndex)) {
-          capitalizeChar(deleteIndex)
-        }
-      }
-
-      previousEditorContentRef.current = newText
-    },
-    [quillRef]
-  )
-
-  useEffect(() => {
-    if (!quillRef?.current) return
-
-    const quill = quillRef.current.getEditor()
-    quill.on('text-change', handleAutoCapitalize)
-
-    return () => {
-      quill.off('text-change', handleAutoCapitalize)
-    }
-  }, [quillRef, handleAutoCapitalize])
-
-  const handleDragChange = (
-    e: React.MouseEvent<HTMLDivElement | HTMLVideoElement>
-  ) => {
-    if (typeof document === "undefined") return; // Ensure code runs only in the browser
-
-    e.preventDefault()
-    const target = e.target as HTMLDivElement // Correctly typecast the event target
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      setPosition({
-        x: moveEvent.clientX - deltaX,
-        y: moveEvent.clientY - deltaY,
-      })
-    }
-
-    const deltaX = e.clientX - target.getBoundingClientRect().left
-    const deltaY = e.clientY - target.getBoundingClientRect().top
-
-    document.addEventListener('mousemove', onMouseMove)
-    document.addEventListener(
-      'mouseup',
-      () => {
-        document.removeEventListener('mousemove', onMouseMove)
-      },
-      { once: true }
-    )
-  }
-
-  const toggleAutoCapitalize = () => {
-    setAutoCapitalize(!autoCapitalize)
-  }
-
-  const toggleNotes = () => {
-    setNotesOpen(!notesOpen)
-  }
-
-  const toggleRevertTranscript = () => {
-    setRevertTranscriptOpen(!revertTranscriptOpen)
-  }
-
-  function checkSpeakerOrder(speakers: Record<string, string>): boolean {
-    const expectedOrder = Object.keys(speakers).sort((a, b) => {
-      const numA = parseInt(a.replace('S', ''));
-      const numB = parseInt(b.replace('S', ''));
-      return numA - numB;
-    });
-
-    return Object.keys(speakers).every((key, index) => key === expectedOrder[index]);
-  }
-
-  const toggleSpeakerName = async () => {
-    try {
-      if (quillRef && quillRef.current) { // Removed !speakerName condition to re-fetch every time
-        const quill = quillRef.current.getEditor()
-        const text = quill.getText()
-        const speakerRegex = /\d{1,2}:\d{2}:\d{2}\.\d\s+(S\d+):/g
-        const speakerOrder: string[] = []
-        let match
-
-        // Collect speakers in order of appearance
-        while ((match = speakerRegex.exec(text)) !== null) {
-          const speaker = match[1]
-          if (!speakerOrder.includes(speaker)) {
-            speakerOrder.push(speaker)
-          }
-        }
-
-        const response = await getSpeakerNamesAction(orderDetails.fileId)
-        const speakerNamesList = response.data
-        const newSpeakerNames: Record<string, string> = {}
-
-        // Map speaker names based on order of appearance
-        speakerOrder.forEach((speaker) => {
-          const speakerNumber = parseInt(speaker.replace('S', '')) - 1
-          // Preserve existing speaker names if they exist
-          if (speakerName && speakerName[speaker]) {
-            newSpeakerNames[speaker] = speakerName[speaker]
-          } else if (
-            speakerNamesList &&
-            speakerNamesList[speakerNumber] &&
-            (speakerNamesList[speakerNumber].fn || speakerNamesList[speakerNumber].ln)
-          ) {
-            const { fn, ln } = speakerNamesList[speakerNumber]
-            newSpeakerNames[speaker] = `${fn} ${ln}`.trim()
-          } else {
-            newSpeakerNames[speaker] = `Speaker ${speakerNumber + 1}`
-          }
-        })
-
-        // Add any remaining speakers from the API that weren't in the transcript
-        const maxSpeakerNumber = Math.max(
-          ...speakerOrder.map(s => parseInt(s.replace('S', ''))),
-          speakerNamesList.length
-        )
-
-        for (let i = 1; i <= maxSpeakerNumber; i++) {
-          const speaker = `S${i}`
-          if (!newSpeakerNames[speaker]) {
-            if (speakerName && speakerName[speaker]) {
-              newSpeakerNames[speaker] = speakerName[speaker]
-            } else if (
-              speakerNamesList &&
-              speakerNamesList[i - 1] &&
-              (speakerNamesList[i - 1].fn || speakerNamesList[i - 1].ln)
-            ) {
-              const { fn, ln } = speakerNamesList[i - 1]
-              newSpeakerNames[speaker] = `${fn} ${ln}`.trim()
-            } else {
-              newSpeakerNames[speaker] = `Speaker ${i}`
-            }
-          }
-        }
-
-        setSpeakerName(newSpeakerNames) // Replace instead of merge with previous state
-      }
-      setIsSpeakerNameModalOpen(!isSpeakerNameModalOpen)
-    } catch (error) {
-      toast.error('An error occurred while opening the speaker name modal')
-    }
-  }
-
-  const handleSpeakerNameChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    key: string
-  ) => {
-    setSpeakerName((prev) => ({ ...prev, [key]: e.target.value }))
-  }
-
-  const updateSpeakerName = async () => {
-    const toastId = toast.loading('Updating speaker names...')
-    try {
-      if (!speakerName) {
-        throw new Error('Speaker names cannot be empty')
-      }
-      await updateSpeakerNameAction(orderDetails.fileId, speakerName)
-      toast.dismiss(toastId)
-      toast.success('Speaker names updated successfully')
-      setIsSpeakerNameModalOpen(false)
-      if (submitting) {
-        setIsSubmitModalOpen(true)
-      }
-    } catch (error) {
-      toast.dismiss(toastId)
-      toast.error('Failed to update speaker names')
-    }
-  }
-
-  const addSpeakerName = async () => {
-    if (!speakerName) return
-    const newKey = `S${Object.keys(speakerName).length + 1}`
-    setSpeakerName((prev) => ({
-      ...prev,
-      [newKey]: 'Speaker ' + (Object.keys(speakerName).length + 1),
-    }))
-  }
-
-  const revertTranscript = async () => {
-    const toastId = toast.loading('Reverting transcript...')
-    let type = 'QC'
-    if (orderDetails.status === 'REVIEWER_ASSIGNED') {
-      type = 'CF_REV'
-    } else if (orderDetails.status === 'FINALIZER_ASSIGNED') {
-      type = 'CF_FINALIZER'
-    }
-
-    try {
-      await axiosInstance.post(`${FILE_CACHE_URL}/revert-transcript`, {
-        fileId: orderDetails.fileId,
-        type
-      })
-      toast.success('Transcript reverted successfully')
-      localStorage.removeItem('transcript')
-      window.location.reload()
-      return
-    } catch (error) {
-      toast.dismiss(toastId)
-      toast.error('Failed to revert transcript')
-    }
-  }
-
-  const handleFormattingOptionChange = async () => {
-    const toastId = toast.loading('Updating formatting options...')
-    try {
-      await setFormattingOptionsAction(
-        Number(orderDetails.orderId),
-        formattingOptions,
-        JSON.parse(existingOptions),
-        +currentTemplate
-      )
-      toast.dismiss(toastId)
-      toast.success('Formatting options updated successfully')
-      localStorage.removeItem('transcript')
-      window.location.reload() // Refresh the page after success
-    } catch (error) {
-      toast.dismiss(toastId)
-      toast.error('Failed to update formatting options')
-    }
-  }
-
-  const requestExtension = async () => {
-    const toastId = toast.loading('Requesting extension...')
-    try {
-      await requestExtensionAction(Number(orderDetails.orderId))
-
-      window.location.reload()
-      toast.dismiss(toastId)
-      toast.success('Extension requested successfully')
-    } catch (error) {
-      toast.dismiss(toastId)
-      toast.error('Failed to request extension')
-    }
-  }
-
-  useEffect(() => {
-    if (submitting && orderDetails.status === 'QC_ASSIGNED') {
-      toggleSpeakerName()
-    }
-    if (submitting && orderDetails.status !== 'QC_ASSIGNED') {
-      setIsSubmitModalOpen(true)
-    }
-  }, [submitting])
-
-  const getEditorText = useCallback(
-    () => quillRef?.current?.getEditor().getText() || '',
-    [quillRef]
-  )
-
-  const handleReReview = async () => {
-    const toastId = toast.loading('Processing re-review request...')
-    try {
-      await requestReReviewAction(orderDetails.fileId, reReviewComment)
-      toast.dismiss(toastId)
-      const successToastId = toast.success(
-        `Re-review request submitted successfully`
-      )
-      toast.dismiss(successToastId)
-    } catch (error) {
-      toast.error('Failed to re-review the file')
-    }
-  }
 
   const insertTimestampBlankAtCursorPositionInstance = useCallback(() => {
     insertTimestampBlankAtCursorPosition(
@@ -1019,123 +436,108 @@ export default memo(function Header({
     }
   }, [audioPlayer])
 
-  const handleDropdownMenuOpenChange = async (open: boolean) => {
-    if (open) {
-      const asrFileUrl = await getTextFile(orderDetails.fileId, 'ASR')
-      setAsrFileUrl(asrFileUrl?.signedUrl || '')
-      const qcFileUrl = await getTextFile(orderDetails.fileId, 'QC')
-      setQcFileUrl(qcFileUrl?.signedUrl || '')
-      const LLMFileUrl = await getTextFile(orderDetails.fileId, 'LLM')
-      setLLMFileUrl(LLMFileUrl?.signedUrl || '')
-    }
-  }
-
   const markSection = () => {
-    if (!quillRef?.current) return;
+    if (!quillRef?.current) return
 
-    const quill = quillRef.current.getEditor();
-    const range = quill.getSelection();
+    const quill = quillRef.current.getEditor()
+    const range = quill.getSelection()
 
     if (!range) {
-      toast.error('Please select the heading to mark.');
-      return;
+      toast.error('Please select the heading to mark.')
+      return
     }
 
-    const selectedText = quill.getText(range.index, range.length).trim();
+    const selectedText = quill.getText(range.index, range.length).trim()
 
-    const validHeadings = ['EXAMINATION', 'PROCEEDINGS', 'EXAMINATION-CONTINUES', 'FURTHER EXAMINATION'];
+    const validHeadings = [
+      'EXAMINATION',
+      'PROCEEDINGS',
+      'EXAMINATION-CONTINUES',
+      'FURTHER EXAMINATION',
+    ]
 
     if (!validHeadings.includes(selectedText.toUpperCase())) {
-      toast.error('Only Proceedings/Examination can be marked.');
-      return;
+      toast.error('Only Proceedings/Examination can be marked.')
+      return
     }
 
-    const nextChar = quill.getText(range.index + range.length, 1);
-    const wrappedText = `[--${selectedText.toUpperCase()}--]${nextChar === '\n' ? '\n' : '\n\n'}`;
-    quill.deleteText(range.index, range.length, 'user');
-    quill.insertText(range.index, wrappedText, 'user');
+    const nextChar = quill.getText(range.index + range.length, 1)
+    const wrappedText = `[--${selectedText.toUpperCase()}--]${
+      nextChar === '\n' ? '\n' : '\n\n'
+    }`
+    quill.deleteText(range.index, range.length, 'user')
+    quill.insertText(range.index, wrappedText, 'user')
 
-    toast.success(`Marked as start of ${selectedText}`);
+    toast.success(`Marked as start of ${selectedText}`)
   }
 
   const markExaminee = () => {
-    if (!quillRef?.current) return;
+    if (!quillRef?.current) return
 
-    const quill = quillRef.current.getEditor();
-    const range = quill.getSelection();
+    const quill = quillRef.current.getEditor()
+    const range = quill.getSelection()
 
     if (!range) {
-      toast.error('Please select the text to mark.');
-      return;
+      toast.error('Please select the text to mark.')
+      return
     }
 
-    const selectedText = quill.getText(range.index, range.length);
-    const wrappedText = `[--EXAMINEE--${selectedText.toUpperCase()}--EXAMINEE--]`;
+    const selectedText = quill.getText(range.index, range.length)
+    const wrappedText = `[--EXAMINEE--${selectedText.toUpperCase()}--EXAMINEE--]`
 
-    quill.deleteText(range.index, range.length, 'user');
-    quill.insertText(range.index, wrappedText, 'user');
+    quill.deleteText(range.index, range.length, 'user')
+    quill.insertText(range.index, wrappedText, 'user')
 
-    toast.success('Marked as continuation of examination');
+    toast.success('Marked as continuation of examination')
   }
 
   const insertSwearInLine = () => {
-    if (!quillRef?.current) return;
+    if (!quillRef?.current) return
 
-    const quill = quillRef.current.getEditor();
-    const range = quill.getSelection();
+    const quill = quillRef.current.getEditor()
+    const range = quill.getSelection()
 
     if (!range) {
-      toast.error('Please place cursor where you want to insert the text');
-      return;
+      toast.error('Please place cursor where you want to insert the text')
+      return
     }
 
-    const textToInsert = "WHEREUPON, [--EXAMINEE--<replace_with_examinee_name>--EXAMINEE--] having been called as a witness, being duly sworn by the notary public present, testified as follows:";
+    const textToInsert =
+      'WHEREUPON, [--EXAMINEE--<replace_with_examinee_name>--EXAMINEE--] having been called as a witness, being duly sworn by the notary public present, testified as follows:'
 
-    quill.insertText(range.index, textToInsert, 'user');
+    quill.insertText(range.index, textToInsert, 'user')
 
-    toast.success('Inserted swear in line text');
+    toast.success('Inserted swear in line text')
   }
 
   const insertInterpreterSwearInLine = () => {
-    if (!quillRef?.current) return;
+    if (!quillRef?.current) return
 
-    const quill = quillRef.current.getEditor();
-    const range = quill.getSelection();
+    const quill = quillRef.current.getEditor()
+    const range = quill.getSelection()
 
     if (!range) {
-      toast.error('Please place cursor where you want to insert the text');
-      return;
+      toast.error('Please place cursor where you want to insert the text')
+      return
     }
 
-    const textToInsert = "WHEREUPON, [--INTERPRETER--<replace_with_interpreter_name>--INTERPRETER--] the interpreter was duly sworn.";
+    const textToInsert =
+      'WHEREUPON, [--INTERPRETER--<replace_with_interpreter_name>--INTERPRETER--] the interpreter was duly sworn.'
 
-    quill.insertText(range.index, textToInsert, 'user');
+    quill.insertText(range.index, textToInsert, 'user')
 
-    toast.success('Inserted swear in line text');
+    toast.success('Inserted swear in line text')
   }
 
-  const handleSwapSpeakers = (currentIndex: number) => {
-    if (!speakerName || currentIndex === 0) return;
-
-    const entries = Object.entries(speakerName);
-    const currentKey = entries[currentIndex][0];
-    const previousKey = entries[currentIndex - 1][0];
-
-    setSpeakerName(prev => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        [currentKey]: prev[previousKey],
-        [previousKey]: prev[currentKey]
-      };
-    });
-  };
-  // Initialize Web Audio API
   const initializeAudio = useCallback(() => {
     if (!isAudioInitialized && audioPlayer.current) {
       try {
-        audioContextRef.current = new (window.AudioContext || (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext || AudioContext)()
-        sourceNodeRef.current = audioContextRef.current.createMediaElementSource(audioPlayer.current)
+        audioContextRef.current = new (window.AudioContext ||
+          (window as { webkitAudioContext?: typeof AudioContext })
+            .webkitAudioContext ||
+          AudioContext)()
+        sourceNodeRef.current =
+          audioContextRef.current.createMediaElementSource(audioPlayer.current)
         gainNodeRef.current = audioContextRef.current.createGain()
 
         sourceNodeRef.current.connect(gainNodeRef.current)
@@ -1161,27 +563,30 @@ export default memo(function Header({
   }, [isAudioInitialized, volumePercentage])
 
   // Cleanup Web Audio API on unmount
-  useEffect(() => () => {
-    if (audioContextRef.current) {
-      audioContextRef.current.close()
-    }
-  }, [])
+  useEffect(
+    () => () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close()
+      }
+    },
+    []
+  )
 
   return (
-    <div className='min-h-24 relative mx-2'>
+    <div className='border bg-white border-customBorder rounded-md relative'>
       {!isPlayerLoaded && (
         <div className='absolute inset-0 w-full h-full bg-white z-50 flex justify-center items-center'>
           <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
           <span>Loading...</span>
         </div>
       )}
-      <div className='h-1/2 bg-white border border-gray-200 border-b-0 overflow-hidden'>
+      <div className='h-12'>
         <div
           id='waveform'
-          className='relative h-full overflow-hidden'
+          className='relative h-full overflow-hidden cursor-pointer'
           onMouseMove={handleMouseMoveOnWaveform}
           onMouseLeave={() => {
-            if (typeof document === "undefined") return; // Ensure code runs only in the browser
+            if (typeof document === 'undefined') return
 
             const tooltip = document.getElementById('time-tooltip')
             if (tooltip) {
@@ -1203,8 +608,8 @@ export default memo(function Header({
         >
           <div
             id='time-tooltip'
-            className='fixed hidden z-50 bg-primary text-white px-2 py-1 rounded text-sm pointer-events-none'
-            style={{ transform: 'translate(-50%, 150%)' }}
+            className='fixed hidden z-50 bg-primary text-white px-1 py-0.5 rounded text-[11px] pointer-events-none'
+            style={{ transform: 'translate(-50%, 200%)' }}
           />
           <div
             className='absolute top-0 left-0 h-full bg-primary/20'
@@ -1213,736 +618,189 @@ export default memo(function Header({
               transition: 'width 0.1s linear',
             }}
           />
-          <span className='absolute top-0 left-0 bg-primary text-white px-2 py-1 rounded text-xs'>
+          <span className='absolute top-0 left-0 bg-primary text-white px-1 py-0.5 rounded text-[11px]'>
             {currentTime}
           </span>
-          <span className='absolute top-0 right-0 bg-primary text-white px-2 py-1 rounded text-xs'>
+          <span className='absolute top-0 right-0 bg-primary text-white px-1 py-0.5 rounded text-[11px]'>
             {formatDuration(audioDuration)}
           </span>
         </div>
       </div>
 
-      <div className='h-1/2 bg-white border border-gray-200 px-1 flex flex-col justify-between rounded-b-lg'>
+      <div className='flex flex-col justify-between p-2'>
         <audio
           ref={audioPlayer}
           className='hidden'
           src={audioUrl}
-          preload="auto"
-          crossOrigin="anonymous"
+          preload='auto'
+          crossOrigin='anonymous'
           onPlay={initializeAudio}
         ></audio>
 
         <div className='flex items-center h-full'>
           <div className='w-full flex justify-between'>
-            <div className='flex'>
+            <div className='flex items-center gap-x-2'>
               <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <PlayerButton
-                      icon={<TrackPreviousIcon />}
-                      tooltip=''
-                      onClick={() => {
-                        if (audioPlayer.current) {
-                          audioPlayer.current.currentTime -= 5
-                        }
-                      }}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Go back 10 seconds</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger>
-                    <PlayerButton
-                      icon={<PlayIcon />}
-                      tooltip='Play'
-                      onClick={shortcutControls.togglePlay}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Play</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger>
-                    <PlayerButton
-                      icon={<PauseIcon />}
-                      tooltip='Pause'
-                      onClick={shortcutControls.pause}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Pause</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger>
-                    <PlayerButton
-                      icon={<TrackNextIcon />}
-                      tooltip='Go forward 5 seconds'
-                      onClick={() => {
-                        if (audioPlayer.current) {
-                          audioPlayer.current.currentTime += 5
-                        }
-                      }}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Go forward 10 seconds</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger>
-                    <PlayerButton
-                      icon={<DoubleArrowUpIcon />}
-                      tooltip='Fast forward'
-                      onClick={shortcutControls.increasePlaybackSpeed}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Increase playback speed</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger>
-                    <PlayerButton
-                      icon={<DoubleArrowDownIcon />}
-                      tooltip='Rewind'
-                      onClick={shortcutControls.decreasePlaybackSpeed}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Decrease playback speed</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger>
-                    <PlayerButton
-                      icon={<SpeakerLoudIcon />}
-                      tooltip='Increase volume'
-                      onClick={shortcutControls.increaseVolume}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Increase volume</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger>
-                    <PlayerButton
-                      icon={<SpeakerQuietIcon />}
-                      tooltip='Decrease volume'
-                      onClick={shortcutControls.decreaseVolume}
-                    />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Decrease volume</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <div className='h-full w-[2px] bg-gray-800 mx-3'></div>
-
-                <div className='block 2xl:hidden relative'>
+                <div className='flex items-center gap-x-1 bg-secondary rounded-sm'>
                   <Tooltip>
                     <TooltipTrigger>
                       <PlayerButton
-                        icon={<DropdownMenuIcon />}
-                        tooltip='Toggle more options'
-                        onClick={handleToolbarDropdownToggle}
+                        icon={<TrackPreviousIcon className='w-4 h-4' />}
+                        tooltip='Go back 10 seconds'
+                        onClick={() => {
+                          if (audioPlayer.current) {
+                            audioPlayer.current.currentTime -= 5
+                          }
+                        }}
                       />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Toggle more options</p>
+                      <p>Go back 10 seconds</p>
                     </TooltipContent>
                   </Tooltip>
-                  {isToolbarDropdownOpen && <div className='absolute top-[35px] -right-[380px] z-10 bg-white rounded-lg shadow-lg border border-gray-200 w-fit p-2 flex'>
-                    <Toolbar
-                      orderDetails={orderDetails}
-                      setSelectionHandler={setSelectionHandler}
-                      playNextBlankInstance={playNextBlankInstance}
-                      playPreviousBlankInstance={playPreviousBlankInstance}
-                      playCurrentParagraphInstance={playCurrentParagraphInstance}
-                      insertTimestampBlankAtCursorPositionInstance={insertTimestampBlankAtCursorPositionInstance}
-                      toggleFindAndReplace={toggleFindAndReplace}
-                      markSection={markSection}
-                      markExaminee={markExaminee}
-                      insertSwearInLine={insertSwearInLine}
-                      adjustTimestampsBy={adjustTimestampsBy}
-                      setAdjustTimestampsBy={setAdjustTimestampsBy}
-                      handleAdjustTimestamps={handleAdjustTimestamps}
-                      increaseFontSize={increaseFontSize}
-                      decreaseFontSize={decreaseFontSize}
-                      insertInterpreterSwearInLine={insertInterpreterSwearInLine}
-                      highlightWordsEnabled={highlightWordsEnabled}
-                      setHighlightWordsEnabled={setHighlightWordsEnabled}
-                    />
-                  </div>}
-                </div>
-              </TooltipProvider>
-              <div className='hidden 2xl:block'>
-                <Toolbar
-                  orderDetails={orderDetails}
-                  setSelectionHandler={setSelectionHandler}
-                  playNextBlankInstance={playNextBlankInstance}
-                  playPreviousBlankInstance={playPreviousBlankInstance}
-                  playCurrentParagraphInstance={playCurrentParagraphInstance}
-                  insertTimestampBlankAtCursorPositionInstance={insertTimestampBlankAtCursorPositionInstance}
-                  toggleFindAndReplace={toggleFindAndReplace}
-                  markSection={markSection}
-                  markExaminee={markExaminee}
-                  insertSwearInLine={insertSwearInLine}
-                  adjustTimestampsBy={adjustTimestampsBy}
-                  setAdjustTimestampsBy={setAdjustTimestampsBy}
-                  handleAdjustTimestamps={handleAdjustTimestamps}
-                  increaseFontSize={increaseFontSize}
-                  decreaseFontSize={decreaseFontSize}
-                  insertInterpreterSwearInLine={insertInterpreterSwearInLine}
-                  highlightWordsEnabled={highlightWordsEnabled}
-                  setHighlightWordsEnabled={setHighlightWordsEnabled}
-                />
-              </div>
-            </div>
 
-            <div className='flex gap-2'>
-              <div className='flex items-center border border-gray-200 rounded-md px-3 py-1 w-32 h-9'>
-                <span>Speed:</span>
-                <div className="ml-2 flex items-center gap-1">
-                  <span className="text-sm font-medium">{speed}</span>
-                  <span className="text-sm text-gray-500">%</span>
-                </div>
-              </div>
-              <div className='flex items-center border border-gray-200 rounded-md px-3 py-1 h-9'>
-                <span>Volume:</span>
-                <div className="ml-2 flex items-center gap-1">
-                  <span className="text-sm font-medium">{volumePercentage}</span>
-                  <span className="text-sm text-gray-500">%</span>
-                </div>
-              </div>
-              <Dialog>
-                <DropdownMenu onOpenChange={handleDropdownMenuOpenChange}>
-                  <DropdownMenuTrigger className='flex border border-gray-200 px-3 rounded-3xl items-center h-9 shadow-none hover:bg-accent transition-colors'>
-                    <div className='flex items-center justify-center mr-2'>
-                      Options
-                    </div>
-                    <CaretDownIcon />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem
-                      onClick={() => setIsShortcutsReferenceModalOpen(true)}
-                    >
-                      Shortcuts Reference
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setIsConfigureShortcutsModalOpen(true)}
-                    >
-                      Configure Shortcuts
-                    </DropdownMenuItem>
-                    {session?.user?.role !== 'CUSTOMER' && (
-                      <DropdownMenuItem onClick={toggleRevertTranscript}>
-                        Revert Transcript
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={toggleVideo}>
-                      Toggle Video
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={toggleNotes}>
-                      Notes
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={toggleSpeakerName}>
-                      Speaker Names
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={downloadMP3.bind(null, orderDetails)}
-                    >
-                      Download MP3
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={requestExtension}>
-                      Request Extension
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={requestExtension}>
-                      Request Extension
-                    </DropdownMenuItem>
-                    {session?.user?.role !== 'CUSTOMER' && (
-                      <DropdownMenuItem
-                        onClick={() => setReportModalOpen(true)}
-                      >
-                        Report
-                      </DropdownMenuItem>
-                    )}
-                    {session?.user?.role !== 'CUSTOMER' && (
-                      <DropdownMenuItem
-                        onClick={() =>
-                          getFrequentTermsHandler(
-                            orderDetails?.userId,
-                            setButtonLoading,
-                            setFrequentTermsData,
-                            setFrequentTermsModalOpen
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <PlayerButton
+                        icon={
+                          !audioPlayer?.current?.paused ? (
+                            <PauseIcon className='w-4 h-4' />
+                          ) : (
+                            <PlayIcon className='w-4 h-4' />
                           )
                         }
-                      >
-                        Frequent Terms
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={toggleAutoCapitalize}>
-                      {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
-                    </DropdownMenuItem>
-                    {session?.user?.role === 'CUSTOMER' && (
-                      <DropdownMenuItem
-                        onClick={() => setIsFormattingOptionsModalOpen(true)}
-                      >
-                        Formatting Options
-                      </DropdownMenuItem>
-                    )}
-                    {orderDetails.status === 'QC_ASSIGNED' &&
-                      <DropdownMenuItem asChild>
-                        <a href={asrFileUrl} target='_blank'>Download ASR text</a>
-                      </DropdownMenuItem>}
-                    {(orderDetails.status === 'REVIEWER_ASSIGNED' || orderDetails.status === 'FINALIZER_ASSIGNED') &&
-                      <DropdownMenuItem asChild>
-                        <a href={qcFileUrl} target='_blank'>Download QC text</a>
-                      </DropdownMenuItem>}
-                    {(orderDetails.status === 'REVIEWER_ASSIGNED' || orderDetails.status === 'FINALIZER_ASSIGNED') &&
-                      <DropdownMenuItem asChild>
-                        <a href={LLMFileUrl} target='_blank'>Download LLM text</a>
-                      </DropdownMenuItem>}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle className='mb-5'>
-                      Change Editor Mode
-                    </DialogTitle>
-                    <div>
-                      <RadioGroup
-                        defaultValue={editorMode}
-                        onValueChange={setNewEditorMode}
-                        className='flex gap-10 mb-5'
-                      >
-                        {editorModeOptions.map((option, index) => (
-                          <div
-                            className='flex items-center space-x-2'
-                            key={index}
-                          >
-                            <RadioGroupItem value={option} id={option} />
-                            <Label htmlFor={option}>{option}</Label>
-                          </div>
-                        ))}
-                      </RadioGroup>
-                    </div>
-                    <DialogClose asChild>
-                      <Button onClick={() => getEditorMode(newEditorMode)}>
-                        Confirm
-                      </Button>
-                    </DialogClose>
-                  </DialogHeader>
-                </DialogContent>
-              </Dialog>
-
-              {step !== 'QC' && (
-                <>
-                  {editorMode === 'Manual' && (
-                    <>
-                      <DownloadDocxDialog
-                        orderDetails={orderDetails}
-                        downloadableType={downloadableType}
-                        setDownloadableType={setDownloadableType}
+                        tooltip={
+                          !audioPlayer?.current?.paused ? 'Pause' : 'Play'
+                        }
+                        onClick={() => {
+                          if (!audioPlayer?.current?.paused) {
+                            shortcutControls.pause()
+                          } else {
+                            shortcutControls.togglePlay()
+                          }
+                        }}
                       />
-                      <UploadDocxDialog
-                        orderDetails={orderDetails}
-                        setButtonLoading={setButtonLoading}
-                        buttonLoading={buttonLoading}
-                        setFileToUpload={setFileToUpload}
-                        fileToUpload={fileToUpload}
-                        session={session}
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{!audioPlayer?.current?.paused ? 'Pause' : 'Play'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <PlayerButton
+                        icon={<TrackNextIcon className='w-4 h-4' />}
+                        tooltip='Go forward 5 seconds'
+                        onClick={() => {
+                          if (audioPlayer.current) {
+                            audioPlayer.current.currentTime += 5
+                          }
+                        }}
                       />
-                    </>
-                  )}
-                </>
-              )}
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Go forward 10 seconds</p>
+                    </TooltipContent>
+                  </Tooltip>
 
-              {editorMode === 'Editor' && step !== 'QC' && (
-                <Button
-                  variant='outline'
-                  className='border border-[#6442ED] text-[#6442ED] hover:text-[#6442ede6]'
-                  onClick={() =>
-                    regenDocx(
-                      orderDetails.fileId,
-                      orderDetails.orderId,
-                      setButtonLoading,
-                      setRegenCount,
-                      setPdfUrl
-                    )
-                  }
-                  disabled={buttonLoading.regenDocx}
-                >
-                  {' '}
-                  {buttonLoading.regenDocx && (
-                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                  )}{' '}
-                  Regenerate Document
-                </Button>
-              )}
-
-              {session?.user?.role === 'CUSTOMER' && (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant='outline'>Re-Review</Button>
-                  </DialogTrigger>
-                  <DialogContent className='w-2/5'>
-                    <DialogHeader>
-                      <DialogTitle>Order Re-review</DialogTitle>
-                      <DialogDescription>
-                        Please enter specific instructions for the re-review, if
-                        any
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className='grid gap-4 py-4'>
-                      <Textarea
-                        onChange={(e) => setReReviewComment(e.target.value)}
-                        placeholder='Enter instructions...'
-                        className='min-h-[100px] resize-none'
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <PlayerButton
+                        icon={<DoubleArrowUpIcon className='w-4 h-4' />}
+                        tooltip='Fast forward'
+                        onClick={shortcutControls.increasePlaybackSpeed}
                       />
-                    </div>
-                    <div className='flex justify-end gap-3'>
-                      <DialogClose asChild>
-                        <Button variant='outline'>Cancel</Button>
-                      </DialogClose>
-                      <Button onClick={handleReReview} type='submit'>
-                        Order
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              )}
-              <div className='flex items-center'>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Increase playback speed</p>
+                    </TooltipContent>
+                  </Tooltip>
 
-                <Button
-                  onClick={() => {
-                    autoCapitalizeSentences(quillRef)
-                    handleSave({
-                      getEditorText,
-                      orderDetails,
-                      notes,
-                      cfd,
-                      setButtonLoading,
-                      playerEvents,
-                    })
-                  }
-                  }
-                  disabled={buttonLoading.save}
-                  className='w-24 mr-2'
-                  variant='outline'
-                >
-                  {' '}
-                  {buttonLoading.save && (
-                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                  )}{' '}
-                  Save
-                </Button>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <PlayerButton
+                        icon={<DoubleArrowDownIcon className='w-4 h-4' />}
+                        tooltip='Rewind'
+                        onClick={shortcutControls.decreasePlaybackSpeed}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Decrease playback speed</p>
+                    </TooltipContent>
+                  </Tooltip>
 
-                {!['CUSTOMER', 'OM', 'ADMIN'].includes(
-                  session?.user?.email ?? ''
-                ) && (
-                    <Button onClick={() => setSubmitting(true)} className='w-24'>
-                      Submit
-                    </Button>
-                  )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <ShortcutsReferenceDialog
-        isShortcutsReferenceModalOpen={isShortcutsReferenceModalOpen}
-        setIsShortcutsReferenceModalOpen={setIsShortcutsReferenceModalOpen}
-        shortcuts={shortcuts}
-        setShortcuts={setShortcuts}
-      />
-      <ConfigureShortcutsDialog
-        isConfigureShortcutsModalOpen={isConfigureShortcutsModalOpen}
-        setIsConfigureShortcutsModalOpen={setIsConfigureShortcutsModalOpen}
-        shortcuts={shortcuts}
-        updateShortcut={updateShortcut}
-      />
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <PlayerButton
+                        icon={<SpeakerLoudIcon className='w-4 h-4' />}
+                        tooltip='Increase volume'
+                        onClick={shortcutControls.increaseVolume}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Increase volume</p>
+                    </TooltipContent>
+                  </Tooltip>
 
-      <Dialog
-        open={isSpeakerNameModalOpen}
-        onOpenChange={(value) => {
-          setIsSpeakerNameModalOpen(value)
-          if (!value) {
-            setSubmitting(false)
-          }
-        }}
-      >
-        <DialogContent className='max-w-4xl w-2/4'>
-          <DialogHeader>
-            <DialogTitle>Speaker Names</DialogTitle>
-            <DialogDescription>
-              Please enter the speaker names below
-            </DialogDescription>
-          </DialogHeader>
-
-          {speakerName && !checkSpeakerOrder(speakerName) && (
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-              <p className="text-yellow-800 text-sm">
-                Warning: Speaker labels in the transcript are not in sequential order.
-                This may cause confusion. Please ensure the transcript follows the correct order before proceeding (S1, S2, S3...).
-              </p>
-            </div>
-          )}
-
-          <div className='space-y-4'>
-            {speakerName &&
-              Object.entries(speakerName).map(([key, value], index) => (
-                <div
-                  key={key}
-                  className='flex items-center justify-start space-x-2'
-                >
-                  <Label htmlFor={key}>{key}:</Label>
-                  <div className="relative flex items-center w-4/5">
-                    <Input
-                      disabled={!checkSpeakerOrder(speakerName)}
-                      id={key}
-                      value={value}
-                      onChange={(e) => handleSpeakerNameChange(e, key)}
-                      className='w-full'
-                    />
-                    {index > 0 && (
-                      <button
-                        onClick={() => handleSwapSpeakers(index)}
-                        title='Swap with previous speaker'
-                        className='absolute right-2 p-1 hover:bg-gray-100 rounded-full transition-colors'
-                        type="button"
-                      >
-                        <ArrowUpIcon className="h-4 w-4 text-gray-500" />
-                      </button>
-                    )}
-                  </div>
-                  {index === Object.entries(speakerName).length - 1 && (
-                    <button
-                      onClick={addSpeakerName}
-                      title='Add Speaker'
-                      className='ml-2 text-red-500 font-bold'
-                    >
-                      <PlusIcon />
-                    </button>
-                  )}
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <PlayerButton
+                        icon={<SpeakerQuietIcon className='w-4 h-4' />}
+                        tooltip='Decrease volume'
+                        onClick={shortcutControls.decreaseVolume}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Decrease volume</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
-              ))}
-          </div>
 
-          <div className='space-y-4 mt-4'>
-            <p className='text-sm text-gray-500'>
-              Please follow the rules below to determine the speaker name, in
-              order:
-            </p>
-            <ol className='list-decimal list-inside text-sm text-gray-500 space-y-1'>
-              <li>
-                The name as spoken in the audio if the customer instruction is
-                present.
-              </li>
-              <li>The name as mentioned in the customer instructions.</li>
-              <li>
-                If the customer instructions (CI) explicitly stated that we
-                should use the names they listed in the CI instead of the names
-                mentioned in the audio, then that CI should be followed.
-              </li>
-              <li>
-                Leave blank otherwise. Do <strong>NOT</strong> use
-                Interviewer/Interviewee or any other format unless specified
-                explicitly by the customer.
-              </li>
-            </ol>
-            <p className='text-sm font-semibold'>Customer Instructions:</p>
-            <p className='text-sm text-gray-500 italic'>
-              {/* Add actual customer instructions here if available */}
-              No specific instructions provided.
-            </p>
-          </div>
+                <div className='h-full w-[1.2px] rounded-full bg-gray-200'></div>
 
-          <div className='mt-6 flex justify-between'>
-            <DialogClose asChild>
-              <Button variant='outline'>Close</Button>
-            </DialogClose>
-            <Button disabled={!checkSpeakerOrder(speakerName || {})} onClick={updateSpeakerName}>Update</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={revertTranscriptOpen}
-        onOpenChange={setRevertTranscriptOpen}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Revert Transcript</DialogTitle>
-            <DialogDescription>
-              Please confirm that the transcript has to be reverted to the
-              original version.
-            </DialogDescription>
-            <div className='h-2'></div>
-            <div className='flex justify-center items-center text-center text-red-500'>
-              All edits made will be discarded. This action is irreversible and
-              cannot be un-done. If you have made any changes, then we recommend
-              that you save the current version by copy pasting it into a new
-              document before reverting.
+                <div className='flex items-center gap-x-1 bg-secondary rounded-sm'>
+                  <Toolbar
+                    orderDetails={orderDetails}
+                    setSelectionHandler={setSelectionHandler}
+                    playNextBlankInstance={playNextBlankInstance}
+                    playPreviousBlankInstance={playPreviousBlankInstance}
+                    playCurrentParagraphInstance={playCurrentParagraphInstance}
+                    insertTimestampBlankAtCursorPositionInstance={
+                      insertTimestampBlankAtCursorPositionInstance
+                    }
+                    toggleFindAndReplace={toggleFindAndReplace}
+                    markSection={markSection}
+                    markExaminee={markExaminee}
+                    insertSwearInLine={insertSwearInLine}
+                    adjustTimestampsBy={adjustTimestampsBy}
+                    setAdjustTimestampsBy={setAdjustTimestampsBy}
+                    handleAdjustTimestamps={handleAdjustTimestamps}
+                    increaseFontSize={increaseFontSize}
+                    decreaseFontSize={decreaseFontSize}
+                    insertInterpreterSwearInLine={insertInterpreterSwearInLine}
+                    highlightWordsEnabled={highlightWordsEnabled}
+                    setHighlightWordsEnabled={setHighlightWordsEnabled}
+                  />
+                </div>
+              </TooltipProvider>
             </div>
-            <div className='h-2' />
-            <div className='flex justify-end'>
-              <Button
-                className='mr-2'
-                variant='destructive'
-                onClick={revertTranscript}
-              >
-                Revert
-              </Button>
-              <Button
-                variant='outline'
-                onClick={() => setRevertTranscriptOpen(false)}
-              >
-                Cancel
-              </Button>
-            </div>
-          </DialogHeader>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={isFormattingOptionsModalOpen}
-        onOpenChange={setIsFormattingOptionsModalOpen}
-      >
-        <DialogContent className='sm:max-w-[425px]'>
-          <DialogHeader>
-            <DialogTitle>Formatting Options</DialogTitle>
-            <DialogDescription className='text-center text-red-500'>
-              These options discard all changes made and reverts the transcript
-              to the delivered version. Please set these options before making
-              any edits.
-            </DialogDescription>
-          </DialogHeader>
-          <div className='grid gap-4 py-4'>
-            <div className='flex items-center space-x-2'>
-              <Checkbox
-                id='time-coding'
-                checked={formattingOptions.timeCoding}
-                onCheckedChange={(checked) =>
-                  setFormattingOptions((prev) => ({
-                    ...prev,
-                    timeCoding: checked as boolean,
-                  }))
-                }
-              />
-              <Label htmlFor='time-coding'>Time-coding</Label>
-            </div>
-            <div className='flex items-center space-x-2'>
-              <Checkbox
-                id='speaker-tracking'
-                checked={formattingOptions.speakerTracking}
-                onCheckedChange={(checked) =>
-                  setFormattingOptions((prev) => ({
-                    ...prev,
-                    speakerTracking: checked as boolean,
-                  }))
-                }
-              />
-              <Label htmlFor='speaker-tracking'>Speaker Tracking</Label>
-            </div>
-            <RadioGroup
-              value={formattingOptions.nameFormat}
-              onValueChange={(value) =>
-                setFormattingOptions((prev) => ({ ...prev, nameFormat: value }))
-              }
-              className='pl-6 space-y-2'
-            >
-              <div className='flex items-center space-x-2'>
-                <RadioGroupItem value='initials' id='initials' />
-                <Label htmlFor='initials'>Initials</Label>
+            <div className='flex gap-2'>
+              <div className='inline-flex items-center bg-primary/10 text-primary rounded-md px-1 text-xs font-semibold shadow-sm ring-1 ring-inset ring-primary/20'>
+                <span className='mr-0.5'>Speed: </span>
+                <span className='tabular-nums'>{speed}%</span>
               </div>
-              <div className='flex items-center space-x-2'>
-                <RadioGroupItem value='full-names' id='full-names' />
-                <Label htmlFor='full-names'>Full Names</Label>
+              <div className='inline-flex items-center bg-primary/10 text-primary rounded-md px-1 text-xs font-semibold shadow-sm ring-1 ring-inset ring-primary/20'>
+                <span className='mr-0.5'>Volume: </span>
+                <span>{volumePercentage}%</span>
               </div>
-            </RadioGroup>
-            <div className='space-y-2'>
-              <Label htmlFor='template'>Template</Label>
-              <Select
-                value={currentTemplate}
-                onValueChange={(value) => setCurrentTemplate(value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder='Select a template' />
-                </SelectTrigger>
-                <SelectContent>
-                  {allPublicTemplates.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className='inline-flex items-center bg-primary/10 text-primary rounded-md px-1 text-xs font-semibold shadow-sm ring-1 ring-inset ring-primary/20'>
+                <span className='mr-0.5'>Font: </span>
+                <span>{fontSize}px</span>
+              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button onClick={() => setIsFormattingOptionsModalOpen(false)}>
-              Close
-            </Button>
-            <Button type='submit' onClick={handleFormattingOptionChange}>
-              Apply
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <div
-        className={` ${!videoPlayerOpen ? 'hidden' : ''
-          } fixed bg-white z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-transparent`}
-        style={{
-          top: `${position.y}px`,
-          left: `${position.x}px`,
-          width: '500px',
-          resize: 'horizontal',
-        }}
-      >
-        <div className='relative w-full h-full'>
-          <video
-            ref={videoRef}
-            src={`${videoUrl}`}
-            className='w-full h-full'
-            controls={false}
-            onMouseDown={handleDragChange}
-          ></video>
-          <button
-            onClick={() => setVideoPlayerOpen(false)}
-            className='absolute top-0 right-0 cursor-pointer bg-gray-100 p-2 rounded-lg mr-2 mt-2'
-            style={{ zIndex: 1 }}
-          >
-            <Cross1Icon />
-          </button>
         </div>
       </div>
-
-      <ReportDialog
-        reportModalOpen={reportModalOpen}
-        setReportModalOpen={setReportModalOpen}
-        reportDetails={reportDetails}
-        setReportDetails={setReportDetails}
-        orderDetails={orderDetails}
-        buttonLoading={buttonLoading}
-        setButtonLoading={setButtonLoading}
-      />
-      <FrequentTermsDialog
-        frequentTermsModalOpen={frequentTermsModalOpen}
-        setFrequentTermsModalOpen={setFrequentTermsModalOpen}
-        frequentTermsData={frequentTermsData}
-      />
     </div>
   )
 })

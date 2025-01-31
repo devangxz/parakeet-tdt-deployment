@@ -558,7 +558,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
       <div>
         <div className='flex'>
           {activeStep === 1 && (
-            <div className='w-[100%] md:w-[50%] p-5 lg:p-10'>
+            <div className='w-[100%] md:w-[50%] p-4'>
               <ScrollArea className='h-[62vh]'>
                 {options.map((option, index) => (
                   <OrderOptions
@@ -710,7 +710,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
           )}
 
           {activeStep === 2 && (
-            <div className='w-[100%] md:w-[50%] p-5 lg:p-10'>
+            <div className='w-[100%] md:w-[50%] p-4'>
               <div className='text-lg text-primary font-medium mb-10'>
                 Add special instructions and file information
               </div>
@@ -724,6 +724,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                     value={instructions.instructions}
                     onChange={(e) => handleInstructionsChange(e.target.value)}
                     rows={4}
+                    className='focus-visible:ring-0'
                   />
                   <div className='text-sm text-[#8A8A8A] mt-2'>
                     Please enter special instructions, terms, acronyms,
@@ -837,7 +838,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
           )}
 
           {activeStep === 3 && (
-            <div className='w-[100%] md:w-[50%] p-5 lg:p-10'>
+            <div className='w-[100%] md:w-[50%] p-4'>
               <div className='text-lg text-primary font-medium mb-10'>
                 Payment terms
               </div>
@@ -932,7 +933,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
             </div>
           )}
 
-          <div className='w-[100%] md:w-[50%] bg-muted p-5 lg:p-10 hidden lg:block'>
+          <div className='w-[100%] md:w-[50%] bg-muted p-4 hidden lg:block'>
             <div className='pl-10'>
               <div className='flex justify-between items-center'>
                 <div className='text-lg text-primary font-medium mb-10'>
@@ -1129,24 +1130,29 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
         </div>
         <Separator />
       </div>
-      <div className='flex justify-end gap-10 mt-6 px-10'>
+      <div className='flex items-center justify-end gap-5 p-4 sticky bottom-0 right-0 w-full bg-white border-t-2 border-customBorder'>
         {paymentSuccess ? (
-          <Button onClick={() => router.push('/files/in-progress')}>
+          <Button
+            className='w-[170px]'
+            onClick={() => router.push('/files/in-progress')}
+          >
             Back to Dashboard
           </Button>
         ) : (
           <>
-            {activeStep !== 1 && (
-              <Button
-                className='w-[200px] text-primary'
-                variant='outline'
-                onClick={prevStep}
-              >
-                Back
-              </Button>
-            )}
+            <Button
+              className='w-[170px] border-primary border-2 text-primary rounded-[32px] transition-all duration-200 hover:opacity-90'
+              variant='outline'
+              onClick={
+                activeStep === 1
+                  ? () => router.push('/files/upload')
+                  : prevStep
+              }
+            >
+              {activeStep === 1 ? 'Back to Dashboard' : 'Back'}
+            </Button>
             {loadingPay ? (
-              <Button disabled className='w-[200px]'>
+              <Button disabled className='w-[170px]'>
                 Please wait
                 <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
               </Button>
@@ -1154,7 +1160,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
               <>
                 {billingEnabled ? (
                   <Button
-                    className='w-[200px]'
+                    className='w-[170px]'
                     onClick={() => {
                       activeStep === totalSteps
                         ? handlePaymentMethodViaBilling()
@@ -1167,7 +1173,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                   <>
                     {(paymentInfo?.totalAmount as number) > creditsUsed ? (
                       <Button
-                        className='w-[200px]'
+                        className='w-[170px]'
                         disabled={
                           activeStep === 3 && (!clientToken || !instance)
                         }
@@ -1181,7 +1187,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                       </Button>
                     ) : (
                       <Button
-                        className='w-[200px]'
+                        className='w-[170px]'
                         onClick={() => {
                           activeStep === totalSteps
                             ? handlePaymentMethodViaCredits()

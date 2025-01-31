@@ -124,15 +124,16 @@ function markExactMatches(alignments: AlignmentType[], ctms: CTMType[]) {
 
         // Exact matching by start/end
         if (ctm.start === alignment.start && ctm.end === alignment.end) {
+            const isWordMatch = ctm.word.toLowerCase() === alignment.word.toLowerCase();
+
             alignments[alignIndex] = {
                 ...alignment,
                 ctmIndex,
-                case: ctm.word.toLowerCase() === alignment.word.toLowerCase() ? 'success' : 'mismatch'
+                case: isWordMatch ? 'success' : 'mismatch'
             };
             ctmIndex++;
             alignIndex++;
         } else if (alignment.start < ctm.start) {
-            // No match found for this alignment
             alignments[alignIndex] = {
                 ...alignment,
                 ctmIndex: -1,
@@ -144,7 +145,6 @@ function markExactMatches(alignments: AlignmentType[], ctms: CTMType[]) {
         }
     }
 
-    // Mark remaining alignments as mismatches
     while (alignIndex < alignments.length) {
         const alignment = alignments[alignIndex];
         if (alignment.type === 'ctm') {
@@ -175,6 +175,16 @@ function calculateWER(alignments: AlignmentType[], ctms: CTMType[]) {
   const wer = errors / ctmWords;
 
   return wer;
+}
+
+function getEditedSegments(alignments: AlignmentType[]): number[] {
+  return alignments
+    .filter(al => al.type === 'ctm' && al.case === 'mismatch')
+    .flatMap(al => {
+      const start = Math.floor(al.start);
+      const end = Math.ceil(al.end);
+      return Array.from({ length: end - start }, (_, i) => start + i);
+    });
 }
 
 /**
@@ -232,12 +242,14 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[], c
                 // Replacement: keep the old alignment's timing but new text
                 // Also update its new char offsets
                 const { startPos, endPos } = newTokens[newTokenIndex];
+                const isMetaOrPunct = isMetaContent(segmentWords[0]) || isPunctuation(segmentWords[0]);
+
                 const replaced: AlignmentType = {
                     ...lastRemovedAlignment!,
                     word: segmentWords[0],
                     punct: segmentWords[0],
-                    source: 'user',
-                    type: 'ctm',
+                    source: isMetaOrPunct ? 'meta' : 'user',
+                    type: isMetaOrPunct ? 'meta' : 'ctm',
                     start: lastRemovedAlignment!.start,
                     end: lastRemovedAlignment!.end,
                     conf: lastRemovedAlignment!.conf,
@@ -268,7 +280,7 @@ function updateAlignments(newText: string, currentAlignments: AlignmentType[], c
                             }
                         }
 
-                        const { startPos, endPos } = newTokens[newTokenIndex];
+                        const { startPos, endPos } = newTokens[newTokenIndex];                        
                         newAlignments.push({
                             word,
                             type: 'meta', 
@@ -345,5 +357,6 @@ self.onmessage = (e) => {
     const { newText, currentAlignments, ctms } = e.data;
     const updatedAlignments = updateAlignments(newText, currentAlignments, ctms);
     const wer = calculateWER(updatedAlignments, ctms);
-    self.postMessage({ alignments: updatedAlignments, wer: Number(wer.toFixed(2)) });
+    const editedSegments = getEditedSegments(updatedAlignments);
+    self.postMessage({ alignments: updatedAlignments, editedSegments, wer: Number(wer.toFixed(2)) });
 };
