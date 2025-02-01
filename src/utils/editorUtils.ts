@@ -393,7 +393,6 @@ type FetchFileDetailsParams = {
     setTranscript: React.Dispatch<React.SetStateAction<string>>
     setCtms: React.Dispatch<React.SetStateAction<CTMType[]>>
     setPlayStats: React.Dispatch<React.SetStateAction<PlayStats>>
-    setAsrTranscript: React.Dispatch<React.SetStateAction<string>>
 }
 
 const fetchFileDetails = async ({
@@ -404,7 +403,6 @@ const fetchFileDetails = async ({
     setTranscript,
     setCtms,
     setPlayStats,
-    setAsrTranscript,
 }: FetchFileDetailsParams) => {
     try {
         const orderRes = await getOrderDetailsAction(params?.fileId as string)
@@ -443,13 +441,12 @@ const fetchFileDetails = async ({
         const transcriptRes = await axiosInstance.get(
             `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.orderDetails.fileId}&step=${step}&orderId=${orderRes.orderDetails.orderId}` //step will be used later when cf editor is implemented
         )
-
+    
         const transcript = JSON.parse(localStorage.getItem('transcript') || '{}')[
             orderRes.orderDetails.fileId
         ]
         if (transcript) {
             setTranscript(transcript)
-            setAsrTranscript(transcriptRes.data.result.asrTranscript)
         } else {
             setTranscript(transcriptRes.data.result.transcript)
         }

@@ -51,8 +51,9 @@ import {
   searchAndSelect,
   replaceTextHandler,
   CustomerQuillSelection,
-  autoCapitalizeSentences,
+  autoCapitalizeSentences
 } from '@/utils/editorUtils'
+import { getFormattedTranscript } from '@/utils/transcript'
 
 export type OrderDetails = {
   orderId: string
@@ -126,7 +127,6 @@ function EditorPage() {
   })
   const [audioDuration, setAudioDuration] = useState(1)
   const [quillRef, setQuillRef] = useState<React.RefObject<ReactQuill>>()
-  const [asrTranscript, setAsrTranscript] = useState('')
 
   const [findText, setFindText] = useState('')
   const [replaceText, setReplaceText] = useState('')
@@ -377,7 +377,6 @@ function EditorPage() {
       setTranscript,
       setCtms,
       setPlayStats,
-      setAsrTranscript,
     })
   }, [])
 
@@ -385,7 +384,7 @@ function EditorPage() {
     if (!quillRef?.current) return
     const quill = quillRef.current.getEditor()
     const contentText = quill.getText() // Get text directly from editor
-    const diff = diffWords(asrTranscript || transcript, contentText)
+    const diff = diffWords(getFormattedTranscript(ctms) || transcript, contentText)
     setDiff(diff)
   }
 
