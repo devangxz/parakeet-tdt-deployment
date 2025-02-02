@@ -442,13 +442,13 @@ const fetchFileDetails = async ({
             `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.orderDetails.fileId}&step=${step}&orderId=${orderRes.orderDetails.orderId}` //step will be used later when cf editor is implemented
         )
     
-        const transcript = JSON.parse(localStorage.getItem('transcript') || '{}')[
-            orderRes.orderDetails.fileId
-        ]
-        if (transcript) {
-            setTranscript(transcript)
+        const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
+        const localTranscript = editorData[orderRes.orderDetails.fileId]?.transcript;
+        if (localTranscript) {
+            setTranscript(localTranscript);
         } else {
-            setTranscript(transcriptRes.data.result.transcript)
+            setTranscript(transcriptRes.data.result.transcript);
+            persistEditorData(orderRes.orderDetails.fileId, transcriptRes.data.result.transcript, '');
         }
         setCtms(transcriptRes.data.result.ctms)
 
@@ -505,11 +505,13 @@ const handleSave = async (
     const toastId = showToast ? toast.loading(`Saving Transcription...`) : null
 
     try {
-        const transcript = getEditorText()
-        if (!transcript) return toast.error('Transcript is empty')
+        const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
+        const fileData = editorData[orderDetails.fileId] || {};
+        if (!fileData.transcript) return toast.error('Transcript is empty');
+        const transcript = fileData.transcript;
         const paragraphs = transcript
             .split('\n')
-            .filter((paragraph) => paragraph.trim() !== '')
+            .filter((paragraph: string) => paragraph.trim() !== '')
 
         // Helper function to detect meta-only paragraphs
         const isMetaOnlyParagraph = (text: string) => {
@@ -675,8 +677,9 @@ const handleSubmit = async ({
             })
         }
 
-        localStorage.removeItem('transcript')
-        localStorage.removeItem(orderDetails.fileId)
+        const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
+        delete editorData[orderDetails.fileId];
+        localStorage.setItem('editorData', JSON.stringify(editorData));
         toast.dismiss(toastId)
         const successToastId = toast.success(`Transcription submitted successfully`)
         toast.dismiss(successToastId)
@@ -1146,6 +1149,17 @@ const scrollEditorToPos = (quill: Quill, pos: number) => {
     }
 }
 
+function persistEditorData(fileId: string, transcript: string, notes: string) {
+    const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
+    editorData[fileId] = {
+        ...(editorData[fileId] || {}),
+        transcript,
+        ...(notes && { notes }),
+        updatedAt: Date.now()
+    };
+    localStorage.setItem('editorData', JSON.stringify(editorData));
+}
+
 export {
     generateRandomColor,
     convertBlankToSeconds,
@@ -1171,6 +1185,7 @@ export {
     replaceTextHandler,
     insertTimestampBlankAtCursorPosition,
     insertTimestampAndSpeaker,
-    autoCapitalizeSentences
+    autoCapitalizeSentences,
+    persistEditorData
 }
 export type { CTMType }

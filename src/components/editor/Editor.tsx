@@ -13,6 +13,7 @@ import {
   CustomerQuillSelection,
   insertTimestampAndSpeaker,
   insertTimestampBlankAtCursorPosition,
+  persistEditorData
 } from '@/utils/editorUtils'
 import {
   createAlignments,
@@ -49,7 +50,7 @@ interface Range {
 
 type Sources = 'user' | 'api' | 'silent';
 
-export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, setEditedSegments }: EditorProps) {
+export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, setEditedSegments }: EditorProps) {
     const ctms = initialCtms; // Make CTMs constant
     const quillRef = useRef<ReactQuill>(null)
     const [alignments, setAlignments] = useState<AlignmentType[]>([])
@@ -352,15 +353,17 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         if (typingTimer) clearTimeout(typingTimer);
         setTypingTimer(
             setTimeout(() => {
+                const text = quill.getText();
+                persistEditorData(orderDetails.fileId, text, '');
                 setAlignmentWorkerRunning(true);
                 alignmentWorker.current?.postMessage({
-                    newText: quill.getText(),
+                    newText: text,
                     currentAlignments: alignments,
                     ctms: ctms
                 });
             }, TYPING_PAUSE)
         );
-    }, [alignments, ctms, typingTimer, quillRef]);
+    }, [alignments, ctms, typingTimer, quillRef, orderDetails.fileId]);
 
     useEffect(() => {
         try {

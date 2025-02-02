@@ -51,7 +51,8 @@ import {
   searchAndSelect,
   replaceTextHandler,
   CustomerQuillSelection,
-  autoCapitalizeSentences
+  autoCapitalizeSentences,
+  persistEditorData
 } from '@/utils/editorUtils'
 import { getFormattedTranscript } from '@/utils/transcript'
 
@@ -516,8 +517,7 @@ function EditorPage() {
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value
     setNotes(text)
-
-    localStorage.setItem(orderDetails.fileId, JSON.stringify({ notes: text }))
+    persistEditorData(orderDetails.fileId, getEditorText(), text)
   }
 
   const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
