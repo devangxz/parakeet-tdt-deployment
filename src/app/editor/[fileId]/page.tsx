@@ -8,7 +8,6 @@ import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
-import { setPlayStatsAction } from '@/app/actions/editor/set-play-stats'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
@@ -141,14 +140,10 @@ function EditorPage() {
   const [searchHighlight, setSearchHighlight] = useState<{ index: number; length: number } | null>(null);
   const [highlightWordsEnabled, setHighlightWordsEnabled] = useState(true);
   const lastTrackedSecondRef = useRef(-1)
-  const [playStats, setPlayStats] = useState<PlayStats>({ listenCount: [] })
+  const [listenCount, setListenCount] = useState<number[]>([])
   const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set());
   const [waveformUrl, setWaveformUrl] = useState('')
   const [finalizerComment, setFinalizerComment] = useState('')
-
-  interface PlayStats {
-    listenCount: number[];
-  }
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -319,18 +314,19 @@ function EditorPage() {
 
       saveChanges: () => {
         autoCapitalizeSentences(quillRef)
-        savePlayStats()
         handleSave({
           getEditorText,
           orderDetails,
           notes,
           cfd,
           setButtonLoading,
+          listenCount,
+          editedSegments,
         })
       },
     }
     return controls as ShortcutControls
-  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, findText, replaceText, matchCase, lastSearchIndex, playStats, editedSegments])
+  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, findText, replaceText, matchCase, lastSearchIndex, listenCount, editedSegments])
 
   useShortcuts(shortcutControls)
 
@@ -377,7 +373,7 @@ function EditorPage() {
       setStep,
       setTranscript,
       setCtms,
-      setPlayStats,
+      setListenCount,
     })
   }, [])
 
@@ -410,16 +406,6 @@ function EditorPage() {
     }
   }, [orderDetails.fileId])
 
-  const savePlayStats = async () => {
-    if (orderDetails.userId && orderDetails.fileId) {
-      await setPlayStatsAction({
-        fileId: orderDetails.fileId,
-        listenCount: playStats.listenCount,
-        editedSegments: Array.from(editedSegments)
-      })
-    }
-  }
-
   useEffect(() => {
     const interval = setInterval(async () => {
       await handleSave(
@@ -429,34 +415,31 @@ function EditorPage() {
           notes,
           cfd,
           setButtonLoading,
+          listenCount,
+          editedSegments,
         },
         false
       )
-      savePlayStats()
     }, 1000 * 60 * AUTOSAVE_INTERVAL)
 
     return () => clearInterval(interval)
-  }, [getEditorText, orderDetails, notes, step, cfd, playStats, editedSegments])
-
-  useEffect(() => {
-    setPlayStats(() => ({
-      listenCount: new Array(Math.ceil(audioDuration)).fill(0)
-    }))
-  }, [audioDuration])
+  }, [getEditorText, orderDetails, notes, step, cfd, listenCount, editedSegments])
 
   useEffect(() => {
     const handleTimeUpdate = () => {
       if (!audioPlayer) return
+
       const currentSecond = Math.floor(audioPlayer.currentTime)
 
       // Only update stats if we've moved to a new second
       if (currentSecond !== lastTrackedSecondRef.current) {
         lastTrackedSecondRef.current = currentSecond
 
-        setPlayStats(prev => {
-          const newListenCount = [...prev.listenCount]
-          newListenCount[currentSecond] = (newListenCount[currentSecond] || 0) + 1
-          return { listenCount: newListenCount }
+        setListenCount(prev => {
+          const newListenCount = [...prev]
+          const prevCount = newListenCount[currentSecond] || 0
+          newListenCount[currentSecond] = prevCount + 1
+          return newListenCount
         })
       }
     }
@@ -469,8 +452,8 @@ function EditorPage() {
   }, [audioPlayer])
 
   const getPlayedPercentage = () => {
-    const playedSections = playStats.listenCount.filter(count => count > 0).length
-    return Math.round((playedSections / playStats.listenCount.length) * 100)
+    const playedSections = listenCount.filter(count => count > 0).length
+    return Math.round((playedSections / listenCount.length) * 100)
   }
 
   const getEditorMode = useCallback((editorMode: string) => {
@@ -817,7 +800,7 @@ function EditorPage() {
                 </p>
                 <PlayStatsVisualization
                   waveformUrl={waveformUrl}
-                  playStats={playStats}
+                  listenCount={listenCount}
                   editedSegments={editedSegments}
                   duration={audioDuration}
                 />

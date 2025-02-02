@@ -12,6 +12,7 @@ import { getFrequentTermsAction } from '@/app/actions/editor/frequent-terms'
 import { getPlayStatsAction } from '@/app/actions/editor/get-play-stats'
 import { getOrderDetailsAction } from '@/app/actions/editor/order-details'
 import { reportFileAction } from '@/app/actions/editor/report-file'
+import { setPlayStatsAction } from '@/app/actions/editor/set-play-stats'
 import { submitQCAction } from '@/app/actions/editor/submit-qc'
 import { submitReviewAction } from '@/app/actions/editor/submit-review'
 import { uploadDocxAction } from '@/app/actions/editor/upload-docx'
@@ -33,10 +34,6 @@ export type ButtonLoading = {
     mp3: boolean
     download: boolean
     frequentTerms: boolean
-}
-
-export interface PlayStats {
-    listenCount: number[];
 }
 
 const usableColors = [
@@ -392,7 +389,7 @@ type FetchFileDetailsParams = {
     setStep: React.Dispatch<React.SetStateAction<string>>
     setTranscript: React.Dispatch<React.SetStateAction<string>>
     setCtms: React.Dispatch<React.SetStateAction<CTMType[]>>
-    setPlayStats: React.Dispatch<React.SetStateAction<PlayStats>>
+    setListenCount: React.Dispatch<React.SetStateAction<number[]>>
 }
 
 const fetchFileDetails = async ({
@@ -402,7 +399,7 @@ const fetchFileDetails = async ({
     setStep,
     setTranscript,
     setCtms,
-    setPlayStats,
+    setListenCount,
 }: FetchFileDetailsParams) => {
     try {
         const orderRes = await getOrderDetailsAction(params?.fileId as string)
@@ -454,10 +451,10 @@ const fetchFileDetails = async ({
 
         const playStats = await getPlayStatsAction(params?.fileId as string)
 
-        if (playStats.success && playStats.data) {
-            setPlayStats({
-                listenCount: playStats.data.listenCount as number[]
-            })
+        if (playStats.success && playStats.data?.listenCount) {
+            setListenCount(playStats.data.listenCount as number[])
+        } else if (orderRes.orderDetails.duration) {
+            setListenCount(new Array(Math.ceil(Number(orderRes.orderDetails.duration))).fill(0))
         }
 
         return orderRes.orderDetails
@@ -485,6 +482,8 @@ type HandleSaveParams = {
     notes: string
     cfd: string
     setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
+    listenCount: number[]
+    editedSegments: Set<number>
 }
 
 const handleSave = async (
@@ -494,6 +493,8 @@ const handleSave = async (
         notes,
         cfd,
         setButtonLoading,
+        listenCount,
+        editedSegments,
     }: HandleSaveParams,
     showToast = true
 ) => {
@@ -544,6 +545,12 @@ const handleSave = async (
             transcript,
             cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
             orderId: orderDetails.orderId,
+        })
+
+        await setPlayStatsAction({
+            fileId: orderDetails.fileId,
+            listenCount,
+            editedSegments: Array.from(editedSegments)
         })
 
         if (showToast) {
