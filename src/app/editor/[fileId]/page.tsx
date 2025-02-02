@@ -490,9 +490,12 @@ function EditorPage() {
       getEditorModeOptions()
     }
 
-    const file = localStorage.getItem(orderDetails?.fileId as string)
-    if (file) {
-      setNotes(JSON.parse(file).notes)
+    if (orderDetails.fileId) {
+      const storedData = localStorage.getItem('editorData') || '{}';
+      const editorData = JSON.parse(storedData);
+      if (editorData[orderDetails.fileId] && editorData[orderDetails.fileId].notes) {
+        setNotes(editorData[orderDetails.fileId].notes);
+      }
     }
   }, [orderDetails])
 
