@@ -437,18 +437,21 @@ const fetchFileDetails = async ({
         const transcriptRes = await axiosInstance.get(
             `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.orderDetails.fileId}&step=${step}&orderId=${orderRes.orderDetails.orderId}` //step will be used later when cf editor is implemented
         )
-    
-        const storedTranscript = getTranscriptFromStorage(orderRes.orderDetails.fileId);
-        const transcript = storedTranscript || transcriptRes.data.result.transcript;
-        persistEditorData(orderRes.orderDetails.fileId, transcript, '');
+
+        const fileData = getEditorData(orderRes.orderDetails.fileId);
+        const transcript = fileData.transcript || transcriptRes.data.result.transcript;
+        persistEditorData(orderRes.orderDetails.fileId, { transcript });
         setCtms(transcriptRes.data.result.ctms)
 
         const playStats = await getPlayStatsAction(params?.fileId as string)
 
-        if (playStats.success && playStats.data?.listenCount) {
+        if (fileData.listenCount) {
+            setListenCount(fileData.listenCount)
+        } else if (playStats.success && playStats.data?.listenCount) {
             setListenCount(playStats.data.listenCount as number[])
         } else if (orderRes.orderDetails.duration) {
-            setListenCount(new Array(Math.ceil(Number(orderRes.orderDetails.duration))).fill(0))
+            const newListenCount = new Array(Math.ceil(Number(orderRes.orderDetails.duration))).fill(0);
+            setListenCount(newListenCount)
         }
 
         return orderRes.orderDetails
@@ -500,9 +503,14 @@ const handleSave = async (
     const toastId = showToast ? toast.loading(`Saving Transcription...`) : null
 
     try {
-        const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
-        const fileData = editorData[orderDetails.fileId] || {};
-        if (!fileData.transcript) return toast.error('Transcript is empty');
+        const fileData = getEditorData(orderDetails.fileId);
+        if (!fileData.transcript) {
+            if (showToast) {
+                return toast.error('Transcript is empty');
+            }
+            return;
+        }
+        
         const transcript = fileData.transcript;
         const paragraphs = transcript
             .split('\n')
@@ -543,7 +551,7 @@ const handleSave = async (
 
         await setPlayStatsAction({
             fileId: orderDetails.fileId,
-            listenCount,
+            listenCount: fileData.listenCount || listenCount,
             editedSegments: Array.from(editedSegments)
         })
 
@@ -1150,21 +1158,31 @@ const scrollEditorToPos = (quill: Quill, pos: number) => {
     }
 }
 
-function persistEditorData(fileId: string, transcript: string, notes: string) {
+interface EditorData {
+    transcript?: string;
+    notes?: string;
+    listenCount?: number[];
+    updatedAt?: number;
+}
+
+function getEditorData(fileId: string): EditorData {
+    const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
+    return editorData[fileId] || {};
+}
+
+function persistEditorData(fileId: string, data: Record<string, string | number[]>) {
     const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
     editorData[fileId] = {
         ...(editorData[fileId] || {}),
-        transcript,
-        ...(notes && { notes }),
+        ...data,
         updatedAt: Date.now()
     };
     localStorage.setItem('editorData', JSON.stringify(editorData));
 }
 
 function getTranscriptFromStorage(fileId: string): string {
-    const storedData = localStorage.getItem('editorData') || '{}';
-    const parsedData = JSON.parse(storedData);
-    return parsedData[fileId]?.transcript || '';
+    const editorData = getEditorData(fileId);
+    return editorData.transcript || '';
 }
 
 function getDiffHtml(oldText: string, newText: string): string {
@@ -1214,6 +1232,7 @@ export {
     insertTimestampBlankAtCursorPosition,
     insertTimestampAndSpeaker,
     autoCapitalizeSentences,
+    getEditorData,
     persistEditorData,
     getTranscriptFromStorage,
     getDiffHtml

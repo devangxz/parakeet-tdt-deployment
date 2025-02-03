@@ -50,6 +50,7 @@ import {
   replaceTextHandler,
   CustomerQuillSelection,
   autoCapitalizeSentences,
+  getEditorData,
   persistEditorData,
   getDiffHtml
 } from '@/utils/editorUtils'
@@ -338,6 +339,13 @@ function EditorPage() {
     }
   }, [audioPlayer])
 
+  useEffect(() => {
+    if (transcriptLoading || !orderDetails.fileId) {
+      return;
+    }
+    persistEditorData(orderDetails.fileId, { listenCount });
+  }, [listenCount, orderDetails.fileId, transcriptLoading])
+
   const sectionChangeHandler = (e: React.MouseEvent<HTMLButtonElement>) => {
     const value = e.currentTarget.dataset.value
     if (!value) return
@@ -475,10 +483,9 @@ function EditorPage() {
     }
 
     if (orderDetails.fileId) {
-      const storedData = localStorage.getItem('editorData') || '{}';
-      const editorData = JSON.parse(storedData);
-      if (editorData[orderDetails.fileId] && editorData[orderDetails.fileId].notes) {
-        setNotes(editorData[orderDetails.fileId].notes);
+      const editorData = getEditorData(orderDetails.fileId);
+      if (editorData.notes) {
+        setNotes(editorData.notes);
       }
     }
   }, [orderDetails])
@@ -502,9 +509,9 @@ function EditorPage() {
   }
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const text = e.target.value
-    setNotes(text)
-    persistEditorData(orderDetails.fileId, getEditorText(), text)
+    const notes = e.target.value
+    setNotes(notes)
+    persistEditorData(orderDetails.fileId, { notes })
   }
 
   const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {

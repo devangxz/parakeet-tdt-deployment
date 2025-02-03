@@ -354,11 +354,11 @@ export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, or
         if (typingTimer) clearTimeout(typingTimer);
         setTypingTimer(
             setTimeout(() => {
-                const text = quill.getText();
-                persistEditorData(orderDetails.fileId, text, '');
+                const transcript = quill.getText();
+                persistEditorData(orderDetails.fileId, { transcript });
                 setAlignmentWorkerRunning(true);
                 alignmentWorker.current?.postMessage({
-                    newText: text,
+                    newText: transcript,
                     currentAlignments: alignments,
                     ctms: ctms
                 });
