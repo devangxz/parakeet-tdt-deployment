@@ -13,6 +13,8 @@ import {
   CustomerQuillSelection,
   insertTimestampAndSpeaker,
   insertTimestampBlankAtCursorPosition,
+  persistEditorData,
+  getTranscriptFromStorage
 } from '@/utils/editorUtils'
 import {
   createAlignments,
@@ -49,7 +51,7 @@ interface Range {
 
 type Sources = 'user' | 'api' | 'silent';
 
-export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, setEditedSegments }: EditorProps) {
+export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, setEditedSegments }: EditorProps) {
     const ctms = initialCtms; // Make CTMs constant
     const quillRef = useRef<ReactQuill>(null)
     const [alignments, setAlignments] = useState<AlignmentType[]>([])
@@ -140,9 +142,10 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         return formattedContent;
     };
 
-    const { content: initialContent } = useMemo(() => (
-        { content: getFormattedContent(transcript) }
-    ), [transcript])
+    const { content: initialContent } = useMemo(() => {
+        const storedTranscript = getTranscriptFromStorage(orderDetails.fileId);
+        return { content: getFormattedContent(storedTranscript) };
+    }, [orderDetails.fileId])
 
     const handleEditorClick = useCallback(() => {
         const quill = quillRef.current?.getEditor()
@@ -352,15 +355,17 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         if (typingTimer) clearTimeout(typingTimer);
         setTypingTimer(
             setTimeout(() => {
+                const text = quill.getText();
+                persistEditorData(orderDetails.fileId, text, '');
                 setAlignmentWorkerRunning(true);
                 alignmentWorker.current?.postMessage({
-                    newText: quill.getText(),
+                    newText: text,
                     currentAlignments: alignments,
                     ctms: ctms
                 });
             }, TYPING_PAUSE)
         );
-    }, [alignments, ctms, typingTimer, quillRef]);
+    }, [alignments, ctms, typingTimer, quillRef, orderDetails.fileId]);
 
     useEffect(() => {
         try {
@@ -589,16 +594,17 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             const newAlignments = createAlignments(originalTranscript, ctms);
             setAlignments(newAlignments);
 
-            if(transcript) {
-                // Process any differences between original and current transcript
+            const storedTranscript = getTranscriptFromStorage(orderDetails.fileId);
+            if(storedTranscript) {
+                // Process any differences between original and stored transcript
                 alignmentWorker.current?.postMessage({
-                    newText: transcript,
+                    newText: storedTranscript,
                     currentAlignments: newAlignments,
                     ctms: ctms
-                })
+                });
             }
         }
-    }, [])
+    }, [ctms, orderDetails.fileId])
 
     useEffect(() => {
         const quill = quillRef.current?.getEditor()

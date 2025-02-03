@@ -1,8 +1,6 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { Change } from 'diff'
 import ReactQuill from 'react-quill'
 
-import Diff from './Diff'
 import Editor from './Editor'
 import { TabsContent } from './Tabs'
 import { Textarea } from '../ui/textarea'
@@ -68,11 +66,12 @@ export const EditorTabComponent = ({
   </TabsContent>
 )
 
-export const DiffTabComponent = ({ diff }: { diff: Change[] }) => (
+export const DiffTabComponent = ({ diff }: { diff: string }) => (
   <TabsContent className='h-full mt-0 overflow-hidden' value='diff'>
-    <div className='overflow-y-scroll h-full py-[12px] px-[15px]'>
-      <Diff diffOutput={diff} />
-    </div>
+    <div 
+      className='overflow-y-scroll h-full py-[12px] px-[15px]'
+      dangerouslySetInnerHTML={{ __html: diff.replace(/\n/g, '<br>') }}
+    />
   </TabsContent>
 )
 

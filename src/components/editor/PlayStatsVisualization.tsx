@@ -2,20 +2,16 @@ import React from 'react';
 
 import formatDuration from '@/utils/formatDuration';
 
-interface PlayStats {
-  listenCount: number[];
-}
-
 interface PlayStatsVisualizationProps {
   waveformUrl: string;
-  playStats: PlayStats;
+  listenCount: number[];
   editedSegments: Set<number>;
   duration: number;
 }
 
 const PlayStatsVisualization: React.FC<PlayStatsVisualizationProps> = ({
   waveformUrl,
-  playStats,
+  listenCount,
   editedSegments,
   duration
 }) => {
@@ -97,7 +93,7 @@ const PlayStatsVisualization: React.FC<PlayStatsVisualizationProps> = ({
                 key={i}
                 className="h-full flex-1 relative"
                 style={{
-                  backgroundColor: getHeatmapColor(playStats.listenCount[i] || 0)
+                  backgroundColor: getHeatmapColor(listenCount[i] || 0)
                 }}
               >
                 {editedSegments.has(i) && (
