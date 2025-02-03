@@ -100,6 +100,8 @@ interface TopbarProps {
     originalFile: File | null
     isUploaded?: boolean
   }
+  listenCount: number[]
+  editedSegments: Set<number>
 }
 
 export default memo(function Topbar({
@@ -116,6 +118,8 @@ export default memo(function Topbar({
   setRegenCount,
   setFileToUpload,
   fileToUpload,
+  listenCount,
+  editedSegments
 }: TopbarProps) {
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
@@ -866,6 +870,8 @@ export default memo(function Topbar({
                       notes,
                       cfd,
                       setButtonLoading,
+                      listenCount,
+                      editedSegments,
                     })
                   }}
                 >
