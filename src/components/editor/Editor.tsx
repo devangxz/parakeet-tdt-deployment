@@ -51,7 +51,7 @@ interface Range {
 
 type Sources = 'user' | 'api' | 'silent';
 
-export default function Editor({ transcript, ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, setEditedSegments }: EditorProps) {
+export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, setEditedSegments }: EditorProps) {
     const ctms = initialCtms; // Make CTMs constant
     const quillRef = useRef<ReactQuill>(null)
     const [alignments, setAlignments] = useState<AlignmentType[]>([])
@@ -594,16 +594,17 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
             const newAlignments = createAlignments(originalTranscript, ctms);
             setAlignments(newAlignments);
 
-            if(transcript) {
-                // Process any differences between original and current transcript
+            const storedTranscript = getTranscriptFromStorage(orderDetails.fileId);
+            if(storedTranscript) {
+                // Process any differences between original and stored transcript
                 alignmentWorker.current?.postMessage({
-                    newText: transcript,
+                    newText: storedTranscript,
                     currentAlignments: newAlignments,
                     ctms: ctms
-                })
+                });
             }
         }
-    }, [])
+    }, [ctms, orderDetails.fileId])
 
     useEffect(() => {
         const quill = quillRef.current?.getEditor()
