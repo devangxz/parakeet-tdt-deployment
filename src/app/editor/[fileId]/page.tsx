@@ -553,6 +553,8 @@ function EditorPage() {
         setRegenCount={setRegenCount}
         setFileToUpload={setFileToUpload}
         fileToUpload={fileToUpload}
+        listenCount={listenCount}
+        editedSegments={editedSegments}
       />
 
       <Header
