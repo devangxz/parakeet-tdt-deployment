@@ -1,7 +1,6 @@
 'use client'
 
 import { Cross1Icon, ReloadIcon } from '@radix-ui/react-icons'
-import { Change, diffWords } from 'diff'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
@@ -51,7 +50,8 @@ import {
   replaceTextHandler,
   CustomerQuillSelection,
   autoCapitalizeSentences,
-  persistEditorData
+  persistEditorData,
+  getDiffHtml
 } from '@/utils/editorUtils'
 import { getFormattedTranscript } from '@/utils/transcript'
 
@@ -108,7 +108,7 @@ function EditorPage() {
     isUploaded?: boolean
   }>({ renamedFile: null, originalFile: null })
   const { data: session } = useSession()
-  const [diff, setDiff] = useState<Change[]>([])
+  const [diff, setDiff] = useState<string>('')
   const [transcript, setTranscript] = useState('')
   const [ctms, setCtms] = useState<CTMType[]>([])
   const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null)
@@ -378,10 +378,8 @@ function EditorPage() {
   }, [])
 
   const handleTabChange = () => {
-    if (!quillRef?.current) return
-    const quill = quillRef.current.getEditor()
-    const contentText = quill.getText() // Get text directly from editor
-    const diff = diffWords(getFormattedTranscript(ctms) || transcript, contentText)
+    const contentText = getEditorText()
+    const diff = getDiffHtml(getFormattedTranscript(ctms), contentText)
     setDiff(diff)
   }
 

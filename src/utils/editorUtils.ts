@@ -24,6 +24,7 @@ import {
     FILE_CACHE_URL,
     MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
 } from '@/constants'
+import { diff_match_patch, DIFF_INSERT, DIFF_DELETE, DIFF_EQUAL } from '@/utils/transcript/diff_match_patch';
 
 export type ButtonLoading = {
     upload: boolean
@@ -1173,6 +1174,27 @@ function getTranscriptFromStorage(fileId: string): string {
     return parsedData[fileId]?.transcript || '';
 }
 
+function getDiffHtml(oldText: string, newText: string): string {
+    // Import the diff_match_patch utilities from your diff_match_patch module
+    const dmp = new diff_match_patch();
+    // Generate diff in word mode as done in the alignment worker
+    const diffs = dmp.diff_wordMode(oldText, newText);
+    dmp.diff_cleanupSemantic(diffs);
+    // Convert the diffs to HTML
+    return diffs.map(([op, text]: [number, string]) => {
+        switch (op) {
+            case DIFF_INSERT:
+                return `<ins style="background:#e6ffe6;">${text}</ins>`;
+            case DIFF_DELETE:
+                return `<del style="background:#ffe6e6;">${text}</del>`;
+            case DIFF_EQUAL:
+                return `<span>${text}</span>`;
+            default:
+                return text;
+        }
+    }).join('');
+}
+
 export {
     generateRandomColor,
     convertBlankToSeconds,
@@ -1200,6 +1222,7 @@ export {
     insertTimestampAndSpeaker,
     autoCapitalizeSentences,
     persistEditorData,
-    getTranscriptFromStorage
+    getTranscriptFromStorage,
+    getDiffHtml
 }
 export type { CTMType }
