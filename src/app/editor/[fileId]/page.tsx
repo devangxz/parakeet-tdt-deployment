@@ -1,14 +1,12 @@
 'use client'
 
 import { Cross1Icon, ReloadIcon } from '@radix-ui/react-icons'
-import { Change, diffWords } from 'diff'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
-import { setPlayStatsAction } from '@/app/actions/editor/set-play-stats'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
@@ -52,7 +50,10 @@ import {
   replaceTextHandler,
   CustomerQuillSelection,
   autoCapitalizeSentences,
+  persistEditorData,
+  getDiffHtml
 } from '@/utils/editorUtils'
+import { getFormattedTranscript } from '@/utils/transcript'
 
 export type OrderDetails = {
   orderId: string
@@ -107,7 +108,7 @@ function EditorPage() {
     isUploaded?: boolean
   }>({ renamedFile: null, originalFile: null })
   const { data: session } = useSession()
-  const [diff, setDiff] = useState<Change[]>([])
+  const [diff, setDiff] = useState<string>('')
   const [transcript, setTranscript] = useState('')
   const [ctms, setCtms] = useState<CTMType[]>([])
   const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null)
@@ -126,7 +127,6 @@ function EditorPage() {
   })
   const [audioDuration, setAudioDuration] = useState(1)
   const [quillRef, setQuillRef] = useState<React.RefObject<ReactQuill>>()
-  const [asrTranscript, setAsrTranscript] = useState('')
 
   const [findText, setFindText] = useState('')
   const [replaceText, setReplaceText] = useState('')
@@ -140,14 +140,10 @@ function EditorPage() {
   const [searchHighlight, setSearchHighlight] = useState<{ index: number; length: number } | null>(null);
   const [highlightWordsEnabled, setHighlightWordsEnabled] = useState(true);
   const lastTrackedSecondRef = useRef(-1)
-  const [playStats, setPlayStats] = useState<PlayStats>({ listenCount: [] })
+  const [listenCount, setListenCount] = useState<number[]>([])
   const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set());
   const [waveformUrl, setWaveformUrl] = useState('')
   const [finalizerComment, setFinalizerComment] = useState('')
-
-  interface PlayStats {
-    listenCount: number[];
-  }
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -318,18 +314,19 @@ function EditorPage() {
 
       saveChanges: () => {
         autoCapitalizeSentences(quillRef)
-        savePlayStats()
         handleSave({
           getEditorText,
           orderDetails,
           notes,
           cfd,
           setButtonLoading,
+          listenCount,
+          editedSegments,
         })
       },
     }
     return controls as ShortcutControls
-  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, findText, replaceText, matchCase, lastSearchIndex, playStats, editedSegments])
+  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, findText, replaceText, matchCase, lastSearchIndex, listenCount, editedSegments])
 
   useShortcuts(shortcutControls)
 
@@ -376,16 +373,13 @@ function EditorPage() {
       setStep,
       setTranscript,
       setCtms,
-      setPlayStats,
-      setAsrTranscript,
+      setListenCount,
     })
   }, [])
 
   const handleTabChange = () => {
-    if (!quillRef?.current) return
-    const quill = quillRef.current.getEditor()
-    const contentText = quill.getText() // Get text directly from editor
-    const diff = diffWords(asrTranscript || transcript, contentText)
+    const contentText = getEditorText()
+    const diff = getDiffHtml(getFormattedTranscript(ctms), contentText)
     setDiff(diff)
   }
 
@@ -410,16 +404,6 @@ function EditorPage() {
     }
   }, [orderDetails.fileId])
 
-  const savePlayStats = async () => {
-    if (orderDetails.userId && orderDetails.fileId) {
-      await setPlayStatsAction({
-        fileId: orderDetails.fileId,
-        listenCount: playStats.listenCount,
-        editedSegments: Array.from(editedSegments)
-      })
-    }
-  }
-
   useEffect(() => {
     const interval = setInterval(async () => {
       await handleSave(
@@ -429,34 +413,31 @@ function EditorPage() {
           notes,
           cfd,
           setButtonLoading,
+          listenCount,
+          editedSegments,
         },
         false
       )
-      savePlayStats()
     }, 1000 * 60 * AUTOSAVE_INTERVAL)
 
     return () => clearInterval(interval)
-  }, [getEditorText, orderDetails, notes, step, cfd, playStats, editedSegments])
-
-  useEffect(() => {
-    setPlayStats(() => ({
-      listenCount: new Array(Math.ceil(audioDuration)).fill(0)
-    }))
-  }, [audioDuration])
+  }, [getEditorText, orderDetails, notes, step, cfd, listenCount, editedSegments])
 
   useEffect(() => {
     const handleTimeUpdate = () => {
       if (!audioPlayer) return
+
       const currentSecond = Math.floor(audioPlayer.currentTime)
 
       // Only update stats if we've moved to a new second
       if (currentSecond !== lastTrackedSecondRef.current) {
         lastTrackedSecondRef.current = currentSecond
 
-        setPlayStats(prev => {
-          const newListenCount = [...prev.listenCount]
-          newListenCount[currentSecond] = (newListenCount[currentSecond] || 0) + 1
-          return { listenCount: newListenCount }
+        setListenCount(prev => {
+          const newListenCount = [...prev]
+          const prevCount = newListenCount[currentSecond] || 0
+          newListenCount[currentSecond] = prevCount + 1
+          return newListenCount
         })
       }
     }
@@ -469,8 +450,8 @@ function EditorPage() {
   }, [audioPlayer])
 
   const getPlayedPercentage = () => {
-    const playedSections = playStats.listenCount.filter(count => count > 0).length
-    return Math.round((playedSections / playStats.listenCount.length) * 100)
+    const playedSections = listenCount.filter(count => count > 0).length
+    return Math.round((playedSections / listenCount.length) * 100)
   }
 
   const getEditorMode = useCallback((editorMode: string) => {
@@ -490,9 +471,12 @@ function EditorPage() {
       getEditorModeOptions()
     }
 
-    const file = localStorage.getItem(orderDetails?.fileId as string)
-    if (file) {
-      setNotes(JSON.parse(file).notes)
+    if (orderDetails.fileId) {
+      const storedData = localStorage.getItem('editorData') || '{}';
+      const editorData = JSON.parse(storedData);
+      if (editorData[orderDetails.fileId] && editorData[orderDetails.fileId].notes) {
+        setNotes(editorData[orderDetails.fileId].notes);
+      }
     }
   }, [orderDetails])
 
@@ -517,8 +501,7 @@ function EditorPage() {
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value
     setNotes(text)
-
-    localStorage.setItem(orderDetails.fileId, JSON.stringify({ notes: text }))
+    persistEditorData(orderDetails.fileId, getEditorText(), text)
   }
 
   const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -815,7 +798,7 @@ function EditorPage() {
                 </p>
                 <PlayStatsVisualization
                   waveformUrl={waveformUrl}
-                  playStats={playStats}
+                  listenCount={listenCount}
                   editedSegments={editedSegments}
                   duration={audioDuration}
                 />
