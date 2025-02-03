@@ -24,7 +24,6 @@ import {
 } from '@/utils/transcript'
 
 interface EditorProps {
-    transcript: string
     ctms: CTMType[]
     audioPlayer: HTMLAudioElement | null
     duration: number

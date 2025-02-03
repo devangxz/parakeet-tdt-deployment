@@ -8,7 +8,7 @@ import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { CTMType, CustomerQuillSelection } from '@/utils/editorUtils'
 
 interface EditorTabComponentProps {
-  transcript: string
+  transcriptLoading: boolean
   ctms: CTMType[]
   audioPlayer: HTMLAudioElement | null
   audioDuration: number
@@ -22,7 +22,7 @@ interface EditorTabComponentProps {
 }
 
 export const EditorTabComponent = ({
-  transcript,
+  transcriptLoading,
   ctms,
   audioPlayer,
   audioDuration,
@@ -39,18 +39,16 @@ export const EditorTabComponent = ({
     value='transcribe'
   >
     <div className='h-full relative overflow-hidden'>
-      {!transcript && (
+      {transcriptLoading ? (
         <div className='h-full flex items-center justify-center'>
           <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
           <span>Loading...</span>
         </div>
-      )}
-      {transcript && (
+      ) : (
         <div className='h-full overflow-hidden'>
           <Editor
             orderDetails={orderDetails}
             getQuillRef={getQuillRef}
-            transcript={transcript}
             ctms={ctms}
             audioPlayer={audioPlayer}
             duration={audioDuration}

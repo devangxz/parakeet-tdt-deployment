@@ -388,7 +388,6 @@ type FetchFileDetailsParams = {
     setOrderDetails: React.Dispatch<React.SetStateAction<OrderDetails>>
     setCfd: React.Dispatch<React.SetStateAction<string>>
     setStep: React.Dispatch<React.SetStateAction<string>>
-    setTranscript: React.Dispatch<React.SetStateAction<string>>
     setCtms: React.Dispatch<React.SetStateAction<CTMType[]>>
     setListenCount: React.Dispatch<React.SetStateAction<number[]>>
 }
@@ -398,7 +397,6 @@ const fetchFileDetails = async ({
     setOrderDetails,
     setCfd,
     setStep,
-    setTranscript,
     setCtms,
     setListenCount,
 }: FetchFileDetailsParams) => {
@@ -440,14 +438,9 @@ const fetchFileDetails = async ({
             `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.orderDetails.fileId}&step=${step}&orderId=${orderRes.orderDetails.orderId}` //step will be used later when cf editor is implemented
         )
     
-        const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
-        const localTranscript = editorData[orderRes.orderDetails.fileId]?.transcript;
-        if (localTranscript) {
-            setTranscript(localTranscript);
-        } else {
-            setTranscript(transcriptRes.data.result.transcript);
-            persistEditorData(orderRes.orderDetails.fileId, transcriptRes.data.result.transcript, '');
-        }
+        const storedTranscript = getTranscriptFromStorage(orderRes.orderDetails.fileId);
+        const transcript = storedTranscript || transcriptRes.data.result.transcript;
+        persistEditorData(orderRes.orderDetails.fileId, transcript, '');
         setCtms(transcriptRes.data.result.ctms)
 
         const playStats = await getPlayStatsAction(params?.fileId as string)

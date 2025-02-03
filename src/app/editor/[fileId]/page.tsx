@@ -109,7 +109,7 @@ function EditorPage() {
   }>({ renamedFile: null, originalFile: null })
   const { data: session } = useSession()
   const [diff, setDiff] = useState<string>('')
-  const [transcript, setTranscript] = useState('')
+  const [transcriptLoading, setTranscriptLoading] = useState(true)
   const [ctms, setCtms] = useState<CTMType[]>([])
   const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null)
   const [step, setStep] = useState<string>('')
@@ -366,15 +366,18 @@ function EditorPage() {
       router.push('/')
     }
 
-    fetchFileDetails({
-      params,
-      setOrderDetails,
-      setCfd,
-      setStep,
-      setTranscript,
-      setCtms,
-      setListenCount,
-    })
+    async function loadDetails() {
+      await fetchFileDetails({
+        params,
+        setOrderDetails,
+        setCfd,
+        setStep,
+        setCtms,
+        setListenCount,
+      })
+      setTranscriptLoading(false)
+    }
+    loadDetails()
   }, [])
 
   const handleTabChange = () => {
@@ -619,7 +622,7 @@ function EditorPage() {
 
                     <EditorTabComponent
                       orderDetails={orderDetails}
-                      transcript={transcript}
+                      transcriptLoading={transcriptLoading}
                       ctms={ctms}
                       audioPlayer={audioPlayer}
                       audioDuration={audioDuration}
