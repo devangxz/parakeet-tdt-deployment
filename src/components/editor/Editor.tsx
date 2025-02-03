@@ -13,7 +13,8 @@ import {
   CustomerQuillSelection,
   insertTimestampAndSpeaker,
   insertTimestampBlankAtCursorPosition,
-  persistEditorData
+  persistEditorData,
+  getTranscriptFromStorage
 } from '@/utils/editorUtils'
 import {
   createAlignments,
@@ -141,9 +142,10 @@ export default function Editor({ transcript, ctms: initialCtms, audioPlayer, get
         return formattedContent;
     };
 
-    const { content: initialContent } = useMemo(() => (
-        { content: getFormattedContent(transcript) }
-    ), [transcript])
+    const { content: initialContent } = useMemo(() => {
+        const storedTranscript = getTranscriptFromStorage(orderDetails.fileId);
+        return { content: getFormattedContent(storedTranscript) };
+    }, [orderDetails.fileId])
 
     const handleEditorClick = useCallback(() => {
         const quill = quillRef.current?.getEditor()

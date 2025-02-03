@@ -1167,6 +1167,12 @@ function persistEditorData(fileId: string, transcript: string, notes: string) {
     localStorage.setItem('editorData', JSON.stringify(editorData));
 }
 
+function getTranscriptFromStorage(fileId: string): string {
+    const storedData = localStorage.getItem('editorData') || '{}';
+    const parsedData = JSON.parse(storedData);
+    return parsedData[fileId]?.transcript || '';
+}
+
 export {
     generateRandomColor,
     convertBlankToSeconds,
@@ -1193,6 +1199,7 @@ export {
     insertTimestampBlankAtCursorPosition,
     insertTimestampAndSpeaker,
     autoCapitalizeSentences,
-    persistEditorData
+    persistEditorData,
+    getTranscriptFromStorage
 }
 export type { CTMType }
