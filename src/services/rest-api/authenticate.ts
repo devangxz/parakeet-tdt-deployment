@@ -10,9 +10,9 @@ export async function authenticateApiKey(apiKey: string | null) {
     const decodedApiKey = Buffer.from(apiKey, 'base64').toString('ascii')
     apiKey = decodedApiKey.split(':')[0]
 
-    const apiKeyRecord = await prisma.apiKey.findUnique({
+    const apiKeyRecord = await prisma.apiKey.findFirst({
       where: {
-        apiKey,
+        OR: [{ apiKey }, { internalApiKey: apiKey }],
       },
       include: {
         user: {
@@ -42,7 +42,8 @@ export async function authenticateApiKey(apiKey: string | null) {
       status: user.status,
       proAccount: user?.Customer?.proAccount || 0,
       customPlan: user?.Customer?.customPlan || false,
-      internalTeamUserId: null,
+      internalTeamUserId:
+        Number(user?.Customer?.lastSelectedInternalTeamUserId) || null,
       teamName: null,
       selectedUserTeamRole: null,
       orderType: user.UserRate?.orderType || 'TRANSCRIPTION',

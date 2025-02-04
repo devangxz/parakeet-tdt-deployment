@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    const userId = user.userId
+    const userId = user?.internalTeamUserId || user?.userId
 
     const checkBraintreeCustomerExists = await checkBraintreeCustomer(userId)
 

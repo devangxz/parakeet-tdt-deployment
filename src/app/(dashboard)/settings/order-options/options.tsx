@@ -98,9 +98,7 @@ interface OptionProps {
   message: string
   statusCode: number
   options?: orderOptoinsType
-  instructions?: {
-    instructions: string | null
-  } | null
+  instructions?: string
 }
 
 const Page = ({ options }: { options: OptionProps }) => {
@@ -110,7 +108,7 @@ const Page = ({ options }: { options: OptionProps }) => {
     options.options || defaultInitState
   )
   const [defaultInstruction, setDefaultInstruction] = useState<string>(
-    options.instructions?.instructions || ''
+    options.instructions ?? ''
   )
 
   async function orderOptionsSubmit() {
