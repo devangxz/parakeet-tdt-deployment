@@ -529,9 +529,6 @@ export default function DevTools() {
   const handleDownloadFromS3Click = async () => {
     try {
       setLoading(true)
-      console.log(
-        `handleDownloadFromS3Click ${formData.fd_s3_fileId} ${fd_s3_file_type}`
-      )
       const signedUrl = await downloadFromS3(
         formData.fd_s3_fileId,
         fd_s3_file_type

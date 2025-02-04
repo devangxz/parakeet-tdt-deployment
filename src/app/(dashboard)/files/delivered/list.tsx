@@ -23,6 +23,7 @@ import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
 import DownloadModal from '@/components/download-modal'
 import RenameFileDialog from '@/components/file-rename-dialog'
+import OrderReReviewModal from '@/components/order-re-review'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -74,6 +75,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
   const [openRenameDialog, setOpenRenameDialog] = useState(false)
   const [openBulkDeleteDialog, setOpenBulkDeleteDialog] = useState(false)
   const [openBulkArchiveDialog, setOpenBulkArchiveDialog] = useState(false)
+  const [openReReviewDialog, setOpenReReviewDialog] = useState(false)
   const [loadingOrder, setLoadingOrder] = useState<Record<string, boolean>>({})
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
@@ -278,7 +280,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   filename: '',
                   docType:
                     session?.user?.organizationName.toLowerCase() ===
-                      'remotelegal'
+                    'remotelegal'
                       ? 'CUSTOM_FORMATTING_DOC'
                       : 'TRANSCRIPTION_DOC',
                 },
@@ -376,10 +378,10 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                   `/editor/${row.original.id}`,
                   '_blank',
                   'toolbar=no,location=no,menubar=no,width=' +
-                  window.screen.width +
-                  ',height=' +
-                  window.screen.height +
-                  ',left=0,top=0'
+                    window.screen.width +
+                    ',height=' +
+                    window.screen.height +
+                    ',left=0,top=0'
                 )
               }
             >
@@ -434,6 +436,20 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
             >
               Go to folder
             </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                setOpenReReviewDialog(true)
+                setSeletedFile({
+                  fileId: row?.original?.id,
+                  name: row?.original?.filename,
+                  orderId: row?.original?.orderId,
+                  orderType: row?.original?.orderType,
+                })
+              }}
+            >
+              Order Re-Review
+            </DropdownMenuItem>
+
             {/* <DropdownMenuItem
                 onClick={() =>
                   controller({ fileId: row?.original?.id }, 'editTranscription')
@@ -512,25 +528,25 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
           <div className='flex items-center'>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-                <Button
-                  variant='order'
-                  className='not-rounded text-black w-[140px]'
-                  onClick={async () => {
-                    try {
-                      if (selectedFiles.length === 0) {
-                        toast.error('Please select at least one file')
-                        return
-                      }
-                      await navigator.clipboard.writeText(selectedFiles.join(','))
-                      toast.success('File Ids copied to clipboard')
-                    } catch (error) {
-                      toast.error('Failed to copy file Ids')
+              <Button
+                variant='order'
+                className='not-rounded text-black w-[140px]'
+                onClick={async () => {
+                  try {
+                    if (selectedFiles.length === 0) {
+                      toast.error('Please select at least one file')
+                      return
                     }
-                  }}
-                >
-                  Copy file Ids
-                </Button>
-              )}
+                    await navigator.clipboard.writeText(selectedFiles.join(','))
+                    toast.success('File Ids copied to clipboard')
+                  } catch (error) {
+                    toast.error('Failed to copy file Ids')
+                  }
+                }}
+              >
+                Copy file Ids
+              </Button>
+            )}
             <Button
               variant='order'
               className='format-button text-black w-[140px]'
@@ -564,7 +580,8 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    if (!selectedFiles.length) return toast.error('Please select at least one file')
+                    if (!selectedFiles.length)
+                      return toast.error('Please select at least one file')
                     setIsDownloadDialogOpen(true)
                   }}
                 >
@@ -647,6 +664,11 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
         isDownloadDialogOpen={isDownloadDialogOpen}
         setIsDownloadDialogOpen={setIsDownloadDialogOpen}
         fileIds={selectedFiles || []}
+      />
+      <OrderReReviewModal
+        open={openReReviewDialog}
+        onClose={() => setOpenReReviewDialog(false)}
+        fileId={selectedFile?.fileId || ''}
       />
     </>
   )

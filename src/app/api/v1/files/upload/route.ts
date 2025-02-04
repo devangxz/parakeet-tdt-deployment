@@ -1,3 +1,4 @@
+import { FileStatus } from '@prisma/client'
 import axios from 'axios'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -10,6 +11,7 @@ import {
   UPLOAD_MAX_RETRIES,
 } from '@/constants'
 import logger from '@/lib/logger'
+import prisma from '@/lib/prisma'
 import { authenticateRequest } from '@/services/auth-service/authenticate-api'
 import { generateUniqueId } from '@/utils/generateUniqueId'
 import { handleRetryableError } from '@/utils/uploadUtils'
@@ -29,6 +31,29 @@ interface UserInfo {
   internalTeamUserId?: number
 }
 
+const insertFileRecord = async (
+  fileId: string,
+  filename: string,
+  userId: number,
+  uploadedBy: number,
+  size: number,
+  duration: number
+) => {
+  const fileRecord = await prisma.file.create({
+    data: {
+      fileId,
+      filename,
+      fileKey: `${filename}_${fileId}.mp3`,
+      userId,
+      uploadedBy,
+      filesize: size.toString(),
+      duration,
+      fileStatus: FileStatus.NONE,
+    },
+  })
+  return fileRecord
+}
+
 export async function POST(req: NextRequest) {
   try {
     const userDetails = await authenticateRequest(req)
@@ -45,6 +70,26 @@ export async function POST(req: NextRequest) {
 
     const file = formData.get('file') as File
     const url = formData.get('url') as string
+    const type = formData.get('type') as string
+    const fileId = generateUniqueId()
+
+    if (type === 'ScribieDotComUpload') {
+      const filename = formData.get('filename') as string
+      const userId = userDetails.internalTeamUserId || userDetails.userId
+      const uploadedBy = userDetails.userId
+      const size = file ? file.size : 0
+      const duration = parseInt(formData.get('duration') as string)
+
+      await insertFileRecord(
+        fileId,
+        filename.split('.')[0],
+        userId,
+        uploadedBy,
+        size,
+        duration
+      )
+      logger.info(`File record inserted successfully ${fileId}`)
+    }
 
     if (!file && !url) {
       return NextResponse.json(
@@ -61,19 +106,18 @@ export async function POST(req: NextRequest) {
     }
 
     logger.info(
-      'File details:',
-      file ? { name: file.name, size: file.size, type: file.type } : 'No file'
+      `Starting upload process for file ${fileId} ${file?.name} ${url}`
     )
 
     if (file) {
       logger.info('Handling file upload')
-      return handleFileUpload(file, userInfo)
+      return handleFileUpload(file, userInfo, fileId)
     } else {
-      logger.info('Handling URL upload')
-      return handleUrlUpload(url, userInfo)
+      logger.info(`Handling URL upload ${decodeURIComponent(url)}`)
+      return handleUrlUpload(decodeURIComponent(url), userInfo, fileId)
     }
   } catch (error) {
-    logger.error('Upload failed:', error)
+    logger.error(`Upload failed: ${error}`)
     return new NextResponse(
       JSON.stringify({
         message: error instanceof Error ? error.message : 'Upload failed',
@@ -86,18 +130,20 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function handleFileUpload(file: File, userInfo: UserInfo) {
-  logger.info('Starting file upload handler', {
-    fileName: file.name,
-    fileSize: file.size,
-  })
+async function handleFileUpload(
+  file: File,
+  userInfo: UserInfo,
+  fileId: string
+) {
+  logger.info(
+    `Starting file upload handler ${file.size} ${file.name} ${fileId}`
+  )
 
   // Validate file size
   if (file.size > MAX_FILE_SIZE) {
-    logger.info('File size exceeds limit', {
-      size: file.size,
-      limit: MAX_FILE_SIZE,
-    })
+    logger.error(
+      `File size exceeds limit ${file.size} ${MAX_FILE_SIZE} ${fileId}`
+    )
     return new NextResponse(
       JSON.stringify({ message: 'File exceeds maximum size limit of 10GB' }),
       {
@@ -109,7 +155,7 @@ async function handleFileUpload(file: File, userInfo: UserInfo) {
 
   // Validate file type
   if (!validateFileType(file)) {
-    logger.info('Invalid file type', { type: file.type })
+    logger.info(`Invalid file type ${file.type} ${fileId}`)
     return new NextResponse(
       JSON.stringify({
         message: `Unsupported file type. Allowed types: ${getAllowedFileExtensions().join(
@@ -124,11 +170,8 @@ async function handleFileUpload(file: File, userInfo: UserInfo) {
   }
 
   try {
-    const fileId = generateUniqueId()
-    logger.info('Generated file ID', { fileId })
-
     // Initialize multipart upload
-    logger.info('Initializing multipart upload')
+    logger.info(`Initializing multipart upload ${fileId}`)
     const initResult = await createMultipartUpload(
       file.type,
       file.name,
@@ -138,10 +181,9 @@ async function handleFileUpload(file: File, userInfo: UserInfo) {
       null,
       userInfo
     )
-    logger.info('Multipart upload initialized', initResult)
 
     if (!initResult.success || !initResult.uploadId || !initResult.key) {
-      logger.error('Failed to initialize upload', initResult)
+      logger.error(`Failed to initialize upload ${fileId} ${initResult}`)
       throw new Error(initResult.message || 'Failed to initialize upload')
     }
 
@@ -154,22 +196,22 @@ async function handleFileUpload(file: File, userInfo: UserInfo) {
 
     // Upload parts
     const numChunks = Math.ceil(file.size / MULTI_PART_UPLOAD_CHUNK_SIZE)
-    logger.info('Starting part uploads', { totalParts: numChunks })
+    logger.info(`Starting part uploads ${numChunks} ${fileId}`)
 
     for (let partNumber = 1; partNumber <= numChunks; partNumber++) {
-      logger.info(`Processing part ${partNumber}/${numChunks}`)
+      logger.info(`Processing part ${partNumber}/${numChunks} ${fileId}`)
       let retryCount = -1
       while (retryCount <= UPLOAD_MAX_RETRIES) {
         try {
           const start = (partNumber - 1) * MULTI_PART_UPLOAD_CHUNK_SIZE
           const end = Math.min(start + MULTI_PART_UPLOAD_CHUNK_SIZE, file.size)
           const chunk = file.slice(start, end)
-          logger.info(`Uploading chunk`, {
-            partNumber,
-            start,
-            end,
-            size: chunk.size,
-          })
+          logger.info(`Uploading chunk
+            ${partNumber},
+            ${start},
+            ${end},
+            ${chunk.size},
+          `)
 
           const partRes = await getUploadPartSignedUrl(
             {
@@ -179,22 +221,14 @@ async function handleFileUpload(file: File, userInfo: UserInfo) {
             partNumber,
             chunk.size
           )
-          logger.info('Got signed URL for part', {
-            partNumber,
-            success: partRes.success,
-          })
 
           if (!partRes.success || !partRes.url) {
-            logger.error('Failed to get upload URL', { partNumber })
+            logger.error(`Failed to get upload URL ${partNumber} ${fileId}`)
             throw new Error('Failed to get upload URL')
           }
 
           const uploadResult = await axios.put(partRes.url, chunk, {
             headers: { 'Content-Type': file.type },
-          })
-          logger.info('Part uploaded successfully', {
-            partNumber,
-            etag: uploadResult.headers['etag'],
           })
 
           uploadState.completedParts.push({
@@ -203,12 +237,7 @@ async function handleFileUpload(file: File, userInfo: UserInfo) {
           })
 
           uploadState.totalUploaded += chunk.size
-          logger.info('Upload progress', {
-            partNumber,
-            totalUploaded: uploadState.totalUploaded,
-            percentage:
-              ((uploadState.totalUploaded / file.size) * 100).toFixed(2) + '%',
-          })
+
           break
         } catch (error) {
           retryCount++
@@ -223,7 +252,7 @@ async function handleFileUpload(file: File, userInfo: UserInfo) {
     }
 
     // Complete multipart upload
-    logger.info('Completing multipart upload', {
+    logger.info(`Completing multipart upload ${fileId}`, {
       key: uploadState.key,
       totalParts: uploadState.completedParts.length,
     })
@@ -236,11 +265,11 @@ async function handleFileUpload(file: File, userInfo: UserInfo) {
     )
 
     if (!completeResult.success) {
-      logger.error('Failed to complete upload', completeResult)
+      logger.error(`Failed to complete upload ${fileId} ${completeResult}`)
       throw new Error(completeResult.message || 'Failed to complete upload')
     }
 
-    logger.info('Upload completed successfully', { key: uploadState.key })
+    logger.info(`Upload completed successfully ${fileId} ${uploadState.key}`)
     return NextResponse.json({
       success: true,
       data: {
@@ -248,7 +277,7 @@ async function handleFileUpload(file: File, userInfo: UserInfo) {
       },
     })
   } catch (error) {
-    logger.error('File upload failed:', error)
+    logger.error(`File upload failed: ${fileId} ${error}`)
     return new NextResponse(
       JSON.stringify({
         error: error instanceof Error ? error.message : 'Upload failed',
@@ -272,12 +301,13 @@ const extractFileName = (url: string): string => {
   }
 }
 
-async function handleUrlUpload(url: string, userInfo: UserInfo) {
-  logger.info('Starting URL upload handler', { url })
+async function handleUrlUpload(
+  url: string,
+  userInfo: UserInfo,
+  fileId: string
+) {
+  logger.info(`Starting URL upload handler ${url} ${fileId}`)
   try {
-    // Validate URL and get file metadata
-    logger.info('Validating URL')
-
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL
     const headResponse = await fetch(`${baseUrl}/auth/link`, {
       method: 'POST',
@@ -287,7 +317,7 @@ async function handleUrlUpload(url: string, userInfo: UserInfo) {
 
     if (!headResponse.ok) {
       const error = await headResponse.json()
-      logger.info('URL validation failed', error)
+      logger.info(`URL validation failed ${error}`)
       return new NextResponse(
         JSON.stringify({ error: error.error || 'URL validation failed' }),
         {
@@ -298,7 +328,7 @@ async function handleUrlUpload(url: string, userInfo: UserInfo) {
     }
 
     const { contentType, contentLength } = await headResponse.json()
-    logger.info('URL metadata', { contentType, contentLength })
+    logger.info(`URL metadata fetched ${contentType} ${contentLength}`)
 
     if (!contentType || !contentLength) {
       logger.info('Missing content type or length')
@@ -314,10 +344,6 @@ async function handleUrlUpload(url: string, userInfo: UserInfo) {
     }
 
     const fileName = extractFileName(url)
-    const fileId = generateUniqueId()
-    logger.info('Generated file details', { fileName, fileId })
-
-    // Initialize multipart upload
     logger.info('Initializing multipart upload')
     const initResult = await createMultipartUpload(
       contentType,
@@ -351,7 +377,7 @@ async function handleUrlUpload(url: string, userInfo: UserInfo) {
     })
 
     if (!downloadResponse.ok) {
-      logger.error('Download failed', { status: downloadResponse.status })
+      logger.error(`Download failed ${downloadResponse.status} ${fileId}`)
       throw new Error('Failed to download file from URL')
     }
 
@@ -404,7 +430,6 @@ async function handleUrlUpload(url: string, userInfo: UserInfo) {
       }
     }
 
-    // Complete multipart upload
     logger.info('Completing multipart upload', {
       totalParts: uploadState.completedParts.length,
     })
