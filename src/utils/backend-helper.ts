@@ -648,6 +648,9 @@ export const getCustomerRate = async (userId: number) => {
       reviewerMediumDifficultyRate:
         userRate.customFormatMediumDifficultyReviewRate,
       reviewerHighDifficultyRate: userRate.customFormatHighDifficultyReviewRate,
+      qcLowDifficultyRate: userRate.qcLowDifficultyRate,
+      qcMediumDifficultyRate: userRate.qcMediumDifficultyRate,
+      qcHighDifficultyRate: userRate.qcHighDifficultyRate,
       option: userRate.customFormatOption,
     }
   } catch (error) {
