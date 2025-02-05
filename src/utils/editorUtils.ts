@@ -1139,11 +1139,17 @@ const insertTimestampBlankAtCursorPosition = (
         return;
     }
 
-    const currentTime = audioPlayer.currentTime
-    const formattedTime = `[${secondsToTs(currentTime, true, 1)}] ____ `
+    const currentTime = audioPlayer.currentTime;
+    const formattedTime = `[${secondsToTs(currentTime, true, 1)}] ____`;
 
+    // Insert the blank with the red color style.
     quill.insertText(cursorPosition, formattedTime, { color: '#FF0000' }, 'user');
-    quill.setSelection(cursorPosition + formattedTime.length, 0)
+
+    // Set the selection after the inserted text.
+    quill.setSelection(cursorPosition + formattedTime.length, 0);
+    
+    // Reset the text format so that new text is not red.
+    quill.format('color', false);
 }
 
 const scrollEditorToPos = (quill: Quill, pos: number) => {
