@@ -453,7 +453,7 @@ export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, or
         };
      }, [alignments, ctms, typingTimer, scheduleAlignmentUpdate]);
      
-     useEffect(() => {
+    useEffect(() => {
         const originalExecCommand = document.execCommand;
         document.execCommand = function(command, ...args) {
             if (command === 'undo' || command === 'redo') {
@@ -531,6 +531,14 @@ export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, or
                 }
      
                 scheduleAlignmentUpdate();
+            }
+
+            // If the Enter key is pressed, clear any line highlight
+            if (e.key === 'Enter') {
+                if (prevLineNodeRef.current) {
+                    prevLineNodeRef.current.classList.remove("line-highlight");
+                    prevLineNodeRef.current = null;
+                }
             }
         };
      
