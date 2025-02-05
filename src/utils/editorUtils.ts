@@ -575,25 +575,35 @@ const handleSave = async (
     }
 }
 
-const autoCapitalizeSentences = (quillRef: React.RefObject<ReactQuill> | undefined) => {
-    if (quillRef?.current) {
-        const quill = quillRef.current.getEditor();
-        const text = quill.getText();
+function autoCapitalizeSentences(quillRef: React.RefObject<ReactQuill> | undefined) {
+    if (!quillRef?.current) return;
+    const quill = quillRef.current.getEditor();
+    const text = quill.getText();
 
-        // Match sentence endings followed by spaces and a lowercase letter
-        const regex = /([.!?])\s+([a-z])/g;
-        let match;
+    // 1. Handle lines that start with a timestamp and speaker label pattern,
+    // e.g. "00:00:00.0 S1:" followed by a lowercase letter.
+    const regexTimestampSpeaker = /^(\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:)\s*([a-z])/gm;
+    let match: RegExpExecArray | null;
+    while ((match = regexTimestampSpeaker.exec(text)) !== null) {
+        // match[0] is the whole matching string, e.g. "00:00:00.0 S1: hello"
+        // match[1] is the timestamp & speaker label (e.g. "00:00:00.0 S1:")
+        // match[2] is the first lowercase letter of the sentence ("h" in "hello")
+        // Determine where the group2 begins relative to the document text.
+        const fullMatch = match[0];
+        const group2 = match[2];
+        const group2Offset = fullMatch.indexOf(group2);
+        const charIndex = match.index + group2Offset;
+        quill.deleteText(charIndex, 1, 'user');
+        quill.insertText(charIndex, group2.toUpperCase(), 'user');
+    }
 
-        while ((match = regex.exec(text)) !== null) {
-            // Calculate dynamic index based on full match length
-            const charIndex = match.index + match[0].length - 1;
-            const lowercaseChar = match[2];
-            const uppercaseChar = lowercaseChar.toUpperCase();
-
-            // Replace the lowercase character
-            quill.deleteText(charIndex, 1, 'user');
-            quill.insertText(charIndex, uppercaseChar, 'user');
-        }
+    // 2. Auto capitalize sentences after punctuation (as your original logic)
+    const regex = /([.!?])\s+([a-z])/g;
+    while ((match = regex.exec(text)) !== null) {
+        // The letter to be capitalized is the last character (after punctuation and spaces)
+        const charIndex = match.index + match[0].length - 1;
+        quill.deleteText(charIndex, 1, 'user');
+        quill.insertText(charIndex, match[2].toUpperCase(), 'user');
     }
 }
 
