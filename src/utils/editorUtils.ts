@@ -6,7 +6,6 @@ import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
 import axiosInstance from './axios'
-import { CTMType } from './getFormattedTranscript'
 import { secondsToTs } from './secondsToTs'
 import { getFrequentTermsAction } from '@/app/actions/editor/frequent-terms'
 import { getPlayStatsAction } from '@/app/actions/editor/get-play-stats'
@@ -24,6 +23,7 @@ import {
     FILE_CACHE_URL,
     MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
 } from '@/constants'
+import { CTMType } from '@/types/editor/transcript'
 import { UndoRedoItem } from '@/types/editor/undo-redo-item'
 import { diff_match_patch, DIFF_INSERT, DIFF_DELETE, DIFF_EQUAL } from '@/utils/transcript/diff_match_patch'
 
