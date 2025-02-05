@@ -24,7 +24,7 @@ import {
     FILE_CACHE_URL,
     MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
 } from '@/constants'
-import { UndoRedoItem } from '@/types/editor'
+import { UndoRedoItem } from '@/types/editor/undo-redo-item'
 import { diff_match_patch, DIFF_INSERT, DIFF_DELETE, DIFF_EQUAL } from '@/utils/transcript/diff_match_patch'
 
 export type ButtonLoading = {

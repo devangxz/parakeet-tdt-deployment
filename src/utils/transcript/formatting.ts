@@ -1,5 +1,5 @@
 import { secondsToTs } from '../secondsToTs'
-import { CTMType } from '../types/transcript'
+import { CTMType } from '@/types/editor/transcript'
 
 export function getFormattedTranscript(ctms: CTMType[]): string {
     const paragraphs: string[] = [];

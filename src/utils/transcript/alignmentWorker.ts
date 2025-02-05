@@ -1,5 +1,5 @@
+import { AlignmentType, CTMType } from '@/types/editor/transcript'
 import { diff_match_patch, DIFF_DELETE, DIFF_INSERT } from '@/utils/transcript/diff_match_patch'
-import { AlignmentType, CTMType } from '@/utils/types/transcript'
 
 function processMetaPhrase(text: string): string[] {
     text = text.trim();
