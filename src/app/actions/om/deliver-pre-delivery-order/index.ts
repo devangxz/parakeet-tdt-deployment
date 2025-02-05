@@ -87,7 +87,7 @@ export async function deliverPreDeliveryOrder(
     }
 
     if (order?.orderType === OrderType.TRANSCRIPTION) {
-      const tokenRes = await fileCacheTokenAction()
+      const tokenRes = await fileCacheTokenAction(session)
       const transcriptRes = await axios.get(
         `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderInformation.fileId}&orderId=${orderInformation.id}`,
         {

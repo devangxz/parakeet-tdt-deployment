@@ -173,8 +173,10 @@ export function CheckAndDownload({
   }
 
   useEffect(() => {
-    getAuthToken()
-  }, [])
+    if (toggleCheckAndDownload) {
+      getAuthToken()
+    }
+  }, [toggleCheckAndDownload])
 
   return (
     <Dialog
