@@ -39,20 +39,18 @@ function PaymentsNavbar() {
                 </span>
               </div>
             </Link>
-            <div className='flex gap-4'>
+            <div className='flex items-center gap-4'>
               {session?.user?.readonly && (
-                <div className='mr-2 mt-1'>
-                  <Badge
-                    variant='outline'
-                    className='lg:text-md text-sm text-primary bg-violet-100 pt-1 pb-1 font-medium'
-                  >
-                    Accessing `{session?.user?.email}` account
-                  </Badge>
-                </div>
+              <Badge
+                variant='outline'
+                className='w-fit lg:text-md text-sm text-primary bg-secondary border border-customBorder pt-1 pb-1 font-medium'
+              >
+                Accessing `{session?.user?.email}` account
+              </Badge>
               )}
               <Button
                 variant='default'
-                className='w-full'
+                className='w-fit'
                 onClick={handleUpload}
               >
                 <Image

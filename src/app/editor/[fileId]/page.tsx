@@ -10,6 +10,7 @@ import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
 import { setPlayStatsAction } from '@/app/actions/editor/set-play-stats'
+import { getUserEditorSettingsAction } from '@/app/actions/editor/settings'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
@@ -39,9 +40,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { RenderPDFDocument } from '@/components/utils'
 import { AUTOSAVE_INTERVAL } from '@/constants'
 import usePreventMultipleTabs from '@/hooks/usePreventMultipleTabs'
+import { EditorSettings } from '@/types/editor'
 import {
   ShortcutControls,
   useShortcuts,
+  defaultShortcuts,
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   CTMType,
@@ -138,16 +141,32 @@ function EditorPage() {
   const [matchCount, setMatchCount] = useState(0)
   const [matchSelection, setMatchSelection] = useState(false)
   const findInputRef = useRef<HTMLInputElement>(null)
-  const [selection, setSelection] = useState<CustomerQuillSelection | null>(null)
-  const [searchHighlight, setSearchHighlight] = useState<{ index: number; length: number } | null>(null);
-  const [highlightWordsEnabled, setHighlightWordsEnabled] = useState(true);
+  const [selection, setSelection] = useState<CustomerQuillSelection | null>(
+    null
+  )
+  const [searchHighlight, setSearchHighlight] = useState<{
+    index: number
+    length: number
+  } | null>(null)
+  const [highlightWordsEnabled, setHighlightWordsEnabled] = useState(true)
+  const [fontSize, setFontSize] = useState(16)
   const lastTrackedSecondRef = useRef(-1)
   const [playStats, setPlayStats] = useState<PlayStats>({ listenCount: [] })
-  const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set());
+  const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set())
   const [waveformUrl, setWaveformUrl] = useState('')
+  const [editorSettings, setEditorSettings] = useState<EditorSettings>({
+    wordHighlight: true,
+    fontSize: 16,
+    audioRewindSeconds: 2,
+    volume: 100,
+    playbackSpeed: 100,
+    useNativeContextMenu: false,
+    shortcuts: { ...defaultShortcuts },
+  })
+  const isWordPlayback = useRef(false)
 
   interface PlayStats {
-    listenCount: number[];
+    listenCount: number[]
   }
 
   const setSelectionHandler = () => {
@@ -330,7 +349,20 @@ function EditorPage() {
       },
     }
     return controls as ShortcutControls
-  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, findText, replaceText, matchCase, lastSearchIndex, playStats, editedSegments])
+  }, [
+    getEditorText,
+    orderDetails,
+    notes,
+    step,
+    cfd,
+    setButtonLoading,
+    findText,
+    replaceText,
+    matchCase,
+    lastSearchIndex,
+    playStats,
+    editedSegments,
+  ])
 
   useShortcuts(shortcutControls)
 
@@ -397,7 +429,10 @@ function EditorPage() {
   useEffect(() => {
     const fetchWaveform = async () => {
       try {
-        const res = await getSignedUrlAction(`${orderDetails.fileId}_wf.png`, 300)
+        const res = await getSignedUrlAction(
+          `${orderDetails.fileId}_wf.png`,
+          300
+        )
         if (res.success && res.signedUrl) {
           setWaveformUrl(res.signedUrl)
         }
@@ -405,21 +440,21 @@ function EditorPage() {
         console.error('Failed to load waveform:', error)
       }
     }
-    
+
     if (orderDetails.fileId) {
       fetchWaveform()
     }
-  }, [orderDetails.fileId])  
+  }, [orderDetails.fileId])
 
   const savePlayStats = async () => {
     if (orderDetails.userId && orderDetails.fileId) {
       await setPlayStatsAction({
         fileId: orderDetails.fileId,
         listenCount: playStats.listenCount,
-        editedSegments: Array.from(editedSegments)
+        editedSegments: Array.from(editedSegments),
       })
     }
-  }  
+  }
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -441,7 +476,7 @@ function EditorPage() {
 
   useEffect(() => {
     setPlayStats(() => ({
-      listenCount: new Array(Math.ceil(audioDuration)).fill(0)
+      listenCount: new Array(Math.ceil(audioDuration)).fill(0),
     }))
   }, [audioDuration])
 
@@ -449,17 +484,18 @@ function EditorPage() {
     const handleTimeUpdate = () => {
       if (!audioPlayer) return
       const currentSecond = Math.floor(audioPlayer.currentTime)
-      
+
       // Only update stats if we've moved to a new second
       if (currentSecond !== lastTrackedSecondRef.current) {
         lastTrackedSecondRef.current = currentSecond
-        
-        setPlayStats(prev => {
+
+        setPlayStats((prev) => {
           const newListenCount = [...prev.listenCount]
-          newListenCount[currentSecond] = (newListenCount[currentSecond] || 0) + 1
+          newListenCount[currentSecond] =
+            (newListenCount[currentSecond] || 0) + 1
           return { listenCount: newListenCount }
         })
-      }  
+      }
     }
 
     audioPlayer?.addEventListener('timeupdate', handleTimeUpdate)
@@ -470,7 +506,9 @@ function EditorPage() {
   }, [audioPlayer])
 
   const getPlayedPercentage = () => {
-    const playedSections = playStats.listenCount.filter(count => count > 0).length
+    const playedSections = playStats.listenCount.filter(
+      (count) => count > 0
+    ).length
     return Math.round((playedSections / playStats.listenCount.length) * 100)
   }
 
@@ -555,6 +593,36 @@ function EditorPage() {
     setMatchCount(countMatches(findText))
   }, [matchSelection, matchCase])
 
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await getUserEditorSettingsAction()
+        if (response.success && response.settings) {
+          const newSettings: EditorSettings = {
+            wordHighlight: response.settings.wordHighlight,
+            fontSize: response.settings.fontSize,
+            audioRewindSeconds: response.settings.audioRewindSeconds,
+            volume: response.settings.volume,
+            playbackSpeed: response.settings.playbackSpeed,
+            useNativeContextMenu: response.settings.useNativeContextMenu,
+            shortcuts: response.settings.shortcuts,
+          }
+
+          setEditorSettings(newSettings)
+          setHighlightWordsEnabled(newSettings.wordHighlight)
+        }
+      } catch (error) {
+        toast.error('Failed to load editor settings')
+      }
+    }
+
+    loadSettings()
+  }, [])
+
+  useEffect(() => {
+    setHighlightWordsEnabled(editorSettings.wordHighlight)
+  }, [editorSettings.wordHighlight])
+
   return (
     <div className='bg-secondary h-screen flex flex-col p-1 gap-y-1'>
       <Topbar
@@ -571,6 +639,8 @@ function EditorPage() {
         setRegenCount={setRegenCount}
         setFileToUpload={setFileToUpload}
         fileToUpload={fileToUpload}
+        editorSettings={editorSettings}
+        onSettingsChange={setEditorSettings}
       />
 
       <Header
@@ -578,9 +648,13 @@ function EditorPage() {
         quillRef={quillRef}
         orderDetails={orderDetails}
         toggleFindAndReplace={toggleFindAndReplace}
+        waveformUrl={waveformUrl}
         highlightWordsEnabled={highlightWordsEnabled}
         setHighlightWordsEnabled={setHighlightWordsEnabled}
-        waveformUrl={waveformUrl}
+        fontSize={fontSize}
+        setFontSize={setFontSize}
+        editorSettings={editorSettings}
+        isWordPlayback={isWordPlayback}
       />
 
       <div className='flex h-full overflow-hidden'>
@@ -648,7 +722,10 @@ function EditorPage() {
                       selection={selection}
                       searchHighlight={searchHighlight}
                       highlightWordsEnabled={highlightWordsEnabled}
+                      setFontSize={setFontSize}
                       setEditedSegments={setEditedSegments}
+                      editorSettings={editorSettings}
+                      isWordPlayback={isWordPlayback}
                     />
 
                     <DiffTabComponent diff={diff} />
@@ -800,8 +877,8 @@ function EditorPage() {
           </div>
         </div>
 
-        <Dialog 
-          open={isSubmitModalOpen} 
+        <Dialog
+          open={isSubmitModalOpen}
           onOpenChange={(open) => {
             setIsSubmitModalOpen(open)
             if (!open) {
@@ -809,28 +886,29 @@ function EditorPage() {
             }
           }}
         >
-          <DialogContent className="max-w-4xl">
+          <DialogContent className='max-w-4xl'>
             <DialogHeader>
               <DialogTitle>Submit</DialogTitle>
               <DialogDescription>
                 Please confirm that you want to submit the transcript
               </DialogDescription>
 
-              <div className="py-4">
-                <p className="text-sm text-gray-500 mb-2">
-                  Audio Playback Coverage: <span className="font-medium">{getPlayedPercentage()}%</span>
+              <div className='py-4'>
+                <p className='text-sm text-gray-500 mb-2'>
+                  Audio Playback Coverage:{' '}
+                  <span className='font-medium'>{getPlayedPercentage()}%</span>
                 </p>
-                <PlayStatsVisualization 
+                <PlayStatsVisualization
                   waveformUrl={waveformUrl}
                   playStats={playStats}
                   editedSegments={editedSegments}
                   duration={audioDuration}
-                />                
+                />
               </div>
 
-              <div className="flex justify-end gap-2 mt-4">
+              <div className='flex justify-end gap-2 mt-4'>
                 <Button
-                  variant="outline"
+                  variant='outline'
                   onClick={() => {
                     setSubmitting(false)
                     setIsSubmitModalOpen(false)
@@ -841,7 +919,7 @@ function EditorPage() {
                 <Button
                   onClick={() => {
                     if (!quillRef?.current) return
-                    const quill = quillRef.current.getEditor()      
+                    const quill = quillRef.current.getEditor()
                     handleSubmit({
                       orderDetails,
                       step,
@@ -858,7 +936,7 @@ function EditorPage() {
                   disabled={buttonLoading.submit}
                 >
                   {buttonLoading.submit && (
-                    <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
                   )}
                   Confirm
                 </Button>
