@@ -16,12 +16,16 @@ const calculateTranscriberCost = async (order: any, transcriberId: number) => {
   const transcriptionRates = config.transcriber_rates
   const userRates = await getCustomerRate(order.userId)
   const qcStatuses = [OrderStatus.QC_ASSIGNED, OrderStatus.TRANSCRIBED]
-  const reviewStatuses = [
+  const cfReviewStatuses = [
     OrderStatus.QC_COMPLETED,
     OrderStatus.REVIEWER_ASSIGNED,
     OrderStatus.FORMATTED,
     OrderStatus.REVIEW_COMPLETED,
+  ]
+  const reviewStatuses = [
+    OrderStatus.REVIEW_COMPLETED,
     OrderStatus.FINALIZER_ASSIGNED,
+    OrderStatus.FINALIZING_COMPLETED,
   ]
   const iCQC = await isTranscriberICQC(transcriberId)
 
@@ -38,6 +42,16 @@ const calculateTranscriberCost = async (order: any, transcriberId: number) => {
     } else {
       rate = transcriptionRates.general_qc[pwerLevel]
     }
+  } else if (cfReviewStatuses.includes(order.status)) {
+    rate = iCQC.isICQC
+      ? iCQC.cfRRate
+      : userRates
+      ? pwerLevel === 'high'
+        ? userRates.cfReviewHighDifficultyRate
+        : pwerLevel === 'medium'
+        ? userRates.cfReviewMediumDifficultyRate
+        : userRates.cfReviewLowDifficultyRate
+      : 0
   } else if (reviewStatuses.includes(order.status)) {
     rate = iCQC.isICQC
       ? iCQC.cfRRate

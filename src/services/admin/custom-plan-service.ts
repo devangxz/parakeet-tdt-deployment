@@ -30,6 +30,9 @@ interface UpdateCustomPlanParams {
     qcLowDifficultyRate: string
     qcMediumDifficultyRate: string
     qcHighDifficultyRate: string
+    cfReviewLowDifficultyRate: string
+    cfReviewMediumDifficultyRate: string
+    cfReviewHighDifficultyRate: string
   }
 }
 
@@ -147,6 +150,15 @@ export async function updateCustomPlan({
           qcLowDifficultyRate: parseFloat(rates.qcLowDifficultyRate),
           qcMediumDifficultyRate: parseFloat(rates.qcMediumDifficultyRate),
           qcHighDifficultyRate: parseFloat(rates.qcHighDifficultyRate),
+          cfReviewLowDifficultyRate: parseFloat(
+            rates.cfReviewLowDifficultyRate
+          ),
+          cfReviewMediumDifficultyRate: parseFloat(
+            rates.cfReviewMediumDifficultyRate
+          ),
+          cfReviewHighDifficultyRate: parseFloat(
+            rates.cfReviewHighDifficultyRate
+          ),
           deadline: parseInt(rates.customFormatDeadline),
           orderType: rates.orderType,
           updatedAt: new Date(),
@@ -171,6 +183,15 @@ export async function updateCustomPlan({
           qcLowDifficultyRate: parseFloat(rates.qcLowDifficultyRate),
           qcMediumDifficultyRate: parseFloat(rates.qcMediumDifficultyRate),
           qcHighDifficultyRate: parseFloat(rates.qcHighDifficultyRate),
+          cfReviewLowDifficultyRate: parseFloat(
+            rates.cfReviewLowDifficultyRate
+          ),
+          cfReviewMediumDifficultyRate: parseFloat(
+            rates.cfReviewMediumDifficultyRate
+          ),
+          cfReviewHighDifficultyRate: parseFloat(
+            rates.cfReviewHighDifficultyRate
+          ),
           deadline: parseInt(rates.customFormatDeadline),
           orderType: rates.orderType,
         },
