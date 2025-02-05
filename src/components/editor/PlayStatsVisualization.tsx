@@ -57,6 +57,53 @@ const PlayStatsVisualization: React.FC<PlayStatsVisualizationProps> = ({
 
   const timeMarkers = generateTimeMarkers();
 
+  // --- New state for processing overlay elements ---
+  const [overlayNodes, setOverlayNodes] = React.useState<JSX.Element[]>([]);
+  const [processingProgress, setProcessingProgress] = React.useState<number>(0);
+
+  // --- Process listenCount array in chunks ---
+  React.useEffect(() => {
+    let currentIndex = 0;
+    const nodesAccumulator: JSX.Element[] = [];
+    const chunkSize = 100; // adjust the chunk size as needed
+    let cancelled = false; // for cleanup
+
+    function processChunk() {
+      if (cancelled) return;
+      const endIndex = Math.min(currentIndex + chunkSize, duration);
+      
+      for (let i = currentIndex; i < endIndex; i++) {
+        nodesAccumulator.push(
+          <div
+            key={i}
+            className="h-full flex-1 relative"
+            style={{ backgroundColor: getHeatmapColor(listenCount[i] || 0) }}
+          >
+            {editedSegments.has(i) && (
+              <div 
+                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-emerald-500 rounded-full"
+                style={{ boxShadow: '0 0 2px rgba(16, 185, 129, 0.8)' }}
+              />
+            )}
+          </div>
+        );
+      }
+      
+      currentIndex = endIndex;
+      setOverlayNodes([...nodesAccumulator]);
+      setProcessingProgress(Math.min((currentIndex / duration) * 100, 100));
+      
+      if (currentIndex < duration) {
+        setTimeout(processChunk, 0);
+      }
+    }
+
+    processChunk();
+    return () => {
+      cancelled = true;
+    };
+  }, [duration, listenCount, editedSegments]);
+
   return (
     <div className="relative w-full">
       <div className="flex gap-2 mb-1 text-xs text-gray-500">
@@ -87,33 +134,26 @@ const PlayStatsVisualization: React.FC<PlayStatsVisualizationProps> = ({
             backgroundPosition: 'center'
           }}
         >
+          {/* Render overlay nodes processed in chunks */}
           <div className="absolute inset-0 flex">
-            {Array.from({length: duration}).map((_, i) => (
-              <div
-                key={i}
-                className="h-full flex-1 relative"
-                style={{
-                  backgroundColor: getHeatmapColor(listenCount[i] || 0)
-                }}
-              >
-                {editedSegments.has(i) && (
-                  <div 
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-emerald-500 rounded-full"
-                    style={{
-                      boxShadow: '0 0 2px rgba(16, 185, 129, 0.8)'
-                    }}
-                  />
-                )}
-              </div>
-            ))}
+            {overlayNodes}
           </div>
+
+          {/* Optional progress indicator until processing is complete */}
+          {processingProgress < 100 && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-60">
+              <span className="text-sm text-gray-700">
+                Processing: {processingProgress.toFixed(0)}%
+              </span>
+            </div>
+          )}
         </div>
         
         <div className="relative h-6 px-1">
           {/* Scale markers */}
           <div className="absolute left-0 right-0 top-0 h-1 flex items-center">
             <div className="absolute left-0 w-0.5 h-1.5 bg-gray-300" />
-            {timeMarkers.map(({time, position}) => (
+            {timeMarkers.map(({ time, position }) => (
               <div 
                 key={time}
                 className="absolute w-0.5 h-1.5 bg-gray-300"
@@ -126,7 +166,7 @@ const PlayStatsVisualization: React.FC<PlayStatsVisualizationProps> = ({
           {/* Time labels */}
           <div className="absolute left-0 right-0 top-2 flex justify-between text-xs text-gray-500">
             <span>{formatDuration(0)}</span>
-            {timeMarkers.map(({time}) => (
+            {timeMarkers.map(({ time }) => (
               <span 
                 key={time}
                 className="absolute -translate-x-1/2"
