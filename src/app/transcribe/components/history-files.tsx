@@ -424,7 +424,7 @@ export default function HistoryFilesPage() {
                           : ''
                     }
                   >
-                    {diff.text}
+                    {diff.text.replace(/\n/g, '¶\n').replace(/ /g, '·')}
                   </span>
                 ))}
               </pre>

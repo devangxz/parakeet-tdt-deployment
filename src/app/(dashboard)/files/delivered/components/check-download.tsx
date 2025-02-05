@@ -1,12 +1,12 @@
 import { StarFilledIcon, StarIcon } from '@radix-ui/react-icons'
 import { useGoogleLogin } from '@react-oauth/google'
-import { Session } from 'next-auth'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { SpecialInstructions } from './special-instructions'
 import { Tip } from '../../all-files/AllFiles'
 import { orderController } from '../controllers'
+import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
 import { getOrderRating } from '@/app/actions/order/rating'
 import { BoxUploadButton } from '@/components/box-upload-button'
 import { DropboxUploadButton } from '@/components/dropbox-upload-button'
@@ -28,7 +28,6 @@ interface CheckAndDownloadProps {
   filename: string
   toggleCheckAndDownload: boolean
   setToggleCheckAndDownload: (value: boolean) => void
-  session: Session
   txtSignedUrl: string
   cfDocxSignedUrl: string
 }
@@ -40,7 +39,6 @@ export function CheckAndDownload({
   filename,
   toggleCheckAndDownload,
   setToggleCheckAndDownload,
-  session,
   txtSignedUrl,
   cfDocxSignedUrl,
 }: CheckAndDownloadProps) {
@@ -49,6 +47,7 @@ export function CheckAndDownload({
   const [showSubtitle, setShowSubtitle] = useState<boolean>(false)
   const [rating, setRating] = useState<null | number>(storedrating || null)
   const [isUploading, setIsUploading] = useState(false)
+  const [authToken, setAuthToken] = useState<string | undefined>('')
   const ratingMessages = ['Poor', 'Bad', 'Okay', 'Good', 'Excellent']
   const controller = async (
     payload: {
@@ -167,6 +166,16 @@ export function CheckAndDownload({
     }
     fetchRating()
   }, [rating, storedrating, id])
+
+  const getAuthToken = async () => {
+    const tokenRes = await fileCacheTokenAction()
+    setAuthToken(tokenRes.token)
+  }
+
+  useEffect(() => {
+    getAuthToken()
+  }, [])
+
   return (
     <Dialog
       open={toggleCheckAndDownload}
@@ -271,7 +280,7 @@ export function CheckAndDownload({
               {/* pdf  */}
               <div className='max-w-full flex justify-between'>
                 <a
-                  href={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${session?.user?.token}`}
+                  href={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`}
                   target='_blank'
                   className='text-primary'
                 >{`${pdf?.name}_cf.pdf`}</a>
@@ -282,7 +291,7 @@ export function CheckAndDownload({
                     asChild
                   >
                     <a
-                      href={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${session?.user?.token}`}
+                      href={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`}
                       target='_blank'
                     >Save to device</a>
 
@@ -290,21 +299,21 @@ export function CheckAndDownload({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleGDriveUpload(`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${session?.user?.token}`, `${pdf?.name}_cf.pdf`)}
+                    onClick={() => handleGDriveUpload(`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`, `${pdf?.name}_cf.pdf`)}
                     disabled={isUploading}
                   >
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
                   </Button>
                   <OneDriveUploadButton
-                    fileUrl={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${session?.user?.token}`}
+                    fileUrl={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`}
                     fileName={`${pdf?.name}_cf.pdf`}
                   />
                   <BoxUploadButton
-                    fileUrl={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${session?.user?.token}`}
+                    fileUrl={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`}
                     fileName={`${pdf?.name}_cf.pdf`}
                   />
                   <DropboxUploadButton
-                    files={[{ filename: `${pdf?.name}_cf.pdf`, url: `${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${session?.user?.token}` }]}
+                    files={[{ filename: `${pdf?.name}_cf.pdf`, url: `${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}` }]}
                   />
                 </div>
               </div>
@@ -319,7 +328,7 @@ export function CheckAndDownload({
               {/* docx  */}
               <div className='max-w-full flex justify-between'>
                 <a
-                  href={`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${session?.user?.token}`}
+                  href={`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${authToken}`}
                   target='_blank'
                   className='text-primary'
                 >{`${docx?.name}.docx`}</a>
@@ -330,7 +339,7 @@ export function CheckAndDownload({
                     asChild
                   >
                     <a
-                      href={`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${session?.user?.token}`}
+                      href={`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${authToken}`}
                       target='_blank'
                     >Save to device</a>
 
@@ -338,28 +347,28 @@ export function CheckAndDownload({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleGDriveUpload(`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${session?.user?.token}`, `${docx?.name}.docx`)}
+                    onClick={() => handleGDriveUpload(`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${authToken}`, `${docx?.name}.docx`)}
                     disabled={isUploading}
                   >
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
                   </Button>
                   <OneDriveUploadButton
-                    fileUrl={`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${session?.user?.token}`}
+                    fileUrl={`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${authToken}`}
                     fileName={`${docx?.name}.docx`}
                   />
                   <BoxUploadButton
-                    fileUrl={`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${session?.user?.token}`}
+                    fileUrl={`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${authToken}`}
                     fileName={`${docx?.name}.docx`}
                   />
                   <DropboxUploadButton
-                    files={[{ filename: `${docx?.name}.docx`, url: `${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${session?.user?.token}` }]}
+                    files={[{ filename: `${docx?.name}.docx`, url: `${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${authToken}` }]}
                   />
                 </div>
               </div>
               {/* pdf  */}
               <div className='max-w-full flex justify-between'>
                 <a
-                  href={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${session?.user?.token}`}
+                  href={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${authToken}`}
                   target='_blank'
                   className='text-primary'
                 >{`${pdf?.name}.pdf`}</a>
@@ -370,7 +379,7 @@ export function CheckAndDownload({
                     asChild
                   >
                     <a
-                      href={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${session?.user?.token}`}
+                      href={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${authToken}`}
                       target='_blank'
                     >Save to device</a>
 
@@ -378,21 +387,21 @@ export function CheckAndDownload({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleGDriveUpload(`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${session?.user?.token}`, `${pdf?.name}.pdf`)}
+                    onClick={() => handleGDriveUpload(`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${authToken}`, `${pdf?.name}.pdf`)}
                     disabled={isUploading}
                   >
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
                   </Button>
                   <OneDriveUploadButton
-                    fileUrl={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${session?.user?.token}`}
+                    fileUrl={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${authToken}`}
                     fileName={`${pdf?.name}.pdf`}
                   />
                   <BoxUploadButton
-                    fileUrl={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${session?.user?.token}`}
+                    fileUrl={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${authToken}`}
                     fileName={`${pdf?.name}.pdf`}
                   />
                   <DropboxUploadButton
-                    files={[{ filename: `${pdf?.name}.pdf`, url: `${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${session?.user?.token}` }]}
+                    files={[{ filename: `${pdf?.name}.pdf`, url: `${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${authToken}` }]}
                   />
                 </div>
               </div>
@@ -445,7 +454,7 @@ export function CheckAndDownload({
               {/* srt  */}
               <div className='max-w-full flex justify-between'>
                 <a
-                  href={`${FILE_CACHE_URL}/get-subtitles/${id}?authToken=${session?.user?.token}&ext=srt`}
+                  href={`${FILE_CACHE_URL}/get-subtitles/${id}?authToken=${authToken}&ext=srt`}
                   target='_blank'
                   className='text-primary'
                 >{`${filename}.srt`}</a>
@@ -462,7 +471,7 @@ export function CheckAndDownload({
 
               <div className='max-w-full flex justify-between'>
                 <a
-                  href={`${FILE_CACHE_URL}/get-subtitles/${id}?authToken=${session?.user?.token}&ext=vtt`}
+                  href={`${FILE_CACHE_URL}/get-subtitles/${id}?authToken=${authToken}&ext=vtt`}
                   target='_blank'
                   className='text-primary'
                 >{`${filename}.vtt`}</a>

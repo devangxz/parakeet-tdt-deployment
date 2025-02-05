@@ -1,14 +1,15 @@
 'use server'
 
 import { FileTag, OrderType } from '@prisma/client'
+import axios from 'axios'
 import { getServerSession } from 'next-auth'
 
+import { fileCacheTokenAction } from '../../auth/file-cache-token'
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import deliver from '@/services/file-service/deliver'
-import axiosInstance from '@/utils/axios'
 import { uploadToS3 } from '@/utils/backend-helper'
 import getCustomerTranscript from '@/utils/getCustomerTranscript'
 
@@ -86,11 +87,12 @@ export async function deliverPreDeliveryOrder(
     }
 
     if (order?.orderType === OrderType.TRANSCRIPTION) {
-      const transcriptRes = await axiosInstance.get(
-        `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderInformation.fileId}&orderId=${orderInformation.id}&userId=${omId}`,
+      const tokenRes = await fileCacheTokenAction()
+      const transcriptRes = await axios.get(
+        `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderInformation.fileId}&orderId=${orderInformation.id}`,
         {
           headers: {
-            'x-api-key': process.env.SCRIBIE_API_KEY,
+            'Authorization': `Bearer ${tokenRes.token}`
           },
         }
       )

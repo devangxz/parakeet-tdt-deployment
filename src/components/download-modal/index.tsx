@@ -9,6 +9,7 @@ import { Button } from '../ui/button'
 import { Checkbox } from '../ui/checkbox'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog'
 import { Label } from '../ui/label'
+import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token';
 import { getZipFilesAction } from '@/app/actions/order/get-zip-files'
 
 interface DownloadDialogProps {
@@ -93,10 +94,12 @@ const DownloadModal = ({
         const toastId = toast.loading('Generating zip file...')
         setIsLoading(true)
         try {
+            const tokenRes = await fileCacheTokenAction();
+            const authToken = tokenRes.token;
             const res = await getZipFilesAction(fileIds, Object.entries(selectedTypes)
                 // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 .filter(([_, isSelected]) => isSelected)
-                .map(([type]) => type))
+                .map(([type]) => type), authToken)
             if (res.success && res.data) {
                 await downloadRemoteFilesAsZip(res.data)
                 setStep(2)

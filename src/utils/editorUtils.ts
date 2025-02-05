@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import axiosInstance from './axios'
 import { CTMType } from './getFormattedTranscript'
 import { secondsToTs } from './secondsToTs'
+import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
 import { getFrequentTermsAction } from '@/app/actions/editor/frequent-terms'
 import { getPlayStatsAction } from '@/app/actions/editor/get-play-stats'
 import { getOrderDetailsAction } from '@/app/actions/editor/order-details'
@@ -403,6 +404,7 @@ const fetchFileDetails = async ({
     setListenCount,
 }: FetchFileDetailsParams) => {
     try {
+        const tokenRes = await fileCacheTokenAction()
         const orderRes = await getOrderDetailsAction(params?.fileId as string)
         if (!orderRes?.orderDetails) {
             throw new Error('Order details not found')
@@ -436,10 +438,15 @@ const fetchFileDetails = async ({
             }
         }
         setStep(step)
-        const transcriptRes = await axiosInstance.get(
-            `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.orderDetails.fileId}&step=${step}&orderId=${orderRes.orderDetails.orderId}` //step will be used later when cf editor is implemented
+        const transcriptRes = await axios.get(
+            `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.orderDetails.fileId}&step=${step}&orderId=${orderRes.orderDetails.orderId}`, //step will be used later when cf editor is implemented
+            {
+                headers: {
+                    'Authorization': `Bearer ${tokenRes.token}`
+                }
+            }
         )
-    
+
         const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
         const localTranscript = editorData[orderRes.orderDetails.fileId]?.transcript;
         if (localTranscript) {
@@ -541,11 +548,16 @@ const handleSave = async (
         }
 
         // Save notes and other data
-        await axiosInstance.post(`${FILE_CACHE_URL}/save-transcript`, {
+        const tokenRes = await fileCacheTokenAction()
+        await axios.post(`${FILE_CACHE_URL}/save-transcript`, {
             fileId: orderDetails.fileId,
             transcript,
             cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
             orderId: orderDetails.orderId,
+        }, {
+            headers: {
+                'Authorization': `Bearer ${tokenRes.token}`
+            }
         })
 
         await setPlayStatsAction({
