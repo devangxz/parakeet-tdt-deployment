@@ -1,4 +1,3 @@
-import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 
 import { Button } from '../ui/button'
@@ -12,6 +11,7 @@ import {
 } from '../ui/dialog'
 import { Label } from '../ui/label'
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group'
+import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
 import { downloadBlankDocxAction } from '@/app/actions/editor/download-docx'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { FILE_CACHE_URL } from '@/constants'
@@ -27,8 +27,8 @@ const DownloadDocxDialog = ({
   downloadableType,
   setDownloadableType,
 }: DownloadDocxDialogProps) => {
-  const { data: session } = useSession()
   const [docxUrl, setDocxUrl] = useState('')
+  const [authToken, setAuthToken] = useState<string | undefined>('')
 
   const getDocxUrl = async () => {
     const response = await downloadBlankDocxAction(
@@ -48,6 +48,15 @@ const DownloadDocxDialog = ({
     ) {
       getDocxUrl()
     }
+  }, [])
+
+  const getAuthToken = async () => {
+    const tokenRes = await fileCacheTokenAction()
+    setAuthToken(tokenRes.token)
+  }
+
+  useEffect(() => {
+    getAuthToken()
   }, [])
 
   return (
@@ -85,15 +94,15 @@ const DownloadDocxDialog = ({
 
               {(orderDetails.status === 'FINALIZER_ASSIGNED' ||
                 orderDetails.status === 'PRE_DELIVERED') && (
-                <div className='flex items-center space-x-2'>
-                  <RadioGroupItem
-                    disabled={!docxUrl}
-                    value='cf-rev-submit'
-                    id='cf-rev-submit'
-                  />
-                  <Label htmlFor='cf-rev-submit'>CF File</Label>
-                </div>
-              )}
+                  <div className='flex items-center space-x-2'>
+                    <RadioGroupItem
+                      disabled={!docxUrl}
+                      value='cf-rev-submit'
+                      id='cf-rev-submit'
+                    />
+                    <Label htmlFor='cf-rev-submit'>CF File</Label>
+                  </div>
+                )}
             </RadioGroup>
           </div>
         </DialogHeader>
@@ -103,7 +112,7 @@ const DownloadDocxDialog = ({
               <Button asChild>
                 <a
                   target='_blank'
-                  href={`${FILE_CACHE_URL}/get-qc-txt/${orderDetails.fileId}?orgName=${orderDetails.orgName}&authToken=${session?.user?.token}`}
+                  href={`${FILE_CACHE_URL}/get-qc-txt/${orderDetails.fileId}?orgName=${orderDetails.orgName}&authToken=${authToken}`}
                 >
                   Download File
                 </a>
@@ -113,7 +122,7 @@ const DownloadDocxDialog = ({
               <Button asChild>
                 <a
                   target='_blank'
-                  href={`${FILE_CACHE_URL}/get-cf-docx/${orderDetails.fileId}?orgName=${orderDetails.orgName}&templateName=${orderDetails.templateName}&type=marking&authToken=${session?.user?.token}`}
+                  href={`${FILE_CACHE_URL}/get-cf-docx/${orderDetails.fileId}?orgName=${orderDetails.orgName}&templateName=${orderDetails.templateName}&type=marking&authToken=${authToken}`}
                 >
                   Download File
                 </a>
