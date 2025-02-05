@@ -26,11 +26,18 @@ const calculateTranscriberCost = async (order: any, transcriberId: number) => {
   const iCQC = await isTranscriberICQC(transcriberId)
 
   if (qcStatuses.includes(order.status)) {
-    rate = iCQC.isICQC
-      ? iCQC.qcRate
-      : userRates && userRates.option?.toLocaleLowerCase() === 'legal'
-      ? transcriptionRates.legal_qc[pwerLevel]
-      : transcriptionRates.general_qc[pwerLevel]
+    if (iCQC.isICQC) {
+      rate = iCQC.qcRate
+    } else if (userRates) {
+      rate =
+        pwerLevel === 'high'
+          ? userRates.qcHighDifficultyRate
+          : pwerLevel === 'medium'
+          ? userRates.qcMediumDifficultyRate
+          : userRates.qcLowDifficultyRate
+    } else {
+      rate = transcriptionRates.general_qc[pwerLevel]
+    }
   } else if (reviewStatuses.includes(order.status)) {
     rate = iCQC.isICQC
       ? iCQC.cfRRate

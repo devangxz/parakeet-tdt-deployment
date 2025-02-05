@@ -842,7 +842,6 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
             filename={selectedFile.name || ''}
             toggleCheckAndDownload={toggleCheckAndDownload}
             setToggleCheckAndDownload={setToggleCheckAndDownload}
-            session={session as Session}
             txtSignedUrl={signedUrls.txtSignedUrl || ''}
             cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
           />
