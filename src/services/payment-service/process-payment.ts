@@ -83,7 +83,7 @@ export const processPayment = async (
         userEmailId: getEmails.email || '',
       }
 
-      const instructionData = { userEmailId: '' }
+      const instructionData = { userEmailId: 'support@scribie.com' }
 
       const fileInfo = await prisma.invoiceFile.findMany({
         where: {
@@ -123,7 +123,7 @@ export const processPayment = async (
       await ses.sendMail('ORDER_CONFIRMATION', emailData, templateData)
       if (instructions) {
         await ses.sendMail('SEND_INSTRUCTIONS', instructionData, {
-          instructions: instructions,
+          Instructions: instructions,
           customerEmail: getEmails.email || '',
           fileIds: invoice.itemNumber ?? '',
           invoiceId: invoice.invoiceId,
