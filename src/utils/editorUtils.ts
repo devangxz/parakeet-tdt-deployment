@@ -24,7 +24,8 @@ import {
     FILE_CACHE_URL,
     MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
 } from '@/constants'
-import { diff_match_patch, DIFF_INSERT, DIFF_DELETE, DIFF_EQUAL } from '@/utils/transcript/diff_match_patch';
+import { UndoRedoItem } from '@/types/editor'
+import { diff_match_patch, DIFF_INSERT, DIFF_DELETE, DIFF_EQUAL } from '@/utils/transcript/diff_match_patch'
 
 export type ButtonLoading = {
     upload: boolean
@@ -1163,6 +1164,8 @@ interface EditorData {
     notes?: string;
     listenCount?: number[];
     updatedAt?: number;
+    undoStack?: UndoRedoItem[];
+    redoStack?: UndoRedoItem[];
 }
 
 function getEditorData(fileId: string): EditorData {
@@ -1170,7 +1173,7 @@ function getEditorData(fileId: string): EditorData {
     return editorData[fileId] || {};
 }
 
-function persistEditorData(fileId: string, data: Record<string, string | number[]>) {
+function persistEditorData(fileId: string, data: Record<string, unknown>) {
     const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
     editorData[fileId] = {
         ...(editorData[fileId] || {}),

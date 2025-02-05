@@ -7,6 +7,7 @@ import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 
 import { OrderDetails } from '@/app/editor/[fileId]/page'
+import { UndoRedoItem, Range } from '@/types/editor'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 import {
   CTMType,
@@ -14,7 +15,7 @@ import {
   insertTimestampAndSpeaker,
   insertTimestampBlankAtCursorPosition,
   persistEditorData,
-  getTranscriptFromStorage
+  getEditorData
 } from '@/utils/editorUtils'
 import {
   createAlignments,
@@ -36,18 +37,6 @@ interface EditorProps {
     setEditedSegments: (segments: Set<number>) => void;
 }
 
-interface UndoRedoItem {
-    delta: Delta;
-    oldDelta: Delta;
-    beforeSelection: Range | null;
-    afterSelection: Range | null;
-}
- 
-interface Range {
-    index: number;
-    length: number;
-}
-
 type Sources = 'user' | 'api' | 'silent';
 
 export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, setEditedSegments }: EditorProps) {
@@ -58,8 +47,6 @@ export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, or
     const alignmentWorker = useRef<Worker | null>(null)
     const prevLineNodeRef = useRef<HTMLElement | null>(null);
     const lastHighlightedRef = useRef<number | null>(null);
-    const [undoStack, setUndoStack] = useState<UndoRedoItem[]>([]);
-    const [redoStack, setRedoStack] = useState<UndoRedoItem[]>([]);
     const beforeSelectionRef = useRef<Range | null>(null);
     const [currentSelection, setCurrentSelection] = useState<Range | null>(null);  
     const [isTyping, setIsTyping] = useState(false);  
@@ -141,10 +128,31 @@ export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, or
         return formattedContent;
     };
 
-    const { content: initialContent } = useMemo(() => {
-        const storedTranscript = getTranscriptFromStorage(orderDetails.fileId);
-        return { content: getFormattedContent(storedTranscript) };
-    }, [orderDetails.fileId])
+    const { 
+        content: initialContent, 
+        undoStack: initialUndoStack, 
+        redoStack: initialRedoStack 
+    } = useMemo(() => {
+        const editorData = getEditorData(orderDetails.fileId);
+        const transcript = editorData.transcript || '';
+
+        // Reconstruct Delta objects from stored data
+        const reconstructStack = (stack: UndoRedoItem[]) =>
+          stack.map(item => ({
+            ...item,
+            delta: new Delta(item.delta.ops),
+            oldDelta: new Delta(item.oldDelta.ops)
+          }));
+
+        return { 
+            content: getFormattedContent(transcript),
+            undoStack: editorData.undoStack ? reconstructStack(editorData.undoStack) : [],
+            redoStack: editorData.redoStack ? reconstructStack(editorData.redoStack) : []
+        };
+    }, [orderDetails.fileId]);
+
+    const [undoStack, setUndoStack] = useState<UndoRedoItem[]>(initialUndoStack);
+    const [redoStack, setRedoStack] = useState<UndoRedoItem[]>(initialRedoStack);
 
     const handleEditorClick = useCallback(() => {
         const quill = quillRef.current?.getEditor()
@@ -588,22 +596,27 @@ export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, or
 
     // Create initial alignments once when component loads
     useEffect(() => {
-        if (ctms.length > 0) {
-            const originalTranscript = getFormattedTranscript(ctms);
-            const newAlignments = createAlignments(originalTranscript, ctms);
-            setAlignments(newAlignments);
+        if (!ctms.length) return;
 
-            const storedTranscript = getTranscriptFromStorage(orderDetails.fileId);
-            if(storedTranscript) {
-                // Process any differences between original and stored transcript
-                alignmentWorker.current?.postMessage({
-                    newText: storedTranscript,
-                    currentAlignments: newAlignments,
-                    ctms: ctms
-                });
-            }
-        }
-    }, [ctms, orderDetails.fileId])
+        const quill = quillRef.current?.getEditor();
+        if (!quill) return;
+
+        // Create initial alignments from transcript
+        const originalTranscript = getFormattedTranscript(ctms);
+        const newAlignments = createAlignments(originalTranscript, ctms);
+        setAlignments(newAlignments);
+
+        // Process current text differences if any exist
+        const currentText = quill.getText();
+        if (!currentText) return;
+
+        alignmentWorker.current?.postMessage({
+            newText: currentText,
+            currentAlignments: newAlignments,
+            ctms
+        });
+
+    }, [ctms])
 
     useEffect(() => {
         const quill = quillRef.current?.getEditor()
@@ -673,6 +686,11 @@ export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, or
     //     // Select the word
     //     quill.setSelection(wordStart, wordEnd - wordStart);
     // }
+
+    useEffect(() => {
+        // Persist the undoStack and redoStack using persistEditorData
+        persistEditorData(orderDetails.fileId, { undoStack, redoStack });
+    }, [undoStack, redoStack, orderDetails.fileId]);
 
     useEffect(() => {
         const editor = quillRef.current?.getEditor()?.root;
