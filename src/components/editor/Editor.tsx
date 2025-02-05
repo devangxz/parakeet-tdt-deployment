@@ -7,10 +7,10 @@ import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 
 import { OrderDetails } from '@/app/editor/[fileId]/page'
+import { CTMType, AlignmentType } from '@/types/editor/transcript'
 import { UndoRedoItem, Range } from '@/types/editor/undo-redo-item'
 import { ShortcutControls, useShortcuts } from '@/utils/editorAudioPlayerShortcuts'
 import {
-  CTMType,
   CustomerQuillSelection,
   insertTimestampAndSpeaker,
   insertTimestampBlankAtCursorPosition,
@@ -20,7 +20,6 @@ import {
 import {
   createAlignments,
   getFormattedTranscript,
-  AlignmentType,
   getAlignmentIndexByTime
 } from '@/utils/transcript'
 
@@ -53,6 +52,7 @@ export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, or
     const [alignmentWorkerRunning, setAlignmentWorkerRunning] = useState(false);
     const TYPING_PAUSE = 500; // Half second pause indicates word completion
     const STACK_LIMIT = 100;
+    const [isEditorFocused, setIsEditorFocused] = useState(false);
 
     const quillModules = {
         history: false,
@@ -467,12 +467,14 @@ export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, or
      
         const editorRoot = quill.root;
         const handleBeforeInput = (e: InputEvent) => {
-            if (e.inputType === 'historyUndo' || e.inputType === 'historyRedo') {
+            if (isEditorFocused && (e.inputType === 'historyUndo' || e.inputType === 'historyRedo')) {
                 e.preventDefault();
             }
         };
      
         const handleKeyDown = (e: KeyboardEvent) => {
+            if (!isEditorFocused) return;
+
             // Undo
             if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
                 e.preventDefault();
@@ -540,7 +542,7 @@ export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, or
             document.removeEventListener('keydown', handleKeyDown, true);
             editorRoot.removeEventListener('beforeinput', handleBeforeInput, true);
         };
-    }, [undoStack, redoStack, scheduleAlignmentUpdate]);
+    }, [undoStack, redoStack, scheduleAlignmentUpdate, clearLastHighlight, isEditorFocused]);
 
     useEffect(() => {
         if (!highlightWordsEnabled) {
@@ -728,6 +730,8 @@ export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, or
                 background: '#D9D9D9'
             })
         }
+
+        setIsEditorFocused(false);
     }
 
     // Update handleFocus to preserve line highlight
@@ -748,6 +752,8 @@ export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, or
                 background: null
             })
         }
+
+        setIsEditorFocused(true);
     }
 
     const handleCursorMove = useCallback(() => {
