@@ -733,6 +733,10 @@ export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, or
         const [line] = quill.getLine(selection.index);
         if (!line) return;
 
+        // Get the text content of the line
+        const lineText = line.domNode.textContent;
+        if (!lineText?.trim()) return; // Skip empty lines
+
         // If still in the same line as before, skip
         const currentLineDomNode = line.domNode as HTMLElement;
         if (prevLineNodeRef.current === currentLineDomNode) return;
