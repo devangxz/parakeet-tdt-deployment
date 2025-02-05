@@ -55,12 +55,12 @@ const DownloadDocxDialog = ({
     setAuthToken(tokenRes.token)
   }
 
-  useEffect(() => {
-    getAuthToken()
-  }, [])
-
   return (
-    <Dialog>
+    <Dialog onOpenChange={(open) => {
+      if (open) {
+        getAuthToken()
+      }
+    }}>
       <DialogTrigger>
         <Button
           className='flex items-center border-primary border-2 justify-center px-2 py-1 text-sm font-medium text-primary rounded-[32px] cursor-pointer transition-all duration-200 hover:opacity-90'
