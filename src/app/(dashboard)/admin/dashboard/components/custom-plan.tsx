@@ -43,7 +43,12 @@ export default function CustomPlan() {
     audioTimeCodingRate: '',
     rushOrderRate: '',
     customFormattingRate: '',
-    customFormattingTranscriberRate: '',
+    qcLowDifficultyRate: '6',
+    qcMediumDifficultyRate: '8',
+    qcHighDifficultyRate: '10',
+    cfReviewLowDifficultyRate: '6',
+    cfReviewMediumDifficultyRate: '6',
+    cfReviewHighDifficultyRate: '8',
     customFormattingReviewRate: '6',
     customFormattingMediumDifficultyReviewRate: '6',
     customFormattingHighDifficultyReviewRate: '8',
@@ -109,8 +114,6 @@ export default function CustomPlan() {
             audioTimeCodingRate: responseData.audioTimeCoding.toString(),
             rushOrderRate: responseData.rushOrder.toString(),
             customFormattingRate: responseData.customFormat.toString(),
-            customFormattingTranscriberRate:
-              responseData.customFormatQcRate.toString(),
             customFormattingReviewRate:
               responseData.customFormatReviewRate.toString(),
             customFormattingMediumDifficultyReviewRate:
@@ -122,6 +125,16 @@ export default function CustomPlan() {
             customFormattingOption:
               responseData.customFormatOption.toLowerCase(),
             orderType: responseData.orderType,
+            qcLowDifficultyRate: responseData.qcLowDifficultyRate.toString(),
+            qcMediumDifficultyRate:
+              responseData.qcMediumDifficultyRate.toString(),
+            qcHighDifficultyRate: responseData.qcHighDifficultyRate.toString(),
+            cfReviewLowDifficultyRate:
+              responseData.cfReviewLowDifficultyRate.toString(),
+            cfReviewMediumDifficultyRate:
+              responseData.cfReviewMediumDifficultyRate.toString(),
+            cfReviewHighDifficultyRate:
+              responseData.cfReviewHighDifficultyRate.toString(),
           }
           setRates(mappedRates)
         }
@@ -149,12 +162,17 @@ export default function CustomPlan() {
       'audioTimeCodingRate',
       'rushOrderRate',
       'customFormattingRate',
-      'customFormattingTranscriberRate',
       'customFormattingReviewRate',
       'customFormattingMediumDifficultyReviewRate',
       'customFormattingHighDifficultyReviewRate',
       'agreedMonthlyHours',
       'customFormatDeadline',
+      'qcLowDifficultyRate',
+      'qcMediumDifficultyRate',
+      'qcHighDifficultyRate',
+      'cfReviewLowDifficultyRate',
+      'cfReviewMediumDifficultyRate',
+      'cfReviewHighDifficultyRate',
     ]
 
     for (const field of requiredFields) {
@@ -326,21 +344,98 @@ export default function CustomPlan() {
                     onChange={handleInputChange}
                   />
                 </div>
-                <div className='grid gap-3'>
-                  <Label htmlFor='customFormattingTranscriberRate'>
-                    Custom formatting qc rate
-                  </Label>
-                  <Input
-                    id='customFormattingTranscriberRate'
-                    type='number'
-                    className='w-full'
-                    placeholder='Custom formatting qc rate'
-                    value={rates.customFormattingTranscriberRate}
-                    onChange={handleInputChange}
-                  />
+                <div>
+                  <p>QC Rates</p>
+                  <div className='border border-2 p-3 rounded-[10px]'>
+                    {' '}
+                    <div className='grid gap-3 mt-3 mb-2'>
+                      <Label htmlFor='qcLowDifficultyRate'>
+                        Low difficulty
+                      </Label>
+                      <Input
+                        id='qcLowDifficultyRate'
+                        type='number'
+                        className='w-full'
+                        placeholder='QC low difficulty rate'
+                        value={rates.qcLowDifficultyRate}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className='grid gap-3 mt-3 mb-2'>
+                      <Label htmlFor='qcMediumDifficultyRate'>
+                        Medium difficulty
+                      </Label>
+                      <Input
+                        id='qcMediumDifficultyRate'
+                        type='number'
+                        className='w-full'
+                        placeholder='QC medium difficulty rate'
+                        value={rates.qcMediumDifficultyRate}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className='grid gap-3'>
+                      <Label htmlFor='qcHighDifficultyRate'>
+                        High difficulty
+                      </Label>
+                      <Input
+                        id='qcHighDifficultyRate'
+                        type='number'
+                        className='w-full'
+                        placeholder='Custom formatting high difficulty review rate'
+                        value={rates.qcHighDifficultyRate}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
                 </div>
                 <div>
-                  <p>Custom Formatting Review Rates</p>
+                  <p>Custom Formatting Review / Editor Rates</p>
+                  <div className='border border-2 p-3 rounded-[10px]'>
+                    {' '}
+                    <div className='grid gap-3 mt-3 mb-2'>
+                      <Label htmlFor='cfReviewLowDifficultyRate'>
+                        Low difficulty
+                      </Label>
+                      <Input
+                        id='cfReviewLowDifficultyRate'
+                        type='number'
+                        className='w-full'
+                        placeholder='CF review low difficulty rate'
+                        value={rates.cfReviewLowDifficultyRate}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className='grid gap-3 mt-3 mb-2'>
+                      <Label htmlFor='cfReviewMediumDifficultyRate'>
+                        Medium difficulty
+                      </Label>
+                      <Input
+                        id='cfReviewMediumDifficultyRate'
+                        type='number'
+                        className='w-full'
+                        placeholder='CF review medium difficulty rate'
+                        value={rates.cfReviewMediumDifficultyRate}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className='grid gap-3'>
+                      <Label htmlFor='cfReviewHighDifficultyRate'>
+                        High difficulty
+                      </Label>
+                      <Input
+                        id='cfReviewHighDifficultyRate'
+                        type='number'
+                        className='w-full'
+                        placeholder='CF review high difficulty rate'
+                        value={rates.cfReviewHighDifficultyRate}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <p>Custom Formatting Finalize Rates</p>
                   <div className='border border-2 p-3 rounded-[10px]'>
                     {' '}
                     <div className='grid gap-3 mt-3 mb-2'>

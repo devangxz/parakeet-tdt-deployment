@@ -2,12 +2,12 @@ export const dynamic = 'force-dynamic'
 import { InvoiceType } from '@prisma/client'
 import { NextRequest, NextResponse } from 'next/server'
 
-import { payViaBraintree } from '../../orders/route'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { authenticateRequest } from '@/services/auth-service/authenticate-api'
 import { getCreditBalance } from '@/services/payment-service/get-credit-balance'
 import { generateInvoiceId } from '@/utils/backend-helper'
+import { payViaBraintree } from '@/utils/payViaBraintree'
 
 export async function GET(req: NextRequest) {
   try {

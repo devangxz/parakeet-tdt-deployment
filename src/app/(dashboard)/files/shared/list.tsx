@@ -2,7 +2,6 @@
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import { Session } from 'next-auth'
 import { useSession } from 'next-auth/react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -341,25 +340,25 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
           <div className='flex items-center'>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-              <Button
-                variant='order'
-                className='not-rounded text-black w-[140px]'
-                onClick={async () => {
-                  try {
-                    if (selectedFiles.length === 0) {
-                      toast.error('Please select at least one file')
-                      return
+                <Button
+                  variant='order'
+                  className='not-rounded text-black w-[140px]'
+                  onClick={async () => {
+                    try {
+                      if (selectedFiles.length === 0) {
+                        toast.error('Please select at least one file')
+                        return
+                      }
+                      await navigator.clipboard.writeText(selectedFiles.join(','))
+                      toast.success('File Ids copied to clipboard')
+                    } catch (error) {
+                      toast.error('Failed to copy file Ids')
                     }
-                    await navigator.clipboard.writeText(selectedFiles.join(','))
-                    toast.success('File Ids copied to clipboard')
-                  } catch (error) {
-                    toast.error('Failed to copy file Ids')
-                  }
-                }}
-              >
-                Copy file Ids
-              </Button>
-            )}
+                  }}
+                >
+                  Copy file Ids
+                </Button>
+              )}
             <Button
               variant='order'
               className='not-rounded text-black w-[140px]'
@@ -390,7 +389,6 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
           filename={selectedFile?.name || ''}
           toggleCheckAndDownload={toggleCheckAndDownload}
           setToggleCheckAndDownload={setToggleCheckAndDownload}
-          session={session as Session}
           txtSignedUrl={signedUrls.txtSignedUrl || ''}
           cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
         />

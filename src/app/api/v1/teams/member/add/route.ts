@@ -26,14 +26,16 @@ export async function POST(req: NextRequest) {
     const userId = user.userId
     const userEmail = user.email
 
-    const { memberEmail, memberRole, teamId } = await req.json()
+    const { memberEmail, memberRole, teamId: teamIdString } = await req.json()
 
-    if (!userId || !userEmail || !memberEmail || !memberRole || !teamId) {
+    if (!userId || !userEmail || !memberEmail || !memberRole || !teamIdString) {
       return NextResponse.json(
         { message: 'Missing required fields' },
         { status: 400 }
       )
     }
+
+    const teamId = Number(teamIdString)
 
     if (memberEmail === userEmail) {
       logger.error(`attempt to add self to team ${memberEmail}`)
@@ -86,7 +88,7 @@ export async function POST(req: NextRequest) {
       // Create a new user with a random password
       memberUser = await prisma.user.create({
         data: {
-          email: memberEmail,
+          email: memberEmail.toLowerCase(),
           user: memberEmail,
         },
       })

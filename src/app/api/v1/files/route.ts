@@ -46,7 +46,6 @@ export async function GET(req: NextRequest) {
       })),
     })
   } catch (error) {
-    console.error('Error fetching files:', error)
     return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }

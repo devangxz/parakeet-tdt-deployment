@@ -12,7 +12,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    const invoices = await getInvoicesHistory(user.userId, false)
+    const userId = user?.internalTeamUserId || user?.userId
+
+    const invoices = await getInvoicesHistory(userId, false)
     if (!invoices.success) {
       return NextResponse.json(
         { message: 'Failed to fetch invoices' },

@@ -228,15 +228,16 @@ model Order {
   pwer         Float?
   wer          Float?
 
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @default(now()) @map("updated_at")
-  orderType       OrderType     @default(TRANSCRIPTION) @map("order_type")
-  reportMode      ReportMode    @default(NONE) @map("report_mode")
-  reportOption    ReportOption? @map("report_option")
-  reportComment   String?       @map("report_comment")
-  comments        String?
-  reReview        Boolean?      @default(false) @map("re_review")
-  reReviewComment String?       @map("re_review_comment")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @default(now()) @map("updated_at")
+  orderType        OrderType     @default(TRANSCRIPTION) @map("order_type")
+  reportMode       ReportMode    @default(NONE) @map("report_mode")
+  reportOption     ReportOption? @map("report_option")
+  reportComment    String?       @map("report_comment")
+  comments         String?
+  reReview         Boolean?      @default(false) @map("re_review")
+  reReviewComment  String?       @map("re_review_comment")
+  finalizerComment String?       @map("finalizer_comment")
 
   // Relations
   File       File?           @relation(fields: [fileId], references: [fileId])
@@ -304,6 +305,12 @@ model UserRate {
   customFormatReviewRate                 Float     @default(6) @map("custom_format_review_rate")
   customFormatMediumDifficultyReviewRate Float     @default(6) @map("custom_format_medium_difficulty_review_rate")
   customFormatHighDifficultyReviewRate   Float     @default(8) @map("custom_format_high_difficulty_review_rate")
+  qcLowDifficultyRate                    Float     @default(6) @map("qc_low_difficulty_rate")
+  qcMediumDifficultyRate                 Float     @default(8) @map("qc_medium_difficulty_rate")
+  qcHighDifficultyRate                   Float     @default(10) @map("cf_review_high_difficulty_rate")
+  cfReviewLowDifficultyRate              Float     @default(6) @map("cf_review_low_difficulty_rate")
+  cfReviewMediumDifficultyRate           Float     @default(6) @map("cf_review_medium_difficulty_rate")
+  cfReviewHighDifficultyRate             Float     @default(8) @map("qc_high_difficulty_rate")
   orderType                              OrderType @default(TRANSCRIPTION) @map("order_type")
   createdAt                              DateTime  @default(now()) @map("created_at")
   updatedAt                              DateTime  @default(now()) @map("updated_at")
@@ -568,6 +575,7 @@ model MiscJobsAttachments {
   ts               DateTime @default(now())
   originalFilename String?  @map("original_filename")
   fileExtension    String?  @map("file_extension")
+  s3Bucket         String   @map("s3_bucket")
 
   @@index([fileId])
   @@index([filename])
@@ -677,12 +685,12 @@ model PlayStats {
   editedSegments Json     @map("edited_segments")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @default(now()) @map("updated_at")
-  
+
   user User @relation(fields: [userId], references: [id])
   file File @relation(fields: [fileId], references: [fileId])
 
   @@unique([userId, fileId])
-  @@index([userId])  
+  @@index([userId])
   @@index([fileId])
   @@map("scb_play_stats")
 }
@@ -702,6 +710,30 @@ model UserEditorSettings {
   user                  User     @relation(fields: [userId], references: [id])
 
   @@map("scb_user_editor_settings")
+}
+
+model MiscJobs {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @map("user_id")
+  name            String
+  description     String
+  status          String
+  category        String
+  attachmentCount Int      @map("attachment_count")
+  fileId          String   @map("file_id")
+  invoiceId       String   @map("invoice_id")
+  deadline        DateTime
+  rate            Float
+  ts              DateTime
+  cost            Float
+  timeoutHour     Int      @map("timeout_hour")
+  trRate          Float    @map("tr_rate")
+  reviewCost      Float    @map("review_cost")
+
+  @@unique([userId, fileId])
+  @@index([userId])
+  @@index([fileId])
+  @@map("scb_misc_jobs")
 }
 
 //  ███████ ███    ██ ██    ██ ███    ███ ███████

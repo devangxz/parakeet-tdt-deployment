@@ -13,7 +13,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    const result = await getUserInfo(user.userId)
+    const userId = user?.internalTeamUserId || user?.userId
+
+    const result = await getUserInfo(userId)
     return NextResponse.json({
       success: true,
       data: {
@@ -63,6 +65,8 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
+    const userId = user?.internalTeamUserId || user?.userId
+
     const payload = (await req.json()) as UpdatePersonalInfoPayload
 
     const data = {
@@ -79,7 +83,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const userUpdate = await prisma.user.update({
-      where: { id: user.userId },
+      where: { id: userId },
       data: data,
     })
 

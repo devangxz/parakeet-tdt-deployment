@@ -19,6 +19,7 @@ import EnablePreDelivery from './components/enable-pre-delivery'
 import OrderWatch from './components/order-watch'
 import TransferCredits from './components/transfer-credits'
 import TransferFiles from './components/transfer-files'
+import UpdateICQCRates from './components/update-ic-qc-rates'
 import YouTubeVideoUploader from './components/youtube-video-uploader'
 
 export default function AdminDashboard() {
@@ -44,6 +45,7 @@ export default function AdminDashboard() {
             <EnableACRReview />
             <AddTestCustomer />
             <EnableCustomers />
+            <UpdateICQCRates />
             <AddMiscEarnings />
             <TransferCredits />
             <OrderWatch />

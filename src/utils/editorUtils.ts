@@ -8,10 +8,12 @@ import { toast } from 'sonner'
 import axiosInstance from './axios'
 import { CTMType } from './getFormattedTranscript'
 import { secondsToTs } from './secondsToTs'
+import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
 import { getFrequentTermsAction } from '@/app/actions/editor/frequent-terms'
 import { getPlayStatsAction } from '@/app/actions/editor/get-play-stats'
 import { getOrderDetailsAction } from '@/app/actions/editor/order-details'
 import { reportFileAction } from '@/app/actions/editor/report-file'
+import { setPlayStatsAction } from '@/app/actions/editor/set-play-stats'
 import { submitQCAction } from '@/app/actions/editor/submit-qc'
 import { submitReviewAction } from '@/app/actions/editor/submit-review'
 import { uploadDocxAction } from '@/app/actions/editor/upload-docx'
@@ -23,6 +25,7 @@ import {
     FILE_CACHE_URL,
     MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
 } from '@/constants'
+import { diff_match_patch, DIFF_INSERT, DIFF_DELETE, DIFF_EQUAL } from '@/utils/transcript/diff_match_patch';
 
 export type ButtonLoading = {
     upload: boolean
@@ -33,10 +36,6 @@ export type ButtonLoading = {
     mp3: boolean
     download: boolean
     frequentTerms: boolean
-}
-
-export interface PlayStats {
-  listenCount: number[];
 }
 
 const usableColors = [
@@ -392,8 +391,7 @@ type FetchFileDetailsParams = {
     setStep: React.Dispatch<React.SetStateAction<string>>
     setTranscript: React.Dispatch<React.SetStateAction<string>>
     setCtms: React.Dispatch<React.SetStateAction<CTMType[]>>
-    setPlayStats: React.Dispatch<React.SetStateAction<PlayStats>>
-    setAsrTranscript: React.Dispatch<React.SetStateAction<string>>
+    setListenCount: React.Dispatch<React.SetStateAction<number[]>>
 }
 
 const fetchFileDetails = async ({
@@ -403,10 +401,10 @@ const fetchFileDetails = async ({
     setStep,
     setTranscript,
     setCtms,
-    setPlayStats,
-    setAsrTranscript,
+    setListenCount,
 }: FetchFileDetailsParams) => {
     try {
+        const tokenRes = await fileCacheTokenAction()
         const orderRes = await getOrderDetailsAction(params?.fileId as string)
         if (!orderRes?.orderDetails) {
             throw new Error('Order details not found')
@@ -440,29 +438,33 @@ const fetchFileDetails = async ({
             }
         }
         setStep(step)
-        const transcriptRes = await axiosInstance.get(
-            `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.orderDetails.fileId}&step=${step}&orderId=${orderRes.orderDetails.orderId}` //step will be used later when cf editor is implemented
+        const transcriptRes = await axios.get(
+            `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.orderDetails.fileId}&step=${step}&orderId=${orderRes.orderDetails.orderId}`, //step will be used later when cf editor is implemented
+            {
+                headers: {
+                    'Authorization': `Bearer ${tokenRes.token}`
+                }
+            }
         )
 
-        const transcript = JSON.parse(localStorage.getItem('transcript') || '{}')[
-            orderRes.orderDetails.fileId
-        ]
-        if (transcript) {
-            setTranscript(transcript)
-            setAsrTranscript(transcriptRes.data.result.asrTranscript)
+        const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
+        const localTranscript = editorData[orderRes.orderDetails.fileId]?.transcript;
+        if (localTranscript) {
+            setTranscript(localTranscript);
         } else {
-            setTranscript(transcriptRes.data.result.transcript)
+            setTranscript(transcriptRes.data.result.transcript);
+            persistEditorData(orderRes.orderDetails.fileId, transcriptRes.data.result.transcript, '');
         }
         setCtms(transcriptRes.data.result.ctms)
 
         const playStats = await getPlayStatsAction(params?.fileId as string)
-      
-        if (playStats.success && playStats.data) {
-          setPlayStats({
-            listenCount: playStats.data.listenCount as number[]
-          })
+
+        if (playStats.success && playStats.data?.listenCount) {
+            setListenCount(playStats.data.listenCount as number[])
+        } else if (orderRes.orderDetails.duration) {
+            setListenCount(new Array(Math.ceil(Number(orderRes.orderDetails.duration))).fill(0))
         }
-        
+
         return orderRes.orderDetails
     } catch (error) {
         console.log(error)
@@ -488,6 +490,8 @@ type HandleSaveParams = {
     notes: string
     cfd: string
     setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
+    listenCount: number[]
+    editedSegments: Set<number>
 }
 
 const handleSave = async (
@@ -497,6 +501,8 @@ const handleSave = async (
         notes,
         cfd,
         setButtonLoading,
+        listenCount,
+        editedSegments,
     }: HandleSaveParams,
     showToast = true
 ) => {
@@ -508,11 +514,13 @@ const handleSave = async (
     const toastId = showToast ? toast.loading(`Saving Transcription...`) : null
 
     try {
-        const transcript = getEditorText()
-        if (!transcript) return toast.error('Transcript is empty')
+        const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
+        const fileData = editorData[orderDetails.fileId] || {};
+        if (!fileData.transcript) return toast.error('Transcript is empty');
+        const transcript = fileData.transcript;
         const paragraphs = transcript
             .split('\n')
-            .filter((paragraph) => paragraph.trim() !== '')
+            .filter((paragraph: string) => paragraph.trim() !== '')
 
         // Helper function to detect meta-only paragraphs
         const isMetaOnlyParagraph = (text: string) => {
@@ -540,11 +548,22 @@ const handleSave = async (
         }
 
         // Save notes and other data
-        await axiosInstance.post(`${FILE_CACHE_URL}/save-transcript`, {
+        const tokenRes = await fileCacheTokenAction()
+        await axios.post(`${FILE_CACHE_URL}/save-transcript`, {
             fileId: orderDetails.fileId,
             transcript,
             cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
             orderId: orderDetails.orderId,
+        }, {
+            headers: {
+                'Authorization': `Bearer ${tokenRes.token}`
+            }
+        })
+
+        await setPlayStatsAction({
+            fileId: orderDetails.fileId,
+            listenCount,
+            editedSegments: Array.from(editedSegments)
         })
 
         if (showToast) {
@@ -567,25 +586,25 @@ const handleSave = async (
 }
 
 const autoCapitalizeSentences = (quillRef: React.RefObject<ReactQuill> | undefined) => {
-  if (quillRef?.current) {
-      const quill = quillRef.current.getEditor();
-      const text = quill.getText();
+    if (quillRef?.current) {
+        const quill = quillRef.current.getEditor();
+        const text = quill.getText();
 
-      // Match sentence endings followed by spaces and a lowercase letter
-      const regex = /([.!?])\s+([a-z])/g;
-      let match;
+        // Match sentence endings followed by spaces and a lowercase letter
+        const regex = /([.!?])\s+([a-z])/g;
+        let match;
 
-      while ((match = regex.exec(text)) !== null) {
-          // Calculate dynamic index based on full match length
-          const charIndex = match.index + match[0].length - 1;
-          const lowercaseChar = match[2];
-          const uppercaseChar = lowercaseChar.toUpperCase();
+        while ((match = regex.exec(text)) !== null) {
+            // Calculate dynamic index based on full match length
+            const charIndex = match.index + match[0].length - 1;
+            const lowercaseChar = match[2];
+            const uppercaseChar = lowercaseChar.toUpperCase();
 
-          // Replace the lowercase character
-          quill.deleteText(charIndex, 1, 'user');
-          quill.insertText(charIndex, uppercaseChar, 'user');
-      }
-  }
+            // Replace the lowercase character
+            quill.deleteText(charIndex, 1, 'user');
+            quill.insertText(charIndex, uppercaseChar, 'user');
+        }
+    }
 }
 
 type HandleSubmitParams = {
@@ -602,7 +621,8 @@ type HandleSubmitParams = {
     router: {
         push: (path: string) => void
     }
-    quill: Quill
+    quill: Quill,
+    finalizerComment: string
 }
 
 const checkTranscriptForAllowedMeta = (quill: Quill) => {
@@ -642,6 +662,7 @@ const handleSubmit = async ({
     getPlayedPercentage,
     router,
     quill,
+    finalizerComment
 }: HandleSubmitParams) => {
     if (!orderDetails || !orderDetails.orderId || !step) return
     const toastId = toast.loading(`Submitting Transcription...`)
@@ -665,7 +686,8 @@ const handleSubmit = async ({
             await submitReviewAction(
                 Number(orderDetails.orderId),
                 orderDetails.fileId,
-                transcript
+                transcript,
+                finalizerComment
             )
         } else {
             await submitQCAction({
@@ -675,8 +697,9 @@ const handleSubmit = async ({
             })
         }
 
-        localStorage.removeItem('transcript')
-        localStorage.removeItem(orderDetails.fileId)
+        const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
+        delete editorData[orderDetails.fileId];
+        localStorage.setItem('editorData', JSON.stringify(editorData));
         toast.dismiss(toastId)
         const successToastId = toast.success(`Transcription submitted successfully`)
         toast.dismiss(successToastId)
@@ -1146,6 +1169,44 @@ const scrollEditorToPos = (quill: Quill, pos: number) => {
     }
 }
 
+function persistEditorData(fileId: string, transcript: string, notes: string) {
+    const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
+    editorData[fileId] = {
+        ...(editorData[fileId] || {}),
+        transcript,
+        ...(notes && { notes }),
+        updatedAt: Date.now()
+    };
+    localStorage.setItem('editorData', JSON.stringify(editorData));
+}
+
+function getTranscriptFromStorage(fileId: string): string {
+    const storedData = localStorage.getItem('editorData') || '{}';
+    const parsedData = JSON.parse(storedData);
+    return parsedData[fileId]?.transcript || '';
+}
+
+function getDiffHtml(oldText: string, newText: string): string {
+    // Import the diff_match_patch utilities from your diff_match_patch module
+    const dmp = new diff_match_patch();
+    // Generate diff in word mode as done in the alignment worker
+    const diffs = dmp.diff_wordMode(oldText, newText);
+    dmp.diff_cleanupSemantic(diffs);
+    // Convert the diffs to HTML
+    return diffs.map(([op, text]: [number, string]) => {
+        switch (op) {
+            case DIFF_INSERT:
+                return `<ins style="background:#e6ffe6;">${text}</ins>`;
+            case DIFF_DELETE:
+                return `<del style="background:#ffe6e6;">${text}</del>`;
+            case DIFF_EQUAL:
+                return `<span>${text}</span>`;
+            default:
+                return text;
+        }
+    }).join('');
+}
+
 export {
     generateRandomColor,
     convertBlankToSeconds,
@@ -1171,6 +1232,9 @@ export {
     replaceTextHandler,
     insertTimestampBlankAtCursorPosition,
     insertTimestampAndSpeaker,
-    autoCapitalizeSentences
+    autoCapitalizeSentences,
+    persistEditorData,
+    getTranscriptFromStorage,
+    getDiffHtml
 }
 export type { CTMType }

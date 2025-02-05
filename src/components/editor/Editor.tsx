@@ -1,5 +1,6 @@
 'use client'
 
+import debounce from 'lodash/debounce'
 import { Delta, Op } from 'quill/core'
 import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react'
 import ReactQuill from 'react-quill'
@@ -16,6 +17,8 @@ import {
   CustomerQuillSelection,
   insertTimestampAndSpeaker,
   insertTimestampBlankAtCursorPosition,
+  persistEditorData,
+  getTranscriptFromStorage,
 } from '@/utils/editorUtils'
 import {
   createAlignments,
@@ -31,16 +34,14 @@ interface EditorProps {
   duration: number
   getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void
   orderDetails: OrderDetails
-  content: Op[]
-  setContent: (content: Op[]) => void
   setSelectionHandler: () => void
   selection: CustomerQuillSelection | null
   searchHighlight: CustomerQuillSelection | null
   highlightWordsEnabled: boolean
-  setFontSize: (size: number) => void
   setEditedSegments: (segments: Set<number>) => void
   editorSettings: EditorSettings
-  isWordPlayback: React.MutableRefObject<boolean>;
+  isWordPlayback: React.MutableRefObject<boolean>
+  setFontSize: (size: number) => void
 }
 
 interface UndoRedoItem {
@@ -58,21 +59,18 @@ interface Range {
 type Sources = 'user' | 'api' | 'silent'
 
 export default function Editor({
-  transcript,
   ctms: initialCtms,
   audioPlayer,
   getQuillRef,
   orderDetails,
-  content,
-  setContent,
   setSelectionHandler,
   selection,
   searchHighlight,
   highlightWordsEnabled,
-  setFontSize,
   setEditedSegments,
   editorSettings,
   isWordPlayback,
+  setFontSize,
 }: EditorProps) {
   const ctms = initialCtms // Make CTMs constant
   const quillRef = useRef<ReactQuill>(null)
@@ -85,6 +83,8 @@ export default function Editor({
   const [redoStack, setRedoStack] = useState<UndoRedoItem[]>([])
   const beforeSelectionRef = useRef<Range | null>(null)
   const [currentSelection, setCurrentSelection] = useState<Range | null>(null)
+  const [isTyping, setIsTyping] = useState(false)
+  const [alignmentWorkerRunning, setAlignmentWorkerRunning] = useState(false)
   const [showCustomContextMenu, setShowCustomContextMenu] = useState<boolean>(
     !editorSettings.useNativeContextMenu
   )
@@ -175,12 +175,10 @@ export default function Editor({
     return formattedContent
   }
 
-  useEffect(() => {
-    if (!content.length) {
-      const formattedContent = getFormattedContent(transcript)
-      setContent(formattedContent)
-    }
-  }, [content.length, transcript])
+  const { content: initialContent } = useMemo(() => {
+    const storedTranscript = getTranscriptFromStorage(orderDetails.fileId)
+    return { content: getFormattedContent(storedTranscript) }
+  }, [orderDetails.fileId])
 
   const handleEditorClick = useCallback(() => {
     const quill = quillRef.current?.getEditor()
@@ -354,6 +352,21 @@ export default function Editor({
     quill.setSelection(paraStart + 1, 0)
   }, [quillRef])
 
+  const clearLastHighlight = useCallback(() => {
+    const quill = quillRef.current?.getEditor()
+    if (!quill || lastHighlightedRef.current === null) {
+      return
+    }
+
+    const oldAl = alignments[lastHighlightedRef.current]
+    if (oldAl.startPos !== undefined && oldAl.endPos !== undefined) {
+      quill.formatText(oldAl.startPos, oldAl.endPos - oldAl.startPos, {
+        background: null,
+      })
+    }
+    lastHighlightedRef.current = null
+  }, [alignments])
+
   const shortcutControls = useMemo(() => {
     const controls: Partial<ShortcutControls> = {
       playAudioAtCursorPosition: handlePlayAudioAtCursorPositionShortcut,
@@ -386,13 +399,6 @@ export default function Editor({
 
   useShortcuts(shortcutControls)
 
-  const handleContentChange = useCallback(() => {
-    const quill = quillRef.current?.getEditor()
-    if (!quill) return
-
-    setContent(quill.getContents().ops)
-  }, [orderDetails.fileId])
-
   const clearHighlights = useCallback(() => {
     requestAnimationFrame(() => {
       const quill = quillRef.current?.getEditor()
@@ -408,14 +414,17 @@ export default function Editor({
     if (typingTimer) clearTimeout(typingTimer)
     setTypingTimer(
       setTimeout(() => {
+        const text = quill.getText()
+        persistEditorData(orderDetails.fileId, text, '')
+        setAlignmentWorkerRunning(true)
         alignmentWorker.current?.postMessage({
-          newText: quill.getText(),
+          newText: text,
           currentAlignments: alignments,
           ctms: ctms,
         })
       }, TYPING_PAUSE)
     )
-  }, [alignments, ctms, typingTimer, quillRef])
+  }, [alignments, ctms, typingTimer, quillRef, orderDetails.fileId])
 
   useEffect(() => {
     try {
@@ -428,6 +437,8 @@ export default function Editor({
         const { alignments: newAlignments, wer, editedSegments } = e.data
         setAlignments(newAlignments)
         setEditedSegments(new Set(editedSegments))
+        setIsTyping(false)
+        setAlignmentWorkerRunning(false)
         console.log('Updated alignments:', newAlignments, 'WER:', wer)
       }
 
@@ -454,8 +465,26 @@ export default function Editor({
       source: string
     ) => {
       if (source !== 'user') return
+      setIsTyping(true)
+
       const quill = quillRef.current?.getEditor()
       if (!quill) return
+
+      if (lastHighlightedRef.current) {
+        const oldAl = alignments[lastHighlightedRef.current]
+        const oldStartPos = oldAl.startPos
+        const oldEndPos = oldAl.endPos
+
+        if (oldStartPos !== undefined && oldEndPos !== undefined) {
+          const newStartPos = delta.transformPosition(oldStartPos)
+          const newEndPos = delta.transformPosition(oldEndPos)
+          quill.formatText(newStartPos, newEndPos - newStartPos, {
+            background: null,
+          })
+        }
+
+        lastHighlightedRef.current = null
+      }
 
       const newItem: UndoRedoItem = {
         delta: new Delta(delta.ops),
@@ -506,6 +535,8 @@ export default function Editor({
       if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault()
         e.stopImmediatePropagation()
+        setIsTyping(true)
+        clearLastHighlight()
 
         if (undoStack.length === 0) return
         const item = undoStack[undoStack.length - 1]
@@ -539,6 +570,8 @@ export default function Editor({
       ) {
         e.preventDefault()
         e.stopImmediatePropagation()
+        setIsTyping(true)
+        clearLastHighlight()
 
         if (redoStack.length === 0) return
         const item = redoStack[redoStack.length - 1]
@@ -582,13 +615,17 @@ export default function Editor({
     }
   }, [highlightWordsEnabled, clearHighlights])
 
-  useEffect(() => {
-    if (!audioPlayer) return
-
-    const handleTimeUpdate = () => {
+  const timeUpdateHandler = useCallback(
+    debounce(() => {
       const quill = quillRef.current?.getEditor()
-
-      if (!quill || !highlightWordsEnabled) return
+      if (
+        !quill ||
+        !highlightWordsEnabled ||
+        isTyping ||
+        !audioPlayer ||
+        alignmentWorkerRunning
+      )
+        return
 
       const currentTime = audioPlayer.currentTime
       const currentWordIndex = getAlignmentIndexByTime(
@@ -597,36 +634,31 @@ export default function Editor({
         lastHighlightedRef.current
       )
 
-      // Skip if same word
       if (currentWordIndex === lastHighlightedRef.current) return
 
-      // Un-highlight the old word
-      if (lastHighlightedRef.current !== null) {
-        const oldAl = alignments[lastHighlightedRef.current]
-        if (oldAl.startPos !== undefined && oldAl.endPos !== undefined) {
-          quill.formatText(oldAl.startPos, oldAl.endPos - oldAl.startPos, {
-            background: null,
-          })
-        }
-      }
+      clearLastHighlight()
 
-      // Highlight the new word
       const newAl = alignments[currentWordIndex]
-      if (newAl.startPos !== undefined && newAl.endPos !== undefined) {
+      if (newAl?.startPos !== undefined && newAl?.endPos !== undefined) {
         quill.formatText(newAl.startPos, newAl.endPos - newAl.startPos, {
           background: 'yellow',
         })
+        if (!isTyping) {
+          lastHighlightedRef.current = currentWordIndex
+        }
       }
+    }, 100),
+    [alignments, highlightWordsEnabled, isTyping, clearLastHighlight]
+  )
 
-      lastHighlightedRef.current = currentWordIndex
-    }
-
-    audioPlayer.addEventListener('timeupdate', handleTimeUpdate)
-
+  useEffect(() => {
+    if (!audioPlayer) return
+    audioPlayer.addEventListener('timeupdate', timeUpdateHandler)
     return () => {
-      audioPlayer.removeEventListener('timeupdate', handleTimeUpdate)
+      timeUpdateHandler.cancel()
+      audioPlayer.removeEventListener('timeupdate', timeUpdateHandler)
     }
-  }, [alignments, audioPlayer, highlightWordsEnabled])
+  }, [timeUpdateHandler, audioPlayer])
 
   useEffect(() => {
     initEditor()
@@ -649,16 +681,17 @@ export default function Editor({
       const newAlignments = createAlignments(originalTranscript, ctms)
       setAlignments(newAlignments)
 
-      if (transcript) {
-        // Process any differences between original and current transcript
+      const storedTranscript = getTranscriptFromStorage(orderDetails.fileId)
+      if (storedTranscript) {
+        // Process any differences between original and stored transcript
         alignmentWorker.current?.postMessage({
-          newText: transcript,
+          newText: storedTranscript,
           currentAlignments: newAlignments,
           ctms: ctms,
         })
       }
     }
-  }, [])
+  }, [ctms, orderDetails.fileId])
 
   useEffect(() => {
     const quill = quillRef.current?.getEditor()
@@ -761,7 +794,6 @@ export default function Editor({
     document.addEventListener('click', handleClickOutside)
     return () => document.removeEventListener('click', handleClickOutside)
   }, [showCustomContextMenu])
-
   useEffect(() => {
     const editor = quillRef.current?.getEditor()?.root
     if (!editor) return
@@ -863,8 +895,7 @@ export default function Editor({
         ref={quillRef}
         theme='snow'
         modules={quillModules}
-        value={{ ops: content }}
-        onChange={handleContentChange}
+        defaultValue={{ ops: initialContent }}
         formats={['size', 'background', 'font', 'color', 'bold', 'italics']}
         className='h-full'
         onChangeSelection={handleSelectionChange}

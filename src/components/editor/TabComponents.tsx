@@ -1,9 +1,6 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { Change } from 'diff'
-import { Op } from 'quill/core'
 import ReactQuill from 'react-quill'
 
-import Diff from './Diff'
 import Editor from './Editor'
 import { TabsContent } from './Tabs'
 import { Textarea } from '../ui/textarea'
@@ -18,8 +15,6 @@ interface EditorTabComponentProps {
   audioDuration: number
   getQuillRef: (quillRef: React.RefObject<ReactQuill>) => void
   orderDetails: OrderDetails
-  content: Op[]
-  setContent: (content: Op[]) => void
   setSelectionHandler: () => void
   selection: CustomerQuillSelection | null
   searchHighlight: CustomerQuillSelection | null
@@ -37,8 +32,6 @@ export const EditorTabComponent = ({
   audioDuration,
   getQuillRef,
   orderDetails,
-  content,
-  setContent,
   setSelectionHandler,
   selection,
   searchHighlight,
@@ -68,8 +61,6 @@ export const EditorTabComponent = ({
             ctms={ctms}
             audioPlayer={audioPlayer}
             duration={audioDuration}
-            content={content}
-            setContent={setContent}
             setSelectionHandler={setSelectionHandler}
             selection={selection}
             searchHighlight={searchHighlight}
@@ -85,11 +76,12 @@ export const EditorTabComponent = ({
   </TabsContent>
 )
 
-export const DiffTabComponent = ({ diff }: { diff: Change[] }) => (
+export const DiffTabComponent = ({ diff }: { diff: string }) => (
   <TabsContent className='h-full mt-0 overflow-hidden' value='diff'>
-    <div className='overflow-y-scroll h-full py-[12px] px-[15px]'>
-      <Diff diffOutput={diff} />
-    </div>
+    <div 
+      className='overflow-y-scroll h-full py-[12px] px-[15px]'
+      dangerouslySetInnerHTML={{ __html: diff.replace(/\n/g, '<br>') }}
+    />
   </TabsContent>
 )
 

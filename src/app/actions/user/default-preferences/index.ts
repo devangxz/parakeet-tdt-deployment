@@ -22,7 +22,7 @@ export async function saveDefaultPreferences(
   try {
     const session = await getServerSession(authOptions)
     const user = session?.user
-    const userId = user?.userId
+    const userId = user?.internalTeamUserId || user?.userId
 
     if (!userId) {
       return {

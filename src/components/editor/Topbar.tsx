@@ -6,6 +6,7 @@ import {
   ReloadIcon,
   ArrowUpIcon,
 } from '@radix-ui/react-icons'
+import axios from 'axios'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
@@ -48,6 +49,7 @@ import {
   SelectValue,
 } from '../ui/select'
 import { Textarea } from '../ui/textarea'
+import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
 import { getFormattingOptionsAction } from '@/app/actions/editor/get-formatting-options'
 import { getSpeakerNamesAction } from '@/app/actions/editor/get-speaker-names'
 import { requestReReviewAction } from '@/app/actions/editor/re-review'
@@ -61,7 +63,6 @@ import TranscriberProfile from '@/app/transcribe/components/transcriberProfiles'
 import 'rc-slider/assets/index.css'
 import { FILE_CACHE_URL } from '@/constants'
 import { EditorSettings } from '@/types/editor'
-import axiosInstance from '@/utils/axios'
 import DefaultShortcuts, {
   getAllShortcuts,
   setShortcut,
@@ -78,7 +79,6 @@ import {
   playCurrentParagraphTimestamp,
   regenDocx,
 } from '@/utils/editorUtils'
-
 interface TopbarProps {
   quillRef: React.RefObject<ReactQuill> | undefined
   editorModeOptions: string[]
@@ -103,6 +103,8 @@ interface TopbarProps {
     originalFile: File | null
     isUploaded?: boolean
   }
+  listenCount: number[]
+  editedSegments: Set<number>
   editorSettings: EditorSettings
   onSettingsChange: (settings: EditorSettings) => void
 }
@@ -121,6 +123,8 @@ export default memo(function Topbar({
   setRegenCount,
   setFileToUpload,
   fileToUpload,
+  listenCount,
+  editedSegments,
   editorSettings,
   onSettingsChange,
 }: TopbarProps) {
@@ -603,9 +607,14 @@ export default memo(function Topbar({
     }
 
     try {
-      await axiosInstance.post(`${FILE_CACHE_URL}/revert-transcript`, {
+      const tokenRes = await fileCacheTokenAction()
+      await axios.post(`${FILE_CACHE_URL}/revert-transcript`, {
         fileId: orderDetails.fileId,
         type,
+      }, {
+        headers: {
+          'Authorization': `Bearer ${tokenRes.token}`
+        }
       })
       toast.success('Transcript reverted successfully')
       localStorage.removeItem('transcript')
@@ -749,9 +758,8 @@ export default memo(function Topbar({
 
         {orderDetails.status === 'QC_ASSIGNED' && (
           <span
-            className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${
-              orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
-            }`}
+            className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
+              }`}
           >
             {timeoutCount}
           </span>
@@ -843,13 +851,13 @@ export default memo(function Topbar({
             {!['CUSTOMER', 'OM', 'ADMIN'].includes(
               session?.user?.role ?? ''
             ) && (
-              <Button
-                onClick={() => setSubmitting(true)}
-                className='format-button border-r-[1.5px] border-white/70'
-              >
-                Submit
-              </Button>
-            )}
+                <Button
+                  onClick={() => setSubmitting(true)}
+                  className='format-button border-r-[1.5px] border-white/70'
+                >
+                  Submit
+                </Button>
+              )}
 
             <DropdownMenu
               modal={false}
@@ -857,13 +865,12 @@ export default memo(function Topbar({
             >
               <DropdownMenuTrigger className='focus-visible:ring-0 outline-none'>
                 <Button
-                  className={`${
-                    !['CUSTOMER', 'OM', 'ADMIN'].includes(
-                      session?.user?.role ?? ''
-                    )
-                      ? 'px-2 format-icon-button'
-                      : ''
-                  } focus-visible:ring-0 outline-none`}
+                  className={`${!['CUSTOMER', 'OM', 'ADMIN'].includes(
+                    session?.user?.role ?? ''
+                  )
+                    ? 'px-2 format-icon-button'
+                    : ''
+                    } focus-visible:ring-0 outline-none`}
                 >
                   <span className='sr-only'>Open menu</span>
                   <ChevronDownIcon className='h-4 w-4' />
@@ -879,6 +886,8 @@ export default memo(function Topbar({
                       notes,
                       cfd,
                       setButtonLoading,
+                      listenCount,
+                      editedSegments,
                     })
                   }}
                 >
@@ -914,10 +923,10 @@ export default memo(function Topbar({
                 {!['CUSTOMER', 'OM', 'ADMIN'].includes(
                   session?.user?.role || ''
                 ) && (
-                  <DropdownMenuItem onClick={requestExtension}>
-                    Request Extension
-                  </DropdownMenuItem>
-                )}
+                    <DropdownMenuItem onClick={requestExtension}>
+                      Request Extension
+                    </DropdownMenuItem>
+                  )}
                 {session?.user?.role !== 'CUSTOMER' && (
                   <DropdownMenuItem onClick={() => setReportModalOpen(true)}>
                     Report
@@ -956,12 +965,12 @@ export default memo(function Topbar({
                 )}
                 {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
                   orderDetails.status === 'FINALIZER_ASSIGNED') && (
-                  <DropdownMenuItem asChild>
-                    <a href={qcFileUrl} target='_blank'>
-                      Download QC text
-                    </a>
-                  </DropdownMenuItem>
-                )}
+                    <DropdownMenuItem asChild>
+                      <a href={qcFileUrl} target='_blank'>
+                        Download QC text
+                      </a>
+                    </DropdownMenuItem>
+                  )}
                 {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
                   orderDetails.status === 'FINALIZER_ASSIGNED') && (
                   <DropdownMenuItem asChild>
@@ -1253,9 +1262,8 @@ export default memo(function Topbar({
         </DialogContent>
       </Dialog>
       <div
-        className={` ${
-          !videoPlayerOpen ? 'hidden' : ''
-        } fixed bg-white z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-transparent`}
+        className={` ${!videoPlayerOpen ? 'hidden' : ''
+          } fixed bg-white z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-transparent`}
         style={{
           top: `${position.y}px`,
           left: `${position.x}px`,

@@ -26,8 +26,8 @@ export async function DELETE(req: NextRequest) {
     const existingMember = await prisma.teamMember.findUnique({
       where: {
         userId_teamId: {
-          userId: memberId,
-          teamId,
+          userId: Number(memberId),
+          teamId: Number(teamId),
         },
       },
     })
@@ -43,14 +43,14 @@ export async function DELETE(req: NextRequest) {
     await prisma.teamMember.delete({
       where: {
         userId_teamId: {
-          userId: memberId,
-          teamId,
+          userId: Number(memberId),
+          teamId: Number(teamId),
         },
       },
     })
 
     const memberUser = await prisma.user.findUnique({
-      where: { id: memberId },
+      where: { id: Number(memberId) },
     })
 
     const teamEmailDetails = await getTeamSuperAdminEmailAndTeamName(teamId)
