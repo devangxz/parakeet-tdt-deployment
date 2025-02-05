@@ -1082,24 +1082,27 @@ const insertTimestampAndSpeaker = (
         paragraphStart--;
     }
 
-    // Check for existing timestamp and speaker pattern at start of line
-    const lineText = quill.getText(paragraphStart, 14); // Get enough text to check pattern
+    // Check and remove any existing timestamp and speaker pattern at the start of the line
+    const lineText = quill.getText(paragraphStart, 14);
     const timestampSpeakerPattern = /^\d{1}:\d{2}:\d{2}\.\d{1} S\d+: /;
-
     if (timestampSpeakerPattern.test(lineText)) {
-        // If pattern exists, delete it before inserting new one
         const match = lineText.match(timestampSpeakerPattern);
         if (match) {
-            quill.deleteText(paragraphStart, match[0].length);
+            quill.deleteText(paragraphStart, match[0].length, 'user');
         }
     }
 
-    const speakerText = ' S1: ';
-    quill.insertText(paragraphStart, formattedTime + speakerText, { bold: true }, 'user');
+    // Insert the bold part (formatted time and speaker label without trailing space)
+    const boldPart = formattedTime + ' S1:';
+    quill.insertText(paragraphStart, boldPart, { bold: true }, 'user');
 
-    // Select just the speaker number for easy editing
-    const speakerNumberStart = paragraphStart + formattedTime.length + 2; // +2 for ' S'
-    quill.setSelection(speakerNumberStart, 1); // Select just the '1' in 'S1'
+    // Insert a space after the colon with normal formatting to reset bold style
+    const nonBoldPart = ' ';
+    quill.insertText(paragraphStart + boldPart.length, nonBoldPart, { bold: false }, 'user');
+
+    // Set selection to the speaker number for easy editing (selects the digit in "S1")
+    const speakerNumberStart = paragraphStart + formattedTime.length + 2; // +2 for " S"
+    quill.setSelection(speakerNumberStart, 1);
 };
 
 const insertTimestampBlankAtCursorPosition = (

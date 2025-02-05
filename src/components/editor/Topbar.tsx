@@ -387,8 +387,8 @@ export default memo(function Topbar({
       const capitalizeChar = (index: number): void => {
         const char = newText[index]
         if (/^[a-zA-Z]$/.test(char) && char !== char.toUpperCase()) {
-          quill.deleteText(index, 1)
-          quill.insertText(index, char.toUpperCase(), quill.getFormat())
+          quill.deleteText(index, 1, 'user')
+          quill.insertText(index, char.toUpperCase(), quill.getFormat(), 'user')
           quill.setSelection(index + 1, 0)
         }
       }
