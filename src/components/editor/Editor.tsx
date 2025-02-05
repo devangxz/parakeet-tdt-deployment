@@ -592,6 +592,7 @@ export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, or
             quill.setSelection(0, 0)
             setTimeout(() => {
                 handleCursorMove()
+                setIsEditorFocused(true)
             }, 0)        
         }
     }, []);    
