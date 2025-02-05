@@ -52,7 +52,8 @@ import {
   autoCapitalizeSentences,
   getEditorData,
   persistEditorData,
-  getDiffHtml
+  getDiffHtml,
+  getFormattedContent
 } from '@/utils/editorUtils'
 import { getFormattedTranscript } from '@/utils/transcript'
 
@@ -312,10 +313,9 @@ function EditorPage() {
           searchAndSelectInstance(findText, selection)
         }
       },
-
-      saveChanges: () => {
+      saveChanges: async () => {
         autoCapitalizeSentences(quillRef)
-        handleSave({
+        await handleSave({
           getEditorText,
           orderDetails,
           notes,
@@ -324,6 +324,7 @@ function EditorPage() {
           listenCount,
           editedSegments,
         })
+        updateFormattedTranscript();
       },
     }
     return controls as ShortcutControls
@@ -429,6 +430,7 @@ function EditorPage() {
         },
         false
       )
+      updateFormattedTranscript();
     }, 1000 * 60 * AUTOSAVE_INTERVAL)
 
     return () => clearInterval(interval)
@@ -503,6 +505,15 @@ function EditorPage() {
       setInitialPDFLoaded(true)
     }
   }, [orderDetails, editorMode])
+
+  // NEW: Helper to update the transcript formatting in Quill
+  const updateFormattedTranscript = () => {
+    if (!quillRef?.current) return;
+    const quill = quillRef.current.getEditor();
+    const text = quill.getText();
+    const formattedDelta = getFormattedContent(text);
+    quill.setContents(formattedDelta);
+  }
 
   const getQuillRef = (quillRef: React.RefObject<ReactQuill>) => {
     setQuillRef(quillRef)

@@ -2,6 +2,7 @@
 import axios from 'axios'
 import { Session } from 'next-auth'
 import Quill from 'quill'
+import { Op } from 'quill/core'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
@@ -1222,6 +1223,53 @@ function getDiffHtml(oldText: string, newText: string): string {
     }).join('');
 }
 
+function getFormattedContent(text: string): Op[] {
+    const formattedContent: Op[] = []
+    let lastIndex = 0
+
+    // Update pattern to explicitly include the timestamp+blank pattern
+    const pattern = /(\d:\d{2}:\d{2}\.\d\s+S\d+:|(?:\[\d:\d{2}:\d{2}\.\d\]\s+____)|\[[^\]]+\])/g
+    let match: RegExpExecArray | null
+
+    while ((match = pattern.exec(text)) !== null) {
+        if (match.index > lastIndex) {
+            formattedContent.push({ insert: text.slice(lastIndex, match.index) })
+        }
+
+        const matchedText = match[0]
+
+        // Rule 1: TS + Speaker labels
+        if (matchedText.match(/^\d:\d{2}:\d{2}\.\d\s+S\d+:/)) {
+            formattedContent.push({
+                insert: matchedText,
+                attributes: { bold: true }
+            })
+        }
+        // Rule 2: TS + blank (complete pattern)
+        else if (matchedText.match(/\[\d:\d{2}:\d{2}\.\d\]\s+____/)) {
+            formattedContent.push({
+                insert: matchedText,
+                attributes: { color: '#FF0000' }
+            })
+        }
+        // Rule 3: Any other bracketed content
+        else if (matchedText.startsWith('[')) {
+            formattedContent.push({
+                insert: matchedText,
+                attributes: { background: '#f5f5f5', color: '#4A4A4A' }
+            })
+        }
+
+        lastIndex = match.index + matchedText.length
+    }
+
+    if (lastIndex < text.length) {
+        formattedContent.push({ insert: text.slice(lastIndex) })
+    }
+
+    return formattedContent
+}
+
 export {
     generateRandomColor,
     convertBlankToSeconds,
@@ -1251,6 +1299,7 @@ export {
     getEditorData,
     persistEditorData,
     getTranscriptFromStorage,
-    getDiffHtml
+    getDiffHtml,
+    getFormattedContent
 }
 export type { CTMType }
