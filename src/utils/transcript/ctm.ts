@@ -1,6 +1,6 @@
 import { TranscriptWord } from "assemblyai";
 
-import { CTMType } from '../types/transcript'
+import { CTMType } from '@/types/editor'
 
 export function getCTMs(transcriptWords: TranscriptWord[]): CTMType[] {
     const ctms: CTMType[] = [];
