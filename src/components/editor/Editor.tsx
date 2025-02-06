@@ -597,6 +597,10 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
           prevLineNodeRef.current = null;
         }
       }
+
+      if (quill) {
+        beforeSelectionRef.current = quill.getSelection();
+      }
     };
  
     document.addEventListener('keydown', handleKeyDown, true);
