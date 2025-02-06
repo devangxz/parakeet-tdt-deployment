@@ -9,12 +9,14 @@ interface PlayStatsVisualizationProps {
   duration: number;
 }
 
-const PlayStatsVisualization: React.FC<PlayStatsVisualizationProps> = ({
+export function PlayStatsVisualization({
   waveformUrl,
   listenCount,
   editedSegments,
   duration
-}) => {
+}: PlayStatsVisualizationProps) {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+
   const getHeatmapColor = (count: number): string => {
     const colors = [
       'rgba(243, 244, 246, 0.7)', // unplayed - light gray
@@ -57,48 +59,57 @@ const PlayStatsVisualization: React.FC<PlayStatsVisualizationProps> = ({
 
   const timeMarkers = generateTimeMarkers();
 
-  // --- New state for processing overlay elements ---
-  const [overlayNodes, setOverlayNodes] = React.useState<JSX.Element[]>([]);
-  const [processingProgress, setProcessingProgress] = React.useState<number>(0);
-
-  // --- Process listenCount array in chunks ---
   React.useEffect(() => {
-    let currentIndex = 0;
-    const nodesAccumulator: JSX.Element[] = [];
-    const chunkSize = 100; // adjust the chunk size as needed
-    let cancelled = false; // for cleanup
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-    function processChunk() {
+    const context = canvas.getContext('2d')!;
+
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    context.scale(dpr, dpr);
+
+    context.clearRect(0, 0, rect.width, rect.height);
+
+    const segmentWidth = rect.width / duration;
+    const canvasHeight = rect.height;
+    const chunkSize = 100;
+    let currentIndex = 0;
+    let cancelled = false;
+
+    function drawChunk() {
       if (cancelled) return;
+
       const endIndex = Math.min(currentIndex + chunkSize, duration);
-      
+
       for (let i = currentIndex; i < endIndex; i++) {
-        nodesAccumulator.push(
-          <div
-            key={i}
-            className="h-full flex-1 relative"
-            style={{ backgroundColor: getHeatmapColor(listenCount[i] || 0) }}
-          >
-            {editedSegments.has(i) && (
-              <div 
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-emerald-500 rounded-full"
-                style={{ boxShadow: '0 0 2px rgba(16, 185, 129, 0.8)' }}
-              />
-            )}
-          </div>
-        );
+        context.fillStyle = getHeatmapColor(listenCount[i] || 0);
+        context.fillRect(i * segmentWidth, 0, segmentWidth, canvasHeight);
+
+        if (editedSegments.has(i)) {
+          const cx = i * segmentWidth + segmentWidth / 2;
+          const cy = canvasHeight / 2;
+          const radius = Math.min(segmentWidth, canvasHeight) / 4;
+
+          context.shadowColor = 'rgba(16, 185, 129, 0.8)';
+          context.shadowBlur = 2;
+          context.beginPath();
+          context.arc(cx, cy, radius, 0, Math.PI * 2);
+          context.fillStyle = '#10B981';
+          context.fill();
+          context.shadowBlur = 0;
+        }
       }
-      
       currentIndex = endIndex;
-      setOverlayNodes([...nodesAccumulator]);
-      setProcessingProgress(Math.min((currentIndex / duration) * 100, 100));
-      
       if (currentIndex < duration) {
-        setTimeout(processChunk, 0);
+        setTimeout(drawChunk, 0);
       }
     }
 
-    processChunk();
+    drawChunk();
+
     return () => {
       cancelled = true;
     };
@@ -134,23 +145,10 @@ const PlayStatsVisualization: React.FC<PlayStatsVisualizationProps> = ({
             backgroundPosition: 'center'
           }}
         >
-          {/* Render overlay nodes processed in chunks */}
-          <div className="absolute inset-0 flex">
-            {overlayNodes}
-          </div>
-
-          {/* Optional progress indicator until processing is complete */}
-          {processingProgress < 100 && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-60">
-              <span className="text-sm text-gray-700">
-                Processing: {processingProgress.toFixed(0)}%
-              </span>
-            </div>
-          )}
+          <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
         </div>
         
         <div className="relative h-6 px-1">
-          {/* Scale markers */}
           <div className="absolute left-0 right-0 top-0 h-1 flex items-center">
             <div className="absolute left-0 w-0.5 h-1.5 bg-gray-300" />
             {timeMarkers.map(({ time, position }) => (
@@ -163,7 +161,6 @@ const PlayStatsVisualization: React.FC<PlayStatsVisualizationProps> = ({
             <div className="absolute right-0 w-0.5 h-1.5 bg-gray-300" />
           </div>
 
-          {/* Time labels */}
           <div className="absolute left-0 right-0 top-2 flex justify-between text-xs text-gray-500">
             <span>{formatDuration(0)}</span>
             {timeMarkers.map(({ time }) => (
@@ -181,6 +178,6 @@ const PlayStatsVisualization: React.FC<PlayStatsVisualizationProps> = ({
       </div>
     </div>
   );
-};
+}
 
 export default PlayStatsVisualization;
