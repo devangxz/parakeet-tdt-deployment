@@ -38,7 +38,7 @@ export async function getUserEditorSettingsAction(): Promise<ActionResponse> {
       const defaultSettings: EditorSettings = {
         wordHighlight: true,
         fontSize: 16,
-        audioRewindSeconds: 2,
+        audioRewindSeconds: 0,
         volume: 100,
         playbackSpeed: 100,
         useNativeContextMenu: false,
@@ -166,7 +166,7 @@ export async function updateShortcutAction(
         userId: userId,
         wordHighlight: true,
         fontSize: 16,
-        audioRewindSeconds: 2,
+        audioRewindSeconds: 0,
         volume: 100,
         playbackSpeed: 100,
         useNativeContextMenu: false,
