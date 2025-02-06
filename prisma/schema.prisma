@@ -700,7 +700,7 @@ model UserEditorSettings {
   userId                Int      @unique @map("user_id")
   wordHighlight         Boolean  @default(true) @map("word_highlight")
   fontSize              Int      @default(16) @map("font_size")
-  audioRewindSeconds    Int      @default(2) @map("audio_rewind_seconds")
+  audioRewindSeconds    Int      @default(0) @map("audio_rewind_seconds")
   volume                Int      @default(100)
   playbackSpeed         Int      @default(100) @map("playback_speed")
   useNativeContextMenu  Boolean  @default(false) @map("use_native_context_menu")

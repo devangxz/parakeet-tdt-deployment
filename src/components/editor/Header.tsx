@@ -599,7 +599,7 @@ export default memo(function Header({
     if (audioPlayer.current) {
       audioPlayer.current.playbackRate = speed / 100
     }
-  }, [speed])
+  }, [isAudioInitialized, speed])
 
   // Cleanup Web Audio API on unmount
   useEffect(

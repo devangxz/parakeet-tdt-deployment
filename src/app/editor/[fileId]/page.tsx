@@ -160,7 +160,7 @@ function EditorPage() {
   const [editorSettings, setEditorSettings] = useState<EditorSettings>({
     wordHighlight: true,
     fontSize: 16,
-    audioRewindSeconds: 2,
+    audioRewindSeconds: 0,
     volume: 100,
     playbackSpeed: 100,
     useNativeContextMenu: false,
@@ -642,7 +642,7 @@ function EditorPage() {
 
   useEffect(() => {
     setHighlightWordsEnabled(editorSettings.wordHighlight)
-  }, [editorSettings.wordHighlight])
+  }, [editorSettings])
 
   return (
     <div className='bg-secondary h-screen flex flex-col p-1 gap-y-1'>
