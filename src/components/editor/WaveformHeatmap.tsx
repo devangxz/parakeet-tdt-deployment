@@ -80,29 +80,31 @@ export function WaveformHeatmap({
     let cancelled = false;
 
     function drawChunk() {
-      if (cancelled) return;
+      if (cancelled) {
+        return;
+      }
 
       const endIndex = Math.min(currentIndex + chunkSize, duration);
 
       for (let i = currentIndex; i < endIndex; i++) {
-        context.fillStyle = getHeatmapColor(listenCount[i] || 0);
+        const count = listenCount[i] || 0;
+        
+        context.fillStyle = getHeatmapColor(count);
         context.fillRect(i * segmentWidth, 0, segmentWidth, canvasHeight);
 
         if (editedSegments.has(i)) {
           const cx = i * segmentWidth + segmentWidth / 2;
           const cy = canvasHeight / 2;
-          const radius = Math.min(segmentWidth, canvasHeight) / 4;
+          const radius = 4;
 
-          context.shadowColor = 'rgba(16, 185, 129, 0.8)';
-          context.shadowBlur = 2;
           context.beginPath();
           context.arc(cx, cy, radius, 0, Math.PI * 2);
           context.fillStyle = '#10B981';
           context.fill();
-          context.shadowBlur = 0;
         }
       }
       currentIndex = endIndex;
+      
       if (currentIndex < duration) {
         setTimeout(drawChunk, 0);
       }

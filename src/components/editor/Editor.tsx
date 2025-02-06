@@ -52,6 +52,7 @@ type Sources = 'user' | 'api' | 'silent'
 export interface EditorHandle {
   triggerAlignmentUpdate: () => void;
   clearAllHighlights: () => void;
+  scrollToCurrentWord: () => void;
 }
 
 // Wrap the component in forwardRef so the parent can call exposed methods
@@ -596,6 +597,10 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
           prevLineNodeRef.current = null;
         }
       }
+
+      if (quill) {
+        beforeSelectionRef.current = quill.getSelection();
+      }
     };
  
     document.addEventListener('keydown', handleKeyDown, true);
@@ -617,7 +622,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
 
   const timeUpdateHandler = useCallback(
     debounce(() => {
-      const quill = quillRef.current?.getEditor()
+      const quill = quillRef.current?.getEditor();
       if (
         !quill ||
         !highlightWordsEnabled ||
@@ -625,40 +630,42 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
         !audioPlayer ||
         alignmentWorkerRunning
       )
-        return
+        return;
 
-      const currentTime = audioPlayer.currentTime
+      const currentTime = audioPlayer.currentTime;
       const currentWordIndex = getAlignmentIndexByTime(
         alignments,
         currentTime,
         lastHighlightedRef.current
-      )
+      );
 
-      if (currentWordIndex === lastHighlightedRef.current) return
+      if (currentWordIndex === lastHighlightedRef.current) return;
 
-      clearLastHighlight()
+      clearLastHighlight();
 
-      const newAl = alignments[currentWordIndex]
+      const newAl = alignments[currentWordIndex];
       if (newAl?.startPos !== undefined && newAl?.endPos !== undefined) {
+        // Highlight the new word
         quill.formatText(newAl.startPos, newAl.endPos - newAl.startPos, {
           background: 'yellow',
-        })
+        });
+
         if (!isTyping) {
-          lastHighlightedRef.current = currentWordIndex
+          lastHighlightedRef.current = currentWordIndex;
         }
       }
     }, 100),
     [alignments, highlightWordsEnabled, isTyping, clearLastHighlight]
-  )
+  );
 
   useEffect(() => {
-    if (!audioPlayer) return
-    audioPlayer.addEventListener('timeupdate', timeUpdateHandler)
+    if (!audioPlayer) return;
+    audioPlayer.addEventListener('timeupdate', timeUpdateHandler);
     return () => {
-      timeUpdateHandler.cancel()
-      audioPlayer.removeEventListener('timeupdate', timeUpdateHandler)
+      timeUpdateHandler.cancel();
+      audioPlayer.removeEventListener('timeupdate', timeUpdateHandler);
     }
-  }, [timeUpdateHandler, audioPlayer])
+  }, [timeUpdateHandler, audioPlayer]);
 
   useEffect(() => {
     initEditor()
@@ -912,6 +919,26 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
   useImperativeHandle(ref, () => ({
     triggerAlignmentUpdate: updateAlignments,
     clearAllHighlights: clearAllHighlights,
+    scrollToCurrentWord: () => {
+      const quill = quillRef.current?.getEditor();
+      if (!quill || !audioPlayer) return;
+      const currentTime = audioPlayer.currentTime;
+      const currentWordIndex = getAlignmentIndexByTime(
+        alignments,
+        currentTime,
+        lastHighlightedRef.current
+      );
+      if (currentWordIndex === null || currentWordIndex === undefined) return;
+      const newAl = alignments[currentWordIndex];
+      if (newAl?.startPos !== undefined && newAl?.endPos !== undefined) {
+        // Scroll the highlighted word into view
+        const bounds = quill.getBounds(newAl.startPos, newAl.endPos - newAl.startPos);
+        if (!bounds) return;
+        const editorEl = quill.root;
+        const targetScrollTop = bounds.top + editorEl.scrollTop - editorEl.clientHeight / 2;
+        editorEl.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+      }
+    }
   }))
 
   return (

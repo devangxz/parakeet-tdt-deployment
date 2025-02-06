@@ -678,6 +678,7 @@ function EditorPage() {
         setFontSize={setFontSize}
         editorSettings={editorSettings}
         isWordPlayback={isWordPlayback}
+        editorRef={editorRef}
       />
 
       <div className='flex h-full overflow-hidden'>
