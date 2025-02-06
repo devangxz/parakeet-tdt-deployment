@@ -20,7 +20,6 @@ const calculateTranscriberCost = async (order: any, transcriberId: number) => {
     OrderStatus.QC_COMPLETED,
     OrderStatus.REVIEWER_ASSIGNED,
     OrderStatus.FORMATTED,
-    OrderStatus.REVIEW_COMPLETED,
   ]
   const reviewStatuses = [
     OrderStatus.REVIEW_COMPLETED,
