@@ -390,7 +390,7 @@ export default function CustomPlan() {
                   </div>
                 </div>
                 <div>
-                  <p>Custom Formatting Review / Editor Rates</p>
+                  <p>Custom Formatting Editor Rates</p>
                   <div className='border border-2 p-3 rounded-[10px]'>
                     {' '}
                     <div className='grid gap-3 mt-3 mb-2'>
