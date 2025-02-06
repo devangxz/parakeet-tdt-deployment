@@ -1,4 +1,4 @@
-import { CTMType, AlignmentType } from '@/types/editor/transcript'
+import { CTMType, AlignmentType } from '@/types/editor'
 
 export function findMatchingBoundary(
     newWords: string[],

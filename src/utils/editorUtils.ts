@@ -25,8 +25,7 @@ import {
     FILE_CACHE_URL,
     MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
 } from '@/constants'
-import { CTMType } from '@/types/editor/transcript'
-import { UndoRedoItem } from '@/types/editor/undo-redo-item'
+import { CTMType, UndoRedoItem } from '@/types/editor'
 import { getEditorDataIDB, persistEditorDataIDB } from '@/utils/indexedDB'
 import { diff_match_patch, DIFF_INSERT, DIFF_DELETE, DIFF_EQUAL } from '@/utils/transcript/diff_match_patch'
 

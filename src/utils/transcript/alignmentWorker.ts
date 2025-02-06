@@ -1,4 +1,4 @@
-import { AlignmentType, CTMType } from '@/types/editor/transcript'
+import { AlignmentType, CTMType } from '@/types/editor'
 import { diff_match_patch, DIFF_DELETE, DIFF_INSERT } from '@/utils/transcript/diff_match_patch'
 
 function processMetaPhrase(text: string): string[] {

@@ -7,9 +7,7 @@ import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 
 import { OrderDetails } from '@/app/editor/[fileId]/page'
-import { EditorSettings } from '@/types/editor'
-import { CTMType, AlignmentType } from '@/types/editor/transcript'
-import { UndoRedoItem, Range } from '@/types/editor/undo-redo-item'
+import { EditorSettings, CTMType, AlignmentType, UndoRedoItem, Range } from '@/types/editor'
 import {
   ShortcutControls,
   useShortcuts,
