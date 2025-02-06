@@ -53,6 +53,7 @@ type Sources = 'user' | 'api' | 'silent'
 // Export an interface for the methods exposed by Editor
 export interface EditorHandle {
   triggerAlignmentUpdate: () => void;
+  clearAllHighlights: () => void;
 }
 
 // Wrap the component in forwardRef so the parent can call exposed methods
@@ -410,6 +411,21 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       ctms: ctms,
     })
   }, [alignments, ctms, typingTimer, quillRef, orderDetails.fileId])
+
+  // Create a function to clear any word and line highlights
+  const clearAllHighlights = useCallback(() => {
+    const quill = quillRef.current?.getEditor();
+    if (!quill) return;
+    // Clear background highlights on all text
+    quill.formatText(0, quill.getLength(), { background: null });
+    // Remove any custom "line-highlight" classes from the editor
+    const editorRoot = quill.root;
+    editorRoot.querySelectorAll('.line-highlight').forEach((el) => {
+      (el as HTMLElement).classList.remove('line-highlight');
+    });
+    // Reset any stored last highlight
+    lastHighlightedRef.current = null;
+  }, [quillRef]);
 
   useEffect(() => {
     try {
@@ -894,9 +910,10 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     }
   }, [handleCursorMove])
 
-  // Expose the immediate alignment update function via ref
+  // Expose the immediate alignment update & clear highlights function via ref
   useImperativeHandle(ref, () => ({
-    triggerAlignmentUpdate: updateAlignments
+    triggerAlignmentUpdate: updateAlignments,
+    clearAllHighlights: clearAllHighlights,
   }))
 
   return (

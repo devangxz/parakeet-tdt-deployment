@@ -336,6 +336,7 @@ function EditorPage() {
       },
       saveChanges: async () => {
         if (editorRef.current) {
+          editorRef.current.clearAllHighlights();
           editorRef.current.triggerAlignmentUpdate();
         }
         autoCapitalizeSentences(quillRef)
