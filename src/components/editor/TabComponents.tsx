@@ -1,7 +1,7 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
 import ReactQuill from 'react-quill'
 
-import Editor from './Editor'
+import Editor, { EditorHandle } from './Editor'
 import { TabsContent } from './Tabs'
 import { Textarea } from '../ui/textarea'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
@@ -24,6 +24,7 @@ interface EditorTabComponentProps {
   editorSettings: EditorSettings
   isWordPlayback: React.MutableRefObject<boolean>
   initialEditorData: EditorData
+  editorRef?: React.Ref<EditorHandle>
 }
 
 export const EditorTabComponent = ({
@@ -42,6 +43,7 @@ export const EditorTabComponent = ({
   editorSettings,
   isWordPlayback,
   initialEditorData,
+  editorRef,
 }: EditorTabComponentProps) => (
   <TabsContent
     className='h-full mt-0 overflow-hidden pb-[41px]'
@@ -56,6 +58,7 @@ export const EditorTabComponent = ({
       ) : (
         <div className='h-full overflow-hidden'>
           <Editor
+            ref={editorRef}
             orderDetails={orderDetails}
             getQuillRef={getQuillRef}
             ctms={ctms}

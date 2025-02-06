@@ -2,7 +2,7 @@
 
 import debounce from 'lodash/debounce'
 import { Delta } from 'quill/core'
-import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react'
+import React, { useRef, useEffect, useCallback, useMemo, useState, useImperativeHandle, forwardRef } from 'react'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 
@@ -50,21 +50,29 @@ interface EditorProps {
 
 type Sources = 'user' | 'api' | 'silent'
 
-export default function Editor({
-  ctms: initialCtms,
-  audioPlayer,
-  getQuillRef,
-  orderDetails,
-  setSelectionHandler,
-  selection,
-  searchHighlight,
-  highlightWordsEnabled,
-  setEditedSegments,
-  editorSettings,
-  isWordPlayback,
-  setFontSize,
-  initialEditorData
-}: EditorProps) {
+// Export an interface for the methods exposed by Editor
+export interface EditorHandle {
+  triggerAlignmentUpdate: () => void;
+}
+
+// Wrap the component in forwardRef so the parent can call exposed methods
+const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
+  const {
+    ctms: initialCtms,
+    audioPlayer,
+    getQuillRef,
+    orderDetails,
+    setSelectionHandler,
+    selection,
+    searchHighlight,
+    highlightWordsEnabled,
+    setEditedSegments,
+    editorSettings,
+    isWordPlayback,
+    setFontSize,
+    initialEditorData
+  } = props
+
   const ctms = initialCtms // Make CTMs constant
   const quillRef = useRef<ReactQuill>(null)
   const [alignments, setAlignments] = useState<AlignmentType[]>([])
@@ -372,7 +380,7 @@ export default function Editor({
   const scheduleAlignmentUpdate = useCallback(() => {
     const quill = quillRef.current?.getEditor()
     if (!quill) return
-
+  
     if (typingTimer) clearTimeout(typingTimer)
     setTypingTimer(
       setTimeout(() => {
@@ -386,6 +394,21 @@ export default function Editor({
         })
       }, TYPING_PAUSE)
     )
+  }, [alignments, ctms, typingTimer, quillRef, orderDetails.fileId])
+
+  // Create a function to update alignment immediately without debounce
+  const updateAlignments = useCallback(() => {
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
+    if (typingTimer) clearTimeout(typingTimer)
+    const transcript = quill.getText()
+    persistEditorDataIDB(orderDetails.fileId, { transcript })
+    setAlignmentWorkerRunning(true)
+    alignmentWorker.current?.postMessage({
+      newText: transcript,
+      currentAlignments: alignments,
+      ctms: ctms,
+    })
   }, [alignments, ctms, typingTimer, quillRef, orderDetails.fileId])
 
   useEffect(() => {
@@ -871,6 +894,11 @@ export default function Editor({
     }
   }, [handleCursorMove])
 
+  // Expose the immediate alignment update function via ref
+  useImperativeHandle(ref, () => ({
+    triggerAlignmentUpdate: updateAlignments
+  }))
+
   return (
     <div className='relative w-full h-full'>
       <ReactQuill
@@ -927,4 +955,7 @@ export default function Editor({
       )}
     </div>
   )
-}
+})
+
+Editor.displayName = 'Editor'
+export default Editor

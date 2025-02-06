@@ -11,6 +11,7 @@ import { getUserEditorSettingsAction } from '@/app/actions/editor/settings'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
+import { EditorHandle } from '@/components/editor/Editor'
 import Header from '@/components/editor/Header'
 import SectionSelector from '@/components/editor/SectionSelector'
 import {
@@ -131,6 +132,7 @@ function EditorPage() {
   })
   const [audioDuration, setAudioDuration] = useState(1)
   const [quillRef, setQuillRef] = useState<React.RefObject<ReactQuill>>()
+  const editorRef = useRef<EditorHandle>(null);
 
   const [findText, setFindText] = useState('')
   const [replaceText, setReplaceText] = useState('')
@@ -333,6 +335,9 @@ function EditorPage() {
         }
       },
       saveChanges: async () => {
+        if (editorRef.current) {
+          editorRef.current.triggerAlignmentUpdate();
+        }
         autoCapitalizeSentences(quillRef)
         await handleSave({
           getEditorText,
@@ -739,11 +744,10 @@ function EditorPage() {
                       highlightWordsEnabled={highlightWordsEnabled}
                       setFontSize={setFontSize}
                       setEditedSegments={setEditedSegments}
-                      initialEditorData={
-                        initialEditorData || { transcript: '', undoStack: [], redoStack: [] }
-                      }
                       editorSettings={editorSettings}
                       isWordPlayback={isWordPlayback}
+                      initialEditorData={initialEditorData || { transcript: '', undoStack: [], redoStack: [] }}
+                      editorRef={editorRef}
                     />
 
                     <DiffTabComponent diff={diff} />
