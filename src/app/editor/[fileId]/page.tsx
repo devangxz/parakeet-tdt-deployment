@@ -57,7 +57,7 @@ import {
   getFormattedContent,
   EditorData,
 } from '@/utils/editorUtils'
-import { persistEditorDataIDB } from '@/utils/indexedDB'
+import { persistEditorDataIDB, getEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
 
 export type OrderDetails = {
@@ -423,10 +423,18 @@ function EditorPage() {
     loadDetails();
   }, [session])
 
-  const handleTabChange = () => {
+  const handleTabsValueChange = async (value: string) => {
+    // Update the diff regardless
     const contentText = getEditorText()
-    const diff = getDiffHtml(getFormattedTranscript(ctms), contentText)
-    setDiff(diff)
+    const newDiff = getDiffHtml(getFormattedTranscript(ctms), contentText)
+    setDiff(newDiff)
+
+    if (value === 'transcribe' && orderDetails.fileId) {
+      const persistedData = await getEditorDataIDB(orderDetails.fileId)
+      setInitialEditorData(
+        persistedData || { transcript: '', undoStack: [], redoStack: [] }
+      )
+    }
   }
 
   const getAudioPlayer = useCallback((audioPlayer: HTMLAudioElement | null) => {
@@ -691,7 +699,7 @@ function EditorPage() {
               >
                 {selectedSection === 'proceedings' && (
                   <Tabs
-                    onValueChange={handleTabChange}
+                    onValueChange={handleTabsValueChange}
                     defaultValue='transcribe'
                     className='h-full'
                   >
