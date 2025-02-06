@@ -27,6 +27,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import 'rc-slider/assets/index.css'
+import { EditorSettings } from '@/types/editor'
 import {
   ShortcutControls,
   useShortcuts,
@@ -42,6 +43,7 @@ import formatDuration from '@/utils/formatDuration'
 const createShortcutControls = (
   audioPlayer: React.RefObject<HTMLAudioElement>,
   quill: Quill | null,
+  setSpeed: React.Dispatch<React.SetStateAction<number>>,
   setVolumePercentage: React.Dispatch<React.SetStateAction<number>>
 ): ShortcutControls => ({
   togglePlay: () => {
@@ -69,23 +71,16 @@ const createShortcutControls = (
   decreaseFontSize: () => {},
   repeatLastFind: () => {},
   increaseVolume: () => {
-    setVolumePercentage((prevVol: number) => prevVol + 10)
+    setVolumePercentage((prevVol: number) => Math.min(500, prevVol + 10))
   },
   decreaseVolume: () => {
     setVolumePercentage((prevVol: number) => Math.max(0, prevVol - 10))
   },
   increasePlaybackSpeed: () => {
-    if (audioPlayer.current) {
-      audioPlayer.current.playbackRate += 0.1
-    }
+    setSpeed((prevSpeed: number) => Math.min(300, prevSpeed + 10))
   },
   decreasePlaybackSpeed: () => {
-    if (audioPlayer.current) {
-      audioPlayer.current.playbackRate = Math.max(
-        0.1,
-        audioPlayer.current.playbackRate - 0.1
-      )
-    }
+    setSpeed((prevSpeed: number) => Math.max(10, prevSpeed - 10))
   },
   playAudioFromTheStartOfCurrentParagraph: () => {},
   capitalizeFirstLetter: () => {},
@@ -118,14 +113,10 @@ const createShortcutControls = (
     adjustTimestamps(quill, 0, quill.getSelection())
   },
   playAt75Speed: () => {
-    if (!audioPlayer.current) return
-    audioPlayer.current.playbackRate = 0.75
-    audioPlayer.current.play()
+    setSpeed(75)
   },
   playAt100Speed: () => {
-    if (!audioPlayer.current) return
-    audioPlayer.current.playbackRate = 1.0
-    audioPlayer.current.play()
+    setSpeed(100)
   },
 })
 
@@ -134,9 +125,13 @@ interface HeaderProps {
   quillRef: React.RefObject<ReactQuill> | undefined
   orderDetails: OrderDetails
   toggleFindAndReplace: () => void
+  waveformUrl: string
   highlightWordsEnabled: boolean
   setHighlightWordsEnabled: (enabled: boolean) => void
-  waveformUrl: string
+  fontSize: number
+  setFontSize: (size: number) => void
+  editorSettings: EditorSettings
+  isWordPlayback: React.MutableRefObject<boolean>
 }
 
 export default memo(function Header({
@@ -144,9 +139,13 @@ export default memo(function Header({
   quillRef,
   orderDetails,
   toggleFindAndReplace,
+  waveformUrl,
   highlightWordsEnabled,
   setHighlightWordsEnabled,
-  waveformUrl,
+  fontSize,
+  setFontSize,
+  editorSettings,
+  isWordPlayback,
 }: HeaderProps) {
   const [currentValue, setCurrentValue] = useState(0)
   const [currentTime, setCurrentTime] = useState('00:00')
@@ -161,20 +160,65 @@ export default memo(function Header({
   const [step, setStep] = useState<string>('')
   const [cfd, setCfd] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
-  const [speed, setSpeed] = useState(100)
-  const [fontSize, setFontSize] = useState(() => {
-    if (typeof window !== 'undefined' && quillRef?.current) {
-      const quill = quillRef.current.getEditor()
-      const container = quill.container as HTMLElement
-      return parseInt(window.getComputedStyle(container).fontSize)
-    }
-    return 16
-  })
-  const [volumePercentage, setVolumePercentage] = useState(100)
+  const [speed, setSpeed] = useState(editorSettings.playbackSpeed)
+  const [volumePercentage, setVolumePercentage] = useState(
+    editorSettings.volume
+  )
   const audioContextRef = useRef<AudioContext | null>(null)
   const gainNodeRef = useRef<GainNode | null>(null)
   const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null)
   const [isAudioInitialized, setIsAudioInitialized] = useState(false)
+
+  useEffect(() => {
+    if (quillRef?.current) {
+      const container = quillRef.current.getEditor().container as HTMLElement
+      container.style.fontSize = `${editorSettings.fontSize}px`
+    }
+
+    setSpeed(editorSettings.playbackSpeed)
+    setFontSize(editorSettings.fontSize)
+    setVolumePercentage(editorSettings.volume)
+  }, [editorSettings, quillRef, audioPlayer, isAudioInitialized])
+
+  useEffect(() => {
+    if (!audioPlayer.current) return
+
+    let lastPauseTime = 0
+    let wasManualPause = false
+
+    const handlePause = () => {
+      if (audioPlayer.current) {
+        lastPauseTime = audioPlayer.current.currentTime
+        wasManualPause = true
+      }
+    }
+
+    const handlePlay = () => {
+      if (
+        audioPlayer.current &&
+        !isWordPlayback.current &&
+        wasManualPause &&
+        editorSettings.audioRewindSeconds > 0 &&
+        audioPlayer.current.currentTime === lastPauseTime
+      ) {
+        const newTime = Math.max(
+          0,
+          audioPlayer.current.currentTime - editorSettings.audioRewindSeconds
+        )
+        audioPlayer.current.currentTime = newTime
+      }
+      wasManualPause = false
+      isWordPlayback.current = false
+    }
+
+    audioPlayer.current.addEventListener('pause', handlePause)
+    audioPlayer.current.addEventListener('play', handlePlay)
+
+    return () => {
+      audioPlayer.current?.removeEventListener('pause', handlePause)
+      audioPlayer.current?.removeEventListener('play', handlePlay)
+    }
+  }, [audioPlayer, editorSettings.audioRewindSeconds])
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -255,9 +299,10 @@ export default memo(function Header({
       const quill = quillRef.current.getEditor()
       const container = quill.container as HTMLElement
       const currentSize = parseInt(window.getComputedStyle(container).fontSize)
-      const newSize = increase ? currentSize + 2 : currentSize - 2
-      container.style.fontSize = `${newSize}px`
-      setFontSize(Math.max(newSize, 0))
+      const newSize = increase ? currentSize + 1 : currentSize - 1
+      const clampedSize = Math.min(Math.max(newSize, 1), 400)
+      container.style.fontSize = `${clampedSize}px`
+      setFontSize(clampedSize)
     },
     [quillRef]
   )
@@ -270,6 +315,7 @@ export default memo(function Header({
       createShortcutControls(
         audioPlayer,
         quillRef?.current?.getEditor() || null,
+        setSpeed,
         setVolumePercentage
       ),
     [audioPlayer, quillRef]
@@ -327,7 +373,6 @@ export default memo(function Header({
     const handleLoadedMetadata = () => {
       if (!audioDuration) {
         setAudioDuration(audio.duration)
-        setSpeed(audio.playbackRate * 100)
       }
     }
 
@@ -420,21 +465,6 @@ export default memo(function Header({
       quillRef?.current?.getEditor()
     )
   }, [audioPlayer, quillRef])
-
-  useEffect(() => {
-    const audio = audioPlayer.current
-    if (!audio) return
-
-    const handleRateChange = () => {
-      setSpeed(Math.round(audio.playbackRate * 100))
-    }
-
-    audio.addEventListener('ratechange', handleRateChange)
-
-    return () => {
-      audio.removeEventListener('ratechange', handleRateChange)
-    }
-  }, [audioPlayer])
 
   const markSection = () => {
     if (!quillRef?.current) return
@@ -561,6 +591,12 @@ export default memo(function Header({
       gainNodeRef.current.gain.value = volumePercentage / 100
     }
   }, [isAudioInitialized, volumePercentage])
+
+  useEffect(() => {
+    if (audioPlayer.current) {
+      audioPlayer.current.playbackRate = speed / 100
+    }
+  }, [speed])
 
   // Cleanup Web Audio API on unmount
   useEffect(
@@ -779,7 +815,7 @@ export default memo(function Header({
                     decreaseFontSize={decreaseFontSize}
                     insertInterpreterSwearInLine={insertInterpreterSwearInLine}
                     highlightWordsEnabled={highlightWordsEnabled}
-                    setHighlightWordsEnabled={setHighlightWordsEnabled}
+                    setHighlightWordsEnabled={setHighlightWordsEnabled}              
                   />
                 </div>
               </TooltipProvider>
