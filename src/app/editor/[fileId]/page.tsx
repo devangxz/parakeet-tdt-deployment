@@ -11,7 +11,6 @@ import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
 import Header from '@/components/editor/Header'
-import PlayStatsVisualization from '@/components/editor/PlayStatsVisualization'
 import SectionSelector from '@/components/editor/SectionSelector'
 import {
   DiffTabComponent,
@@ -21,6 +20,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/editor/Tabs'
 import renderTitleInputs from '@/components/editor/TitleInputs'
 import Topbar from '@/components/editor/Topbar'
+import WaveformHeatmap from '@/components/editor/WaveformHeatmap'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -819,7 +819,7 @@ function EditorPage() {
                 <p className="text-sm text-gray-500 mb-2">
                   Audio Playback Coverage: <span className="font-medium">{getPlayedPercentage()}%</span>
                 </p>
-                <PlayStatsVisualization
+                <WaveformHeatmap
                   waveformUrl={waveformUrl}
                   listenCount={listenCount}
                   editedSegments={editedSegments}

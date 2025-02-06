@@ -2,19 +2,19 @@ import React from 'react';
 
 import formatDuration from '@/utils/formatDuration';
 
-interface PlayStatsVisualizationProps {
+interface WaveformHeatmapProps {
   waveformUrl: string;
   listenCount: number[];
   editedSegments: Set<number>;
   duration: number;
 }
 
-export function PlayStatsVisualization({
+export function WaveformHeatmap({
   waveformUrl,
   listenCount,
   editedSegments,
   duration
-}: PlayStatsVisualizationProps) {
+}: WaveformHeatmapProps) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
   const getHeatmapColor = (count: number): string => {
@@ -180,4 +180,4 @@ export function PlayStatsVisualization({
   );
 }
 
-export default PlayStatsVisualization;
+export default WaveformHeatmap;
