@@ -156,7 +156,7 @@ function EditorPage() {
   const [editorSettings, setEditorSettings] = useState<EditorSettings>({
     wordHighlight: true,
     fontSize: 16,
-    audioRewindSeconds: 2,
+    audioRewindSeconds: 0,
     volume: 100,
     playbackSpeed: 100,
     useNativeContextMenu: false,
