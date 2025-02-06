@@ -42,7 +42,7 @@ const Sidebar = ({
       <nav className="flex-1 overflow-hidden">
         <div className="h-full px-2 lg:px-4 py-4">
           {showTeams && (
-            <div className="pb-5 border-b-2 border-customBorder">
+            <div className="pb-5 border-b-2 border-customBorder truncate">
               <h2 className="mb-2.5 text-lg font-semibold tracking-tight">Teams</h2>
               <TeamSwitcher />
             </div>
