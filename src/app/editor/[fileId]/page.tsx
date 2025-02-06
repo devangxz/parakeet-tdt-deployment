@@ -611,7 +611,7 @@ function EditorPage() {
 
   useEffect(() => {
     setHighlightWordsEnabled(editorSettings.wordHighlight)
-  }, [editorSettings.wordHighlight])
+  }, [editorSettings])
 
   return (
     <div className='bg-secondary h-screen flex flex-col p-1 gap-y-1'>
