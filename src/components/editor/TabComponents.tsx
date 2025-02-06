@@ -21,9 +21,9 @@ interface EditorTabComponentProps {
   highlightWordsEnabled: boolean
   setFontSize: (size: number) => void
   setEditedSegments: (segments: Set<number>) => void
-  initialEditorData: EditorData
   editorSettings: EditorSettings
   isWordPlayback: React.MutableRefObject<boolean>
+  initialEditorData: EditorData
 }
 
 export const EditorTabComponent = ({
