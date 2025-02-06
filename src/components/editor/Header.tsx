@@ -58,6 +58,9 @@ const createShortcutControls = (
   skipAudio: (seconds: number) => {
     if (audioPlayer.current) {
       audioPlayer.current.currentTime += seconds
+      if (audioPlayer.current.paused) {
+        audioPlayer.current.play()
+      }
     }
   },
   playNextBlank: () => {},
