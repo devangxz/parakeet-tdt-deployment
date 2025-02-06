@@ -79,32 +79,45 @@ export function WaveformHeatmap({
     let currentIndex = 0;
     let cancelled = false;
 
+    console.log(editedSegments)
+
     function drawChunk() {
-      if (cancelled) return;
+      console.log('Drawing chunk:', { currentIndex, chunkSize, duration });
+      if (cancelled) {
+        console.log('Drawing cancelled');
+        return;
+      }
 
       const endIndex = Math.min(currentIndex + chunkSize, duration);
+      console.log('Processing indices:', currentIndex, 'to', endIndex);
 
       for (let i = currentIndex; i < endIndex; i++) {
-        context.fillStyle = getHeatmapColor(listenCount[i] || 0);
+        const count = listenCount[i] || 0;
+        console.log('Drawing segment:', i, 'Listen count:', count);
+        
+        context.fillStyle = getHeatmapColor(count);
         context.fillRect(i * segmentWidth, 0, segmentWidth, canvasHeight);
 
         if (editedSegments.has(i)) {
+          console.log('Drawing edit marker at segment:', i);
           const cx = i * segmentWidth + segmentWidth / 2;
           const cy = canvasHeight / 2;
-          const radius = Math.min(segmentWidth, canvasHeight) / 4;
+          const radius = 4;
 
-          context.shadowColor = 'rgba(16, 185, 129, 0.8)';
-          context.shadowBlur = 2;
           context.beginPath();
           context.arc(cx, cy, radius, 0, Math.PI * 2);
           context.fillStyle = '#10B981';
           context.fill();
-          context.shadowBlur = 0;
         }
       }
       currentIndex = endIndex;
+      console.log('Chunk complete. New currentIndex:', currentIndex);
+      
       if (currentIndex < duration) {
+        console.log('Scheduling next chunk');
         setTimeout(drawChunk, 0);
+      } else {
+        console.log('Drawing complete');
       }
     }
 
