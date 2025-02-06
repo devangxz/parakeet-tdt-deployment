@@ -5,7 +5,8 @@ import logger from "../lib/logger";
 import prisma from "../lib/prisma";
 import { redis } from '../lib/redis'
 import { getSignedURLFromS3 } from "../utils/backend-helper";
-import { getFormattedTranscript, getCTMs, CTMType } from "../utils/transcript";
+import { getFormattedTranscript, getCTMs } from "../utils/transcript";
+import { CTMType } from "@/types/editor";
 
 async function transcribe(fileURL: string, fileId: string) {
     const client = new AssemblyAI({
