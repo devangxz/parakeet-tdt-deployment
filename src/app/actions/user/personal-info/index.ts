@@ -11,7 +11,7 @@ export async function getPersonalInfo() {
   try {
     const session = await getServerSession(authOptions)
     const user = session?.user
-    const userId = user?.userId
+    const userId = user?.internalTeamUserId || user?.userId
 
     if (!userId) {
       return {
@@ -51,7 +51,7 @@ export async function updatePersonalInfo(payload: UpdatePersonalInfoPayload) {
   try {
     const session = await getServerSession(authOptions)
     const user = session?.user
-    const userId = user?.userId
+    const userId = user?.internalTeamUserId || user?.userId
 
     if (!userId) {
       return {

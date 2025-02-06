@@ -6,6 +6,7 @@ import {
   ReloadIcon,
   ArrowUpIcon,
 } from '@radix-ui/react-icons'
+import axios from 'axios'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
@@ -14,6 +15,7 @@ import { toast } from 'sonner'
 
 import ConfigureShortcutsDialog from './ConfigureShortcutsDialog'
 import DownloadDocxDialog from './DownloadDocxDialog'
+import EditorSettingsDialog from './EditorSettingsDialog'
 import FrequentTermsDialog from './FrequentTermsDialog'
 import ReportDialog from './ReportDialog'
 import ShortcutsReferenceDialog from './ShortcutsReferenceDialog'
@@ -47,6 +49,7 @@ import {
   SelectValue,
 } from '../ui/select'
 import { Textarea } from '../ui/textarea'
+import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
 import { getFormattingOptionsAction } from '@/app/actions/editor/get-formatting-options'
 import { getSpeakerNamesAction } from '@/app/actions/editor/get-speaker-names'
 import { requestReReviewAction } from '@/app/actions/editor/re-review'
@@ -59,12 +62,13 @@ import { OrderDetails } from '@/app/editor/[fileId]/page'
 import TranscriberProfile from '@/app/transcribe/components/transcriberProfiles'
 import 'rc-slider/assets/index.css'
 import { FILE_CACHE_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
+import { EditorSettings } from '@/types/editor'
 import DefaultShortcuts, {
   getAllShortcuts,
   setShortcut,
   ShortcutControls,
   useShortcuts,
+  defaultShortcuts,
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   autoCapitalizeSentences,
@@ -75,7 +79,6 @@ import {
   playCurrentParagraphTimestamp,
   regenDocx,
 } from '@/utils/editorUtils'
-
 interface TopbarProps {
   quillRef: React.RefObject<ReactQuill> | undefined
   editorModeOptions: string[]
@@ -102,6 +105,8 @@ interface TopbarProps {
   }
   listenCount: number[]
   editedSegments: Set<number>
+  editorSettings: EditorSettings
+  onSettingsChange: (settings: EditorSettings) => void
 }
 
 export default memo(function Topbar({
@@ -119,14 +124,24 @@ export default memo(function Topbar({
   setFileToUpload,
   fileToUpload,
   listenCount,
-  editedSegments
+  editedSegments,
+  editorSettings,
+  onSettingsChange,
 }: TopbarProps) {
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
   const [notesOpen, setNotesOpen] = useState(true)
   const [shortcuts, setShortcuts] = useState<
     { key: string; shortcut: string }[]
-  >([])
+  >(
+    Object.entries({
+      ...defaultShortcuts,
+      ...editorSettings.shortcuts,
+    }).map(([key, shortcut]) => ({
+      key,
+      shortcut,
+    }))
+  )
   const [position, setPosition] = useState({ x: 100, y: 100 })
   const [videoPlayerOpen, setVideoPlayerOpen] = useState(false)
   const [revertTranscriptOpen, setRevertTranscriptOpen] = useState(false)
@@ -185,6 +200,7 @@ export default memo(function Topbar({
   const [reReviewComment, setReReviewComment] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
   const [timeoutCount, setTimeoutCount] = useState('')
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
 
   useEffect(() => {
     if (cfd && step) return
@@ -264,16 +280,13 @@ export default memo(function Topbar({
     }
   }, [orderDetails.orderId])
 
-  useEffect(() => {
-    setShortcuts(getAllShortcuts())
-  }, [])
-
-  const updateShortcut = (
+  const updateShortcut = async (
     action: keyof DefaultShortcuts,
     newShortcut: string
   ) => {
-    setShortcut(action, newShortcut)
-    setShortcuts(getAllShortcuts())
+    await setShortcut(action, newShortcut)
+    const updatedShortcuts = await getAllShortcuts()
+    setShortcuts(updatedShortcuts)
   }
 
   useEffect(() => {
@@ -594,9 +607,14 @@ export default memo(function Topbar({
     }
 
     try {
-      await axiosInstance.post(`${FILE_CACHE_URL}/revert-transcript`, {
+      const tokenRes = await fileCacheTokenAction()
+      await axios.post(`${FILE_CACHE_URL}/revert-transcript`, {
         fileId: orderDetails.fileId,
         type,
+      }, {
+        headers: {
+          'Authorization': `Bearer ${tokenRes.token}`
+        }
       })
       toast.success('Transcript reverted successfully')
       localStorage.removeItem('transcript')
@@ -740,9 +758,8 @@ export default memo(function Topbar({
 
         {orderDetails.status === 'QC_ASSIGNED' && (
           <span
-            className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${
-              orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
-            }`}
+            className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
+              }`}
           >
             {timeoutCount}
           </span>
@@ -834,13 +851,13 @@ export default memo(function Topbar({
             {!['CUSTOMER', 'OM', 'ADMIN'].includes(
               session?.user?.role ?? ''
             ) && (
-              <Button
-                onClick={() => setSubmitting(true)}
-                className='format-button border-r-[1.5px] border-white/70'
-              >
-                Submit
-              </Button>
-            )}
+                <Button
+                  onClick={() => setSubmitting(true)}
+                  className='format-button border-r-[1.5px] border-white/70'
+                >
+                  Submit
+                </Button>
+              )}
 
             <DropdownMenu
               modal={false}
@@ -848,13 +865,12 @@ export default memo(function Topbar({
             >
               <DropdownMenuTrigger className='focus-visible:ring-0 outline-none'>
                 <Button
-                  className={`${
-                    !['CUSTOMER', 'OM', 'ADMIN'].includes(
-                      session?.user?.role ?? ''
-                    )
-                      ? 'px-2 format-icon-button'
-                      : ''
-                  } focus-visible:ring-0 outline-none`}
+                  className={`${!['CUSTOMER', 'OM', 'ADMIN'].includes(
+                    session?.user?.role ?? ''
+                  )
+                    ? 'px-2 format-icon-button'
+                    : ''
+                    } focus-visible:ring-0 outline-none`}
                 >
                   <span className='sr-only'>Open menu</span>
                   <ChevronDownIcon className='h-4 w-4' />
@@ -907,10 +923,10 @@ export default memo(function Topbar({
                 {!['CUSTOMER', 'OM', 'ADMIN'].includes(
                   session?.user?.role || ''
                 ) && (
-                  <DropdownMenuItem onClick={requestExtension}>
-                    Request Extension
-                  </DropdownMenuItem>
-                )}
+                    <DropdownMenuItem onClick={requestExtension}>
+                      Request Extension
+                    </DropdownMenuItem>
+                  )}
                 {session?.user?.role !== 'CUSTOMER' && (
                   <DropdownMenuItem onClick={() => setReportModalOpen(true)}>
                     Report
@@ -949,12 +965,12 @@ export default memo(function Topbar({
                 )}
                 {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
                   orderDetails.status === 'FINALIZER_ASSIGNED') && (
-                  <DropdownMenuItem asChild>
-                    <a href={qcFileUrl} target='_blank'>
-                      Download QC text
-                    </a>
-                  </DropdownMenuItem>
-                )}
+                    <DropdownMenuItem asChild>
+                      <a href={qcFileUrl} target='_blank'>
+                        Download QC text
+                      </a>
+                    </DropdownMenuItem>
+                  )}
                 {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
                   orderDetails.status === 'FINALIZER_ASSIGNED') && (
                   <DropdownMenuItem asChild>
@@ -963,6 +979,9 @@ export default memo(function Topbar({
                     </a>
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuItem onClick={() => setIsSettingsModalOpen(true)}>
+                  Settings
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -999,7 +1018,6 @@ export default memo(function Topbar({
           <TranscriberProfile />
         </div>
       </div>
-
       <ShortcutsReferenceDialog
         isShortcutsReferenceModalOpen={isShortcutsReferenceModalOpen}
         setIsShortcutsReferenceModalOpen={setIsShortcutsReferenceModalOpen}
@@ -1012,7 +1030,6 @@ export default memo(function Topbar({
         shortcuts={shortcuts}
         updateShortcut={updateShortcut}
       />
-
       <Dialog
         open={isSpeakerNameModalOpen}
         onOpenChange={(value) => {
@@ -1122,7 +1139,6 @@ export default memo(function Topbar({
           </div>
         </DialogContent>
       </Dialog>
-
       <Dialog
         open={revertTranscriptOpen}
         onOpenChange={setRevertTranscriptOpen}
@@ -1160,7 +1176,6 @@ export default memo(function Topbar({
           </DialogHeader>
         </DialogContent>
       </Dialog>
-
       <Dialog
         open={isFormattingOptionsModalOpen}
         onOpenChange={setIsFormattingOptionsModalOpen}
@@ -1246,11 +1261,9 @@ export default memo(function Topbar({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       <div
-        className={` ${
-          !videoPlayerOpen ? 'hidden' : ''
-        } fixed bg-white z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-transparent`}
+        className={` ${!videoPlayerOpen ? 'hidden' : ''
+          } fixed bg-white z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-transparent`}
         style={{
           top: `${position.y}px`,
           left: `${position.x}px`,
@@ -1275,7 +1288,6 @@ export default memo(function Topbar({
           </button>
         </div>
       </div>
-
       <ReportDialog
         reportModalOpen={reportModalOpen}
         setReportModalOpen={setReportModalOpen}
@@ -1289,6 +1301,12 @@ export default memo(function Topbar({
         frequentTermsModalOpen={frequentTermsModalOpen}
         setFrequentTermsModalOpen={setFrequentTermsModalOpen}
         frequentTermsData={frequentTermsData}
+      />
+      <EditorSettingsDialog
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        initialSettings={editorSettings}
+        onSettingsChange={onSettingsChange}
       />
     </div>
   )

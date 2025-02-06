@@ -3,7 +3,6 @@
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
 import { useRouter } from 'next/navigation'
-import { Session } from 'next-auth'
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
@@ -23,6 +22,7 @@ import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
 import DownloadModal from '@/components/download-modal'
 import RenameFileDialog from '@/components/file-rename-dialog'
+import OrderReReviewModal from '@/components/order-re-review'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -74,6 +74,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
   const [openRenameDialog, setOpenRenameDialog] = useState(false)
   const [openBulkDeleteDialog, setOpenBulkDeleteDialog] = useState(false)
   const [openBulkArchiveDialog, setOpenBulkArchiveDialog] = useState(false)
+  const [openReReviewDialog, setOpenReReviewDialog] = useState(false)
   const [loadingOrder, setLoadingOrder] = useState<Record<string, boolean>>({})
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
@@ -434,6 +435,20 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
             >
               Go to folder
             </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                setOpenReReviewDialog(true)
+                setSeletedFile({
+                  fileId: row?.original?.id,
+                  name: row?.original?.filename,
+                  orderId: row?.original?.orderId,
+                  orderType: row?.original?.orderType,
+                })
+              }}
+            >
+              Order Re-Review
+            </DropdownMenuItem>
+
             {/* <DropdownMenuItem
                 onClick={() =>
                   controller({ fileId: row?.original?.id }, 'editTranscription')
@@ -564,7 +579,8 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    if (!selectedFiles.length) return toast.error('Please select at least one file')
+                    if (!selectedFiles.length)
+                      return toast.error('Please select at least one file')
                     setIsDownloadDialogOpen(true)
                   }}
                 >
@@ -593,7 +609,6 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
             filename={selectedFile.name || ''}
             toggleCheckAndDownload={toggleCheckAndDownload}
             setToggleCheckAndDownload={setToggleCheckAndDownload}
-            session={session as Session}
             txtSignedUrl={signedUrls.txtSignedUrl || ''}
             cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
           />
@@ -647,6 +662,11 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
         isDownloadDialogOpen={isDownloadDialogOpen}
         setIsDownloadDialogOpen={setIsDownloadDialogOpen}
         fileIds={selectedFiles || []}
+      />
+      <OrderReReviewModal
+        open={openReReviewDialog}
+        onClose={() => setOpenReReviewDialog(false)}
+        fileId={selectedFile?.fileId || ''}
       />
     </>
   )

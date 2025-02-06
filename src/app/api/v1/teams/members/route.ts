@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: members.team_members,
+      data: members,
     })
   } catch (error) {
     logger.error(`Failed to get team members, ${error}`)

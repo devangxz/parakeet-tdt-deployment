@@ -424,7 +424,10 @@ export const getRefundAmount = async (fileId: string) => {
       return false
     }
 
-    const chargeRate = (invoice.discount / invoice.amount).toFixed(2)
+    const chargeRate =
+      invoice.discount === 0
+        ? '1'
+        : (invoice.discount / invoice.amount).toFixed(2)
     const refundAmount = (invoiceFile.price * parseFloat(chargeRate)).toFixed(2)
 
     return refundAmount
@@ -645,6 +648,12 @@ export const getCustomerRate = async (userId: number) => {
       reviewerMediumDifficultyRate:
         userRate.customFormatMediumDifficultyReviewRate,
       reviewerHighDifficultyRate: userRate.customFormatHighDifficultyReviewRate,
+      qcLowDifficultyRate: userRate.qcLowDifficultyRate,
+      qcMediumDifficultyRate: userRate.qcMediumDifficultyRate,
+      qcHighDifficultyRate: userRate.qcHighDifficultyRate,
+      cfReviewLowDifficultyRate: userRate.cfReviewLowDifficultyRate,
+      cfReviewMediumDifficultyRate: userRate.cfReviewMediumDifficultyRate,
+      cfReviewHighDifficultyRate: userRate.cfReviewHighDifficultyRate,
       option: userRate.customFormatOption,
     }
   } catch (error) {

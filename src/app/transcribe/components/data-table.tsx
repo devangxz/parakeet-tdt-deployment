@@ -17,6 +17,7 @@ import {
 import * as React from 'react'
 
 import { DataTablePagination } from './data-table-pagination'
+import { DataTableToolbar } from './toolbar'
 import {
   Table,
   TableBody,
@@ -31,6 +32,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[]
   onSelectedRowsChange?: (selectedRows: TData[]) => void
   renderRowSubComponent?: (props: { row: unknown }) => React.ReactNode
+  showToolbar?: boolean
 }
 
 export function DataTable<TData, TValue>({
@@ -38,10 +40,13 @@ export function DataTable<TData, TValue>({
   data,
   onSelectedRowsChange,
   renderRowSubComponent,
+  showToolbar = false,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({})
+    React.useState<VisibilityState>({
+      orgName: false,
+    })
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   )
@@ -82,6 +87,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className='space-y-4'>
+      {showToolbar && <DataTableToolbar table={table} />}
       <div className='rounded-md border-2 border-customBorder bg-white'>
         <Table>
           <TableHeader>
