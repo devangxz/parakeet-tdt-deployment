@@ -50,11 +50,11 @@ import {
   replaceTextHandler,
   CustomerQuillSelection,
   autoCapitalizeSentences,
-  getEditorData,
-  persistEditorData,
   getDiffHtml,
-  getFormattedContent
+  getFormattedContent,
+  EditorData
 } from '@/utils/editorUtils'
+import { persistEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
 
 export type OrderDetails = {
@@ -111,7 +111,6 @@ function EditorPage() {
   }>({ renamedFile: null, originalFile: null })
   const { data: session } = useSession()
   const [diff, setDiff] = useState<string>('')
-  const [transcriptLoading, setTranscriptLoading] = useState(true)
   const [ctms, setCtms] = useState<CTMType[]>([])
   const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null)
   const [step, setStep] = useState<string>('')
@@ -146,6 +145,7 @@ function EditorPage() {
   const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set());
   const [waveformUrl, setWaveformUrl] = useState('')
   const [finalizerComment, setFinalizerComment] = useState('')
+  const [initialEditorData, setInitialEditorData] = useState<EditorData | null>(null)
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -341,11 +341,9 @@ function EditorPage() {
   }, [audioPlayer])
 
   useEffect(() => {
-    if (transcriptLoading || !orderDetails.fileId) {
-      return;
-    }
-    persistEditorData(orderDetails.fileId, { listenCount });
-  }, [listenCount, orderDetails.fileId, transcriptLoading])
+    if (!initialEditorData || !orderDetails.fileId) return;
+    persistEditorDataIDB(orderDetails.fileId, { listenCount });
+  }, [listenCount, orderDetails.fileId, initialEditorData])
 
   const sectionChangeHandler = (e: React.MouseEvent<HTMLButtonElement>) => {
     const value = e.currentTarget.dataset.value
@@ -376,18 +374,22 @@ function EditorPage() {
     }
 
     async function loadDetails() {
-      await fetchFileDetails({
+      if (!session || !session.user) return;
+      const result = await fetchFileDetails({
         params,
         setOrderDetails,
         setCfd,
         setStep,
         setCtms,
         setListenCount,
-      })
-      setTranscriptLoading(false)
+      });
+      if (result) {
+        setOrderDetails(result.orderDetails);
+        setInitialEditorData(result.initialEditorData);
+      }
     }
-    loadDetails()
-  }, [])
+    loadDetails();
+  }, [session])
 
   const handleTabChange = () => {
     const contentText = getEditorText()
@@ -484,13 +486,10 @@ function EditorPage() {
       getEditorModeOptions()
     }
 
-    if (orderDetails.fileId) {
-      const editorData = getEditorData(orderDetails.fileId);
-      if (editorData.notes) {
-        setNotes(editorData.notes);
-      }
+    if (orderDetails.fileId && initialEditorData?.notes) {
+      setNotes(initialEditorData.notes)
     }
-  }, [orderDetails])
+  }, [orderDetails, initialEditorData])
 
   useEffect(() => {
     if (!orderDetails.orderId || !orderDetails.fileId) return
@@ -522,7 +521,7 @@ function EditorPage() {
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const notes = e.target.value
     setNotes(notes)
-    persistEditorData(orderDetails.fileId, { notes })
+    persistEditorDataIDB(orderDetails.fileId, { notes })
   }
 
   const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -639,17 +638,20 @@ function EditorPage() {
                     </div>
 
                     <EditorTabComponent
-                      orderDetails={orderDetails}
-                      transcriptLoading={transcriptLoading}
+                      transcriptLoading={!initialEditorData}
                       ctms={ctms}
                       audioPlayer={audioPlayer}
                       audioDuration={audioDuration}
                       getQuillRef={getQuillRef}
+                      orderDetails={orderDetails}
                       setSelectionHandler={setSelectionHandler}
                       selection={selection}
                       searchHighlight={searchHighlight}
                       highlightWordsEnabled={highlightWordsEnabled}
                       setEditedSegments={setEditedSegments}
+                      initialEditorData={
+                        initialEditorData || { transcript: '', undoStack: [], redoStack: [] }
+                      }
                     />
 
                     <DiffTabComponent diff={diff} />

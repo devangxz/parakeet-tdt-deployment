@@ -26,6 +26,7 @@ import {
 } from '@/constants'
 import { CTMType } from '@/types/editor/transcript'
 import { UndoRedoItem } from '@/types/editor/undo-redo-item'
+import { getEditorDataIDB, persistEditorDataIDB } from '@/utils/indexedDB'
 import { diff_match_patch, DIFF_INSERT, DIFF_DELETE, DIFF_EQUAL } from '@/utils/transcript/diff_match_patch'
 
 export type ButtonLoading = {
@@ -394,6 +395,20 @@ type FetchFileDetailsParams = {
     setListenCount: React.Dispatch<React.SetStateAction<number[]>>
 }
 
+export interface EditorData {
+    transcript?: string;
+    notes?: string;
+    listenCount?: number[];
+    updatedAt?: number;
+    undoStack?: UndoRedoItem[];
+    redoStack?: UndoRedoItem[];
+}
+
+type FetchFileDetailsReturn = {
+    orderDetails: OrderDetails;
+    initialEditorData: EditorData;
+};
+
 const fetchFileDetails = async ({
     params,
     setOrderDetails,
@@ -401,7 +416,7 @@ const fetchFileDetails = async ({
     setStep,
     setCtms,
     setListenCount,
-}: FetchFileDetailsParams) => {
+}: FetchFileDetailsParams): Promise<FetchFileDetailsReturn | undefined> => {
     try {
         const orderRes = await getOrderDetailsAction(params?.fileId as string)
         if (!orderRes?.orderDetails) {
@@ -440,23 +455,29 @@ const fetchFileDetails = async ({
             `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.orderDetails.fileId}&step=${step}&orderId=${orderRes.orderDetails.orderId}` //step will be used later when cf editor is implemented
         )
 
-        const fileData = getEditorData(orderRes.orderDetails.fileId);
-        const transcript = fileData.transcript || transcriptRes.data.result.transcript;
-        persistEditorData(orderRes.orderDetails.fileId, { transcript });
+        // Retrieve editorData from IndexedDB once
+        const fileData = await getEditorDataIDB(orderRes.orderDetails.fileId)
+        const transcript = (fileData?.transcript || transcriptRes.data.result.transcript) as string;
+        await persistEditorDataIDB(orderRes.orderDetails.fileId, { transcript })
         setCtms(transcriptRes.data.result.ctms)
 
         const playStats = await getPlayStatsAction(params?.fileId as string)
 
-        if (fileData.listenCount) {
-            setListenCount(fileData.listenCount)
-        } else if (playStats.success && playStats.data?.listenCount) {
-            setListenCount(playStats.data.listenCount as number[])
+        if (fileData?.listenCount && Array.isArray(fileData.listenCount)) {
+            setListenCount(fileData.listenCount);
+        } else if (playStats.success && playStats.data?.listenCount && Array.isArray(playStats.data.listenCount)) {
+            setListenCount(playStats.data.listenCount as number[]);
         } else if (orderRes.orderDetails.duration) {
             const newListenCount = new Array(Math.ceil(Number(orderRes.orderDetails.duration))).fill(0);
-            setListenCount(newListenCount)
+            setListenCount(newListenCount);
         }
 
-        return orderRes.orderDetails
+        const initialEditorData: EditorData = {
+            ...fileData,
+            transcript,
+        }
+
+        return { orderDetails: orderDetailsFormatted, initialEditorData }
     } catch (error) {
         console.log(error)
         if (
@@ -469,9 +490,10 @@ const fetchFileDetails = async ({
         ) {
             toast.error('You are not authorized to access this file')
             window.location.href = '/'
-            return
+            return undefined;
         }
         toast.error('Failed to fetch file details')
+        return undefined;
     }
 }
 
@@ -505,15 +527,15 @@ const handleSave = async (
     const toastId = showToast ? toast.loading(`Saving Transcription...`) : null
 
     try {
-        const fileData = getEditorData(orderDetails.fileId);
-        if (!fileData.transcript) {
+        const fileData = await getEditorDataIDB(orderDetails.fileId);
+        if (!fileData || !fileData.transcript) {
             if (showToast) {
                 return toast.error('Transcript is empty');
             }
             return;
         }
         
-        const transcript = fileData.transcript;
+        const transcript = fileData.transcript as string;
         const paragraphs = transcript
             .split('\n')
             .filter((paragraph: string) => paragraph.trim() !== '')
@@ -553,7 +575,9 @@ const handleSave = async (
 
         await setPlayStatsAction({
             fileId: orderDetails.fileId,
-            listenCount: fileData.listenCount || listenCount,
+            listenCount: (fileData.listenCount && Array.isArray(fileData.listenCount))
+                ? fileData.listenCount
+                : listenCount,
             editedSegments: Array.from(editedSegments)
         })
 
@@ -1193,35 +1217,6 @@ const scrollEditorToPos = (quill: Quill, pos: number) => {
     }
 }
 
-interface EditorData {
-    transcript?: string;
-    notes?: string;
-    listenCount?: number[];
-    updatedAt?: number;
-    undoStack?: UndoRedoItem[];
-    redoStack?: UndoRedoItem[];
-}
-
-function getEditorData(fileId: string): EditorData {
-    const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
-    return editorData[fileId] || {};
-}
-
-function persistEditorData(fileId: string, data: Record<string, unknown>) {
-    const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
-    editorData[fileId] = {
-        ...(editorData[fileId] || {}),
-        ...data,
-        updatedAt: Date.now()
-    };
-    localStorage.setItem('editorData', JSON.stringify(editorData));
-}
-
-function getTranscriptFromStorage(fileId: string): string {
-    const editorData = getEditorData(fileId);
-    return editorData.transcript || '';
-}
-
 function getDiffHtml(oldText: string, newText: string): string {
     // Import the diff_match_patch utilities from your diff_match_patch module
     const dmp = new diff_match_patch();
@@ -1316,9 +1311,6 @@ export {
     insertTimestampBlankAtCursorPosition,
     insertTimestampAndSpeaker,
     autoCapitalizeSentences,
-    getEditorData,
-    persistEditorData,
-    getTranscriptFromStorage,
     getDiffHtml,
     getFormattedContent
 }

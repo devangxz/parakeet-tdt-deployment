@@ -5,7 +5,7 @@ import Editor from './Editor'
 import { TabsContent } from './Tabs'
 import { Textarea } from '../ui/textarea'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
-import { CTMType, CustomerQuillSelection } from '@/utils/editorUtils'
+import { CTMType, CustomerQuillSelection, EditorData } from '@/utils/editorUtils'
 
 interface EditorTabComponentProps {
   transcriptLoading: boolean
@@ -19,6 +19,7 @@ interface EditorTabComponentProps {
   searchHighlight: CustomerQuillSelection | null
   highlightWordsEnabled: boolean
   setEditedSegments: (segments: Set<number>) => void
+  initialEditorData: EditorData
 }
 
 export const EditorTabComponent = ({
@@ -33,6 +34,7 @@ export const EditorTabComponent = ({
   searchHighlight,
   highlightWordsEnabled,
   setEditedSegments,
+  initialEditorData,
 }: EditorTabComponentProps) => (
   <TabsContent
     className='h-full mt-0 overflow-hidden pb-[41px]'
@@ -57,6 +59,7 @@ export const EditorTabComponent = ({
             searchHighlight={searchHighlight}
             highlightWordsEnabled={highlightWordsEnabled}
             setEditedSegments={setEditedSegments}
+            initialEditorData={initialEditorData}
           />
         </div>
       )}

@@ -15,13 +15,13 @@ import {
   getFormattedContent,
   insertTimestampAndSpeaker,
   insertTimestampBlankAtCursorPosition,
-  persistEditorData,
-  getEditorData
+  EditorData
 } from '@/utils/editorUtils'
+import { persistEditorDataIDB } from '@/utils/indexedDB'
 import {
   createAlignments,
   getFormattedTranscript,
-  getAlignmentIndexByTime
+  getAlignmentIndexByTime,
 } from '@/utils/transcript'
 
 const TYPING_PAUSE = 500; // Half second pause indicates word completion
@@ -38,11 +38,12 @@ interface EditorProps {
     searchHighlight: CustomerQuillSelection | null
     highlightWordsEnabled: boolean;
     setEditedSegments: (segments: Set<number>) => void;
+    initialEditorData: EditorData;
 }
 
 type Sources = 'user' | 'api' | 'silent';
 
-export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, setEditedSegments }: EditorProps) {
+export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, orderDetails, setSelectionHandler, selection, searchHighlight, highlightWordsEnabled, setEditedSegments, initialEditorData }: EditorProps) {
     const ctms = initialCtms; // Make CTMs constant
     const quillRef = useRef<ReactQuill>(null)
     const [alignments, setAlignments] = useState<AlignmentType[]>([])
@@ -83,28 +84,27 @@ export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, or
         quill.container.style.fontSize = '16px'
     }, [])
 
+    // Initialize editor state from the initialEditorData prop
     const { 
         content: initialContent, 
         undoStack: initialUndoStack, 
         redoStack: initialRedoStack 
     } = useMemo(() => {
-        const editorData = getEditorData(orderDetails.fileId);
+        const editorData = initialEditorData || { transcript: '', undoStack: [], redoStack: [] };
         const transcript = editorData.transcript || '';
-
-        // Reconstruct Delta objects from stored data
-        const reconstructStack = (stack: UndoRedoItem[]) =>
-          stack.map(item => ({
-            ...item,
-            delta: new Delta(item.delta.ops),
-            oldDelta: new Delta(item.oldDelta.ops)
-          }));
-
+        // Reconstruct the undo/redo stacks if needed
+        const reconstructStack = (stack: UndoRedoItem[] = []): UndoRedoItem[] =>
+            stack.map(item => ({
+                ...item,
+                delta: new Delta(item.delta.ops),
+                oldDelta: new Delta(item.oldDelta.ops),
+            }));
         return { 
             content: getFormattedContent(transcript),
-            undoStack: editorData.undoStack ? reconstructStack(editorData.undoStack) : [],
-            redoStack: editorData.redoStack ? reconstructStack(editorData.redoStack) : []
+            undoStack: reconstructStack(editorData.undoStack),
+            redoStack: reconstructStack(editorData.redoStack),
         };
-    }, [orderDetails.fileId]);
+    }, [initialEditorData]);
 
     const [undoStack, setUndoStack] = useState<UndoRedoItem[]>(initialUndoStack);
     const [redoStack, setRedoStack] = useState<UndoRedoItem[]>(initialRedoStack);
@@ -318,7 +318,7 @@ export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, or
         setTypingTimer(
             setTimeout(() => {
                 const transcript = quill.getText();
-                persistEditorData(orderDetails.fileId, { transcript });
+                persistEditorDataIDB(orderDetails.fileId, { transcript });
                 setAlignmentWorkerRunning(true);
                 alignmentWorker.current?.postMessage({
                     newText: transcript,
@@ -655,7 +655,7 @@ export default function Editor({ ctms: initialCtms, audioPlayer, getQuillRef, or
 
     useEffect(() => {
         // Persist the undoStack and redoStack using persistEditorData
-        persistEditorData(orderDetails.fileId, { undoStack, redoStack });
+        persistEditorDataIDB(orderDetails.fileId, { undoStack, redoStack });
     }, [undoStack, redoStack, orderDetails.fileId]);
 
     useEffect(() => {
