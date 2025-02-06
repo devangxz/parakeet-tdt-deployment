@@ -2,6 +2,8 @@ import { Role, OrderType } from '@prisma/client'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { getAWSSesInstance } from '@/lib/ses'
+import { getTeamAdminUserDetails } from '@/utils/backend-helper'
 import isValidEmail from '@/utils/isValidEmail'
 
 interface GetCustomPlanDetailsParams {
@@ -25,6 +27,12 @@ interface UpdateCustomPlanParams {
     customFormattingOption: string
     customFormatDeadline: string
     orderType: OrderType
+    qcLowDifficultyRate: string
+    qcMediumDifficultyRate: string
+    qcHighDifficultyRate: string
+    cfReviewLowDifficultyRate: string
+    cfReviewMediumDifficultyRate: string
+    cfReviewHighDifficultyRate: string
   }
 }
 
@@ -131,7 +139,6 @@ export async function updateCustomPlan({
           audioTimeCoding: parseFloat(rates.audioTimeCodingRate),
           rushOrder: parseFloat(rates.rushOrderRate),
           customFormat: parseFloat(rates.customFormattingRate),
-          customFormatQcRate: parseFloat(rates.customFormattingTranscriberRate),
           customFormatReviewRate: parseFloat(rates.customFormattingReviewRate),
           customFormatMediumDifficultyReviewRate: parseFloat(
             rates.customFormattingMediumDifficultyReviewRate
@@ -140,6 +147,18 @@ export async function updateCustomPlan({
             rates.customFormattingHighDifficultyReviewRate
           ),
           customFormatOption: rates.customFormattingOption,
+          qcLowDifficultyRate: parseFloat(rates.qcLowDifficultyRate),
+          qcMediumDifficultyRate: parseFloat(rates.qcMediumDifficultyRate),
+          qcHighDifficultyRate: parseFloat(rates.qcHighDifficultyRate),
+          cfReviewLowDifficultyRate: parseFloat(
+            rates.cfReviewLowDifficultyRate
+          ),
+          cfReviewMediumDifficultyRate: parseFloat(
+            rates.cfReviewMediumDifficultyRate
+          ),
+          cfReviewHighDifficultyRate: parseFloat(
+            rates.cfReviewHighDifficultyRate
+          ),
           deadline: parseInt(rates.customFormatDeadline),
           orderType: rates.orderType,
           updatedAt: new Date(),
@@ -153,7 +172,6 @@ export async function updateCustomPlan({
           audioTimeCoding: parseFloat(rates.audioTimeCodingRate),
           rushOrder: parseFloat(rates.rushOrderRate),
           customFormat: parseFloat(rates.customFormattingRate),
-          customFormatQcRate: parseFloat(rates.customFormattingTranscriberRate),
           customFormatReviewRate: parseFloat(rates.customFormattingReviewRate),
           customFormatMediumDifficultyReviewRate: parseFloat(
             rates.customFormattingMediumDifficultyReviewRate
@@ -162,6 +180,18 @@ export async function updateCustomPlan({
             rates.customFormattingHighDifficultyReviewRate
           ),
           customFormatOption: rates.customFormattingOption,
+          qcLowDifficultyRate: parseFloat(rates.qcLowDifficultyRate),
+          qcMediumDifficultyRate: parseFloat(rates.qcMediumDifficultyRate),
+          qcHighDifficultyRate: parseFloat(rates.qcHighDifficultyRate),
+          cfReviewLowDifficultyRate: parseFloat(
+            rates.cfReviewLowDifficultyRate
+          ),
+          cfReviewMediumDifficultyRate: parseFloat(
+            rates.cfReviewMediumDifficultyRate
+          ),
+          cfReviewHighDifficultyRate: parseFloat(
+            rates.cfReviewHighDifficultyRate
+          ),
           deadline: parseInt(rates.customFormatDeadline),
           orderType: rates.orderType,
         },
@@ -174,6 +204,28 @@ export async function updateCustomPlan({
         },
       })
     })
+
+    let email = ''
+
+    const teamAdminUserDetails = await getTeamAdminUserDetails(user.id)
+
+    if (!teamAdminUserDetails) {
+      const userInformation = await prisma.user.findUnique({
+        where: { id: user.id },
+      })
+      email = userInformation?.email ?? ''
+    } else {
+      email = teamAdminUserDetails.email
+    }
+
+    const awsSes = getAWSSesInstance()
+    await awsSes.sendAlert(
+      `Custom Plan Updated`,
+      `${email} custom plan updated and the new rates are $${JSON.stringify(
+        rates
+      )}`,
+      'software'
+    )
 
     logger.info(`Successfully added custom plan details for user ${user.email}`)
     return {

@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
+import { getUserEditorSettingsAction } from '@/app/actions/editor/settings'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
@@ -36,9 +37,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { RenderPDFDocument } from '@/components/utils'
 import { AUTOSAVE_INTERVAL } from '@/constants'
 import usePreventMultipleTabs from '@/hooks/usePreventMultipleTabs'
+import { EditorSettings } from '@/types/editor'
 import {
   ShortcutControls,
   useShortcuts,
+  defaultShortcuts,
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   CTMType,
@@ -52,7 +55,7 @@ import {
   autoCapitalizeSentences,
   getDiffHtml,
   getFormattedContent,
-  EditorData
+  EditorData,
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
@@ -137,15 +140,31 @@ function EditorPage() {
   const [matchCount, setMatchCount] = useState(0)
   const [matchSelection, setMatchSelection] = useState(false)
   const findInputRef = useRef<HTMLInputElement>(null)
-  const [selection, setSelection] = useState<CustomerQuillSelection | null>(null)
-  const [searchHighlight, setSearchHighlight] = useState<{ index: number; length: number } | null>(null);
-  const [highlightWordsEnabled, setHighlightWordsEnabled] = useState(true);
+  const [selection, setSelection] = useState<CustomerQuillSelection | null>(
+    null
+  )
+  const [searchHighlight, setSearchHighlight] = useState<{
+    index: number
+    length: number
+  } | null>(null)
+  const [highlightWordsEnabled, setHighlightWordsEnabled] = useState(true)
+  const [fontSize, setFontSize] = useState(16)
   const lastTrackedSecondRef = useRef(-1)
   const [listenCount, setListenCount] = useState<number[]>([])
-  const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set());
+  const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set())
   const [waveformUrl, setWaveformUrl] = useState('')
   const [finalizerComment, setFinalizerComment] = useState('')
   const [initialEditorData, setInitialEditorData] = useState<EditorData | null>(null)
+  const [editorSettings, setEditorSettings] = useState<EditorSettings>({
+    wordHighlight: true,
+    fontSize: 16,
+    audioRewindSeconds: 2,
+    volume: 100,
+    playbackSpeed: 100,
+    useNativeContextMenu: false,
+    shortcuts: { ...defaultShortcuts },
+  })
+  const isWordPlayback = useRef(false)
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -328,7 +347,20 @@ function EditorPage() {
       },
     }
     return controls as ShortcutControls
-  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, findText, replaceText, matchCase, lastSearchIndex, listenCount, editedSegments])
+  }, [
+    getEditorText,
+    orderDetails,
+    notes,
+    step,
+    cfd,
+    setButtonLoading,
+    findText,
+    replaceText,
+    matchCase,
+    lastSearchIndex,
+    listenCount,
+    editedSegments,
+  ])
 
   useShortcuts(shortcutControls)
 
@@ -404,7 +436,10 @@ function EditorPage() {
   useEffect(() => {
     const fetchWaveform = async () => {
       try {
-        const res = await getSignedUrlAction(`${orderDetails.fileId}_wf.png`, 300)
+        const res = await getSignedUrlAction(
+          `${orderDetails.fileId}_wf.png`,
+          300
+        )
         if (res.success && res.signedUrl) {
           setWaveformUrl(res.signedUrl)
         }
@@ -436,7 +471,15 @@ function EditorPage() {
     }, 1000 * 60 * AUTOSAVE_INTERVAL)
 
     return () => clearInterval(interval)
-  }, [getEditorText, orderDetails, notes, step, cfd, listenCount, editedSegments])
+  }, [
+    getEditorText,
+    orderDetails,
+    notes,
+    step,
+    cfd,
+    listenCount,
+    editedSegments,
+  ])
 
   useEffect(() => {
     const handleTimeUpdate = () => {
@@ -448,7 +491,7 @@ function EditorPage() {
       if (currentSecond !== lastTrackedSecondRef.current) {
         lastTrackedSecondRef.current = currentSecond
 
-        setListenCount(prev => {
+        setListenCount((prev) => {
           const newListenCount = [...prev]
           const prevCount = newListenCount[currentSecond] || 0
           newListenCount[currentSecond] = prevCount + 1
@@ -465,7 +508,7 @@ function EditorPage() {
   }, [audioPlayer])
 
   const getPlayedPercentage = () => {
-    const playedSections = listenCount.filter(count => count > 0).length
+    const playedSections = listenCount.filter((count) => count > 0).length
     return Math.round((playedSections / listenCount.length) * 100)
   }
 
@@ -557,6 +600,36 @@ function EditorPage() {
     setMatchCount(countMatches(findText))
   }, [matchSelection, matchCase])
 
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await getUserEditorSettingsAction()
+        if (response.success && response.settings) {
+          const newSettings: EditorSettings = {
+            wordHighlight: response.settings.wordHighlight,
+            fontSize: response.settings.fontSize,
+            audioRewindSeconds: response.settings.audioRewindSeconds,
+            volume: response.settings.volume,
+            playbackSpeed: response.settings.playbackSpeed,
+            useNativeContextMenu: response.settings.useNativeContextMenu,
+            shortcuts: response.settings.shortcuts,
+          }
+
+          setEditorSettings(newSettings)
+          setHighlightWordsEnabled(newSettings.wordHighlight)
+        }
+      } catch (error) {
+        toast.error('Failed to load editor settings')
+      }
+    }
+
+    loadSettings()
+  }, [])
+
+  useEffect(() => {
+    setHighlightWordsEnabled(editorSettings.wordHighlight)
+  }, [editorSettings.wordHighlight])
+
   return (
     <div className='bg-secondary h-screen flex flex-col p-1 gap-y-1'>
       <Topbar
@@ -575,6 +648,8 @@ function EditorPage() {
         fileToUpload={fileToUpload}
         listenCount={listenCount}
         editedSegments={editedSegments}
+        editorSettings={editorSettings}
+        onSettingsChange={setEditorSettings}
       />
 
       <Header
@@ -582,18 +657,23 @@ function EditorPage() {
         quillRef={quillRef}
         orderDetails={orderDetails}
         toggleFindAndReplace={toggleFindAndReplace}
+        waveformUrl={waveformUrl}
         highlightWordsEnabled={highlightWordsEnabled}
         setHighlightWordsEnabled={setHighlightWordsEnabled}
-        waveformUrl={waveformUrl}
+        fontSize={fontSize}
+        setFontSize={setFontSize}
+        editorSettings={editorSettings}
+        isWordPlayback={isWordPlayback}
       />
 
       <div className='flex h-full overflow-hidden'>
         <div className='flex h-full flex-col items-center flex-1 overflow-hidden'>
           <div
-            className={`flex ${step !== 'QC' && editorMode === 'Editor'
-              ? 'justify-between'
-              : 'justify-center'
-              } w-full h-full`}
+            className={`flex ${
+              step !== 'QC' && editorMode === 'Editor'
+                ? 'justify-between'
+                : 'justify-center'
+            } w-full h-full`}
           >
             {step !== 'QC' && editorMode === 'Editor' && (
               <SectionSelector
@@ -603,10 +683,11 @@ function EditorPage() {
             )}
             <div className='flex w-full gap-x-1'>
               <div
-                className={`bg-white border border-customBorder ${step !== 'QC' && editorMode === 'Editor'
-                  ? 'rounded-r-md'
-                  : 'rounded-md'
-                  } w-[80%]`}
+                className={`bg-white border border-customBorder ${
+                  step !== 'QC' && editorMode === 'Editor'
+                    ? 'rounded-r-md'
+                    : 'rounded-md'
+                } w-[80%]`}
               >
                 {selectedSection === 'proceedings' && (
                   <Tabs
@@ -648,10 +729,13 @@ function EditorPage() {
                       selection={selection}
                       searchHighlight={searchHighlight}
                       highlightWordsEnabled={highlightWordsEnabled}
+                      setFontSize={setFontSize}
                       setEditedSegments={setEditedSegments}
                       initialEditorData={
                         initialEditorData || { transcript: '', undoStack: [], redoStack: [] }
                       }
+                      editorSettings={editorSettings}
+                      isWordPlayback={isWordPlayback}
                     />
 
                     <DiffTabComponent diff={diff} />
@@ -677,8 +761,9 @@ function EditorPage() {
               </div>
               <div className='w-[20%]'>
                 <div
-                  className={`flex flex-col h-full ${findAndReplaceOpen ? 'gap-y-1' : ''
-                    }`}
+                  className={`flex flex-col h-full ${
+                    findAndReplaceOpen ? 'gap-y-1' : ''
+                  }`}
                 >
                   {findAndReplaceOpen && (
                     <div className='bg-white border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out h-[50%]'>
@@ -773,8 +858,9 @@ function EditorPage() {
                   )}
 
                   <div
-                    className={`bg-white border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out ${findAndReplaceOpen ? 'h-[50%]' : 'h-full'
-                      }`}
+                    className={`bg-white border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out ${
+                      findAndReplaceOpen ? 'h-[50%]' : 'h-full'
+                    }`}
                   >
                     <div className='font-medium text-md border-b border-customBorder flex items-center p-2'>
                       Notes
@@ -810,16 +896,17 @@ function EditorPage() {
             }
           }}
         >
-          <DialogContent className="max-w-4xl">
+          <DialogContent className='max-w-4xl'>
             <DialogHeader>
               <DialogTitle>Submit</DialogTitle>
               <DialogDescription>
                 Please confirm that you want to submit the transcript
               </DialogDescription>
 
-              <div className="py-4">
-                <p className="text-sm text-gray-500 mb-2">
-                  Audio Playback Coverage: <span className="font-medium">{getPlayedPercentage()}%</span>
+              <div className='py-4'>
+                <p className='text-sm text-gray-500 mb-2'>
+                  Audio Playback Coverage:{' '}
+                  <span className='font-medium'>{getPlayedPercentage()}%</span>
                 </p>
                 <WaveformHeatmap
                   waveformUrl={waveformUrl}
@@ -829,17 +916,29 @@ function EditorPage() {
                 />
               </div>
 
-              {orderDetails.status === 'FINALIZER_ASSIGNED' && <div className='mt-4'>
-                <Label htmlFor='finalizer-comment' className="text-sm text-gray-500">
-                  Comments for CF reviewer:
-                </Label>
-                <div className='h-2' />
-                <Textarea value={finalizerComment} onChange={(e) => { setFinalizerComment(e.target.value) }} id='finalizer-comment' placeholder="Comments for CF reviewer..." />
-              </div>}
+              {orderDetails.status === 'FINALIZER_ASSIGNED' && (
+                <div className='mt-4'>
+                  <Label
+                    htmlFor='finalizer-comment'
+                    className='text-sm text-gray-500'
+                  >
+                    Comments for CF reviewer:
+                  </Label>
+                  <div className='h-2' />
+                  <Textarea
+                    value={finalizerComment}
+                    onChange={(e) => {
+                      setFinalizerComment(e.target.value)
+                    }}
+                    id='finalizer-comment'
+                    placeholder='Comments for CF reviewer...'
+                  />
+                </div>
+              )}
 
-              <div className="flex justify-end gap-2 mt-4">
+              <div className='flex justify-end gap-2 mt-4'>
                 <Button
-                  variant="outline"
+                  variant='outline'
                   onClick={() => {
                     setSubmitting(false)
                     setIsSubmitModalOpen(false)
@@ -860,7 +959,7 @@ function EditorPage() {
                       getPlayedPercentage,
                       router,
                       quill,
-                      finalizerComment
+                      finalizerComment,
                     })
                     setSubmitting(false)
                     setIsSubmitModalOpen(false)
@@ -868,7 +967,7 @@ function EditorPage() {
                   disabled={buttonLoading.submit}
                 >
                   {buttonLoading.submit && (
-                    <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
                   )}
                   Confirm
                 </Button>

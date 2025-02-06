@@ -143,7 +143,7 @@ export async function createUser(
 
     const newUser = await prisma.user.create({
       data: {
-        email,
+        email: email.toLowerCase(),
         pass: hashedPassword,
         salt,
         firstname,

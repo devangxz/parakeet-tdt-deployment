@@ -5,6 +5,7 @@ import Editor from './Editor'
 import { TabsContent } from './Tabs'
 import { Textarea } from '../ui/textarea'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
+import { EditorSettings } from '@/types/editor'
 import { CTMType, CustomerQuillSelection, EditorData } from '@/utils/editorUtils'
 
 interface EditorTabComponentProps {
@@ -18,8 +19,11 @@ interface EditorTabComponentProps {
   selection: CustomerQuillSelection | null
   searchHighlight: CustomerQuillSelection | null
   highlightWordsEnabled: boolean
+  setFontSize: (size: number) => void
   setEditedSegments: (segments: Set<number>) => void
   initialEditorData: EditorData
+  editorSettings: EditorSettings
+  isWordPlayback: React.MutableRefObject<boolean>
 }
 
 export const EditorTabComponent = ({
@@ -33,7 +37,10 @@ export const EditorTabComponent = ({
   selection,
   searchHighlight,
   highlightWordsEnabled,
+  setFontSize,
   setEditedSegments,
+  editorSettings,
+  isWordPlayback,
   initialEditorData,
 }: EditorTabComponentProps) => (
   <TabsContent
@@ -58,7 +65,10 @@ export const EditorTabComponent = ({
             selection={selection}
             searchHighlight={searchHighlight}
             highlightWordsEnabled={highlightWordsEnabled}
+            setFontSize={setFontSize}
             setEditedSegments={setEditedSegments}
+            editorSettings={editorSettings}
+            isWordPlayback={isWordPlayback}
             initialEditorData={initialEditorData}
           />
         </div>

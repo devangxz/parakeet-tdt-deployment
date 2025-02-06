@@ -27,6 +27,7 @@ interface File extends BaseTranscriberFile {
   qc_cost: number
   orgName: string
   testFile: boolean
+  containsMp4: boolean
 }
 
 interface Props {
@@ -105,6 +106,8 @@ export default function AvailableFilesPage({ changeTab }: Props) {
             instructions: order.instructions,
             orgName: order.orgName,
             testFile: order.isTestCustomer,
+            containsMp4:
+              order.File.fileKey?.split('.').pop().toLowerCase() === 'mp4',
           }
         })
         setAvailableFiles(orders ?? [])
@@ -168,7 +171,7 @@ export default function AvailableFilesPage({ changeTab }: Props) {
       ),
     },
     {
-      accessorKey: 'id',
+      accessorKey: 'fileId',
       header: 'Details',
       cell: ({ row }) => (
         <div>
@@ -260,9 +263,22 @@ export default function AvailableFilesPage({ changeTab }: Props) {
                 Test File
               </Badge>
             )}
+            {row.original.containsMp4 && (
+              <Badge
+                variant='outline'
+                className='font-semibold text-[10px] text-green-600'
+              >
+                Contains Video
+              </Badge>
+            )}
           </div>
         </div>
       ),
+    },
+    {
+      accessorKey: 'orgName',
+      header: 'Organization',
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
       accessorKey: 'duration',
@@ -280,7 +296,7 @@ export default function AvailableFilesPage({ changeTab }: Props) {
       ),
     },
     {
-      accessorKey: 'status',
+      accessorKey: 'timeString',
       header: 'Date',
       cell: ({ row }) => (
         <div>
@@ -341,6 +357,7 @@ export default function AvailableFilesPage({ changeTab }: Props) {
   return (
     <>
       <DataTable
+        showToolbar={true}
         data={availableFiles ?? []}
         columns={columns}
         renderRowSubComponent={({ row }: { row: any }) =>

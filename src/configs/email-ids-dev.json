@@ -4,6 +4,7 @@
   "$$ADMIN_EMAIL_ID$$": "test+support@scribie.com",
   "$$SUPPORT_EMAIL_ID$$": "Scribie Support <test+support@scribie.com>",
   "$$CONTACT_EMAIL_ID$$": "test+support@scribie.com",
+  "$$SUPPORT_EMAIL$$": "test+support@scribie.com",
 
   "$$ALERT_BE_EMAIL_ID$$": "test+support@scribie.com",
   "$$ALERT_EMAIL_ID$$": "test+support@scribie.com",
