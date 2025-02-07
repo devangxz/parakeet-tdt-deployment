@@ -11,6 +11,7 @@ import { unassignmentHandler } from './unassignmentHandler'
 import { determinePwerLevel } from './utils'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { getAssignedQCFiles } from '@/app/actions/qc/assigned-files'
+import { CancellationModal } from '@/components/cancellation-modal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -52,8 +53,25 @@ export default function AssignedFilesPage({ changeTab }: Props) {
   const [loadingFileOrder, setLoadingFileOrder] = useState<
     Record<string, boolean>
   >({})
+  const [showCancellationModal, setShowCancellationModal] = useState(false)
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
   const pathname = usePathname()
   const isLegalQCPage = pathname === '/transcribe/legal-qc'
+
+  const handleCancellation = (reason: string, comment: string) => {
+    if (selectedOrderId) {
+      unassignmentHandler({
+        id: selectedOrderId,
+        setLoadingFileOrder,
+        changeTab,
+        type: 'QC',
+        reason,
+        comment
+      })
+      setShowCancellationModal(false)
+      setSelectedOrderId(null)
+    }
+  }
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -359,10 +377,10 @@ export default function AssignedFilesPage({ changeTab }: Props) {
                       `/editor/${row.original.fileId}`,
                       '_blank',
                       'toolbar=no,location=no,menubar=no,width=' +
-                        window.screen.width +
-                        ',height=' +
-                        window.screen.height +
-                        ',left=0,top=0'
+                      window.screen.width +
+                      ',height=' +
+                      window.screen.height +
+                      ',left=0,top=0'
                     )
                   }
                 }}
@@ -378,14 +396,10 @@ export default function AssignedFilesPage({ changeTab }: Props) {
               ) : (
                 <DropdownMenuItem
                   className='text-destructive'
-                  onClick={() =>
-                    unassignmentHandler({
-                      id: row.original.orderId,
-                      setLoadingFileOrder,
-                      changeTab,
-                      type: 'QC',
-                    })
-                  }
+                  onClick={() => {
+                    setSelectedOrderId(row.original.orderId)
+                    setShowCancellationModal(true)
+                  }}
                 >
                   Cancel
                 </DropdownMenuItem>
@@ -410,6 +424,14 @@ export default function AssignedFilesPage({ changeTab }: Props) {
             </div>
           ) : null
         }
+      />
+      <CancellationModal
+        isOpen={showCancellationModal}
+        onClose={() => {
+          setShowCancellationModal(false)
+          setSelectedOrderId(null)
+        }}
+        onConfirm={handleCancellation}
       />
     </>
   )
