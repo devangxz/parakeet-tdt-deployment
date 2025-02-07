@@ -43,7 +43,7 @@ const calculateTranscriberCost = async (order: any, transcriberId: number) => {
     }
   } else if (cfReviewStatuses.includes(order.status)) {
     rate = iCQC.isICQC
-      ? iCQC.cfRRate
+      ? iCQC.cfRate
       : userRates
       ? pwerLevel === 'high'
         ? userRates.cfReviewHighDifficultyRate

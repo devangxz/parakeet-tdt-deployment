@@ -27,6 +27,7 @@ import { applyDiscount } from '@/app/actions/payment/apply-discount'
 import { checkout } from '@/app/actions/payment/checkout'
 import { checkoutViaCredits } from '@/app/actions/payment/checkout-via-credits'
 import { getClientTokenAction } from '@/app/actions/payment/client-token'
+import { saveDefaultInstructions } from '@/app/actions/user/default-instructions'
 import BillBreakdownDialog from '@/components/bill-breakdown'
 import { Icons } from '@/components/icons'
 import { Button } from '@/components/ui/button'
@@ -176,6 +177,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
     useState<boolean>(false)
   const [spellingCollapsible, setSpellingCollapsible] = useState<boolean>(false)
   const [billingEnabled, setBillingEnabled] = useState<boolean>(false)
+  const [loadingInstructions, setLoadingInstructions] = useState(false)
 
   useEffect(() => {
     const fetchOrderInformation = async () => {
@@ -506,6 +508,25 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
       setPaymentSuccess,
       setLoadingPay
     )
+  }
+
+  async function handleDefaultInstruction() {
+    setLoadingInstructions(true)
+    try {
+      const response = await saveDefaultInstructions(instructions.instructions)
+      if (response.success) {
+        const successToastId = toast.success(
+          'Successfully saved as default instructions'
+        )
+        toast.dismiss(successToastId)
+      } else {
+        toast.error(`Error updating default instructions`)
+      }
+    } catch (error) {
+      toast.error(`Error updating default instructions`)
+    } finally {
+      setLoadingInstructions(false)
+    }
   }
 
   useEffect(() => {
@@ -1144,13 +1165,33 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
               className='w-[170px] border-primary border-2 text-primary rounded-[32px] transition-all duration-200 hover:opacity-90'
               variant='outline'
               onClick={
-                activeStep === 1
-                  ? () => router.push('/files/upload')
-                  : prevStep
+                activeStep === 1 ? () => router.push('/files/upload') : prevStep
               }
             >
               {activeStep === 1 ? 'Back to Dashboard' : 'Back'}
             </Button>
+            {activeStep === 2 && (
+              <>
+                {loadingInstructions ? (
+                  <Button
+                    disabled
+                    variant='outline'
+                    className='w-[170px] border-primary border-2 text-primary '
+                  >
+                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                    Save
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => handleDefaultInstruction()}
+                    variant='outline'
+                    className='w-[170px] border-primary border-2 text-primary '
+                  >
+                    Save As Default
+                  </Button>
+                )}
+              </>
+            )}
             {loadingPay ? (
               <Button disabled className='w-[170px]'>
                 Please wait
