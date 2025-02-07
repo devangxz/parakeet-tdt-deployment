@@ -7,6 +7,16 @@ import prisma from '@/lib/prisma'
 import calculateFileCost from '@/utils/calculateFileCost'
 import getOrgName from '@/utils/getOrgName'
 
+const getSpecialInstructions = async (userId: number) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+  })
+
+  return user?.splInstructions ?? ''
+}
+
 export async function fetchPendingOrders() {
   try {
     const pendingOrders = await prisma.order.findMany({
@@ -33,7 +43,8 @@ export async function fetchPendingOrders() {
       pendingOrders.map(async (order) => {
         const fileCost = await calculateFileCost(order)
         const orgName = await getOrgName(order.userId)
-        return { ...order, fileCost, orgName }
+        const specialInstructions = await getSpecialInstructions(order.userId)
+        return { ...order, fileCost, orgName, specialInstructions }
       })
     )
 
