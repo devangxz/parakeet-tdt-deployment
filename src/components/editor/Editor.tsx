@@ -1,13 +1,28 @@
 'use client'
 
 import debounce from 'lodash/debounce'
+import { Search, Play, Book } from 'lucide-react'
 import { Delta } from 'quill/core'
-import React, { useRef, useEffect, useCallback, useMemo, useState, useImperativeHandle, forwardRef } from 'react'
+import React, {
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+  useState,
+  useImperativeHandle,
+  forwardRef,
+} from 'react'
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 
 import { OrderDetails } from '@/app/editor/[fileId]/page'
-import { EditorSettings, CTMType, AlignmentType, UndoRedoItem, Range } from '@/types/editor'
+import {
+  EditorSettings,
+  CTMType,
+  AlignmentType,
+  UndoRedoItem,
+  Range,
+} from '@/types/editor'
 import {
   ShortcutControls,
   useShortcuts,
@@ -17,7 +32,7 @@ import {
   getFormattedContent,
   insertTimestampAndSpeaker,
   insertTimestampBlankAtCursorPosition,
-  EditorData
+  EditorData,
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB } from '@/utils/indexedDB'
 import {
@@ -26,8 +41,8 @@ import {
   getAlignmentIndexByTime,
 } from '@/utils/transcript'
 
-const TYPING_PAUSE = 500; // Half second pause indicates word completion
-const STACK_LIMIT = 100;
+const TYPING_PAUSE = 500 // Half second pause indicates word completion
+const STACK_LIMIT = 100
 
 interface EditorProps {
   ctms: CTMType[]
@@ -42,16 +57,16 @@ interface EditorProps {
   setEditedSegments: (segments: Set<number>) => void
   editorSettings: EditorSettings
   setFontSize: (size: number) => void
-  initialEditorData: EditorData; 
+  initialEditorData: EditorData
 }
 
 type Sources = 'user' | 'api' | 'silent'
 
 // Export an interface for the methods exposed by Editor
 export interface EditorHandle {
-  triggerAlignmentUpdate: () => void;
-  clearAllHighlights: () => void;
-  scrollToCurrentWord: () => void;
+  triggerAlignmentUpdate: () => void
+  clearAllHighlights: () => void
+  scrollToCurrentWord: () => void
 }
 
 // Wrap the component in forwardRef so the parent can call exposed methods
@@ -68,7 +83,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     setEditedSegments,
     editorSettings,
     setFontSize,
-    initialEditorData
+    initialEditorData,
   } = props
 
   const ctms = initialCtms // Make CTMs constant
@@ -82,7 +97,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
   const [currentSelection, setCurrentSelection] = useState<Range | null>(null)
   const [isTyping, setIsTyping] = useState(false)
   const [alignmentWorkerRunning, setAlignmentWorkerRunning] = useState(false)
-  const [isEditorFocused, setIsEditorFocused] = useState(false);
+  const [isEditorFocused, setIsEditorFocused] = useState(false)
   const [showCustomContextMenu, setShowCustomContextMenu] = useState<boolean>(
     !editorSettings.useNativeContextMenu
   )
@@ -124,29 +139,33 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
   }, [])
 
   // Initialize editor state from the initialEditorData prop
-  const { 
-    content: initialContent, 
-    undoStack: initialUndoStack, 
-    redoStack: initialRedoStack 
+  const {
+    content: initialContent,
+    undoStack: initialUndoStack,
+    redoStack: initialRedoStack,
   } = useMemo(() => {
-    const editorData = initialEditorData || { transcript: '', undoStack: [], redoStack: [] };
-    const transcript = editorData.transcript || '';
+    const editorData = initialEditorData || {
+      transcript: '',
+      undoStack: [],
+      redoStack: [],
+    }
+    const transcript = editorData.transcript || ''
     // Reconstruct the undo/redo stacks if needed
     const reconstructStack = (stack: UndoRedoItem[] = []): UndoRedoItem[] =>
-      stack.map(item => ({
+      stack.map((item) => ({
         ...item,
         delta: new Delta(item.delta.ops),
         oldDelta: new Delta(item.oldDelta.ops),
-      }));
-    return { 
+      }))
+    return {
       content: getFormattedContent(transcript),
       undoStack: reconstructStack(editorData.undoStack),
       redoStack: reconstructStack(editorData.redoStack),
-    };
-  }, [initialEditorData]);
+    }
+  }, [initialEditorData])
 
-  const [undoStack, setUndoStack] = useState<UndoRedoItem[]>(initialUndoStack);
-  const [redoStack, setRedoStack] = useState<UndoRedoItem[]>(initialRedoStack);
+  const [undoStack, setUndoStack] = useState<UndoRedoItem[]>(initialUndoStack)
+  const [redoStack, setRedoStack] = useState<UndoRedoItem[]>(initialRedoStack)
 
   const handleEditorClick = useCallback(() => {
     const quill = quillRef.current?.getEditor()
@@ -377,7 +396,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
   const scheduleAlignmentUpdate = useCallback(() => {
     const quill = quillRef.current?.getEditor()
     if (!quill) return
-  
+
     if (typingTimer) clearTimeout(typingTimer)
     setTypingTimer(
       setTimeout(() => {
@@ -410,18 +429,18 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
 
   // Create a function to clear any word and line highlights
   const clearAllHighlights = useCallback(() => {
-    const quill = quillRef.current?.getEditor();
-    if (!quill) return;
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
     // Clear background highlights on all text
-    quill.formatText(0, quill.getLength(), { background: null });
+    quill.formatText(0, quill.getLength(), { background: null })
     // Remove any custom "line-highlight" classes from the editor
-    const editorRoot = quill.root;
+    const editorRoot = quill.root
     editorRoot.querySelectorAll('.line-highlight').forEach((el) => {
-      (el as HTMLElement).classList.remove('line-highlight');
-    });
+      ;(el as HTMLElement).classList.remove('line-highlight')
+    })
     // Reset any stored last highlight
-    lastHighlightedRef.current = null;
-  }, [quillRef]);
+    lastHighlightedRef.current = null
+  }, [quillRef])
 
   useEffect(() => {
     try {
@@ -487,10 +506,10 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
         delta: new Delta(delta.ops),
         oldDelta: new Delta(oldDelta.ops),
         beforeSelection: beforeSelectionRef.current,
-        afterSelection: quill.getSelection()
+        afterSelection: quill.getSelection(),
       }
 
-      setUndoStack(prev => {
+      setUndoStack((prev) => {
         const newStack = [...prev]
         if (newStack.length >= STACK_LIMIT) newStack.shift()
         newStack.push(newItem)
@@ -508,107 +527,124 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     }
   }, [alignments, ctms, typingTimer, scheduleAlignmentUpdate])
   useEffect(() => {
-    const originalExecCommand = document.execCommand;
-    document.execCommand = function(command, ...args) {
+    const originalExecCommand = document.execCommand
+    document.execCommand = function (command, ...args) {
       if (command === 'undo' || command === 'redo') {
-        return false;
+        return false
       }
-      return originalExecCommand.call(this, command, ...args);
-    };
- 
-    const quill = quillRef.current?.getEditor();
-    if (!quill) return;
- 
-    const editorRoot = quill.root;
+      return originalExecCommand.call(this, command, ...args)
+    }
+
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
+
+    const editorRoot = quill.root
     const handleBeforeInput = (e: InputEvent) => {
-      if (isEditorFocused && (e.inputType === 'historyUndo' || e.inputType === 'historyRedo')) {
-        e.preventDefault();
+      if (
+        isEditorFocused &&
+        (e.inputType === 'historyUndo' || e.inputType === 'historyRedo')
+      ) {
+        e.preventDefault()
       }
-    };
- 
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isEditorFocused) return;
+      if (!isEditorFocused) return
 
       // Undo
       if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        setIsTyping(true);  
-        clearLastHighlight(); 
-     
-        if (undoStack.length === 0) return;
-        const item = undoStack[undoStack.length - 1];
-        setUndoStack(prev => prev.slice(0, -1));
- 
-        // Invert based on the old doc state
-        const revertDelta = item.delta.invert(item.oldDelta);
-        quill.updateContents(revertDelta);
- 
-        setRedoStack(prev => {
-          const newStack = [...prev];
-          if (newStack.length >= STACK_LIMIT) newStack.shift();
-          newStack.push(item);
-          return newStack;
-        });
- 
-        if (item.beforeSelection) {
-          quill.setSelection(item.beforeSelection.index, item.beforeSelection.length);
-        }
- 
-        scheduleAlignmentUpdate();
-      }
- 
-      // Redo
-      if (((e.metaKey || e.ctrlKey) && e.key === 'y') || 
-          ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z')) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        setIsTyping(true);      
-        clearLastHighlight(); 
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        setIsTyping(true)
+        clearLastHighlight()
 
-        if (redoStack.length === 0) return;
-        const item = redoStack[redoStack.length - 1];
-        setRedoStack(prev => prev.slice(0, -1));
- 
-        // Reapply original delta
-        quill.updateContents(item.delta);
- 
-        setUndoStack(prev => {
-          const newStack = [...prev];
-          if (newStack.length >= STACK_LIMIT) newStack.shift();
-          newStack.push(item);
-          return newStack;
-        });
- 
-        if (item.afterSelection) {
-          quill.setSelection(item.afterSelection.index, item.afterSelection.length);
+        if (undoStack.length === 0) return
+        const item = undoStack[undoStack.length - 1]
+        setUndoStack((prev) => prev.slice(0, -1))
+
+        // Invert based on the old doc state
+        const revertDelta = item.delta.invert(item.oldDelta)
+        quill.updateContents(revertDelta)
+
+        setRedoStack((prev) => {
+          const newStack = [...prev]
+          if (newStack.length >= STACK_LIMIT) newStack.shift()
+          newStack.push(item)
+          return newStack
+        })
+
+        if (item.beforeSelection) {
+          quill.setSelection(
+            item.beforeSelection.index,
+            item.beforeSelection.length
+          )
         }
- 
-        scheduleAlignmentUpdate();
+
+        scheduleAlignmentUpdate()
+      }
+
+      // Redo
+      if (
+        ((e.metaKey || e.ctrlKey) && e.key === 'y') ||
+        ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z')
+      ) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        setIsTyping(true)
+        clearLastHighlight()
+
+        if (redoStack.length === 0) return
+        const item = redoStack[redoStack.length - 1]
+        setRedoStack((prev) => prev.slice(0, -1))
+
+        // Reapply original delta
+        quill.updateContents(item.delta)
+
+        setUndoStack((prev) => {
+          const newStack = [...prev]
+          if (newStack.length >= STACK_LIMIT) newStack.shift()
+          newStack.push(item)
+          return newStack
+        })
+
+        if (item.afterSelection) {
+          quill.setSelection(
+            item.afterSelection.index,
+            item.afterSelection.length
+          )
+        }
+
+        scheduleAlignmentUpdate()
       }
 
       // If the Enter key is pressed, clear any line highlight
       if (e.key === 'Enter') {
         if (prevLineNodeRef.current) {
-          prevLineNodeRef.current.classList.remove("line-highlight");
-          prevLineNodeRef.current = null;
+          prevLineNodeRef.current.classList.remove('line-highlight')
+          prevLineNodeRef.current = null
         }
       }
 
       if (quill) {
-        beforeSelectionRef.current = quill.getSelection();
+        beforeSelectionRef.current = quill.getSelection()
       }
-    };
- 
-    document.addEventListener('keydown', handleKeyDown, true);
-    editorRoot.addEventListener('beforeinput', handleBeforeInput, true);
- 
+    }
+
+    document.addEventListener('keydown', handleKeyDown, true)
+    editorRoot.addEventListener('beforeinput', handleBeforeInput, true)
+
     return () => {
-      document.execCommand = originalExecCommand;
-      document.removeEventListener('keydown', handleKeyDown, true);
-      editorRoot.removeEventListener('beforeinput', handleBeforeInput, true);
-    };
-  }, [undoStack, redoStack, scheduleAlignmentUpdate, clearLastHighlight, isEditorFocused]);
+      document.execCommand = originalExecCommand
+      document.removeEventListener('keydown', handleKeyDown, true)
+      editorRoot.removeEventListener('beforeinput', handleBeforeInput, true)
+    }
+  }, [
+    undoStack,
+    redoStack,
+    scheduleAlignmentUpdate,
+    clearLastHighlight,
+    isEditorFocused,
+  ])
 
   useEffect(() => {
     if (!highlightWordsEnabled) {
@@ -619,7 +655,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
 
   const timeUpdateHandler = useCallback(
     debounce(() => {
-      const quill = quillRef.current?.getEditor();
+      const quill = quillRef.current?.getEditor()
       if (
         !quill ||
         !highlightWordsEnabled ||
@@ -627,42 +663,42 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
         !audioPlayer ||
         alignmentWorkerRunning
       )
-        return;
+        return
 
-      const currentTime = audioPlayer.currentTime;
+      const currentTime = audioPlayer.currentTime
       const currentWordIndex = getAlignmentIndexByTime(
         alignments,
         currentTime,
         lastHighlightedRef.current
-      );
+      )
 
-      if (currentWordIndex === lastHighlightedRef.current) return;
+      if (currentWordIndex === lastHighlightedRef.current) return
 
-      clearLastHighlight();
+      clearLastHighlight()
 
-      const newAl = alignments[currentWordIndex];
+      const newAl = alignments[currentWordIndex]
       if (newAl?.startPos !== undefined && newAl?.endPos !== undefined) {
         // Highlight the new word
         quill.formatText(newAl.startPos, newAl.endPos - newAl.startPos, {
           background: 'yellow',
-        });
+        })
 
         if (!isTyping) {
-          lastHighlightedRef.current = currentWordIndex;
+          lastHighlightedRef.current = currentWordIndex
         }
       }
     }, 100),
     [alignments, highlightWordsEnabled, isTyping, clearLastHighlight]
-  );
+  )
 
   useEffect(() => {
-    if (!audioPlayer) return;
-    audioPlayer.addEventListener('timeupdate', timeUpdateHandler);
+    if (!audioPlayer) return
+    audioPlayer.addEventListener('timeupdate', timeUpdateHandler)
     return () => {
-      timeUpdateHandler.cancel();
-      audioPlayer.removeEventListener('timeupdate', timeUpdateHandler);
+      timeUpdateHandler.cancel()
+      audioPlayer.removeEventListener('timeupdate', timeUpdateHandler)
     }
-  }, [timeUpdateHandler, audioPlayer]);
+  }, [timeUpdateHandler, audioPlayer])
 
   useEffect(() => {
     initEditor()
@@ -675,31 +711,31 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       setTimeout(() => {
         handleCursorMove()
         setIsEditorFocused(true)
-      }, 0)        
+      }, 0)
     }
-  }, []);    
+  }, [])
 
   // Create initial alignments once when component loads
   useEffect(() => {
-    if (!ctms.length) return;
+    if (!ctms.length) return
 
-    const quill = quillRef.current?.getEditor();
-    if (!quill) return;
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
 
     // Create initial alignments from transcript
-    const originalTranscript = getFormattedTranscript(ctms);
-    const newAlignments = createAlignments(originalTranscript, ctms);
-    setAlignments(newAlignments);
+    const originalTranscript = getFormattedTranscript(ctms)
+    const newAlignments = createAlignments(originalTranscript, ctms)
+    setAlignments(newAlignments)
 
     // Process current text differences if any exist
-    const currentText = quill.getText();
-    if (!currentText) return;
+    const currentText = quill.getText()
+    if (!currentText) return
 
     alignmentWorker.current?.postMessage({
       newText: currentText,
       currentAlignments: newAlignments,
-      ctms
-    });
+      ctms,
+    })
   }, [ctms])
 
   useEffect(() => {
@@ -724,9 +760,9 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
   }, [quillRef])
 
   useEffect(() => {
-      // Persist the undoStack and redoStack using persistEditorData
-      persistEditorDataIDB(orderDetails.fileId, { undoStack, redoStack });
-  }, [undoStack, redoStack, orderDetails.fileId]);
+    // Persist the undoStack and redoStack using persistEditorData
+    persistEditorDataIDB(orderDetails.fileId, { undoStack, redoStack })
+  }, [undoStack, redoStack, orderDetails.fileId])
 
   const handleContextMenuSelect = useCallback(
     (action: string) => {
@@ -763,17 +799,20 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       if (!textPosition) return
 
       const text = quill.getText()
-      let wordStart = textPosition.index
-      let wordEnd = textPosition.index
 
-      while (wordStart > 0 && !/\s/.test(text[wordStart - 1])) {
-        wordStart--
-      }
-      while (wordEnd < text.length && !/\s/.test(text[wordEnd])) {
-        wordEnd++
-      }
+      if (textPosition.length === 0) {
+        let wordStart = textPosition.index
+        let wordEnd = textPosition.index
 
-      quill.setSelection(wordStart, wordEnd - wordStart)
+        while (wordStart > 0 && !/\s/.test(text[wordStart - 1])) {
+          wordStart--
+        }
+        while (wordEnd < text.length && !/\s/.test(text[wordEnd])) {
+          wordEnd++
+        }
+
+        quill.setSelection(wordStart, wordEnd - wordStart)
+      }
 
       const shouldShowCustomMenu = editorSettings.useNativeContextMenu
         ? e.altKey
@@ -808,7 +847,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     document.addEventListener('click', handleClickOutside)
     return () => document.removeEventListener('click', handleClickOutside)
   }, [showCustomContextMenu])
-  
+
   useEffect(() => {
     const editor = quillRef.current?.getEditor()?.root
     if (!editor) return
@@ -842,11 +881,11 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     // Only apply highlight to selected text
     if (selection.length > 0) {
       quill.formatText(selection.index, selection.length, {
-        background: '#D9D9D9'
+        background: '#D9D9D9',
       })
     }
 
-    setIsEditorFocused(false);
+    setIsEditorFocused(false)
   }
 
   // Update handleFocus to preserve line highlight
@@ -864,7 +903,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     // Remove search highlight if exists
     if (searchHighlight) {
       quill.formatText(searchHighlight.index, searchHighlight.length, {
-        background: null
+        background: null,
       })
     }
 
@@ -881,12 +920,12 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     // If the user is highlighting text, you may want to bail out:
     if (selection.length > 0) return
 
-    const [line] = quill.getLine(selection.index);
-    if (!line) return;
+    const [line] = quill.getLine(selection.index)
+    if (!line) return
 
     // Get the text content of the line
-    const lineText = line.domNode.textContent;
-    if (!lineText?.trim()) return; // Skip empty lines
+    const lineText = line.domNode.textContent
+    if (!lineText?.trim()) return // Skip empty lines
 
     // If still in the same line as before, skip
     const currentLineDomNode = line.domNode as HTMLElement
@@ -917,25 +956,29 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     triggerAlignmentUpdate: updateAlignments,
     clearAllHighlights: clearAllHighlights,
     scrollToCurrentWord: () => {
-      const quill = quillRef.current?.getEditor();
-      if (!quill || !audioPlayer) return;
-      const currentTime = audioPlayer.currentTime;
+      const quill = quillRef.current?.getEditor()
+      if (!quill || !audioPlayer) return
+      const currentTime = audioPlayer.currentTime
       const currentWordIndex = getAlignmentIndexByTime(
         alignments,
         currentTime,
         lastHighlightedRef.current
-      );
-      if (currentWordIndex === null || currentWordIndex === undefined) return;
-      const newAl = alignments[currentWordIndex];
+      )
+      if (currentWordIndex === null || currentWordIndex === undefined) return
+      const newAl = alignments[currentWordIndex]
       if (newAl?.startPos !== undefined && newAl?.endPos !== undefined) {
         // Scroll the highlighted word into view
-        const bounds = quill.getBounds(newAl.startPos, newAl.endPos - newAl.startPos);
-        if (!bounds) return;
-        const editorEl = quill.root;
-        const targetScrollTop = bounds.top + editorEl.scrollTop - editorEl.clientHeight / 2;
-        editorEl.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+        const bounds = quill.getBounds(
+          newAl.startPos,
+          newAl.endPos - newAl.startPos
+        )
+        if (!bounds) return
+        const editorEl = quill.root
+        const targetScrollTop =
+          bounds.top + editorEl.scrollTop - editorEl.clientHeight / 2
+        editorEl.scrollTo({ top: targetScrollTop, behavior: 'smooth' })
       }
-    }
+    },
   }))
 
   return (
@@ -954,41 +997,58 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
 
       {showCustomContextMenu && menuPosition && (
         <div
-          className='fixed z-50 max-w-fit flex flex-col bg-white shadow-lg rounded-md border border-gray-200'
+          className='fixed z-50 w-fit bg-white rounded-md shadow-lg border border-customBorder backdrop-blur-sm bg-opacity-95'
           style={{
             left: menuPosition.x,
             top: menuPosition.y,
           }}
         >
           <button
-            className='px-4 py-2 text-left hover:bg-secondary'
+            className='flex items-center w-full p-2.5 text-sm text-gray-700 hover:bg-secondary group transition-colors duration-150 ease-in-out'
             onClick={() => {
               handleContextMenuSelect('play-word')
               setShowCustomContextMenu(false)
               setMenuPosition(null)
             }}
           >
-            Play Word
+            <span className='flex items-center justify-center w-5 h-5 mr-2'>
+              <Play className='w-4 h-4 group-hover:text-primary transition-colors duration-150' />
+            </span>
+            <span className='group-hover:text-primary transition-colors duration-150 font-medium'>
+              Play Word
+            </span>
           </button>
+
           <button
-            className='px-4 py-2 text-left hover:bg-secondary'
+            className='flex items-center w-full p-2.5 text-sm text-gray-700 hover:bg-secondary group transition-colors duration-150 ease-in-out'
             onClick={() => {
               handleContextMenuSelect('google')
               setShowCustomContextMenu(false)
               setMenuPosition(null)
             }}
           >
-            Google Search
+            <span className='flex items-center justify-center w-5 h-5 mr-2'>
+              <Search className='w-4 h-4 group-hover:text-primary transition-colors duration-150' />
+            </span>
+            <span className='group-hover:text-primary transition-colors duration-150 font-medium'>
+              Google Search
+            </span>
           </button>
+
           <button
-            className='px-4 py-2 text-left hover:bg-secondary'
+            className='flex items-center w-full p-2.5 text-sm text-gray-700 hover:bg-secondary group transition-colors duration-150 ease-in-out'
             onClick={() => {
               handleContextMenuSelect('define')
               setShowCustomContextMenu(false)
               setMenuPosition(null)
             }}
           >
-            Define Word
+            <span className='flex items-center justify-center w-5 h-5 mr-2'>
+              <Book className='w-4 h-4 group-hover:text-primary transition-colors duration-150' />
+            </span>
+            <span className='group-hover:text-primary transition-colors duration-150 font-medium'>
+              Define Word
+            </span>
           </button>
         </div>
       )}
