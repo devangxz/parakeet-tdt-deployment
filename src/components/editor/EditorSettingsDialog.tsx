@@ -216,7 +216,7 @@ export default function EditorSettingsDialog({
             <SettingItem
               icon={Volume2}
               title='Volume'
-              description='Set the volume level for audio playback (can go up to 500%)'
+              description='Set the volume level for audio playback'
             >
               <NumberControl
                 value={localSettings.volume}

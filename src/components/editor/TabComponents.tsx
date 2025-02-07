@@ -24,7 +24,6 @@ interface EditorTabComponentProps {
   setFontSize: (size: number) => void
   setEditedSegments: (segments: Set<number>) => void
   editorSettings: EditorSettings
-  isWordPlayback: React.MutableRefObject<boolean>
   initialEditorData: EditorData
   editorRef?: React.Ref<EditorHandle>
 }
@@ -43,7 +42,6 @@ export const EditorTabComponent = ({
   setFontSize,
   setEditedSegments,
   editorSettings,
-  isWordPlayback,
   initialEditorData,
   editorRef,
 }: EditorTabComponentProps) => (
@@ -73,7 +71,6 @@ export const EditorTabComponent = ({
             setFontSize={setFontSize}
             setEditedSegments={setEditedSegments}
             editorSettings={editorSettings}
-            isWordPlayback={isWordPlayback}
             initialEditorData={initialEditorData}
           />
         </div>

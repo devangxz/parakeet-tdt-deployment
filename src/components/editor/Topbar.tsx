@@ -133,15 +133,7 @@ export default memo(function Topbar({
   const [notesOpen, setNotesOpen] = useState(true)
   const [shortcuts, setShortcuts] = useState<
     { key: string; shortcut: string }[]
-  >(
-    Object.entries({
-      ...defaultShortcuts,
-      ...editorSettings.shortcuts,
-    }).map(([key, shortcut]) => ({
-      key,
-      shortcut,
-    }))
-  )
+  >([])
   const [position, setPosition] = useState({ x: 100, y: 100 })
   const [videoPlayerOpen, setVideoPlayerOpen] = useState(false)
   const [revertTranscriptOpen, setRevertTranscriptOpen] = useState(false)
@@ -279,6 +271,18 @@ export default memo(function Topbar({
       getFormattingOptions()
     }
   }, [orderDetails.orderId])
+
+  useEffect(() => {
+    setShortcuts(
+      Object.entries({
+        ...defaultShortcuts,
+        ...editorSettings.shortcuts,
+      }).map(([key, shortcut]) => ({
+        key,
+        shortcut,
+      }))
+    )
+  }, [editorSettings.shortcuts])
 
   const updateShortcut = async (
     action: keyof DefaultShortcuts,
@@ -608,14 +612,18 @@ export default memo(function Topbar({
 
     try {
       const tokenRes = await fileCacheTokenAction()
-      await axios.post(`${FILE_CACHE_URL}/revert-transcript`, {
-        fileId: orderDetails.fileId,
-        type,
-      }, {
-        headers: {
-          'Authorization': `Bearer ${tokenRes.token}`
+      await axios.post(
+        `${FILE_CACHE_URL}/revert-transcript`,
+        {
+          fileId: orderDetails.fileId,
+          type,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${tokenRes.token}`,
+          },
         }
-      })
+      )
       toast.success('Transcript reverted successfully')
       localStorage.removeItem('transcript')
       window.location.reload()
@@ -758,8 +766,9 @@ export default memo(function Topbar({
 
         {orderDetails.status === 'QC_ASSIGNED' && (
           <span
-            className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
-              }`}
+            className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${
+              orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
+            }`}
           >
             {timeoutCount}
           </span>
@@ -851,13 +860,13 @@ export default memo(function Topbar({
             {!['CUSTOMER', 'OM', 'ADMIN'].includes(
               session?.user?.role ?? ''
             ) && (
-                <Button
-                  onClick={() => setSubmitting(true)}
-                  className='format-button border-r-[1.5px] border-white/70'
-                >
-                  Submit
-                </Button>
-              )}
+              <Button
+                onClick={() => setSubmitting(true)}
+                className='format-button border-r-[1.5px] border-white/70'
+              >
+                Submit
+              </Button>
+            )}
 
             <DropdownMenu
               modal={false}
@@ -865,12 +874,13 @@ export default memo(function Topbar({
             >
               <DropdownMenuTrigger className='focus-visible:ring-0 outline-none'>
                 <Button
-                  className={`${!['CUSTOMER', 'OM', 'ADMIN'].includes(
-                    session?.user?.role ?? ''
-                  )
-                    ? 'px-2 format-icon-button'
-                    : ''
-                    } focus-visible:ring-0 outline-none`}
+                  className={`${
+                    !['CUSTOMER', 'OM', 'ADMIN'].includes(
+                      session?.user?.role ?? ''
+                    )
+                      ? 'px-2 format-icon-button'
+                      : ''
+                  } focus-visible:ring-0 outline-none`}
                 >
                   <span className='sr-only'>Open menu</span>
                   <ChevronDownIcon className='h-4 w-4' />
@@ -923,10 +933,10 @@ export default memo(function Topbar({
                 {!['CUSTOMER', 'OM', 'ADMIN'].includes(
                   session?.user?.role || ''
                 ) && (
-                    <DropdownMenuItem onClick={requestExtension}>
-                      Request Extension
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem onClick={requestExtension}>
+                    Request Extension
+                  </DropdownMenuItem>
+                )}
                 {session?.user?.role !== 'CUSTOMER' && (
                   <DropdownMenuItem onClick={() => setReportModalOpen(true)}>
                     Report
@@ -965,12 +975,12 @@ export default memo(function Topbar({
                 )}
                 {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
                   orderDetails.status === 'FINALIZER_ASSIGNED') && (
-                    <DropdownMenuItem asChild>
-                      <a href={qcFileUrl} target='_blank'>
-                        Download QC text
-                      </a>
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem asChild>
+                    <a href={qcFileUrl} target='_blank'>
+                      Download QC text
+                    </a>
+                  </DropdownMenuItem>
+                )}
                 {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
                   orderDetails.status === 'FINALIZER_ASSIGNED') && (
                   <DropdownMenuItem asChild>
@@ -1262,8 +1272,9 @@ export default memo(function Topbar({
         </DialogContent>
       </Dialog>
       <div
-        className={` ${!videoPlayerOpen ? 'hidden' : ''
-          } fixed bg-white z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-transparent`}
+        className={` ${
+          !videoPlayerOpen ? 'hidden' : ''
+        } fixed bg-white z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-transparent`}
         style={{
           top: `${position.y}px`,
           left: `${position.x}px`,
