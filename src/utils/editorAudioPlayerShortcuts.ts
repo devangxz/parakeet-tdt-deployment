@@ -7,6 +7,7 @@ import { getUserOS } from './getUserOS'
 import {
   getUserEditorSettingsAction,
   updateShortcutAction,
+  updateMultipleShortcutsAction,
   restoreDefaultShortcutsAction,
 } from '@/app/actions/editor/settings'
 
@@ -335,6 +336,56 @@ const restoreDefaultShortcuts = async (): Promise<void> => {
   await restoreDefaultShortcutsAction()
 }
 
+async function migrateShortcutsFromLocalStorageToDB(): Promise<void> {
+  try {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return
+    }
+
+    const shortcutsJson = localStorage.getItem('shortcuts')
+    if (!shortcutsJson) {
+      return
+    }
+
+    const shortcuts = JSON.parse(shortcutsJson)
+    if (!shortcuts || typeof shortcuts !== 'object') {
+      localStorage.removeItem('shortcuts')
+      return
+    }
+
+    const response = await getUserEditorSettingsAction()
+    const existingShortcuts = response.success
+      ? response.settings?.shortcuts || {}
+      : {}
+
+    const validShortcuts: Record<string, string> = {}
+    for (const [action, shortcut] of Object.entries(shortcuts)) {
+      if (
+        typeof action === 'string' &&
+        typeof shortcut === 'string' &&
+        action.length > 0 &&
+        shortcut.length > 0 &&
+        defaultShortcuts[action as keyof DefaultShortcuts] !== shortcut &&
+        !existingShortcuts[action]
+      ) {
+        validShortcuts[action] = shortcut
+      }
+    }
+
+    if (Object.keys(validShortcuts).length > 0) {
+      const mergedShortcuts = {
+        ...validShortcuts,
+        ...existingShortcuts,
+      }
+      await updateMultipleShortcutsAction(mergedShortcuts)
+    }
+
+    localStorage.removeItem('shortcuts')
+  } catch (error) {
+    return
+  }
+}
+
 const useShortcuts = (shortcutControls: ShortcutControls) => {
   const shortcutsRef = useRef<Record<string, () => void>>({})
 
@@ -343,6 +394,8 @@ const useShortcuts = (shortcutControls: ShortcutControls) => {
 
     const initializeShortcuts = async () => {
       try {
+        await migrateShortcutsFromLocalStorageToDB()
+
         const response = await getUserEditorSettingsAction()
         if (!mounted) return
 

@@ -44,13 +44,22 @@ const createShortcutControls = (
   audioPlayer: React.RefObject<HTMLAudioElement>,
   quill: Quill | null,
   setSpeed: React.Dispatch<React.SetStateAction<number>>,
-  setVolumePercentage: React.Dispatch<React.SetStateAction<number>>
+  setVolumePercentage: React.Dispatch<React.SetStateAction<number>>,
+  editorSettings: EditorSettings
 ): ShortcutControls => ({
   togglePlay: () => {
     if (!audioPlayer.current) return
-    audioPlayer.current.paused
-      ? audioPlayer.current.play()
-      : audioPlayer.current.pause()
+    if (audioPlayer.current.paused) {
+      if (editorSettings.audioRewindSeconds > 0) {
+        audioPlayer.current.currentTime = Math.max(
+          0,
+          audioPlayer.current.currentTime - editorSettings.audioRewindSeconds
+        )
+      }
+      audioPlayer.current.play()
+    } else {
+      audioPlayer.current.pause()
+    }
   },
   pause: () => {
     audioPlayer.current?.pause()
@@ -134,7 +143,6 @@ interface HeaderProps {
   fontSize: number
   setFontSize: (size: number) => void
   editorSettings: EditorSettings
-  isWordPlayback: React.MutableRefObject<boolean>
 }
 
 export default memo(function Header({
@@ -148,7 +156,6 @@ export default memo(function Header({
   fontSize,
   setFontSize,
   editorSettings,
-  isWordPlayback,
 }: HeaderProps) {
   const [currentValue, setCurrentValue] = useState(0)
   const [currentTime, setCurrentTime] = useState('00:00')
@@ -182,46 +189,6 @@ export default memo(function Header({
     setFontSize(editorSettings.fontSize)
     setVolumePercentage(editorSettings.volume)
   }, [editorSettings, quillRef, audioPlayer, isAudioInitialized])
-
-  useEffect(() => {
-    if (!audioPlayer.current) return
-
-    let lastPauseTime = 0
-    let wasManualPause = false
-
-    const handlePause = () => {
-      if (audioPlayer.current) {
-        lastPauseTime = audioPlayer.current.currentTime
-        wasManualPause = true
-      }
-    }
-
-    const handlePlay = () => {
-      if (
-        audioPlayer.current &&
-        !isWordPlayback.current &&
-        wasManualPause &&
-        editorSettings.audioRewindSeconds > 0 &&
-        audioPlayer.current.currentTime === lastPauseTime
-      ) {
-        const newTime = Math.max(
-          0,
-          audioPlayer.current.currentTime - editorSettings.audioRewindSeconds
-        )
-        audioPlayer.current.currentTime = newTime
-      }
-      wasManualPause = false
-      isWordPlayback.current = false
-    }
-
-    audioPlayer.current.addEventListener('pause', handlePause)
-    audioPlayer.current.addEventListener('play', handlePlay)
-
-    return () => {
-      audioPlayer.current?.removeEventListener('pause', handlePause)
-      audioPlayer.current?.removeEventListener('play', handlePlay)
-    }
-  }, [audioPlayer, editorSettings.audioRewindSeconds])
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -319,9 +286,10 @@ export default memo(function Header({
         audioPlayer,
         quillRef?.current?.getEditor() || null,
         setSpeed,
-        setVolumePercentage
+        setVolumePercentage,
+        editorSettings
       ),
-    [audioPlayer, quillRef]
+    [audioPlayer, quillRef, editorSettings]
   )
 
   useShortcuts(shortcutControls as ShortcutControls)
@@ -818,7 +786,7 @@ export default memo(function Header({
                     decreaseFontSize={decreaseFontSize}
                     insertInterpreterSwearInLine={insertInterpreterSwearInLine}
                     highlightWordsEnabled={highlightWordsEnabled}
-                    setHighlightWordsEnabled={setHighlightWordsEnabled}              
+                    setHighlightWordsEnabled={setHighlightWordsEnabled}
                   />
                 </div>
               </TooltipProvider>

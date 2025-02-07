@@ -166,7 +166,6 @@ function EditorPage() {
     useNativeContextMenu: false,
     shortcuts: { ...defaultShortcuts },
   })
-  const isWordPlayback = useRef(false)
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -677,7 +676,6 @@ function EditorPage() {
         fontSize={fontSize}
         setFontSize={setFontSize}
         editorSettings={editorSettings}
-        isWordPlayback={isWordPlayback}
       />
 
       <div className='flex h-full overflow-hidden'>
@@ -746,7 +744,6 @@ function EditorPage() {
                       setFontSize={setFontSize}
                       setEditedSegments={setEditedSegments}
                       editorSettings={editorSettings}
-                      isWordPlayback={isWordPlayback}
                       initialEditorData={initialEditorData || { transcript: '', undoStack: [], redoStack: [] }}
                       editorRef={editorRef}
                     />

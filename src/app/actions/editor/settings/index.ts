@@ -192,6 +192,70 @@ export async function updateShortcutAction(
   }
 }
 
+export async function updateMultipleShortcutsAction(
+  shortcuts: Record<string, string>
+): Promise<ActionResponse> {
+  const session = await getServerSession(authOptions)
+  const user = session?.user
+  const userId = user?.userId
+
+  if (!userId) {
+    logger.error('Missing userId for shortcuts update')
+    return {
+      success: false,
+      error: 'Missing userId',
+    }
+  }
+
+  try {
+    const currentSettings = await prisma.userEditorSettings.findUnique({
+      where: {
+        userId: userId,
+      },
+    })
+
+    const updatedShortcuts = {
+      ...(currentSettings?.shortcuts as Record<string, string>),
+      ...shortcuts,
+    }
+
+    const updatedSettings = await prisma.userEditorSettings.upsert({
+      where: {
+        userId: userId,
+      },
+      update: {
+        shortcuts: updatedShortcuts,
+      },
+      create: {
+        userId: userId,
+        wordHighlight: true,
+        fontSize: 16,
+        audioRewindSeconds: 0,
+        volume: 100,
+        playbackSpeed: 100,
+        useNativeContextMenu: false,
+        shortcuts: updatedShortcuts,
+      },
+    })
+
+    revalidatePath('/editor/[fileId]')
+
+    return {
+      success: true,
+      settings: {
+        ...updatedSettings,
+        shortcuts: updatedSettings.shortcuts as Record<string, string>,
+      },
+    }
+  } catch (error) {
+    logger.error(`Error updating shortcuts for user ${userId}: ${error}`)
+    return {
+      success: false,
+      error: 'Error updating shortcuts',
+    }
+  }
+}
+
 export async function restoreDefaultShortcutsAction(): Promise<ActionResponse> {
   const session = await getServerSession(authOptions)
   const user = session?.user
