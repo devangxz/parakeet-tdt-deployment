@@ -54,6 +54,16 @@ export async function unassignQCFile(orderId: number, reason: string, comment: s
       }
     }
 
+    await prisma.cancellations.create({
+      data: {
+        userId: transcriberId,
+        fileId: order.fileId,
+        reason,
+        comment,
+        status: order.status === OrderStatus.QC_ASSIGNED ? CancellationStatus.QC : CancellationStatus.REVIEW,
+      },
+    })
+
     await unAssignFileFromTranscriber(
       Number(orderId),
       jobAssignment.id,
@@ -65,16 +75,6 @@ export async function unassignQCFile(orderId: number, reason: string, comment: s
       order.fileId,
       order.status === OrderStatus.QC_ASSIGNED ? 'QC' : 'REVIEW'
     )
-
-    await prisma.cancellations.create({
-      data: {
-        userId: transcriberId,
-        fileId: order.fileId,
-        reason,
-        comment,
-        status: order.status === OrderStatus.QC_ASSIGNED ? CancellationStatus.QC : CancellationStatus.REVIEW,
-      },
-    })
 
     logger.info(`Order ${orderId} has been unassigned from ${transcriberId}`)
     return {
