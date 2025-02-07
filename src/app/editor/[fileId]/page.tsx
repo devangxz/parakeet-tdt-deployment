@@ -562,13 +562,23 @@ function EditorPage() {
     }
   }, [orderDetails, editorMode])
 
-  // NEW: Helper to update the transcript formatting in Quill
   const updateFormattedTranscript = () => {
     if (!quillRef?.current) return;
     const quill = quillRef.current.getEditor();
+
+    // Capture the current selection (cursor position)
+    const currentSelection = quill.getSelection();
+
     const text = quill.getText();
     const formattedDelta = getFormattedContent(text);
+
+    // Update the editor contents with the new delta
     quill.setContents(formattedDelta);
+
+    // Restore the original cursor position if it exists
+    if (currentSelection) {
+      quill.setSelection(currentSelection);
+    }
   }
 
   const getQuillRef = (quillRef: React.RefObject<ReactQuill>) => {
