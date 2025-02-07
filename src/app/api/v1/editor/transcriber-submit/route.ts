@@ -16,7 +16,8 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const { fileId, transcriberId, transcript } = await req.json()
+    const { fileId, transcriberId, transcript, listenCount, editedSegments } =
+      await req.json()
 
     if (!fileId || !transcriberId || !transcript) {
       return NextResponse.json({
@@ -38,6 +39,26 @@ export async function POST(req: NextRequest) {
         message: 'Order not found.',
       })
     }
+
+    await prisma.playStats.upsert({
+      where: {
+        userId_fileId: {
+          userId: Number(transcriberId),
+          fileId,
+        },
+      },
+      create: {
+        userId: Number(transcriberId),
+        fileId,
+        listenCount,
+        editedSegments,
+      },
+      update: {
+        listenCount,
+        editedSegments,
+        updatedAt: new Date(),
+      },
+    })
 
     await submitQCFile(order.id, transcriberId, transcript)
 

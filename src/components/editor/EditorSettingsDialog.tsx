@@ -6,7 +6,7 @@ import {
   Gauge,
   Keyboard,
 } from 'lucide-react'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
 
 import { updateEditorSettingsAction } from '@/app/actions/editor/settings'
@@ -134,6 +134,8 @@ export default function EditorSettingsDialog({
   useEffect(() => {
     setLocalSettings(initialSettings)
   }, [initialSettings])
+
+  const hasChanges = useMemo(() => JSON.stringify(localSettings) !== JSON.stringify(initialSettings), [localSettings, initialSettings])
 
   const handleSave = async () => {
     try {
@@ -274,7 +276,9 @@ export default function EditorSettingsDialog({
           <Button variant='outline' onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save Changes</Button>
+          <Button onClick={handleSave} disabled={!hasChanges}>
+            Save Changes
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

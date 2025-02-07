@@ -1,5 +1,5 @@
 import { updatePartialAlignment } from '../alignments'
-import { AlignmentType } from '@/utils/types/transcript'
+import { AlignmentType } from '@/types/editor'
 
 // Mock functions
 const mockCharToWordIndex = (text: string, charIndex: number): number => {
