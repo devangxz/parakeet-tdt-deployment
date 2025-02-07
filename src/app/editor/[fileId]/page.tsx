@@ -54,12 +54,12 @@ import {
   replaceTextHandler,
   CustomerQuillSelection,
   autoCapitalizeSentences,
-  getDiffHtml,
   getFormattedContent,
   EditorData,
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB, getEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
+import { diff_match_patch, DmpDiff } from '@/utils/transcript/diff_match_patch'
 
 export type OrderDetails = {
   orderId: string
@@ -114,7 +114,7 @@ function EditorPage() {
     isUploaded?: boolean
   }>({ renamedFile: null, originalFile: null })
   const { data: session } = useSession()
-  const [diff, setDiff] = useState<string>('')
+  const [diff, setDiff] = useState<DmpDiff[]>([])
   const [ctms, setCtms] = useState<CTMType[]>([])
   const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null)
   const [step, setStep] = useState<string>('')
@@ -430,10 +430,11 @@ function EditorPage() {
   }, [session])
 
   const handleTabsValueChange = async (value: string) => {
-    // Update the diff regardless
     const contentText = getEditorText()
-    const newDiff = getDiffHtml(getFormattedTranscript(ctms), contentText)
-    setDiff(newDiff)
+    const dmp = new diff_match_patch()
+    const diffs = dmp.diff_wordMode(getFormattedTranscript(ctms), contentText)
+    dmp.diff_cleanupSemantic(diffs)
+    setDiff(diffs)
 
     if (value === 'transcribe' && orderDetails.fileId) {
       const persistedData = await getEditorDataIDB(orderDetails.fileId)
@@ -758,7 +759,9 @@ function EditorPage() {
                       setEditedSegments={setEditedSegments}
                       editorSettings={editorSettings}
                       isWordPlayback={isWordPlayback}
-                      initialEditorData={initialEditorData || { transcript: '', undoStack: [], redoStack: [] }}
+                      initialEditorData={
+                        initialEditorData || { transcript: '', undoStack: [], redoStack: [] }
+                      }
                       editorRef={editorRef}
                     />
 

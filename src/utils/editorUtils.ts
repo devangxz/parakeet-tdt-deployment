@@ -1228,27 +1228,6 @@ const scrollEditorToPos = (quill: Quill, pos: number) => {
     }
 }
 
-function getDiffHtml(oldText: string, newText: string): string {
-    // Import the diff_match_patch utilities from your diff_match_patch module
-    const dmp = new diff_match_patch();
-    // Generate diff in word mode as done in the alignment worker
-    const diffs = dmp.diff_wordMode(oldText, newText);
-    dmp.diff_cleanupSemantic(diffs);
-    // Convert the diffs to HTML
-    return diffs.map(([op, text]: [number, string]) => {
-        switch (op) {
-            case DIFF_INSERT:
-                return `<ins style="background:#e6ffe6;">${text}</ins>`;
-            case DIFF_DELETE:
-                return `<del style="background:#ffe6e6;">${text}</del>`;
-            case DIFF_EQUAL:
-                return `<span>${text}</span>`;
-            default:
-                return text;
-        }
-    }).join('');
-}
-
 function getFormattedContent(text: string): Op[] {
     const formattedContent: Op[] = []
     let lastIndex = 0
@@ -1322,7 +1301,6 @@ export {
     insertTimestampBlankAtCursorPosition,
     insertTimestampAndSpeaker,
     autoCapitalizeSentences,
-    getDiffHtml,
     getFormattedContent
 }
 export type { CTMType }
