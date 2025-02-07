@@ -132,7 +132,7 @@ function EditorPage() {
   })
   const [audioDuration, setAudioDuration] = useState(1)
   const [quillRef, setQuillRef] = useState<React.RefObject<ReactQuill>>()
-  const editorRef = useRef<EditorHandle>(null);
+  const editorRef = useRef<EditorHandle>(null)
 
   const [findText, setFindText] = useState('')
   const [replaceText, setReplaceText] = useState('')
@@ -156,7 +156,9 @@ function EditorPage() {
   const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set())
   const [waveformUrl, setWaveformUrl] = useState('')
   const [finalizerComment, setFinalizerComment] = useState('')
-  const [initialEditorData, setInitialEditorData] = useState<EditorData | null>(null)
+  const [initialEditorData, setInitialEditorData] = useState<EditorData | null>(
+    null
+  )
   const [editorSettings, setEditorSettings] = useState<EditorSettings>({
     wordHighlight: true,
     fontSize: 16,
@@ -166,7 +168,6 @@ function EditorPage() {
     useNativeContextMenu: false,
     shortcuts: { ...defaultShortcuts },
   })
-  const isWordPlayback = useRef(false)
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -336,8 +337,8 @@ function EditorPage() {
       },
       saveChanges: async () => {
         if (editorRef.current) {
-          editorRef.current.clearAllHighlights();
-          editorRef.current.triggerAlignmentUpdate();
+          editorRef.current.clearAllHighlights()
+          editorRef.current.triggerAlignmentUpdate()
         }
         autoCapitalizeSentences(quillRef)
         await handleSave({
@@ -349,7 +350,7 @@ function EditorPage() {
           listenCount,
           editedSegments,
         })
-        updateFormattedTranscript();
+        updateFormattedTranscript()
       },
     }
     return controls as ShortcutControls
@@ -379,8 +380,8 @@ function EditorPage() {
   }, [audioPlayer])
 
   useEffect(() => {
-    if (!initialEditorData || !orderDetails.fileId) return;
-    persistEditorDataIDB(orderDetails.fileId, { listenCount });
+    if (!initialEditorData || !orderDetails.fileId) return
+    persistEditorDataIDB(orderDetails.fileId, { listenCount })
   }, [listenCount, orderDetails.fileId, initialEditorData])
 
   const sectionChangeHandler = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -412,7 +413,7 @@ function EditorPage() {
     }
 
     async function loadDetails() {
-      if (!session || !session.user) return;
+      if (!session || !session.user) return
       const result = await fetchFileDetails({
         params,
         setOrderDetails,
@@ -420,13 +421,13 @@ function EditorPage() {
         setStep,
         setCtms,
         setListenCount,
-      });
+      })
       if (result) {
-        setOrderDetails(result.orderDetails);
-        setInitialEditorData(result.initialEditorData);
+        setOrderDetails(result.orderDetails)
+        setInitialEditorData(result.initialEditorData)
       }
     }
-    loadDetails();
+    loadDetails()
   }, [session])
 
   const handleTabsValueChange = async (value: string) => {
@@ -482,7 +483,7 @@ function EditorPage() {
         },
         false
       )
-      updateFormattedTranscript();
+      updateFormattedTranscript()
     }, 1000 * 60 * AUTOSAVE_INTERVAL)
 
     return () => clearInterval(interval)
@@ -564,21 +565,21 @@ function EditorPage() {
   }, [orderDetails, editorMode])
 
   const updateFormattedTranscript = () => {
-    if (!quillRef?.current) return;
-    const quill = quillRef.current.getEditor();
+    if (!quillRef?.current) return
+    const quill = quillRef.current.getEditor()
 
     // Capture the current selection (cursor position)
-    const currentSelection = quill.getSelection();
+    const currentSelection = quill.getSelection()
 
-    const text = quill.getText();
-    const formattedDelta = getFormattedContent(text);
+    const text = quill.getText()
+    const formattedDelta = getFormattedContent(text)
 
     // Update the editor contents with the new delta
-    quill.setContents(formattedDelta);
+    quill.setContents(formattedDelta)
 
     // Restore the original cursor position if it exists
     if (currentSelection) {
-      quill.setSelection(currentSelection);
+      quill.setSelection(currentSelection)
     }
   }
 
@@ -688,7 +689,6 @@ function EditorPage() {
         fontSize={fontSize}
         setFontSize={setFontSize}
         editorSettings={editorSettings}
-        isWordPlayback={isWordPlayback}
         editorRef={editorRef}
       />
 
@@ -758,9 +758,12 @@ function EditorPage() {
                       setFontSize={setFontSize}
                       setEditedSegments={setEditedSegments}
                       editorSettings={editorSettings}
-                      isWordPlayback={isWordPlayback}
                       initialEditorData={
-                        initialEditorData || { transcript: '', undoStack: [], redoStack: [] }
+                        initialEditorData || {
+                          transcript: '',
+                          undoStack: [],
+                          redoStack: [],
+                        }
                       }
                       editorRef={editorRef}
                     />

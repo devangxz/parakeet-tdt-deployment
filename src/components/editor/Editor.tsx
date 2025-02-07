@@ -41,7 +41,6 @@ interface EditorProps {
   highlightWordsEnabled: boolean
   setEditedSegments: (segments: Set<number>) => void
   editorSettings: EditorSettings
-  isWordPlayback: React.MutableRefObject<boolean>
   setFontSize: (size: number) => void
   initialEditorData: EditorData; 
 }
@@ -68,7 +67,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     highlightWordsEnabled,
     setEditedSegments,
     editorSettings,
-    isWordPlayback,
     setFontSize,
     initialEditorData
   } = props
@@ -164,7 +162,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       quill.setSelection(startPos!, word.length)
 
       console.log('Playing word:', word, 'at timestamp:', start)
-      isWordPlayback.current = true
       audioPlayer.currentTime = start
       audioPlayer.play()
     }
