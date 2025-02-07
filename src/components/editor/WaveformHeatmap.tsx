@@ -2,19 +2,21 @@ import React from 'react';
 
 import formatDuration from '@/utils/formatDuration';
 
-interface PlayStatsVisualizationProps {
+interface WaveformHeatmapProps {
   waveformUrl: string;
   listenCount: number[];
   editedSegments: Set<number>;
   duration: number;
 }
 
-const PlayStatsVisualization: React.FC<PlayStatsVisualizationProps> = ({
+export function WaveformHeatmap({
   waveformUrl,
   listenCount,
   editedSegments,
   duration
-}) => {
+}: WaveformHeatmapProps) {
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+
   const getHeatmapColor = (count: number): string => {
     const colors = [
       'rgba(243, 244, 246, 0.7)', // unplayed - light gray
@@ -57,6 +59,64 @@ const PlayStatsVisualization: React.FC<PlayStatsVisualizationProps> = ({
 
   const timeMarkers = generateTimeMarkers();
 
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const context = canvas.getContext('2d')!;
+
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    context.scale(dpr, dpr);
+
+    context.clearRect(0, 0, rect.width, rect.height);
+
+    const segmentWidth = rect.width / duration;
+    const canvasHeight = rect.height;
+    const chunkSize = 100;
+    let currentIndex = 0;
+    let cancelled = false;
+
+    function drawChunk() {
+      if (cancelled) {
+        return;
+      }
+
+      const endIndex = Math.min(currentIndex + chunkSize, duration);
+
+      for (let i = currentIndex; i < endIndex; i++) {
+        const count = listenCount[i] || 0;
+        
+        context.fillStyle = getHeatmapColor(count);
+        context.fillRect(i * segmentWidth, 0, segmentWidth, canvasHeight);
+
+        if (editedSegments.has(i)) {
+          const cx = i * segmentWidth + segmentWidth / 2;
+          const cy = canvasHeight / 2;
+          const radius = 4;
+
+          context.beginPath();
+          context.arc(cx, cy, radius, 0, Math.PI * 2);
+          context.fillStyle = '#10B981';
+          context.fill();
+        }
+      }
+      currentIndex = endIndex;
+      
+      if (currentIndex < duration) {
+        setTimeout(drawChunk, 0);
+      }
+    }
+
+    drawChunk();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [duration, listenCount, editedSegments]);
+
   return (
     <div className="relative w-full">
       <div className="flex gap-2 mb-1 text-xs text-gray-500">
@@ -87,33 +147,13 @@ const PlayStatsVisualization: React.FC<PlayStatsVisualizationProps> = ({
             backgroundPosition: 'center'
           }}
         >
-          <div className="absolute inset-0 flex">
-            {Array.from({length: duration}).map((_, i) => (
-              <div
-                key={i}
-                className="h-full flex-1 relative"
-                style={{
-                  backgroundColor: getHeatmapColor(listenCount[i] || 0)
-                }}
-              >
-                {editedSegments.has(i) && (
-                  <div 
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-emerald-500 rounded-full"
-                    style={{
-                      boxShadow: '0 0 2px rgba(16, 185, 129, 0.8)'
-                    }}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
+          <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
         </div>
         
         <div className="relative h-6 px-1">
-          {/* Scale markers */}
           <div className="absolute left-0 right-0 top-0 h-1 flex items-center">
             <div className="absolute left-0 w-0.5 h-1.5 bg-gray-300" />
-            {timeMarkers.map(({time, position}) => (
+            {timeMarkers.map(({ time, position }) => (
               <div 
                 key={time}
                 className="absolute w-0.5 h-1.5 bg-gray-300"
@@ -123,10 +163,9 @@ const PlayStatsVisualization: React.FC<PlayStatsVisualizationProps> = ({
             <div className="absolute right-0 w-0.5 h-1.5 bg-gray-300" />
           </div>
 
-          {/* Time labels */}
           <div className="absolute left-0 right-0 top-2 flex justify-between text-xs text-gray-500">
             <span>{formatDuration(0)}</span>
-            {timeMarkers.map(({time}) => (
+            {timeMarkers.map(({ time }) => (
               <span 
                 key={time}
                 className="absolute -translate-x-1/2"
@@ -141,6 +180,6 @@ const PlayStatsVisualization: React.FC<PlayStatsVisualizationProps> = ({
       </div>
     </div>
   );
-};
+}
 
-export default PlayStatsVisualization;
+export default WaveformHeatmap;

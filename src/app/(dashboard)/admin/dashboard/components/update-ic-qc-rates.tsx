@@ -25,6 +25,7 @@ export default function UpdateICQCRates() {
   const [userEmail, setUserEmail] = useState('')
   const [qcRate, setQcRate] = useState('0')
   const [cfRRate, setCfRRate] = useState('0')
+  const [cfRate, setCfRate] = useState('0')
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUserEmail(e.target.value)
@@ -49,6 +50,7 @@ export default function UpdateICQCRates() {
         toast.success('Successfully got current ic qc rates.')
         setQcRate(response.qcRate?.toString() ?? '0')
         setCfRRate(response.cfRRate?.toString() ?? '0')
+        setCfRate(response.cfRate?.toString() ?? '0')
       } else {
         toast.error(response.message || 'Failed to get rates')
       }
@@ -75,6 +77,7 @@ export default function UpdateICQCRates() {
       const response = await updateICQCRate(
         userEmail.toLowerCase(),
         parseFloat(qcRate),
+        parseFloat(cfRate),
         parseFloat(cfRRate)
       )
 
@@ -136,7 +139,15 @@ export default function UpdateICQCRates() {
                 placeholder='Enter QC Rate'
               />
 
-              <Label className='mt-4'>Custom Format Rate</Label>
+              <Label className='mt-4'>Custom Format Editor Rate</Label>
+              <Input
+                className='mt-2'
+                value={cfRate}
+                onChange={(e) => setCfRate(e.target.value)}
+                placeholder='Enter Custom Format Rate'
+              />
+
+              <Label className='mt-4'>Custom Format Finalize Rate</Label>
               <Input
                 className='mt-2'
                 value={cfRRate}

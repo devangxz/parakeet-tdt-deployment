@@ -20,6 +20,7 @@ import PlayerButton from './PlayerButton'
 import Toolbar from './Toolbar'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
+import { EditorHandle } from '@/components/editor/Editor'
 import {
   TooltipProvider,
   Tooltip,
@@ -58,6 +59,9 @@ const createShortcutControls = (
   skipAudio: (seconds: number) => {
     if (audioPlayer.current) {
       audioPlayer.current.currentTime += seconds
+      if (audioPlayer.current.paused) {
+        audioPlayer.current.play()
+      }
     }
   },
   playNextBlank: () => {},
@@ -132,6 +136,7 @@ interface HeaderProps {
   setFontSize: (size: number) => void
   editorSettings: EditorSettings
   isWordPlayback: React.MutableRefObject<boolean>
+  editorRef?: React.RefObject<EditorHandle>
 }
 
 export default memo(function Header({
@@ -146,6 +151,7 @@ export default memo(function Header({
   setFontSize,
   editorSettings,
   isWordPlayback,
+  editorRef,
 }: HeaderProps) {
   const [currentValue, setCurrentValue] = useState(0)
   const [currentTime, setCurrentTime] = useState('00:00')
@@ -634,6 +640,7 @@ export default memo(function Header({
             const x = e.clientX - rect.left
             const percentage = (x / rect.width) * 100
             seekTo(percentage)
+            editorRef?.current?.scrollToCurrentWord()
           }}
           style={{
             backgroundImage: `linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)), url(${waveformUrl}), url('/assets/images/fallback-waveform.png')`,

@@ -1,15 +1,15 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
 import ReactQuill from 'react-quill'
 
-import Editor from './Editor'
+import Editor, { EditorHandle } from './Editor'
 import { TabsContent } from './Tabs'
 import { Textarea } from '../ui/textarea'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { EditorSettings } from '@/types/editor'
-import { CTMType, CustomerQuillSelection } from '@/utils/editorUtils'
+import { CTMType, CustomerQuillSelection, EditorData } from '@/utils/editorUtils'
 
 interface EditorTabComponentProps {
-  transcript: string
+  transcriptLoading: boolean
   ctms: CTMType[]
   audioPlayer: HTMLAudioElement | null
   audioDuration: number
@@ -23,10 +23,12 @@ interface EditorTabComponentProps {
   setEditedSegments: (segments: Set<number>) => void
   editorSettings: EditorSettings
   isWordPlayback: React.MutableRefObject<boolean>
+  initialEditorData: EditorData
+  editorRef?: React.Ref<EditorHandle>
 }
 
 export const EditorTabComponent = ({
-  transcript,
+  transcriptLoading,
   ctms,
   audioPlayer,
   audioDuration,
@@ -40,24 +42,25 @@ export const EditorTabComponent = ({
   setEditedSegments,
   editorSettings,
   isWordPlayback,
+  initialEditorData,
+  editorRef,
 }: EditorTabComponentProps) => (
   <TabsContent
     className='h-full mt-0 overflow-hidden pb-[41px]'
     value='transcribe'
   >
     <div className='h-full relative overflow-hidden'>
-      {!transcript && (
+      {transcriptLoading ? (
         <div className='h-full flex items-center justify-center'>
           <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
           <span>Loading...</span>
         </div>
-      )}
-      {transcript && (
+      ) : (
         <div className='h-full overflow-hidden'>
           <Editor
+            ref={editorRef}
             orderDetails={orderDetails}
             getQuillRef={getQuillRef}
-            transcript={transcript}
             ctms={ctms}
             audioPlayer={audioPlayer}
             duration={audioDuration}
@@ -69,6 +72,7 @@ export const EditorTabComponent = ({
             setEditedSegments={setEditedSegments}
             editorSettings={editorSettings}
             isWordPlayback={isWordPlayback}
+            initialEditorData={initialEditorData}
           />
         </div>
       )}

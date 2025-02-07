@@ -2,11 +2,11 @@
 import axios from 'axios'
 import { Session } from 'next-auth'
 import Quill from 'quill'
+import { Op } from 'quill/core'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
 import axiosInstance from './axios'
-import { CTMType } from './getFormattedTranscript'
 import { secondsToTs } from './secondsToTs'
 import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
 import { getFrequentTermsAction } from '@/app/actions/editor/frequent-terms'
@@ -25,7 +25,9 @@ import {
     FILE_CACHE_URL,
     MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
 } from '@/constants'
-import { diff_match_patch, DIFF_INSERT, DIFF_DELETE, DIFF_EQUAL } from '@/utils/transcript/diff_match_patch';
+import { CTMType, UndoRedoItem } from '@/types/editor'
+import { getEditorDataIDB, persistEditorDataIDB } from '@/utils/indexedDB'
+import { diff_match_patch, DIFF_INSERT, DIFF_DELETE, DIFF_EQUAL } from '@/utils/transcript/diff_match_patch'
 
 export type ButtonLoading = {
     upload: boolean
@@ -389,20 +391,32 @@ type FetchFileDetailsParams = {
     setOrderDetails: React.Dispatch<React.SetStateAction<OrderDetails>>
     setCfd: React.Dispatch<React.SetStateAction<string>>
     setStep: React.Dispatch<React.SetStateAction<string>>
-    setTranscript: React.Dispatch<React.SetStateAction<string>>
     setCtms: React.Dispatch<React.SetStateAction<CTMType[]>>
     setListenCount: React.Dispatch<React.SetStateAction<number[]>>
 }
+
+export interface EditorData {
+    transcript?: string;
+    notes?: string;
+    listenCount?: number[];
+    updatedAt?: number;
+    undoStack?: UndoRedoItem[];
+    redoStack?: UndoRedoItem[];
+}
+
+type FetchFileDetailsReturn = {
+    orderDetails: OrderDetails;
+    initialEditorData: EditorData;
+};
 
 const fetchFileDetails = async ({
     params,
     setOrderDetails,
     setCfd,
     setStep,
-    setTranscript,
     setCtms,
     setListenCount,
-}: FetchFileDetailsParams) => {
+}: FetchFileDetailsParams): Promise<FetchFileDetailsReturn | undefined> => {
     try {
         const tokenRes = await fileCacheTokenAction()
         const orderRes = await getOrderDetailsAction(params?.fileId as string)
@@ -447,25 +461,29 @@ const fetchFileDetails = async ({
             }
         )
 
-        const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
-        const localTranscript = editorData[orderRes.orderDetails.fileId]?.transcript;
-        if (localTranscript) {
-            setTranscript(localTranscript);
-        } else {
-            setTranscript(transcriptRes.data.result.transcript);
-            persistEditorData(orderRes.orderDetails.fileId, transcriptRes.data.result.transcript, '');
-        }
+        // Retrieve editorData from IndexedDB once
+        const fileData = await getEditorDataIDB(orderRes.orderDetails.fileId)
+        const transcript = (fileData?.transcript || transcriptRes.data.result.transcript) as string;
+        await persistEditorDataIDB(orderRes.orderDetails.fileId, { transcript })
         setCtms(transcriptRes.data.result.ctms)
 
         const playStats = await getPlayStatsAction(params?.fileId as string)
 
-        if (playStats.success && playStats.data?.listenCount) {
-            setListenCount(playStats.data.listenCount as number[])
+        if (fileData?.listenCount && Array.isArray(fileData.listenCount)) {
+            setListenCount(fileData.listenCount);
+        } else if (playStats.success && playStats.data?.listenCount && Array.isArray(playStats.data.listenCount)) {
+            setListenCount(playStats.data.listenCount as number[]);
         } else if (orderRes.orderDetails.duration) {
-            setListenCount(new Array(Math.ceil(Number(orderRes.orderDetails.duration))).fill(0))
+            const newListenCount = new Array(Math.ceil(Number(orderRes.orderDetails.duration))).fill(0);
+            setListenCount(newListenCount);
         }
 
-        return orderRes.orderDetails
+        const initialEditorData: EditorData = {
+            ...fileData,
+            transcript,
+        }
+
+        return { orderDetails: orderDetailsFormatted, initialEditorData }
     } catch (error) {
         console.log(error)
         if (
@@ -478,9 +496,10 @@ const fetchFileDetails = async ({
         ) {
             toast.error('You are not authorized to access this file')
             window.location.href = '/'
-            return
+            return undefined;
         }
         toast.error('Failed to fetch file details')
+        return undefined;
     }
 }
 
@@ -514,10 +533,15 @@ const handleSave = async (
     const toastId = showToast ? toast.loading(`Saving Transcription...`) : null
 
     try {
-        const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
-        const fileData = editorData[orderDetails.fileId] || {};
-        if (!fileData.transcript) return toast.error('Transcript is empty');
-        const transcript = fileData.transcript;
+        const fileData = await getEditorDataIDB(orderDetails.fileId);
+        if (!fileData || !fileData.transcript) {
+            if (showToast) {
+                return toast.error('Transcript is empty');
+            }
+            return;
+        }
+        
+        const transcript = fileData.transcript as string;
         const paragraphs = transcript
             .split('\n')
             .filter((paragraph: string) => paragraph.trim() !== '')
@@ -562,7 +586,9 @@ const handleSave = async (
 
         await setPlayStatsAction({
             fileId: orderDetails.fileId,
-            listenCount,
+            listenCount: (fileData.listenCount && Array.isArray(fileData.listenCount))
+                ? fileData.listenCount
+                : listenCount,
             editedSegments: Array.from(editedSegments)
         })
 
@@ -585,25 +611,35 @@ const handleSave = async (
     }
 }
 
-const autoCapitalizeSentences = (quillRef: React.RefObject<ReactQuill> | undefined) => {
-    if (quillRef?.current) {
-        const quill = quillRef.current.getEditor();
-        const text = quill.getText();
+function autoCapitalizeSentences(quillRef: React.RefObject<ReactQuill> | undefined) {
+    if (!quillRef?.current) return;
+    const quill = quillRef.current.getEditor();
+    const text = quill.getText();
 
-        // Match sentence endings followed by spaces and a lowercase letter
-        const regex = /([.!?])\s+([a-z])/g;
-        let match;
+    // 1. Handle lines that start with a timestamp and speaker label pattern,
+    // e.g. "00:00:00.0 S1:" followed by a lowercase letter.
+    const regexTimestampSpeaker = /^(\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:)\s*([a-z])/gm;
+    let match: RegExpExecArray | null;
+    while ((match = regexTimestampSpeaker.exec(text)) !== null) {
+        // match[0] is the whole matching string, e.g. "00:00:00.0 S1: hello"
+        // match[1] is the timestamp & speaker label (e.g. "00:00:00.0 S1:")
+        // match[2] is the first lowercase letter of the sentence ("h" in "hello")
+        // Determine where the group2 begins relative to the document text.
+        const fullMatch = match[0];
+        const group2 = match[2];
+        const group2Offset = fullMatch.indexOf(group2);
+        const charIndex = match.index + group2Offset;
+        quill.deleteText(charIndex, 1, 'user');
+        quill.insertText(charIndex, group2.toUpperCase(), 'user');
+    }
 
-        while ((match = regex.exec(text)) !== null) {
-            // Calculate dynamic index based on full match length
-            const charIndex = match.index + match[0].length - 1;
-            const lowercaseChar = match[2];
-            const uppercaseChar = lowercaseChar.toUpperCase();
-
-            // Replace the lowercase character
-            quill.deleteText(charIndex, 1, 'user');
-            quill.insertText(charIndex, uppercaseChar, 'user');
-        }
+    // 2. Auto capitalize sentences after punctuation (as your original logic)
+    const regex = /([.!?])\s+([a-z])/g;
+    while ((match = regex.exec(text)) !== null) {
+        // The letter to be capitalized is the last character (after punctuation and spaces)
+        const charIndex = match.index + match[0].length - 1;
+        quill.deleteText(charIndex, 1, 'user');
+        quill.insertText(charIndex, match[2].toUpperCase(), 'user');
     }
 }
 
@@ -1013,69 +1049,83 @@ const replaceTextHandler = (
     selection: { index: number; length: number } | null,
     matchSelection: boolean
 ) => {
-    if (!quill) return
+    if (!quill) return;
 
-    let replaced = false
+    let replaced = false;
     const searchRange = {
         start: 0,
         end: quill.getText().length
-    }
+    };
 
-    // If there's a selection, limit replacements to that range
+    // Limit search range to the selected text if applicable
     if (selection && selection.length > 0 && matchSelection) {
-        searchRange.start = selection.index
-        searchRange.end = selection.index + selection.length
+        searchRange.start = selection.index;
+        searchRange.end = selection.index + selection.length;
     }
 
-    const text = quill.getText(searchRange.start, searchRange.end - searchRange.start)
-    const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase()
-    const textToSearch = matchCase ? text : text.toLowerCase()
+    const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase();
 
     const replace = (index: number) => {
-        const absoluteIndex = index + searchRange.start
-        quill.deleteText(absoluteIndex, searchText.length, 'user')
-        quill.insertText(absoluteIndex, replaceWith, 'user')
-        replaced = true
-    }
+        const absoluteIndex = index + searchRange.start;
+        quill.deleteText(absoluteIndex, searchText.length, "user");
+        quill.insertText(absoluteIndex, replaceWith, "user");
+        replaced = true;
+    };
 
     if (replaceAll) {
-        let startIndex = 0
-        let index = textToSearch.indexOf(effectiveSearchText, startIndex)
+        // Process each replacement asynchronously using setTimeout
+        const processNext = (startIndex: number) => {
+            const text = quill.getText(
+                searchRange.start,
+                searchRange.end - searchRange.start
+            );
+            const textToSearch = matchCase ? text : text.toLowerCase();
+            const index = textToSearch.indexOf(effectiveSearchText, startIndex);
 
-        while (index !== -1) {
-            replace(index)
-            startIndex = index + replaceWith.length
+            if (index !== -1) {
+                replace(index);
+                // Yield to the browser so UI stays responsive.
+                setTimeout(() => processNext(index + replaceWith.length), 0);
+            } else {
+                if (!replaced) {
+                    toastInstance.error("Text not found in selected range");
+                }
+            }
+        };
 
-            // Update text after replacement
-            const updatedText = quill.getText(searchRange.start, searchRange.end - searchRange.start)
-            const updatedTextToSearch = matchCase ? updatedText : updatedText.toLowerCase()
-            index = updatedTextToSearch.indexOf(effectiveSearchText, startIndex)
-        }
+        processNext(0);
     } else {
-        const currentSelection = quill.getSelection()
+        // Single-instance replacement (synchronous)
+        const currentSelection = quill.getSelection();
         if (currentSelection && currentSelection.length > 0) {
             const selectedText = quill.getText(
                 currentSelection.index,
                 currentSelection.length
-            )
+            );
             if (
                 (matchCase && selectedText === searchText) ||
-                (!matchCase && selectedText.toLowerCase() === effectiveSearchText)
+                (!matchCase &&
+                    selectedText.toLowerCase() === effectiveSearchText)
             ) {
-                replace(currentSelection.index - searchRange.start)
+                replace(currentSelection.index - searchRange.start);
             }
         } else {
-            const index = textToSearch.indexOf(effectiveSearchText)
+            const text = quill.getText(
+                searchRange.start,
+                searchRange.end - searchRange.start
+            );
+            const textToSearch = matchCase ? text : text.toLowerCase();
+            const index = textToSearch.indexOf(effectiveSearchText);
             if (index !== -1) {
-                replace(index)
+                replace(index);
             }
         }
-    }
 
-    if (!replaced) {
-        toastInstance.error('Text not found in selected range')
+        if (!replaced) {
+            toastInstance.error("Text not found in selected range");
+        }
     }
-}
+};
 
 const insertTimestampAndSpeaker = (
     audioPlayer: HTMLAudioElement | null,
@@ -1092,24 +1142,27 @@ const insertTimestampAndSpeaker = (
         paragraphStart--;
     }
 
-    // Check for existing timestamp and speaker pattern at start of line
-    const lineText = quill.getText(paragraphStart, 14); // Get enough text to check pattern
+    // Check and remove any existing timestamp and speaker pattern at the start of the line
+    const lineText = quill.getText(paragraphStart, 14);
     const timestampSpeakerPattern = /^\d{1}:\d{2}:\d{2}\.\d{1} S\d+: /;
-
     if (timestampSpeakerPattern.test(lineText)) {
-        // If pattern exists, delete it before inserting new one
         const match = lineText.match(timestampSpeakerPattern);
         if (match) {
-            quill.deleteText(paragraphStart, match[0].length);
+            quill.deleteText(paragraphStart, match[0].length, 'user');
         }
     }
 
-    const speakerText = ' S1: ';
-    quill.insertText(paragraphStart, formattedTime + speakerText, { bold: true }, 'user');
+    // Insert the bold part (formatted time and speaker label without trailing space)
+    const boldPart = formattedTime + ' S1:';
+    quill.insertText(paragraphStart, boldPart, { bold: true }, 'user');
 
-    // Select just the speaker number for easy editing
-    const speakerNumberStart = paragraphStart + formattedTime.length + 2; // +2 for ' S'
-    quill.setSelection(speakerNumberStart, 1); // Select just the '1' in 'S1'
+    // Insert a space after the colon with normal formatting to reset bold style
+    const nonBoldPart = ' ';
+    quill.insertText(paragraphStart + boldPart.length, nonBoldPart, { bold: false }, 'user');
+
+    // Set selection to the speaker number for easy editing (selects the digit in "S1")
+    const speakerNumberStart = paragraphStart + formattedTime.length + 2; // +2 for " S"
+    quill.setSelection(speakerNumberStart, 1);
 };
 
 const insertTimestampBlankAtCursorPosition = (
@@ -1135,11 +1188,17 @@ const insertTimestampBlankAtCursorPosition = (
         return;
     }
 
-    const currentTime = audioPlayer.currentTime
-    const formattedTime = `[${secondsToTs(currentTime, true, 1)}] ____ `
+    const currentTime = audioPlayer.currentTime;
+    const formattedTime = `[${secondsToTs(currentTime, true, 1)}] ____`;
 
+    // Insert the blank with the red color style.
     quill.insertText(cursorPosition, formattedTime, { color: '#FF0000' }, 'user');
-    quill.setSelection(cursorPosition + formattedTime.length, 0)
+
+    // Set the selection after the inserted text.
+    quill.setSelection(cursorPosition + formattedTime.length, 0);
+    
+    // Reset the text format so that new text is not red.
+    quill.format('color', false);
 }
 
 const scrollEditorToPos = (quill: Quill, pos: number) => {
@@ -1169,23 +1228,6 @@ const scrollEditorToPos = (quill: Quill, pos: number) => {
     }
 }
 
-function persistEditorData(fileId: string, transcript: string, notes: string) {
-    const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
-    editorData[fileId] = {
-        ...(editorData[fileId] || {}),
-        transcript,
-        ...(notes && { notes }),
-        updatedAt: Date.now()
-    };
-    localStorage.setItem('editorData', JSON.stringify(editorData));
-}
-
-function getTranscriptFromStorage(fileId: string): string {
-    const storedData = localStorage.getItem('editorData') || '{}';
-    const parsedData = JSON.parse(storedData);
-    return parsedData[fileId]?.transcript || '';
-}
-
 function getDiffHtml(oldText: string, newText: string): string {
     // Import the diff_match_patch utilities from your diff_match_patch module
     const dmp = new diff_match_patch();
@@ -1205,6 +1247,53 @@ function getDiffHtml(oldText: string, newText: string): string {
                 return text;
         }
     }).join('');
+}
+
+function getFormattedContent(text: string): Op[] {
+    const formattedContent: Op[] = []
+    let lastIndex = 0
+
+    // Update pattern to explicitly include the timestamp+blank pattern
+    const pattern = /(\d:\d{2}:\d{2}\.\d\s+S\d+:|(?:\[\d:\d{2}:\d{2}\.\d\]\s+____)|\[[^\]]+\])/g
+    let match: RegExpExecArray | null
+
+    while ((match = pattern.exec(text)) !== null) {
+        if (match.index > lastIndex) {
+            formattedContent.push({ insert: text.slice(lastIndex, match.index) })
+        }
+
+        const matchedText = match[0]
+
+        // Rule 1: TS + Speaker labels
+        if (matchedText.match(/^\d:\d{2}:\d{2}\.\d\s+S\d+:/)) {
+            formattedContent.push({
+                insert: matchedText,
+                attributes: { bold: true }
+            })
+        }
+        // Rule 2: TS + blank (complete pattern)
+        else if (matchedText.match(/\[\d:\d{2}:\d{2}\.\d\]\s+____/)) {
+            formattedContent.push({
+                insert: matchedText,
+                attributes: { color: '#FF0000' }
+            })
+        }
+        // Rule 3: Any other bracketed content
+        else if (matchedText.startsWith('[')) {
+            formattedContent.push({
+                insert: matchedText,
+                attributes: { background: '#f5f5f5', color: '#4A4A4A' }
+            })
+        }
+
+        lastIndex = match.index + matchedText.length
+    }
+
+    if (lastIndex < text.length) {
+        formattedContent.push({ insert: text.slice(lastIndex) })
+    }
+
+    return formattedContent
 }
 
 export {
@@ -1233,8 +1322,7 @@ export {
     insertTimestampBlankAtCursorPosition,
     insertTimestampAndSpeaker,
     autoCapitalizeSentences,
-    persistEditorData,
-    getTranscriptFromStorage,
-    getDiffHtml
+    getDiffHtml,
+    getFormattedContent
 }
 export type { CTMType }
