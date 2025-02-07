@@ -1,4 +1,4 @@
-import { InvoiceStatus } from '@prisma/client'
+import { InvoiceStatus, PaymentMethod } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
 import logger from '@/lib/logger'
@@ -34,6 +34,7 @@ export async function POST() {
         where: {
           userId,
           status: InvoiceStatus.PAID,
+          paymentMethod: PaymentMethod.BILLING,
           createdAt: {
             gte: new Date(lastMonthYear, lastMonthNum - 1, 1),
             lt: new Date(lastMonthYear, lastMonthNum, 1),
@@ -44,6 +45,7 @@ export async function POST() {
           amount: true,
           discount: true,
           refundAmount: true,
+          invoiceId: true,
         },
       })
 
@@ -54,7 +56,7 @@ export async function POST() {
         continue
       }
 
-      const invoiceIds = invoices.map((invoice) => invoice.id)
+      const invoiceIds = invoices.map((invoice) => invoice.invoiceId)
       const total = invoices.reduce(
         (sum, invoice) =>
           sum + (invoice.amount - invoice.discount - invoice.refundAmount),
@@ -62,7 +64,7 @@ export async function POST() {
       )
 
       const emailData = {
-        userEmailId: '',
+        userEmailId: 'support@scribie.com',
       }
 
       const templateData = {

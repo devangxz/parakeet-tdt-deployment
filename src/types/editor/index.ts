@@ -1,3 +1,5 @@
+import { Delta } from 'quill/core';
+
 export interface EditorSettings {
   wordHighlight: boolean
   fontSize: number
@@ -34,8 +36,6 @@ export type AlignmentType = {
   startPos?: number;
   endPos?: number;
 }
-
-import { Delta } from 'quill/core';
 
 export interface Range {
   index: number;

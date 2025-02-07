@@ -54,12 +54,12 @@ import {
   replaceTextHandler,
   CustomerQuillSelection,
   autoCapitalizeSentences,
-  getDiffHtml,
   getFormattedContent,
   EditorData,
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB, getEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
+import { diff_match_patch, DmpDiff } from '@/utils/transcript/diff_match_patch'
 
 export type OrderDetails = {
   orderId: string
@@ -114,7 +114,7 @@ function EditorPage() {
     isUploaded?: boolean
   }>({ renamedFile: null, originalFile: null })
   const { data: session } = useSession()
-  const [diff, setDiff] = useState<string>('')
+  const [diff, setDiff] = useState<DmpDiff[]>([])
   const [ctms, setCtms] = useState<CTMType[]>([])
   const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null)
   const [step, setStep] = useState<string>('')
@@ -132,7 +132,7 @@ function EditorPage() {
   })
   const [audioDuration, setAudioDuration] = useState(1)
   const [quillRef, setQuillRef] = useState<React.RefObject<ReactQuill>>()
-  const editorRef = useRef<EditorHandle>(null);
+  const editorRef = useRef<EditorHandle>(null)
 
   const [findText, setFindText] = useState('')
   const [replaceText, setReplaceText] = useState('')
@@ -156,7 +156,9 @@ function EditorPage() {
   const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set())
   const [waveformUrl, setWaveformUrl] = useState('')
   const [finalizerComment, setFinalizerComment] = useState('')
-  const [initialEditorData, setInitialEditorData] = useState<EditorData | null>(null)
+  const [initialEditorData, setInitialEditorData] = useState<EditorData | null>(
+    null
+  )
   const [editorSettings, setEditorSettings] = useState<EditorSettings>({
     wordHighlight: true,
     fontSize: 16,
@@ -335,8 +337,8 @@ function EditorPage() {
       },
       saveChanges: async () => {
         if (editorRef.current) {
-          editorRef.current.clearAllHighlights();
-          editorRef.current.triggerAlignmentUpdate();
+          editorRef.current.clearAllHighlights()
+          editorRef.current.triggerAlignmentUpdate()
         }
         autoCapitalizeSentences(quillRef)
         await handleSave({
@@ -348,7 +350,7 @@ function EditorPage() {
           listenCount,
           editedSegments,
         })
-        updateFormattedTranscript();
+        updateFormattedTranscript()
       },
     }
     return controls as ShortcutControls
@@ -378,8 +380,8 @@ function EditorPage() {
   }, [audioPlayer])
 
   useEffect(() => {
-    if (!initialEditorData || !orderDetails.fileId) return;
-    persistEditorDataIDB(orderDetails.fileId, { listenCount });
+    if (!initialEditorData || !orderDetails.fileId) return
+    persistEditorDataIDB(orderDetails.fileId, { listenCount })
   }, [listenCount, orderDetails.fileId, initialEditorData])
 
   const sectionChangeHandler = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -411,7 +413,7 @@ function EditorPage() {
     }
 
     async function loadDetails() {
-      if (!session || !session.user) return;
+      if (!session || !session.user) return
       const result = await fetchFileDetails({
         params,
         setOrderDetails,
@@ -419,20 +421,21 @@ function EditorPage() {
         setStep,
         setCtms,
         setListenCount,
-      });
+      })
       if (result) {
-        setOrderDetails(result.orderDetails);
-        setInitialEditorData(result.initialEditorData);
+        setOrderDetails(result.orderDetails)
+        setInitialEditorData(result.initialEditorData)
       }
     }
-    loadDetails();
+    loadDetails()
   }, [session])
 
   const handleTabsValueChange = async (value: string) => {
-    // Update the diff regardless
     const contentText = getEditorText()
-    const newDiff = getDiffHtml(getFormattedTranscript(ctms), contentText)
-    setDiff(newDiff)
+    const dmp = new diff_match_patch()
+    const diffs = dmp.diff_wordMode(getFormattedTranscript(ctms), contentText)
+    dmp.diff_cleanupSemantic(diffs)
+    setDiff(diffs)
 
     if (value === 'transcribe' && orderDetails.fileId) {
       const persistedData = await getEditorDataIDB(orderDetails.fileId)
@@ -480,7 +483,7 @@ function EditorPage() {
         },
         false
       )
-      updateFormattedTranscript();
+      updateFormattedTranscript()
     }, 1000 * 60 * AUTOSAVE_INTERVAL)
 
     return () => clearInterval(interval)
@@ -561,13 +564,23 @@ function EditorPage() {
     }
   }, [orderDetails, editorMode])
 
-  // NEW: Helper to update the transcript formatting in Quill
   const updateFormattedTranscript = () => {
-    if (!quillRef?.current) return;
-    const quill = quillRef.current.getEditor();
-    const text = quill.getText();
-    const formattedDelta = getFormattedContent(text);
-    quill.setContents(formattedDelta);
+    if (!quillRef?.current) return
+    const quill = quillRef.current.getEditor()
+
+    // Capture the current selection (cursor position)
+    const currentSelection = quill.getSelection()
+
+    const text = quill.getText()
+    const formattedDelta = getFormattedContent(text)
+
+    // Update the editor contents with the new delta
+    quill.setContents(formattedDelta)
+
+    // Restore the original cursor position if it exists
+    if (currentSelection) {
+      quill.setSelection(currentSelection)
+    }
   }
 
   const getQuillRef = (quillRef: React.RefObject<ReactQuill>) => {
@@ -676,6 +689,7 @@ function EditorPage() {
         fontSize={fontSize}
         setFontSize={setFontSize}
         editorSettings={editorSettings}
+        editorRef={editorRef}
       />
 
       <div className='flex h-full overflow-hidden'>
@@ -744,7 +758,13 @@ function EditorPage() {
                       setFontSize={setFontSize}
                       setEditedSegments={setEditedSegments}
                       editorSettings={editorSettings}
-                      initialEditorData={initialEditorData || { transcript: '', undoStack: [], redoStack: [] }}
+                      initialEditorData={
+                        initialEditorData || {
+                          transcript: '',
+                          undoStack: [],
+                          redoStack: [],
+                        }
+                      }
                       editorRef={editorRef}
                     />
 
