@@ -36,4 +36,9 @@ export async function persistEditorDataIDB(fileId: string, data: Record<string, 
     updatedAt: Date.now(),
   };
   await db.put('editorData', newData, fileId);
+}
+
+export async function deleteEditorDataIDB(fileId: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('editorData', fileId);
 } 

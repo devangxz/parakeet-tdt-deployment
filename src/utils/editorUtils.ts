@@ -26,7 +26,7 @@ import {
     MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
 } from '@/constants'
 import { CTMType, UndoRedoItem } from '@/types/editor'
-import { getEditorDataIDB, persistEditorDataIDB } from '@/utils/indexedDB'
+import { getEditorDataIDB, persistEditorDataIDB, deleteEditorDataIDB } from '@/utils/indexedDB'
 import { diff_match_patch, DIFF_INSERT, DIFF_DELETE, DIFF_EQUAL } from '@/utils/transcript/diff_match_patch'
 
 export type ButtonLoading = {
@@ -733,9 +733,10 @@ const handleSubmit = async ({
             })
         }
 
-        const editorData = JSON.parse(localStorage.getItem('editorData') || '{}');
-        delete editorData[orderDetails.fileId];
-        localStorage.setItem('editorData', JSON.stringify(editorData));
+        // TODO: remove this after March 1st
+        localStorage.removeItem('editorData');
+        await deleteEditorDataIDB(orderDetails.fileId);
+
         toast.dismiss(toastId)
         const successToastId = toast.success(`Transcription submitted successfully`)
         toast.dismiss(successToastId)
