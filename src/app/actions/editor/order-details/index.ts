@@ -67,9 +67,21 @@ export async function getOrderDetailsAction(fileId: string) {
     const acceptedTime = assignment?.acceptedTs
       ? new Date(assignment.acceptedTs)
       : null
-    const givenTime = file?.duration
-      ? file.duration * config.job_timeout_multiplier
+    const duration = file?.duration || 0
+
+    let timeoutMultiplier = 4
+    if (duration <= 1800) {
+      // Less than 30 mins
+      timeoutMultiplier = 6
+    } else if (duration <= 10800) {
+      // Between 30 mins and 3 hours
+      timeoutMultiplier = 5
+    }
+
+    const givenTime = duration
+      ? duration * timeoutMultiplier + (duration <= 10800 ? 7200 : 0)
       : 0
+
     let remainingTime = 0
     if (acceptedTime) {
       const elapsedTimeInSeconds = Math.floor(
@@ -77,8 +89,8 @@ export async function getOrderDetailsAction(fileId: string) {
       )
       const baseRemainingTime = Math.max(0, givenTime - elapsedTimeInSeconds)
       const extensionTime =
-        assignment?.extensionRequested && file?.duration
-          ? file.duration * extensionTimeMultiplier
+        assignment?.extensionRequested && duration
+          ? duration * extensionTimeMultiplier
           : 0
       remainingTime = baseRemainingTime + extensionTime
     }

@@ -1,4 +1,5 @@
 'use server'
+import { QCType } from '@prisma/client'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
@@ -31,6 +32,7 @@ export async function getICQCRate(email: string) {
     return {
       success: true,
       qcRate: user.Verifier.qcRate,
+      cfRate: user.Verifier.cfRate,
       cfRRate: user.Verifier.cfRRate,
     }
   } catch (error) {
@@ -46,6 +48,7 @@ export async function getICQCRate(email: string) {
 export async function updateICQCRate(
   email: string,
   qcRate: number,
+  cfRate: number,
   cfRRate: number
 ) {
   try {
@@ -78,7 +81,9 @@ export async function updateICQCRate(
       },
       data: {
         qcRate: qcRate,
+        cfRate: cfRate,
         cfRRate: cfRRate,
+        qcType: QCType.CONTRACTOR,
       },
     })
 
