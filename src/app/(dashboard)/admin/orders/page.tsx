@@ -1,4 +1,5 @@
 'use client'
+import { CancellationStatus } from '@prisma/client'
 import {
   ReloadIcon,
   ChevronLeftIcon,
@@ -24,6 +25,7 @@ const StatusPage = dynamic(() => import('./status'), {
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { changeDeliveryDate } from '@/app/actions/om/change-delivery-date'
 import { fetchPendingOrders } from '@/app/actions/om/fetch-pending-orders'
+import { CancellationDetailsModal } from '@/components/cancellation-details-modal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -56,6 +58,20 @@ interface File {
   rateBonus: number
   type: string
   orgName: string
+  cancellations: {
+    user: {
+      firstname: string | null
+      lastname: string | null
+      email: string
+    }
+    id: number
+    userId: number
+    fileId: string
+    reason: string
+    createdAt: Date
+    comment: string | null
+    status: CancellationStatus
+  }[]
 }
 
 export default function OrdersPage() {
@@ -68,6 +84,21 @@ export default function OrdersPage() {
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
+  const [isCancellationsModalOpen, setIsCancellationsModalOpen] = useState(false)
+  const [selectedCancellations, setSelectedCancellations] = useState<{
+    user: {
+      firstname: string | null
+      lastname: string | null
+      email: string
+    }
+    id: number
+    userId: number
+    fileId: string
+    reason: string
+    createdAt: Date
+    comment: string | null
+    status: CancellationStatus
+  }[]>([])
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -117,6 +148,7 @@ export default function OrdersPage() {
             rateBonus: order.rateBonus,
             type: order.orderType,
             orgName: order.orgName,
+            cancellations: order.cancellations,
           }
         })
         setPendingOrders(orders ?? [])
@@ -213,7 +245,28 @@ export default function OrdersPage() {
               {row.original.fileId}
             </Button>
           </div>
-          <div className='mb-2 font-medium'>{row.original.filename}</div>
+          <div className="mb-2 font-medium">
+            {row.original.filename}
+            {row.original.cancellations.length > 0 && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <button
+                    className="inline-flex items-center justify-center w-5 h-5 bg-red-500 text-primary-foreground rounded-full text-xs font-medium ml-2 cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedCancellations(row.original.cancellations)
+                      setIsCancellationsModalOpen(true)
+                    }}
+                  >
+                    {row.original.cancellations.length}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>View cancellation history</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
           <div className='mb-2 font-medium'>
             {formatDateTime(row.original.orderTs)}
           </div>
@@ -392,54 +445,62 @@ export default function OrdersPage() {
   ]
 
   return (
-    <Tabs
-      defaultValue='orders'
-      value={activeTab}
-      onValueChange={(value) => setActiveTab(value)}
-    >
-      <TabsList className='grid grid-cols-7 mt-5 ml-8 w-[900px]'>
-        <TabsTrigger value='orders'>Orders</TabsTrigger>
-        <TabsTrigger value='status'>Status</TabsTrigger>
-        <TabsTrigger value='screen'>Screen</TabsTrigger>
-        <TabsTrigger value='pre-delivery'>Pre Delivery</TabsTrigger>
-        <TabsTrigger value='approval'>Approval</TabsTrigger>
-        <TabsTrigger value='re-review'>Re-Review</TabsTrigger>
-        <TabsTrigger value='compare'>Compare</TabsTrigger>
-      </TabsList>
-      <TabsContent value='orders'>
-        <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
-          <div className='flex items-center justify-between space-y-2'>
-            <div>
-              <h1 className='text-lg font-semibold md:text-lg'>
-                Pending Orders ({pendingOrders?.length})
-              </h1>
+    <>
+      <Tabs
+        defaultValue='orders'
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value)}
+      >
+        <TabsList className='grid grid-cols-7 mt-5 ml-8 w-[900px]'>
+          <TabsTrigger value='orders'>Orders</TabsTrigger>
+          <TabsTrigger value='status'>Status</TabsTrigger>
+          <TabsTrigger value='screen'>Screen</TabsTrigger>
+          <TabsTrigger value='pre-delivery'>Pre Delivery</TabsTrigger>
+          <TabsTrigger value='approval'>Approval</TabsTrigger>
+          <TabsTrigger value='re-review'>Re-Review</TabsTrigger>
+          <TabsTrigger value='compare'>Compare</TabsTrigger>
+        </TabsList>
+        <TabsContent value='orders'>
+          <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
+            <div className='flex items-center justify-between space-y-2'>
+              <div>
+                <h1 className='text-lg font-semibold md:text-lg'>
+                  Pending Orders ({pendingOrders?.length})
+                </h1>
+              </div>
             </div>
+            <DataTable data={pendingOrders ?? []} columns={columns} />
           </div>
-          <DataTable data={pendingOrders ?? []} columns={columns} />
-        </div>
-        <div className='bg-muted/40'>
-          <Separator className='mb-5' />
-        </div>
-        <DeliveredSection />
-      </TabsContent>
-      <TabsContent value='status'>
-        <StatusPage selectedFileId={fileId} />
-      </TabsContent>
-      <TabsContent value='screen'>
-        <ScreenPage />
-      </TabsContent>
-      <TabsContent value='pre-delivery'>
-        <PreDeliveryPage />
-      </TabsContent>
-      <TabsContent value='approval'>
-        <ApprovalPage />
-      </TabsContent>
-      <TabsContent value='re-review'>
-        <ReReviewPage />
-      </TabsContent>
-      <TabsContent value='compare'>
-        <ComparePage />
-      </TabsContent>
-    </Tabs>
+          <div className='bg-muted/40'>
+            <Separator className='mb-5' />
+          </div>
+          <DeliveredSection />
+        </TabsContent>
+        <TabsContent value='status'>
+          <StatusPage selectedFileId={fileId} />
+        </TabsContent>
+        <TabsContent value='screen'>
+          <ScreenPage />
+        </TabsContent>
+        <TabsContent value='pre-delivery'>
+          <PreDeliveryPage />
+        </TabsContent>
+        <TabsContent value='approval'>
+          <ApprovalPage />
+        </TabsContent>
+        <TabsContent value='re-review'>
+          <ReReviewPage />
+        </TabsContent>
+        <TabsContent value='compare'>
+          <ComparePage />
+        </TabsContent>
+      </Tabs>
+      <CancellationDetailsModal
+        isOpen={isCancellationsModalOpen}
+        onClose={() => setIsCancellationsModalOpen(false)}
+        cancellations={selectedCancellations}
+      />
+    </>
+
   )
 }

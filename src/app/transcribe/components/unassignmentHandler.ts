@@ -9,7 +9,9 @@ interface UnassignFileParams {
     React.SetStateAction<Record<number, boolean>>
   >
   changeTab: (tabName: string) => void
-  type: string
+  type: string,
+  reason?: string,
+  comment?: string
 }
 
 export const unassignmentHandler = async ({
@@ -17,13 +19,15 @@ export const unassignmentHandler = async ({
   setLoadingFileOrder,
   changeTab,
   type,
+  reason = '',
+  comment = ''
 }: UnassignFileParams): Promise<void> => {
   setLoadingFileOrder((prev) => ({ ...prev, [id]: true }))
 
   try {
     let response
     if (type === 'QC') {
-      response = await unassignQCFile(id)
+      response = await unassignQCFile(id, reason, comment)
     } else {
       response = await unassignFile(id)
     }

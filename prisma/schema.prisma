@@ -81,6 +81,7 @@ model User {
   ApiKey                    ApiKey?
   PlayStats                 PlayStats[]
   editorSettings            UserEditorSettings?
+  Cancellations             Cancellations[]
 
   @@index([role])
   @@index([email])
@@ -696,18 +697,18 @@ model PlayStats {
 }
 
 model UserEditorSettings {
-  id                    Int      @id @default(autoincrement())
-  userId                Int      @unique @map("user_id")
-  wordHighlight         Boolean  @default(true) @map("word_highlight")
-  fontSize              Int      @default(16) @map("font_size")
-  audioRewindSeconds    Int      @default(0) @map("audio_rewind_seconds")
-  volume                Int      @default(100)
-  playbackSpeed         Int      @default(100) @map("playback_speed")
-  useNativeContextMenu  Boolean  @default(false) @map("use_native_context_menu")
-  shortcuts             Json     @default("{}")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
-  user                  User     @relation(fields: [userId], references: [id])
+  id                   Int      @id @default(autoincrement())
+  userId               Int      @unique @map("user_id")
+  wordHighlight        Boolean  @default(true) @map("word_highlight")
+  fontSize             Int      @default(16) @map("font_size")
+  audioRewindSeconds   Int      @default(0) @map("audio_rewind_seconds")
+  volume               Int      @default(100)
+  playbackSpeed        Int      @default(100) @map("playback_speed")
+  useNativeContextMenu Boolean  @default(false) @map("use_native_context_menu")
+  shortcuts            Json     @default("{}")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  user                 User     @relation(fields: [userId], references: [id])
 
   @@map("scb_user_editor_settings")
 }
@@ -734,6 +735,22 @@ model MiscJobs {
   @@index([userId])
   @@index([fileId])
   @@map("scb_misc_jobs")
+}
+
+model Cancellations {
+  id        Int                @id @default(autoincrement())
+  userId    Int
+  fileId    String             @map("file_id")
+  reason    String
+  createdAt DateTime           @default(now()) @map("created_at")
+  comment   String?
+  status    CancellationStatus @default(QC)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([fileId])
+  @@map("scb_cancellations")
 }
 
 //  ███████ ███    ██ ██    ██ ███    ███ ███████
@@ -982,4 +999,10 @@ enum FileTag {
 enum SharedFilePermission {
   EDITOR
   VIEWER
+}
+
+enum CancellationStatus {
+  QC
+  REVIEW
+  FINALIZE
 }
