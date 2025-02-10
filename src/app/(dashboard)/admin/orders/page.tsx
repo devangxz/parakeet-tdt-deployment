@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 import {
   ReloadIcon,
@@ -56,6 +57,7 @@ interface File {
   rateBonus: number
   type: string
   orgName: string
+  specialInstructions: string
 }
 
 export default function OrdersPage() {
@@ -117,6 +119,7 @@ export default function OrdersPage() {
             rateBonus: order.rateBonus,
             type: order.orderType,
             orgName: order.orgName,
+            specialInstructions: order.specialInstructions,
           }
         })
         setPendingOrders(orders ?? [])
@@ -227,8 +230,8 @@ export default function OrdersPage() {
                   {row.original.pwer > HIGH_PWER
                     ? 'HIGH'
                     : row.original.pwer < LOW_PWER
-                      ? 'LOW'
-                      : 'MEDIUM'}
+                    ? 'LOW'
+                    : 'MEDIUM'}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
@@ -415,7 +418,18 @@ export default function OrdersPage() {
               </h1>
             </div>
           </div>
-          <DataTable data={pendingOrders ?? []} columns={columns} />
+          <DataTable
+            data={pendingOrders ?? []}
+            columns={columns}
+            renderRowSubComponent={({ row }: { row: any }) =>
+              row.original.specialInstructions ? (
+                <div className='p-2 flex gap-1'>
+                  <strong>Special Instructions:</strong>
+                  <p>{row.original.specialInstructions}</p>
+                </div>
+              ) : null
+            }
+          />
         </div>
         <div className='bg-muted/40'>
           <Separator className='mb-5' />
