@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File
     const url = formData.get('url') as string
     const type = formData.get('type') as string
-    const fileId = generateUniqueId()
+    let fileId = generateUniqueId()
 
     if (type === 'ScribieDotComUpload') {
       const filename = formData.get('filename') as string
@@ -79,6 +79,7 @@ export async function POST(req: NextRequest) {
       const uploadedBy = userDetails.userId
       const size = file ? file.size : 0
       const duration = parseInt(formData.get('duration') as string)
+      fileId = formData.get('file_id') as string
 
       await insertFileRecord(
         fileId,

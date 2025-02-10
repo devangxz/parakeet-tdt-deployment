@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 import { CancellationStatus } from '@prisma/client'
 import {
@@ -58,6 +59,7 @@ interface File {
   rateBonus: number
   type: string
   orgName: string
+  specialInstructions: string
   cancellations: {
     user: {
       firstname: string | null
@@ -84,21 +86,24 @@ export default function OrdersPage() {
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
-  const [isCancellationsModalOpen, setIsCancellationsModalOpen] = useState(false)
-  const [selectedCancellations, setSelectedCancellations] = useState<{
-    user: {
-      firstname: string | null
-      lastname: string | null
-      email: string
-    }
-    id: number
-    userId: number
-    fileId: string
-    reason: string
-    createdAt: Date
-    comment: string | null
-    status: CancellationStatus
-  }[]>([])
+  const [isCancellationsModalOpen, setIsCancellationsModalOpen] =
+    useState(false)
+  const [selectedCancellations, setSelectedCancellations] = useState<
+    {
+      user: {
+        firstname: string | null
+        lastname: string | null
+        email: string
+      }
+      id: number
+      userId: number
+      fileId: string
+      reason: string
+      createdAt: Date
+      comment: string | null
+      status: CancellationStatus
+    }[]
+  >([])
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -148,6 +153,7 @@ export default function OrdersPage() {
             rateBonus: order.rateBonus,
             type: order.orderType,
             orgName: order.orgName,
+            specialInstructions: order.specialInstructions,
             cancellations: order.cancellations,
           }
         })
@@ -245,13 +251,13 @@ export default function OrdersPage() {
               {row.original.fileId}
             </Button>
           </div>
-          <div className="mb-2 font-medium">
+          <div className='mb-2 font-medium'>
             {row.original.filename}
             {row.original.cancellations.length > 0 && (
               <Tooltip>
                 <TooltipTrigger>
                   <button
-                    className="inline-flex items-center justify-center w-5 h-5 bg-red-500 text-primary-foreground rounded-full text-xs font-medium ml-2 cursor-pointer"
+                    className='inline-flex items-center justify-center w-5 h-5 bg-red-500 text-primary-foreground rounded-full text-xs font-medium ml-2 cursor-pointer'
                     onClick={(e) => {
                       e.stopPropagation()
                       setSelectedCancellations(row.original.cancellations)
@@ -280,8 +286,8 @@ export default function OrdersPage() {
                   {row.original.pwer > HIGH_PWER
                     ? 'HIGH'
                     : row.original.pwer < LOW_PWER
-                      ? 'LOW'
-                      : 'MEDIUM'}
+                    ? 'LOW'
+                    : 'MEDIUM'}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
@@ -469,7 +475,18 @@ export default function OrdersPage() {
                 </h1>
               </div>
             </div>
-            <DataTable data={pendingOrders ?? []} columns={columns} />
+            <DataTable
+              data={pendingOrders ?? []}
+              columns={columns}
+              renderRowSubComponent={({ row }: { row: any }) =>
+                row.original.specialInstructions ? (
+                  <div className='p-2 flex gap-1'>
+                    <strong>Special Instructions:</strong>
+                    <p>{row.original.specialInstructions}</p>
+                  </div>
+                ) : null
+              }
+            />
           </div>
           <div className='bg-muted/40'>
             <Separator className='mb-5' />
@@ -501,6 +518,5 @@ export default function OrdersPage() {
         cancellations={selectedCancellations}
       />
     </>
-
   )
 }
