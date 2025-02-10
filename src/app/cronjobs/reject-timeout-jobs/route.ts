@@ -5,6 +5,7 @@ import config from '../../../../config.json'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
+import getOrgName from '@/utils/getOrgName'
 
 export async function POST() {
   try {
@@ -28,6 +29,11 @@ export async function POST() {
 
     for (const file of assignedFiles) {
       if (file.order.File?.duration) {
+        const orgName = await getOrgName(file.order.userId)
+        if (orgName && ['acr', 'remotelegal'].includes(orgName.toLowerCase())) {
+          continue
+        }
+
         let timeoutMultiplier = 4
         if (file.order.File.duration <= 1800) {
           // Less than 30 mins
