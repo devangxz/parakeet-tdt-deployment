@@ -48,9 +48,30 @@ export async function fetchPendingOrders() {
       })
     )
 
+    // Fetch cancellations for each order's file and add to ordersWithCost 
+    const ordersWithCostAndCancellations = await Promise.all(
+      ordersWithCost.map(async (order) => {
+        const cancellations = await prisma.cancellations.findMany({
+          where: {
+            fileId: order.fileId
+          },
+          include: {
+            user: {
+              select: {
+                firstname: true,
+                lastname: true,
+                email: true
+              }
+            }
+          }
+        })
+        return { ...order, cancellations }
+      })
+    )
+
     return {
       success: true,
-      details: ordersWithCost,
+      details: ordersWithCostAndCancellations,
     }
   } catch (error) {
     logger.error(`Error while fetching pending orders`, error)
