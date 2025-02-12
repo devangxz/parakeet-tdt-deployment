@@ -18,7 +18,7 @@ export default function EarningsPage() {
             setActiveTab(value)
           }}
         >
-          <TabsList className='rounded-md bg-primary/5'>
+          <TabsList className='rounded-md'>
             <TabsTrigger value='earnings'>Earnings</TabsTrigger>
             <TabsTrigger value='withdrawals'>Withdrawals</TabsTrigger>
           </TabsList>

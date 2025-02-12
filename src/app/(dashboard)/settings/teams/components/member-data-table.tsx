@@ -66,7 +66,7 @@ export function MemberDataTable<TData, TValue>({
   })
 
   return (
-    <div className='rounded-md border-2 border-customBorder bg-white'>
+    <div className='rounded-md border-2 border-customBorder bg-background'>
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (

@@ -144,7 +144,7 @@ const SignupForm = () => {
               <h1 className='text-4xl font-semibold tracking-tight'>
                 Create Account
               </h1>
-              <p className='mt-2 text-md text-gray-700'>
+              <p className='mt-2 text-md text-muted-foreground'>
                 Fill in your details to create your account
               </p>
             </div>
@@ -420,7 +420,7 @@ const SignupForm = () => {
                   control={form.control}
                   name='terms'
                   render={({ field }) => (
-                    <FormItem className='flex flex-row items-start space-x-3 space-y-0'>
+                    <FormItem className='flex flex-row items-center space-x-3 space-y-0'>
                       <FormControl>
                         <Checkbox
                           checked={field.value}
@@ -428,7 +428,7 @@ const SignupForm = () => {
                         />
                       </FormControl>
                       <div className='space-y-1 leading-none'>
-                        <FormLabel>
+                        <FormLabel className='text-sm text-muted-foreground'>
                           I agree to the{' '}
                           <Link
                             href='/terms'
@@ -446,7 +446,7 @@ const SignupForm = () => {
                   control={form.control}
                   name='receive_updates'
                   render={({ field }) => (
-                    <FormItem className='flex flex-row items-start space-x-3 space-y-0'>
+                    <FormItem className='flex flex-row items-center space-x-3 space-y-0'>
                       <FormControl>
                         <Checkbox
                           checked={field.value}
@@ -454,7 +454,7 @@ const SignupForm = () => {
                         />
                       </FormControl>
                       <div className='space-y-1 leading-none'>
-                        <FormLabel className='text-sm text-gray-700'>
+                        <FormLabel className='text-sm text-muted-foreground'>
                           Receive updates and discount coupons (once every 3
                           months)
                         </FormLabel>
@@ -484,7 +484,7 @@ const SignupForm = () => {
             </form>
           </Form>
 
-          <div className='text-center text-sm text-gray-700'>
+          <div className='text-center text-sm text-muted-foreground'>
             Already have an account?{' '}
             <Link href='/signin' className='text-primary hover:underline'>
               Sign In

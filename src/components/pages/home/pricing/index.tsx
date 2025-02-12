@@ -230,7 +230,7 @@ const Pricing = () => {
             <span className='text-primary'>honest & transparent</span> prices
           </h2>
 
-          <p className='mt-4 sm:mt-6 lg:mt-8 text-gray-700 max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
+          <p className='mt-4 sm:mt-6 lg:mt-8 text-muted-foreground max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
             Calculate transcription costs instantly by entering your media
             duration and selecting premium features
           </p>
@@ -251,7 +251,7 @@ const Pricing = () => {
                 </div>
                 <div className='flex flex-col sm:flex-row gap-4'>
                   <div className='relative w-full sm:w-44'>
-                    <div className='absolute right-12 inset-y-0 flex flex-col justify-center gap-0.5 pr-2 border-r border-border'>
+                    <div className='absolute right-12 inset-y-0 flex flex-col justify-center gap-0.5 pr-2 border-r border-customBorder'>
                       <button
                         onClick={() => handleIncrement('hrs')}
                         className='text-primary hover:text-primary/80 focus:outline-none p-0.5 disabled:opacity-50'
@@ -282,7 +282,7 @@ const Pricing = () => {
                       type='number'
                       min='0'
                       max='24'
-                      className='w-full h-12 text-base sm:text-lg bg-background/90 border-0 focus:border-background rounded-lg pr-20 pl-4 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
+                      className='w-full h-12 text-base sm:text-lg bg-secondary border-0 focus:border-background rounded-lg pr-20 pl-4 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
                       value={time.hr}
                       onChange={(e) => handleTime(e.target.value, 'hrs')}
                     />
@@ -291,7 +291,7 @@ const Pricing = () => {
                     </span>
                   </div>
                   <div className='relative w-full sm:w-44'>
-                    <div className='absolute right-12 inset-y-0 flex flex-col justify-center gap-0.5 pr-2 border-r border-border'>
+                    <div className='absolute right-12 inset-y-0 flex flex-col justify-center gap-0.5 pr-2 border-r border-customBorder'>
                       <button
                         onClick={() => handleIncrement('min')}
                         className='text-primary hover:text-primary/80 focus:outline-none p-0.5 disabled:opacity-50'
@@ -323,7 +323,7 @@ const Pricing = () => {
                       type='number'
                       min='0'
                       max='59'
-                      className='w-full h-12 text-base sm:text-lg bg-background/90 border-0 focus:border-background rounded-lg pr-20 pl-4 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-100 disabled:disabled:bg-background/90'
+                      className='w-full h-12 text-base sm:text-lg bg-secondary border-0 focus:border-background rounded-lg pr-20 pl-4 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-100 disabled:disabled:bg-background/90'
                       value={time.min}
                       onChange={(e) => handleTime(e.target.value, 'min')}
                       disabled={time.hr === 24}
@@ -368,7 +368,7 @@ const Pricing = () => {
                     </div>
                     <button
                       onClick={() => router.push('/upload')}
-                      className='w-full sm:w-auto px-6 py-3 bg-background rounded-lg font-medium text-primary hover:bg-secondary shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all flex items-center justify-center sm:justify-start gap-2 whitespace-nowrap'
+                      className='w-full sm:w-auto px-6 py-3 bg-secondary rounded-lg font-medium text-primary shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all flex items-center justify-center sm:justify-start gap-2 whitespace-nowrap'
                     >
                       <Zap className='w-4 h-4' />
                       Start Now
@@ -393,7 +393,7 @@ const Pricing = () => {
 
                 <div className='grid gap-3 sm:gap-4'>
                   {featuresBasic.map((feature, index) => (
-                    <Card key={index} className='bg-background border-0'>
+                    <Card key={index} className='bg-secondary border-0'>
                       <CardContent className='py-3 px-2 sm:p-4'>
                         <div className='flex items-center justify-between'>
                           <div className='flex items-center gap-3 sm:gap-4'>
@@ -405,11 +405,11 @@ const Pricing = () => {
                                 <h4 className='text-sm sm:text-base font-medium text-foreground'>
                                   {feature.name}
                                 </h4>
-                                <span className='px-1.5 sm:px-2 py-0.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-full'>
+                                <span className='px-1.5 sm:px-2 pt-[1px] pb-[2px] text-xs font-medium text-emerald-700 bg-emerald-50 rounded-full'>
                                   {feature.badge}
                                 </span>
                               </div>
-                              <p className='mt-0.5 sm:mt-1 text-xs sm:text-sm text-gray-500'>
+                              <p className='mt-0.5 sm:mt-1 text-xs sm:text-sm text-muted-foreground'>
                                 {feature.description}
                               </p>
                             </div>
@@ -437,11 +437,11 @@ const Pricing = () => {
 
                 <div className='grid gap-3 sm:gap-4'>
                   {featuresAdvanced.map((feature, index) => (
-                    <Card key={index} className='bg-background border-0'>
+                    <Card key={index} className='bg-secondary border-0'>
                       <CardContent className='py-3 px-2 sm:p-4'>
                         <div className='flex items-center justify-between'>
                           <div className='flex items-center gap-3 sm:gap-4'>
-                            <div className='flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary'>
+                            <div className='flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary'>
                               <feature.icon className='w-4 h-4 sm:w-5 sm:h-5' />
                             </div>
                             <div>
@@ -449,7 +449,7 @@ const Pricing = () => {
                                 <h4 className='text-sm sm:text-base font-medium text-foreground'>
                                   {feature.name}
                                 </h4>
-                                <span className='px-1.5 sm:px-2 py-0.5 text-xs font-medium text-secondary-foreground bg-secondary rounded-full'>
+                                <span className='px-1.5 sm:px-2 pt-[1px] pb-[2px] text-xs font-medium text-secondary-foreground bg-primary/15 rounded-full'>
                                   {feature.badge}
                                 </span>
                               </div>

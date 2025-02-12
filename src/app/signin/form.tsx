@@ -85,7 +85,7 @@ const Signin = () => {
               <h1 className='text-4xl font-semibold tracking-tight'>
                 Welcome Back
               </h1>
-              <p className='mt-2 text-md text-gray-700'>
+              <p className='mt-2 text-md text-muted-foreground'>
                 Enter your credentials to access your account
               </p>
             </div>
@@ -208,7 +208,7 @@ const Signin = () => {
             </form>
           </Form>
 
-          <div className='text-center text-sm text-gray-700'>
+          <div className='text-center text-sm text-muted-foreground'>
             Don&apos;t have an account?{' '}
             <Link
               href='/register'

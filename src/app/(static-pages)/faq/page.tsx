@@ -31,7 +31,7 @@ export default function Page() {
             Frequently Asked <span className='text-primary'>Questions</span>
           </h1>
 
-          <p className='mt-4 sm:mt-6 lg:mt-8 text-gray-700 max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
+          <p className='mt-4 sm:mt-6 lg:mt-8 text-muted-foreground max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
             Find answers to common questions about our transcription services
           </p>
         </header>
@@ -44,12 +44,12 @@ export default function Page() {
                 <Accordion key={index} type='single' collapsible>
                   <AccordionItem
                     value={question.heading}
-                    className='border border-border rounded-xl overflow-hidden bg-card'
+                    className='border border-customBorder rounded-xl overflow-hidden bg-card'
                   >
                     <AccordionTrigger className='px-6 py-4 hover:bg-primary/5 text-lg'>
                       {question.heading}
                     </AccordionTrigger>
-                    <AccordionContent className='px-6 py-4 text-gray-700 text-base sm:text-lg'>
+                    <AccordionContent className='px-6 py-4 text-muted-foreground text-base sm:text-lg'>
                       {question.content}
                     </AccordionContent>
                   </AccordionItem>
@@ -65,12 +65,12 @@ export default function Page() {
                 <Accordion key={index} type='single' collapsible>
                   <AccordionItem
                     value={question.heading}
-                    className='border border-border rounded-xl overflow-hidden bg-card'
+                    className='border border-customBorder rounded-xl overflow-hidden bg-card'
                   >
                     <AccordionTrigger className='px-6 py-4 hover:bg-primary/5 text-lg'>
                       {question.heading}
                     </AccordionTrigger>
-                    <AccordionContent className='px-6 py-4 text-gray-700 text-base sm:text-lg'>
+                    <AccordionContent className='px-6 py-4 text-muted-foreground text-base sm:text-lg'>
                       {question.content}
                     </AccordionContent>
                   </AccordionItem>
@@ -88,12 +88,12 @@ export default function Page() {
                 <Accordion key={index} type='single' collapsible>
                   <AccordionItem
                     value={question.heading}
-                    className='border border-border rounded-xl overflow-hidden bg-card'
+                    className='border border-customBorder rounded-xl overflow-hidden bg-card'
                   >
                     <AccordionTrigger className='px-6 py-4 hover:bg-primary/5 text-lg'>
                       {question.heading}
                     </AccordionTrigger>
-                    <AccordionContent className='px-6 py-4 text-gray-700 text-base sm:text-lg'>
+                    <AccordionContent className='px-6 py-4 text-muted-foreground text-base sm:text-lg'>
                       {question.content}
                     </AccordionContent>
                   </AccordionItem>
@@ -109,12 +109,12 @@ export default function Page() {
                 <Accordion key={index} type='single' collapsible>
                   <AccordionItem
                     value={question.heading}
-                    className='border border-border rounded-xl overflow-hidden bg-card'
+                    className='border border-customBorder rounded-xl overflow-hidden bg-card'
                   >
                     <AccordionTrigger className='px-6 py-4 hover:bg-primary/5 text-lg'>
                       {question.heading}
                     </AccordionTrigger>
-                    <AccordionContent className='px-6 py-4 text-gray-700 text-base sm:text-lg'>
+                    <AccordionContent className='px-6 py-4 text-muted-foreground text-base sm:text-lg'>
                       {question.content}
                     </AccordionContent>
                   </AccordionItem>
@@ -130,12 +130,12 @@ export default function Page() {
                 <Accordion key={index} type='single' collapsible>
                   <AccordionItem
                     value={question.heading}
-                    className='border border-border rounded-xl overflow-hidden bg-card'
+                    className='border border-customBorder rounded-xl overflow-hidden bg-card'
                   >
                     <AccordionTrigger className='px-6 py-4 hover:bg-primary/5 text-lg'>
                       {question.heading}
                     </AccordionTrigger>
-                    <AccordionContent className='px-6 py-4 text-gray-700 text-base sm:text-lg'>
+                    <AccordionContent className='px-6 py-4 text-muted-foreground text-base sm:text-lg'>
                       {question.content}
                     </AccordionContent>
                   </AccordionItem>
@@ -151,12 +151,12 @@ export default function Page() {
                 <Accordion key={index} type='single' collapsible>
                   <AccordionItem
                     value={question.heading}
-                    className='border border-border rounded-xl overflow-hidden bg-card'
+                    className='border border-customBorder rounded-xl overflow-hidden bg-card'
                   >
                     <AccordionTrigger className='px-6 py-4 hover:bg-primary/5 text-lg'>
                       {question.heading}
                     </AccordionTrigger>
-                    <AccordionContent className='px-6 py-4 text-gray-700 text-base sm:text-lg'>
+                    <AccordionContent className='px-6 py-4 text-muted-foreground text-base sm:text-lg'>
                       {question.content}
                     </AccordionContent>
                   </AccordionItem>
@@ -168,9 +168,9 @@ export default function Page() {
 
         <section className='mt-20 sm:mt-28 md:mt-32 lg:mt-40 grid md:grid-cols-2 gap-8'>
           <div className='relative'>
-            <div className='relative bg-primary-foreground p-8 rounded-2xl h-full border border-border'>
+            <div className='relative bg-background p-8 rounded-2xl h-full border border-customBorder'>
               <h3 className='text-xl font-semibold mb-4'>New to Scribie?</h3>
-              <p className='text-gray-700 mb-8'>
+              <p className='text-muted-foreground mb-8'>
                 Get started with our guide to make the most of our transcription
                 services
               </p>
@@ -186,11 +186,11 @@ export default function Page() {
           </div>
 
           <div className='relative'>
-            <div className='relative bg-primary-foreground p-8 rounded-2xl h-full border border-border'>
+            <div className='relative bg-background p-8 rounded-2xl h-full border border-customBorder'>
               <h3 className='text-xl font-semibold mb-4'>
                 Still Have Questions?
               </h3>
-              <p className='text-gray-700 mb-8'>
+              <p className='text-muted-foreground mb-8'>
                 Can&apos;t find what you&apos;re looking for? Our support team
                 is here to help you
               </p>

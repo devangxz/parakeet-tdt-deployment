@@ -95,11 +95,11 @@ const NumberCounter = ({ number }: NumberCounterProps) => {
 const StatHighlight = ({ number, label }: StatHighlightProps) => (
   <div className='relative group cursor-pointer w-full'>
     <div className='absolute inset-0 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-2xl sm:rounded-3xl blur-xl transition-all duration-500 group-hover:blur-2xl' />
-    <div className='relative bg-background/95 backdrop-blur-sm border border-border rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 transition-all duration-500 group-hover:scale-[1.02] group-hover:shadow-lg'>
+    <div className='relative bg-background/95 backdrop-blur-sm border border-customBorder rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 transition-all duration-500 group-hover:scale-[1.02] group-hover:shadow-lg'>
       <div className='flex items-baseline gap-1'>
         <NumberCounter number={number} />
       </div>
-      <p className='mt-2 text-sm sm:text-base text-gray-700'>{label}</p>
+      <p className='mt-2 text-sm sm:text-base text-muted-foreground'>{label}</p>
     </div>
   </div>
 )
@@ -120,7 +120,7 @@ const Achievements = () => (
           <span className='text-primary'>future of transcription</span> prices
         </h2>
 
-        <p className='mt-4 sm:mt-6 lg:mt-8 text-gray-700 max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
+        <p className='mt-4 sm:mt-6 lg:mt-8 text-muted-foreground max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
           Join thousands of companies worldwide who trust our platform for their
           transcription needs
         </p>

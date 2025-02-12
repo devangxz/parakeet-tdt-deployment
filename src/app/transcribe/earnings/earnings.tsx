@@ -217,7 +217,7 @@ export default function EarningsPage() {
 
   return (
     <>
-      <div className='bg-white border-2 border-customBorder rounded-md'>
+      <div className='bg-background border-2 border-customBorder rounded-md'>
         <div className='flex justify-between p-4'>
           <EarningsDetails
             showDollar={false}
@@ -238,7 +238,7 @@ export default function EarningsPage() {
           />
         </div>
       </div>
-      <div className='bg-white border-2 border-customBorder rounded-md mt-5'>
+      <div className='bg-secondary border-2 border-customBorder rounded-md mt-5'>
         <div className='p-4'>
           <div className='flex justify-between items-start mb-1'>
             <h2 className='text-lg font-semibold md:text-xl'>Withdraw</h2>
@@ -258,14 +258,14 @@ export default function EarningsPage() {
           </div>
 
           <ul className='list-disc ml-5'>
-            <li className='text-gray-600'>
+            <li className='text-muted-foreground'>
               Withdrawals of $30 or higher are{' '}
-              <strong className='text-[#161616]'>free</strong>.
+              <strong className='text-foreground'>free</strong>.
             </li>
-            <li className='text-gray-600'>
+            <li className='text-muted-foreground'>
               For withdrawals below $30 a fee of 2% will be charged.
             </li>
-            <li className='text-gray-600'>
+            <li className='text-muted-foreground'>
               Payment processing will happen weekly and will take 7-14 Business
               days after the withdrawals are done.
             </li>
@@ -338,7 +338,7 @@ export default function EarningsPage() {
           </Dialog>
         </div>
       </div>
-      <div className='bg-white border-2 border-customBorder rounded-md mt-5 p-4'>
+      <div className='bg-background border-2 border-customBorder rounded-md mt-5 p-4'>
         <div>
           <h2 className='text-lg font-semibold md:text-xl mb-4'>
             Earnings Breakup

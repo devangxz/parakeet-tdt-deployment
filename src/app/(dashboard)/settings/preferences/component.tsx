@@ -258,7 +258,7 @@ const Page = ({ data }: { data: PreferencesResponse }) => {
               />
               <div className='space-y-0.5'>
                 <div className='font-semibold'>{preference.heading}</div>
-                <div className='text-gray-500 text-sm not-italic font-normal leading-5'>
+                <div className='text-muted-foreground/80 text-sm not-italic font-normal leading-5'>
                   {preference.description}
                 </div>
               </div>
@@ -282,7 +282,7 @@ const Page = ({ data }: { data: PreferencesResponse }) => {
               <RadioGroupItem value='5' id='5' />
               <Label
                 htmlFor='5'
-                className='text-gray-900 text-sm not-italic font-medium leading-3'
+                className='text-muted-foreground text-sm not-italic font-medium leading-3'
               >
                 5
               </Label>
@@ -292,7 +292,7 @@ const Page = ({ data }: { data: PreferencesResponse }) => {
               <RadioGroupItem value='10' id='10' />
               <Label
                 htmlFor='10'
-                className='text-gray-900 text-sm not-italic font-medium leading-3'
+                className='text-muted-foreground text-sm not-italic font-medium leading-3'
               >
                 10
               </Label>
@@ -302,7 +302,7 @@ const Page = ({ data }: { data: PreferencesResponse }) => {
               <RadioGroupItem value='50' id='50' />
               <Label
                 htmlFor='50'
-                className='text-gray-900 text-sm not-italic font-medium leading-3'
+                className='text-muted-foreground text-sm not-italic font-medium leading-3'
               >
                 50
               </Label>
@@ -312,7 +312,7 @@ const Page = ({ data }: { data: PreferencesResponse }) => {
               <RadioGroupItem value='100' id='100' />
               <Label
                 htmlFor='100'
-                className='text-gray-900 text-sm not-italic font-medium leading-3'
+                className='text-muted-foreground text-sm not-italic font-medium leading-3'
               >
                 100
               </Label>

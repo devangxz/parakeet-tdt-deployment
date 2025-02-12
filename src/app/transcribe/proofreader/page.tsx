@@ -86,7 +86,7 @@ export default function QCPage() {
         </h1>
       </div>
 
-      <div className='rounded-md border-2 border-customBorder bg-white'>
+      <div className='rounded-md border-2 border-customBorder bg-background'>
         <Table>
           <TableHeader>
             <TableRow>

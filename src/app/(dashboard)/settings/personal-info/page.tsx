@@ -368,7 +368,7 @@ const Page = () => {
                         onCheckedChange={field.onChange}
                       />
                     </FormControl>
-                    <div className='text-black text-xs not-italic font-normal leading-4'>
+                    <div className='text-muted-foreground text-xs not-italic font-normal leading-4'>
                       <FormLabel>Set as Sign In Email</FormLabel>
                     </div>
                   </FormItem>

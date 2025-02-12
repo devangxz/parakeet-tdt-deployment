@@ -659,7 +659,7 @@ function EditorPage() {
   console.log(listenCount)
 
   return (
-    <div className='bg-secondary h-screen flex flex-col p-1 gap-y-1'>
+    <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
       <Topbar
         quillRef={quillRef}
         editorModeOptions={editorModeOptions}
@@ -712,7 +712,7 @@ function EditorPage() {
             )}
             <div className='flex w-full gap-x-1'>
               <div
-                className={`bg-white border border-customBorder ${step !== 'QC' && editorMode === 'Editor'
+                className={`bg-background border border-customBorder ${step !== 'QC' && editorMode === 'Editor'
                   ? 'rounded-r-md'
                   : 'rounded-md'
                   } w-[80%]`}
@@ -797,12 +797,12 @@ function EditorPage() {
                     }`}
                 >
                   {findAndReplaceOpen && (
-                    <div className='bg-white border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out h-[50%]'>
+                    <div className='bg-background border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out h-[50%]'>
                       <div className='font-medium text-md border-b border-customBorder flex justify-between items-center p-2'>
                         <span>Find & Replace</span>
                         <button
                           onClick={() => setFindAndReplaceOpen(false)}
-                          className='p-1 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors'
+                          className='p-1 rounded-md text-muted-foreground hover:bg-secondary transition-colors'
                         >
                           <Cross1Icon className='h-4 w-4' />
                         </button>
@@ -816,7 +816,7 @@ function EditorPage() {
                             ref={findInputRef}
                           />
                           {findText && (
-                            <span className='absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500'>
+                            <span className='absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground'>
                               {matchCount} matches
                             </span>
                           )}
@@ -889,7 +889,7 @@ function EditorPage() {
                   )}
 
                   <div
-                    className={`bg-white border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out ${findAndReplaceOpen ? 'h-[50%]' : 'h-full'
+                    className={`bg-background border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out ${findAndReplaceOpen ? 'h-[50%]' : 'h-full'
                       }`}
                   >
                     <div className='font-medium text-md border-b border-customBorder flex items-center p-2'>
@@ -908,7 +908,7 @@ function EditorPage() {
               </div>
             </div>
             {step !== 'QC' && editorMode === 'Editor' && (
-              <div className='bg-white w-[20%] rounded-md border border-customBorder overflow-hidden p-2 ml-1'>
+              <div className='bg-background w-[20%] rounded-md border border-customBorder overflow-hidden p-2 ml-1'>
                 <div className='overflow-y-scroll h-full'>
                   <RenderPDFDocument key={regenCount} file={pdfUrl} />
                 </div>
@@ -934,7 +934,7 @@ function EditorPage() {
               </DialogDescription>
 
               <div className='py-4'>
-                <p className='text-sm text-gray-500 mb-2'>
+                <p className='text-sm text-muted-foreground/80 mb-2'>
                   Audio Playback Coverage:{' '}
                   <span className='font-medium'>{getPlayedPercentage()}%</span>
                 </p>

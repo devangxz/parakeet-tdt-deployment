@@ -7,7 +7,7 @@ export default function NotFound() {
   return (
     <>
       <Navbar />
-      <div className='bg-white w-full h-screen flex justify-center items-center'>
+      <div className='bg-background w-full h-screen flex justify-center items-center'>
         <div className='flex flex-col gap-4 w-full sm:w-96 p-4 sm:p-0'>
           <h2 className='text-xl leading-tight py-2'>Page Not Found</h2>
           <p className='py-2'>
