@@ -5,12 +5,14 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
+import { getListenCountAndEditedSegmentAction } from '@/app/actions/admin/get-listen-count-and-edited-segment'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { fetchPreDeliveryOrders } from '@/app/actions/om/fetch-pre-delivery-orders'
 import DeliveryPreDeliveryFile from '@/components/admin-components/deliver-pre-delivery-file'
 import ReassignFinalizer from '@/components/admin-components/re-assign-finalizer-dialog'
 import ReassignPreDeliveryFile from '@/components/admin-components/re-assign-pre-delivery-file'
 import RejectFileDialog from '@/components/admin-components/reject-file-dialog'
+import WaveformHeatmap from '@/components/editor/WaveformHeatmap'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -46,6 +48,9 @@ interface File {
   orderType: string
   fileCost: FileCost
   rateBonus: number
+  waveformUrl?: string
+  listenCount?: number[]
+  editedSegments?: Set<number>
 }
 
 export default function PreDeliveryPage() {
@@ -61,6 +66,43 @@ export default function PreDeliveryPage() {
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
+  const [waveformUrls, setWaveformUrls] = useState<Record<string, string>>({})
+  const [listenCounts, setListenCounts] = useState<Record<string, number[]>>({})
+  const [editedSegments, setEditedSegments] = useState<Record<string, Set<number>>>({})
+
+  const fetchWaveformUrl = async (fileId: string) => {
+    try {
+      const res = await getSignedUrlAction(`${fileId}_wf.png`, 300)
+      if (res.success && res.signedUrl) {
+        setWaveformUrls(prev => ({
+          ...prev,
+          [fileId]: res.signedUrl
+        }))
+      }
+    } catch (error) {
+      console.error('Failed to load waveform:', error)
+    }
+  }
+
+  const fetchEditorData = async (fileId: string) => {
+    try {
+      const data = await getListenCountAndEditedSegmentAction(fileId)
+      if (data?.listenCount) {
+        setListenCounts(prev => ({
+          ...prev,
+          [fileId]: data.listenCount as number[]
+        }))
+      }
+      if (data?.editedSegments) {
+        setEditedSegments(prev => ({
+          ...prev,
+          [fileId]: new Set(data.editedSegments as number[])
+        }))
+      }
+    } catch (error) {
+      console.error('Failed to load editor data:', error)
+    }
+  }
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -91,6 +133,9 @@ export default function PreDeliveryPage() {
           )
             .map((a) => `${a.user.firstname} ${a.user.lastname}`)
             .join(', ')
+
+          fetchWaveformUrl(order.fileId)
+          fetchEditorData(order.fileId)
 
           return {
             index: index + 1,
@@ -388,7 +433,24 @@ export default function PreDeliveryPage() {
             </h1>
           </div>
         </div>
-        <DataTable data={preDeliveryFiles ?? []} columns={columns} />
+        <DataTable
+          data={preDeliveryFiles ?? []}
+          columns={columns}
+          renderWaveform={(row) => {
+            if (!('fileId' in row)) return null;
+            const fileId = row.fileId as string;
+            if (!waveformUrls[fileId]) return null;
+
+            return (
+              <WaveformHeatmap
+                waveformUrl={waveformUrls[fileId]}
+                listenCount={listenCounts[fileId] || []}
+                editedSegments={editedSegments[fileId] || new Set()}
+                duration={row.duration}
+              />
+            );
+          }}
+        />
       </div>
       <DeliveryPreDeliveryFile
         open={openDialog}

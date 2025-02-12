@@ -3,6 +3,7 @@ import { diffWords } from 'diff'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
+import { getDiffFilesAction } from '@/app/actions/files/get-diff-files'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -12,8 +13,6 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog'
-import { BACKEND_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
 
 interface DialogProps {
   open: boolean
@@ -59,11 +58,13 @@ const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
   const loadDiff = async () => {
     setLoading(true)
     try {
-      const res = await axiosInstance.get(
-        `${BACKEND_URL}/get-files?fileId=${fileId}&fileType=asr,qc`
-      )
-      const { file1, file2 } = res.data
-      const diff = diffParagraphs(file1, file2)
+      const res = await getDiffFilesAction(fileId)
+      console.log(res)
+      const { asrFile, qcFile } = res
+      if (!asrFile || !qcFile) {
+        throw new Error('Failed to load diff')
+      }
+      const diff = diffParagraphs(asrFile, qcFile)
       setDiff(diff)
       setLoading(false)
     } catch (error) {
