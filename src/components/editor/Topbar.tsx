@@ -61,6 +61,7 @@ import { getTextFile } from '@/app/actions/get-text-file'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import TranscriberProfile from '@/app/transcribe/components/transcriberProfiles'
 import 'rc-slider/assets/index.css'
+import { ThemeSwitcher } from '@/components/theme-switcher'
 import { FILE_CACHE_URL } from '@/constants'
 import { EditorSettings } from '@/types/editor'
 import DefaultShortcuts, {
@@ -760,7 +761,7 @@ export default memo(function Topbar({
   }
 
   return (
-    <div className='bg-white border border-customBorder rounded-md p-2'>
+    <div className='bg-background border border-customBorder rounded-md p-2'>
       <div className='flex items-center justify-between'>
         <p className='font-semibold'>{orderDetails.filename}</p>
 
@@ -1026,6 +1027,7 @@ export default memo(function Topbar({
             </Dialog>
           </div>
           <TranscriberProfile />
+          <ThemeSwitcher />
         </div>
       </div>
       <ShortcutsReferenceDialog
@@ -1090,7 +1092,7 @@ export default memo(function Topbar({
                         className='absolute right-2 p-1 hover:bg-gray-100 rounded-full transition-colors'
                         type='button'
                       >
-                        <ArrowUpIcon className='h-4 w-4 text-gray-500' />
+                        <ArrowUpIcon className='h-4 w-4 text-muted-foreground' />
                       </button>
                     )}
                   </div>
@@ -1108,11 +1110,11 @@ export default memo(function Topbar({
           </div>
 
           <div className='space-y-4 mt-4'>
-            <p className='text-sm text-gray-500'>
+            <p className='text-sm text-muted-foreground'>
               Please follow the rules below to determine the speaker name, in
               order:
             </p>
-            <ol className='list-decimal list-inside text-sm text-gray-500 space-y-1'>
+            <ol className='list-decimal list-inside text-sm text-muted-foreground space-y-1'>
               <li>
                 The name as spoken in the audio if the customer instruction is
                 present.
@@ -1130,7 +1132,7 @@ export default memo(function Topbar({
               </li>
             </ol>
             <p className='text-sm font-semibold'>Customer Instructions:</p>
-            <p className='text-sm text-gray-500 italic'>
+            <p className='text-sm text-muted-foreground italic'>
               {/* Add actual customer instructions here if available */}
               No specific instructions provided.
             </p>
@@ -1274,7 +1276,7 @@ export default memo(function Topbar({
       <div
         className={` ${
           !videoPlayerOpen ? 'hidden' : ''
-        } fixed bg-white z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-transparent`}
+        } fixed z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-background`}
         style={{
           top: `${position.y}px`,
           left: `${position.x}px`,
@@ -1292,7 +1294,7 @@ export default memo(function Topbar({
           ></video>
           <button
             onClick={() => setVideoPlayerOpen(false)}
-            className='absolute top-0 right-0 cursor-pointer bg-gray-100 p-2 rounded-lg mr-2 mt-2'
+            className='absolute top-0 right-0 cursor-pointer bg-secondary p-2 rounded-lg mr-2 mt-2'
             style={{ zIndex: 1 }}
           >
             <Cross1Icon />

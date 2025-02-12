@@ -39,14 +39,14 @@ const Profile = () => {
           className='relative flex items-center justify-center h-9 pl-1 pr-2 bg-primary/10 rounded-ful border border-primary'
         >
           <Avatar className='h-8 w-8 border-0'>
-            <AvatarFallback className='text-sm font-medium bg-transparent border-0'>
+            <AvatarFallback className='text-sm font-medium text-primary bg-transparent border-0'>
               {getInitials(session?.user?.name ?? 'NA')}
             </AvatarFallback>
           </Avatar>
-          <ChevronDown className='h-4 w-4 text-gray-700' />
+          <ChevronDown className='h-4 w-4 text-primary' />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className='w-56' align='end' forceMount>
+      <DropdownMenuContent className='w-56 border border-customBorder' align='end' forceMount>
         <DropdownMenuLabel className='font-normal'>
           <div className='flex flex-col space-y-1'>
             <p className='text-sm font-medium leading-none'>

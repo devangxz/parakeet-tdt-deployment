@@ -583,9 +583,9 @@ export default memo(function Header({
   )
 
   return (
-    <div className='border bg-white border-customBorder rounded-md relative'>
+    <div className='border bg-background border-customBorder rounded-md relative'>
       {!isPlayerLoaded && (
-        <div className='absolute inset-0 w-full h-full bg-white z-50 flex justify-center items-center'>
+        <div className='absolute inset-0 w-full h-full bg-background z-50 flex justify-center items-center rounded-md'>
           <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
           <span>Loading...</span>
         </div>
@@ -593,7 +593,7 @@ export default memo(function Header({
       <div className='h-12'>
         <div
           id='waveform'
-          className='relative h-full overflow-hidden cursor-pointer'
+          className='relative h-full overflow-hidden cursor-pointer rounded-t-md'
           onMouseMove={handleMouseMoveOnWaveform}
           onMouseLeave={() => {
             if (typeof document === 'undefined') return
@@ -611,15 +611,15 @@ export default memo(function Header({
             editorRef?.current?.scrollToCurrentWord()
           }}
           style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)), url(${waveformUrl}), url('/assets/images/fallback-waveform.png')`,
-            backgroundSize: '100% 200%', // Double the height
+            backgroundImage: `url(${waveformUrl})`,
+            backgroundSize: '100% 200%',
             backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center top', // Position at top
+            backgroundPosition: 'center top',
           }}
         >
           <div
             id='time-tooltip'
-            className='fixed hidden z-50 bg-primary text-white px-1 py-0.5 rounded text-[11px] pointer-events-none'
+            className='fixed hidden z-50 bg-primary text-white px-1 py-0.5 rounded-md text-[11px] pointer-events-none'
             style={{ transform: 'translate(-50%, 200%)' }}
           />
           <div
@@ -629,10 +629,10 @@ export default memo(function Header({
               transition: 'width 0.1s linear',
             }}
           />
-          <span className='absolute top-0 left-0 bg-primary text-white px-1 py-0.5 rounded text-[11px]'>
+          <span className='absolute top-0 left-0 bg-primary text-white px-1 py-0.5 rounded-md text-[11px]'>
             {currentTime}
           </span>
-          <span className='absolute top-0 right-0 bg-primary text-white px-1 py-0.5 rounded text-[11px]'>
+          <span className='absolute top-0 right-0 bg-primary text-white px-1 py-0.5 rounded-md text-[11px]'>
             {formatDuration(audioDuration)}
           </span>
         </div>
@@ -767,7 +767,7 @@ export default memo(function Header({
                   </Tooltip>
                 </div>
 
-                <div className='h-full w-[1.2px] rounded-full bg-gray-200'></div>
+                <div className='h-full w-[1.2px] rounded-full bg-gray-200 dark:bg-gray-600'></div>
 
                 <div className='flex items-center gap-x-1 bg-secondary rounded-sm'>
                   <Toolbar

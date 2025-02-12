@@ -114,7 +114,7 @@ export default function Page() {
             <h1 className='text-4xl md:text-5xl lg:text-6xl font-bold text-foreground max-w-3xl lg:max-w-5xl mx-auto leading-tight md:leading-[1.3] lg:leading-[1.1]'>
               How can we <span className='text-primary'>help you?</span>
             </h1>
-            <p className='mt-4 sm:mt-6 lg:mt-8 text-gray-700 max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
+            <p className='mt-4 sm:mt-6 lg:mt-8 text-muted-foreground max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
               We&apos;re here to help and answer any question you might have
             </p>
           </header>
@@ -124,7 +124,7 @@ export default function Page() {
               <div
                 key={index}
                 className={`bg-card p-6 rounded-xl shadow-lg border ${
-                  info.highlight ? 'border-primary' : 'border-border'
+                  info.highlight ? 'border-primary' : 'border-customBorder'
                 }`}
               >
                 <div className='space-y-4'>
@@ -170,7 +170,7 @@ export default function Page() {
               <h2 className='text-3xl sm:text-4xl font-bold text-foreground'>
                 Get in touch
               </h2>
-              <p className='text-gray-700 text-base sm:text-lg'>
+              <p className='text-muted-foreground text-base sm:text-lg'>
                 Fill out the form and we&apos;ll get back to you within 24 hours
               </p>
             </div>

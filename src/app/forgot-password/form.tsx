@@ -63,7 +63,7 @@ const ForgotPassword = () => {
               <h1 className='text-4xl font-semibold tracking-tight'>
                 Get Reset Link
               </h1>
-              <p className='mt-2 text-md text-gray-700'>
+              <p className='mt-2 text-md text-muted-foreground'>
                 Enter your email address below and we&apos;ll get you back on
                 track
               </p>
@@ -109,7 +109,7 @@ const ForgotPassword = () => {
             </form>
           </Form>
 
-          <div className='text-center text-sm text-gray-700'>
+          <div className='text-center text-sm text-muted-foreground'>
             Remember your password?{' '}
             <Link href='/signin' className='text-primary hover:underline'>
               Sign In

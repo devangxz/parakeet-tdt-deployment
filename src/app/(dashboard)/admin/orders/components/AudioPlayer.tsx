@@ -38,7 +38,7 @@ function PlayerButton({ icon, tooltip, onClick }: PlayerButtonProps) {
     <button
       aria-label={tooltip}
       onClick={onClick}
-      className='w-10 h-10 rounded-full bg-[#EEE9FF] flex items-center justify-center mx-1'
+      className='w-10 h-10 rounded-full bg-[#EEE9FF] dark:bg-secondary flex items-center justify-center mx-1'
     >
       {icon}
     </button>
@@ -188,12 +188,12 @@ export default function AudioPlayer({
   return (
     <div className='mb-3 h-60 relative overflow-hidden'>
       {!isPlayerLoaded && (
-        <div className='absolute inset-0 w-full h-full bg-white z-50 flex justify-center items-center rounded-2xl'>
+        <div className='absolute inset-0 w-full h-full bg-background z-50 flex justify-center items-center rounded-2xl'>
           <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
           <span>Loading...</span>
         </div>
       )}
-      <div className='h-[45%] bg-white rounded-t-2xl border border-gray-200 border-b-0 overflow-hidden'>
+      <div className='h-[45%] bg-background rounded-t-2xl border border-customBorder border-b-0 overflow-hidden'>
         <div id='waveform' className='relative h-full'>
           <Image
             src={waveformUrl}
@@ -207,7 +207,7 @@ export default function AudioPlayer({
           />
         </div>
       </div>
-      <div className='h-[55%] bg-white border border-gray-200 rounded-b-2xl px-3'>
+      <div className='h-[55%] bg-background border border-customBorder rounded-b-2xl px-3'>
         <div className='w-full mt-2'>
           <audio ref={audioPlayer} className='hidden' src={audioUrl}></audio>
           <Slider
@@ -228,7 +228,7 @@ export default function AudioPlayer({
         </div>
 
         <div className='flex justify-between items-center mb-2 mt-3'>
-          <span className='text-[#8C8C8C] text-sm w-[100px]'>
+          <span className='text-sm w-[100px]'>
             {currentTime}
           </span>
           <div className='flex items-center'>

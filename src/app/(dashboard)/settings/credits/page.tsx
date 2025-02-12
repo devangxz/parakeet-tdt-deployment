@@ -257,7 +257,7 @@ const Invoice = () => {
           />
           <div className='space-y-2'>
             <p className='font-semibold'>Notes:</p>
-            <ol className='list-decimal pl-5 space-y-1.5 text-gray-700'>
+            <ol className='list-decimal pl-5 space-y-1.5 text-muted-foreground'>
               <li>Credits can be used to pay for invoices on Scribie</li>
               <li>
                 Credits do not expire and can be shared between team members

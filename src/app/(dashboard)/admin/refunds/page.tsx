@@ -62,7 +62,7 @@ export default function AdminDashboard() {
 
   return (
     <>
-      <div className='h-full flex-1 flex-col space-y-8 p-5 md:flex bg-muted/40'>
+      <div className='h-full flex-1 flex-col space-y-8 p-5 md:flex'>
         <h1 className='text-lg font-semibold md:text-lg'>Refunds</h1>
         <Card>
           <CardHeader>

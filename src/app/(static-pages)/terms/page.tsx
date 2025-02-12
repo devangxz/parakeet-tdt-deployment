@@ -144,7 +144,7 @@ export default function Page() {
           <h1 className='text-4xl md:text-5xl lg:text-6xl font-bold text-foreground max-w-3xl lg:max-w-5xl mx-auto leading-tight md:leading-[1.3] lg:leading-[1.1]'>
             Terms of Service
           </h1>
-          <p className='mt-4 sm:mt-6 lg:mt-8 text-gray-700 max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
+          <p className='mt-4 sm:mt-6 lg:mt-8 text-muted-foreground max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
             Effective date: 8th April, 2016
           </p>
         </header>
@@ -155,20 +155,20 @@ export default function Page() {
               Welcome to Scribie
             </h3>
             <div className='space-y-4'>
-              <p className='text-gray-600'>
+              <p className='text-muted-foreground'>
                 Thanks for using our products and services
                 (&ldquo;Services&rdquo;). The Services are provided by Scribie
                 Technologies Inc. (&ldquo;Scribie&rdquo;), located at 2261
                 Market Street, #22612, San Francisco, CA 94114, United States.
               </p>
-              <p className='text-gray-600'>
+              <p className='text-muted-foreground'>
                 By using our Services, you are agreeing to these terms including
                 any subsequent changes or modifications. Please read them
                 carefully. If you do not agree to these Terms or our Privacy
                 Policy, please do not use the Scribie.com website or any of our
                 Services and products.
               </p>
-              <p className='text-gray-600'>
+              <p className='text-muted-foreground'>
                 Our Services are very diverse, so sometimes additional terms or
                 product requirements (including age requirements) may apply.
                 Additional terms will be available with the relevant Services,
@@ -185,7 +185,7 @@ export default function Page() {
                   <h5 className='text-xl font-bold text-primary'>
                     {section.title}
                   </h5>
-                  <div className='text-gray-600'>{section.content}</div>
+                  <div className='text-muted-foreground'>{section.content}</div>
                 </div>
               </div>
             ))}
@@ -198,7 +198,7 @@ export default function Page() {
                   <h5 className='text-xl font-semibold text-foreground'>
                     {section.title}
                   </h5>
-                  <div className='text-gray-600'>{section.content}</div>
+                  <div className='text-muted-foreground'>{section.content}</div>
                 </div>
               </div>
             ))}
