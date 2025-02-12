@@ -12,11 +12,12 @@ export async function getAllFilesAction(
 ) {
   const session = await getServerSession(authOptions)
   const user = session?.user
+  const userId = user?.internalTeamUserId || user?.userId
   try {
     const files = await getAllFiles(
       parentId !== 'null' ? Number(parentId) : null,
       fileIds ?? 'null',
-      user?.userId as number
+      userId as number
     )
     return {
       success: true,
