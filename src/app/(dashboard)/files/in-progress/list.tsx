@@ -377,7 +377,7 @@ export default function InprogressFilesPage({ files }: ListProps) {
               session?.user?.adminAccess) && (
               <Button
                 variant='order'
-                className='not-rounded text-black w-[140px]'
+                className='not-rounded w-[140px]'
                 onClick={async () => {
                   try {
                     if (selectedFiles.length === 0) {

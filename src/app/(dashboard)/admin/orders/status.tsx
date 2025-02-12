@@ -188,7 +188,6 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
             type='text'
             placeholder='File Id'
             onChange={(e) => setFileId(e.target.value)}
-            className='bg-white'
           />
           {isLoading ? (
             <Button disabled className='mt-3 w-[200px]'>
@@ -218,7 +217,7 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
                         return (
                           <div
                             key={key}
-                            className={`grid grid-cols-2 p-2 mt-2 ${index % 2 === 0 ? 'bg-gray-100' : 'bg-white'
+                            className={`grid grid-cols-2 p-2 mt-2 ${index % 2 === 0 ? 'bg-secondary' : 'bg-background'
                               }`}
                           >
                             <span className='font-semibold'>
@@ -248,7 +247,7 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
                       return (
                         <div
                           key={key}
-                          className={`grid grid-cols-2 p-2 mt-2 ${index % 2 === 0 ? 'bg-gray-100' : 'bg-white'
+                          className={`grid grid-cols-2 p-2 mt-2 ${index % 2 === 0 ? 'bg-secondary' : 'bg-background'
                             }`}
                         >
                           <span className='font-semibold'>

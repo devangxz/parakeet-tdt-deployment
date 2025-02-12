@@ -450,7 +450,7 @@ const UploadProgress = () => {
   return (
     <div
       style={{ right: '20px' }}
-      className='fixed bottom-0 w-80 bg-white rounded-t-xl shadow-lg overflow-hidden z-50 border border-gray-200'
+      className='fixed bottom-0 w-80 bg-background rounded-t-xl shadow-lg overflow-hidden z-50 border border-custom-border'
     >
       <div className='p-3 bg-primary/10 flex justify-between items-center'>
         <div className='flex-1'>
@@ -458,7 +458,7 @@ const UploadProgress = () => {
             {getHeaderContent().title}
           </h3>
           {getHeaderContent().subtitle && (
-            <p className='text-xs text-gray-500 mt-1'>
+            <p className='text-xs text-muted-foreground mt-1'>
               {getHeaderContent().subtitle}
             </p>
           )}
@@ -467,13 +467,13 @@ const UploadProgress = () => {
           <ChevronDown
             onClick={() => setIsExpanded(false)}
             size={25}
-            className='cursor-pointer p-1 rounded-full hover:bg-gray-200 transition-colors duration-200'
+            className='cursor-pointer p-1 rounded-full hover:bg-secondary transition-colors duration-200'
           />
         ) : (
           <ChevronUp
             onClick={() => setIsExpanded(true)}
             size={25}
-            className='cursor-pointer p-1 rounded-full hover:bg-gray-200 transition-colors duration-200'
+            className='cursor-pointer p-1 rounded-full hover:bg-secondary transition-colors duration-200'
           />
         )}
       </div>
@@ -482,7 +482,7 @@ const UploadProgress = () => {
         style={{ maxHeight: isExpanded ? scrollAreaHeight : '0px' }}
       >
         <ScrollArea style={{ height: scrollAreaHeight, maxHeight: '200px' }}>
-          <div ref={scrollAreaRef} className='px-3 bg-white'>
+          <div ref={scrollAreaRef} className='px-3 bg-background'>
             {uploadingFiles.map((file) => (
               <UploadProgressItem
                 key={file.name}

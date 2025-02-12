@@ -7,6 +7,7 @@ import { useSession } from 'next-auth/react'
 
 import Header from '@/app/transcribe/components/header'
 import Profile from '@/components/navbar/profile'
+import { ThemeSwitcher } from '@/components/theme-switcher'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
@@ -23,7 +24,7 @@ function PaymentsNavbar() {
       session?.user?.role === 'REVIEWER' ? (
         <Header />
       ) : (
-        <div className='sticky top-0 z-50 bg-white border-b-2 border-customBorder'>
+        <div className='sticky top-0 z-50 bg-background border-b-2 border-customBorder'>
           <div className='flex justify-between items-center px-2 lg:px-4 py-4'>
             <Link href='/'>
               <div className='flex items-center justify-center gap-2'>
@@ -34,19 +35,19 @@ function PaymentsNavbar() {
                   width={36}
                   height={36}
                 />
-                <span className='inline font-semibold lg:text-3xl text-lg'>
+                <span className='inline font-semibold lg:text-3xl text-lg text-primary'>
                   scribie
                 </span>
               </div>
             </Link>
             <div className='flex items-center gap-4'>
               {session?.user?.readonly && (
-              <Badge
-                variant='outline'
-                className='w-fit lg:text-md text-sm text-primary bg-secondary border border-customBorder pt-1 pb-1 font-medium'
-              >
-                Accessing `{session?.user?.email}` account
-              </Badge>
+                <Badge
+                  variant='outline'
+                  className='w-fit lg:text-md text-sm text-primary bg-secondary border border-customBorder pt-1 pb-1 font-medium'
+                >
+                  Accessing `{session?.user?.email}` account
+                </Badge>
               )}
               <Button
                 variant='default'
@@ -64,6 +65,7 @@ function PaymentsNavbar() {
                 Upload File
               </Button>
               <Profile />
+              <ThemeSwitcher />
             </div>
           </div>
         </div>

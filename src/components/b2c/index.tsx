@@ -559,7 +559,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
               <div className={`flex items-center justify-center gap-3`}>
                 <div
                   className={`rounded-full p-1 ${
-                    activeStep >= step ? 'bg-[#36F0C3]' : 'bg-violet-100'
+                    activeStep >= step ? 'bg-[#36F0C3]' : 'bg-secondary'
                   }`}
                 >
                   <Check className='h-4 w-4 font-bold' />
@@ -961,7 +961,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                   Your bill
                 </div>
                 <div
-                  className='text-md cursor-pointer text-black font-medium mb-10 mr-5 underline'
+                  className='text-md cursor-pointer font-medium mb-10 mr-5 underline'
                   onClick={() => setBillBreakdownOpen(true)}
                 >
                   View invoice
@@ -1151,7 +1151,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
         </div>
         <Separator />
       </div>
-      <div className='flex items-center justify-end gap-5 p-4 sticky bottom-0 right-0 w-full bg-white border-t-2 border-customBorder'>
+      <div className='flex items-center justify-end gap-5 p-4 sticky bottom-0 right-0 w-full bg-background border-t-2 border-customBorder'>
         {paymentSuccess ? (
           <Button
             className='w-[170px]'

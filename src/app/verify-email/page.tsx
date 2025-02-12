@@ -47,7 +47,7 @@ const VerifyEmail = () => {
               <h1 className='text-4xl font-semibold tracking-tight'>
                 Verify Email
               </h1>
-              <p className='mt-2 text-md text-gray-700'>
+              <p className='mt-2 text-md text-muted-foreground'>
                 Please verify your email to continue
               </p>
             </div>
@@ -57,19 +57,19 @@ const VerifyEmail = () => {
             <div className='rounded-xl border border-primary/10 bg-secondary px-4 py-3'>
               <div className='flex items-center gap-2 mb-2.5'>
                 <Mail className='h-5 w-5 text-primary' />
-                <h3 className='text-lg font-semibold text-gray-700'>
+                <h3 className='text-lg font-semibold text-muted-foreground'>
                   Check your inbox
                 </h3>
               </div>
               <div className='space-y-1.5'>
-                <p className='text-md text-gray-700'>
+                <p className='text-md text-muted-foreground'>
                   We have sent a verification email to{' '}
                   <span className='font-medium text-primary'>
                     {session?.user?.email}
                   </span>
                   . Click the link in the email to verify your account.
                 </p>
-                <p className='text-md text-gray-500'>
+                <p className='text-md text-muted-foreground'>
                   Can&apos;t find the email? Check your spam folder or bulk mail
                   folder.
                 </p>
@@ -77,7 +77,7 @@ const VerifyEmail = () => {
             </div>
 
             <div className='text-center'>
-              <p className='text-sm text-gray-500 mb-2.5'>
+              <p className='text-sm text-muted-foreground mb-2.5'>
                 Haven&apos;t received the email yet?
               </p>
               <Button

@@ -90,7 +90,7 @@ export function DataTable<TData, TValue>({
   return (
     <div className='space-y-4'>
       <DataTableToolbar table={table} />
-      <div className='rounded-md border-2 border-customBorder bg-white'>
+      <div className='rounded-md border-2 border-customBorder bg-background'>
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -116,7 +116,7 @@ export function DataTable<TData, TValue>({
                     data-state={row.getIsSelected() && 'selected'}
                     className={`${
                       isDeliveryDatePast(row.getValue('deliveryTs'))
-                        ? 'bg-red-200'
+                        ? 'bg-red-200 dark:bg-red-800'
                         : ''
                     }`}
                   >

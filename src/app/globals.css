@@ -32,11 +32,12 @@ html {
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 263 30% 91%;
+    --border: 253 100% 94%;
     --input: 263 30% 91%;
     --ring: 263 75.6% 58%;
 
     --radius: 0.5rem;
+    --highlight-color: rgba(255, 255, 0, 0.8);
   }
 
   .dark {
@@ -44,33 +45,34 @@ html {
     --primary-foreground: 0 0% 100%;
     --primary-dark: 263 75.6% 38%;
 
-    --background: 263 60% 4%;
-    --foreground: 263 10% 95%;
+    --background: 215 21% 7%;
+    --foreground: 263 10% 85%;
 
-    --card: 263 60% 4%;
-    --card-foreground: 263 10% 95%;
-    --popover: 263 60% 4%;
-    --popover-foreground: 263 10% 95%;
+    --card: 215 21% 7%;
+    --card-foreground: 263 10% 85%;
+    --popover: 215 21% 7%;
+    --popover-foreground: 263 10% 85%;
 
-    --secondary: 263 70% 20%;
+    --secondary: 263 70% 15%;
     --secondary-foreground: 263 90% 95%;
 
     --muted: 263 35% 15%;
     --muted-foreground: 263 20% 70%;
 
     --accent: 263 35% 15%;
-    --accent-foreground: 263 10% 95%;
+    --accent-foreground: 263 10% 85%;
 
     --destructive: 0 65% 30%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 263 35% 15%;
+    --border: 253 30% 20%;
     --input: 263 35% 15%;
     --ring: 263 75.6% 58%;
+    --highlight-color: rgba(255, 230, 0, 0.6);
   }
 
   * {
-    @apply border-border;
+    @apply border-customBorder;
   }
 
   body {
@@ -251,8 +253,16 @@ html {
   background-color: #e6ffe6;
 }
 
+.dark .added {
+  background-color: #004000;
+}
+
 .removed {
   background-color: #ffe6e6;
+}
+
+.dark .removed {
+  background-color: #be0000;
 }
 
 .menu-icon {
@@ -263,14 +273,6 @@ html {
   .menu-icon {
     display: block !important;
   }
-}
-
-.custom-input-border {
-  border: 2px solid #eee9ff;
-}
-
-.pagination-border {
-  border: 2px solid #eee9ff !important;
 }
 
 @keyframes flipOut {
@@ -312,6 +314,10 @@ html {
 
 .line-highlight {
   background-color: #EDEDED;
+}
+
+.dark .line-highlight {
+  background-color: #333333;
 }
 
 .ql-editor {

@@ -481,7 +481,7 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
   }
 
   return (
-    <div className='bg-primary-foreground flex flex-col p-[12px] items-center justify-center rounded-md border-2 border-customBorder shadow-sm min-h-[245px]'>
+    <div className='bg-background flex flex-col p-[12px] items-center justify-center rounded-md border-2 border-customBorder shadow-sm min-h-[245px]'>
       <div className='group relative w-full flex rounded-md text-center transition'>
         <div className='self-center w-full flex flex-col items-center justify-center gap-y-3'>
           <div className='flex items-center gap-1 text-base font-medium leading-6'>
@@ -502,7 +502,7 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             className='w-full flex flex-col gap-y-3'
           >
             <div className='w-full space-y-1'>
-              <p className='ml-[2px] text-xs self-stretch leading-5 text-start text-gray-700'>
+              <p className='ml-[2px] text-xs self-stretch leading-5 text-start text-muted-foreground'>
                 Please enter the link to the media file in the box below, one
                 per line. Please note that the file must be publicly accessible
                 to be imported.
@@ -511,7 +511,7 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 value={urls}
                 onChange={(e) => setUrls(e.target.value)}
                 placeholder='Enter audio/video file download links, one per line, e.g. https://scribie.com/samples/example.mp3'
-                className='w-full px-4 py-2.5 rounded-md border border-customBorder placeholder:text-gray-500 focus:outline-none focus:border-primary text-sm resize-none text-gray-900 overflow-hidden'
+                className='w-full px-4 py-2.5 rounded-md border border-customBorder bg-transparent placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-sm resize-none overflow-hidden'
                 style={{
                   minHeight: '80px',
                   height: `${Math.max(80, urls.split('\n').length * 24)}px`,
@@ -522,7 +522,7 @@ const LinkImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             <div className='flex justify-center'>
               <button
                 type='submit'
-                className='px-5 py-2 bg-primary rounded-[32px] text-white font-medium border border-primary hover:bg-[#5e3ee9] transition-colors'
+                className='px-5 py-2 bg-primary rounded-[32px] text-white font-medium border border-primary hover:bg-primary/90 transition-colors'
               >
                 Import
               </button>

@@ -23,13 +23,12 @@ const config = {
       },
       colors: {
         // Your custom colors
-        customBorder: '#e6dfff',
-        darkCustomBorder: '#aaa9ad',
+        darkCustomBorder: '#4a3e74',
 
         // Standard shadcn colors
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
-        border: 'hsl(var(--border))',
+        customBorder: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
 

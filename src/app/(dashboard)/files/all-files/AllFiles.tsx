@@ -742,7 +742,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
               ) : (
                 <Button
                   variant='order'
-                  className='format-button text-black w-[140px]'
+                  className='format-button w-[140px]'
                   onClick={() =>
                     orderBulkFile(session?.user?.orderType as string)
                   }
