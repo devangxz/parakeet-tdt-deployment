@@ -15,6 +15,7 @@ import { toast } from 'sonner'
 
 import ConfigureShortcutsDialog from './ConfigureShortcutsDialog'
 import DownloadDocxDialog from './DownloadDocxDialog'
+import EditorHeatmapDialog from './EditorHeatmapDialog'
 import EditorSettingsDialog from './EditorSettingsDialog'
 import FrequentTermsDialog from './FrequentTermsDialog'
 import ReportDialog from './ReportDialog'
@@ -107,6 +108,8 @@ interface TopbarProps {
   editedSegments: Set<number>
   editorSettings: EditorSettings
   onSettingsChange: (settings: EditorSettings) => void
+  waveformUrl: string
+  audioDuration: number
 }
 
 export default memo(function Topbar({
@@ -127,6 +130,8 @@ export default memo(function Topbar({
   editedSegments,
   editorSettings,
   onSettingsChange,
+  waveformUrl,
+  audioDuration,
 }: TopbarProps) {
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
@@ -193,6 +198,7 @@ export default memo(function Topbar({
   const [videoUrl, setVideoUrl] = useState('')
   const [timeoutCount, setTimeoutCount] = useState('')
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
+  const [isHeatmapModalOpen, setIsHeatmapModalOpen] = useState(false)
 
   useEffect(() => {
     if (cfd && step) return
@@ -766,9 +772,8 @@ export default memo(function Topbar({
 
         {orderDetails.status === 'QC_ASSIGNED' && (
           <span
-            className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${
-              orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
-            }`}
+            className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
+              }`}
           >
             {timeoutCount}
           </span>
@@ -860,13 +865,13 @@ export default memo(function Topbar({
             {!['CUSTOMER', 'OM', 'ADMIN'].includes(
               session?.user?.role ?? ''
             ) && (
-              <Button
-                onClick={() => setSubmitting(true)}
-                className='format-button border-r-[1.5px] border-white/70'
-              >
-                Submit
-              </Button>
-            )}
+                <Button
+                  onClick={() => setSubmitting(true)}
+                  className='format-button border-r-[1.5px] border-white/70'
+                >
+                  Submit
+                </Button>
+              )}
 
             <DropdownMenu
               modal={false}
@@ -874,13 +879,12 @@ export default memo(function Topbar({
             >
               <DropdownMenuTrigger className='focus-visible:ring-0 outline-none'>
                 <Button
-                  className={`${
-                    !['CUSTOMER', 'OM', 'ADMIN'].includes(
-                      session?.user?.role ?? ''
-                    )
-                      ? 'px-2 format-icon-button'
-                      : ''
-                  } focus-visible:ring-0 outline-none`}
+                  className={`${!['CUSTOMER', 'OM', 'ADMIN'].includes(
+                    session?.user?.role ?? ''
+                  )
+                    ? 'px-2 format-icon-button'
+                    : ''
+                    } focus-visible:ring-0 outline-none`}
                 >
                   <span className='sr-only'>Open menu</span>
                   <ChevronDownIcon className='h-4 w-4' />
@@ -933,10 +937,10 @@ export default memo(function Topbar({
                 {!['CUSTOMER', 'OM', 'ADMIN'].includes(
                   session?.user?.role || ''
                 ) && (
-                  <DropdownMenuItem onClick={requestExtension}>
-                    Request Extension
-                  </DropdownMenuItem>
-                )}
+                    <DropdownMenuItem onClick={requestExtension}>
+                      Request Extension
+                    </DropdownMenuItem>
+                  )}
                 {session?.user?.role !== 'CUSTOMER' && (
                   <DropdownMenuItem onClick={() => setReportModalOpen(true)}>
                     Report
@@ -975,20 +979,23 @@ export default memo(function Topbar({
                 )}
                 {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
                   orderDetails.status === 'FINALIZER_ASSIGNED') && (
-                  <DropdownMenuItem asChild>
-                    <a href={qcFileUrl} target='_blank'>
-                      Download QC text
-                    </a>
-                  </DropdownMenuItem>
-                )}
+                    <DropdownMenuItem asChild>
+                      <a href={qcFileUrl} target='_blank'>
+                        Download QC text
+                      </a>
+                    </DropdownMenuItem>
+                  )}
                 {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
                   orderDetails.status === 'FINALIZER_ASSIGNED') && (
-                  <DropdownMenuItem asChild>
-                    <a href={LLMFileUrl} target='_blank'>
-                      Download LLM text
-                    </a>
-                  </DropdownMenuItem>
-                )}
+                    <DropdownMenuItem asChild>
+                      <a href={LLMFileUrl} target='_blank'>
+                        Download LLM text
+                      </a>
+                    </DropdownMenuItem>
+                  )}
+                <DropdownMenuItem onClick={() => setIsHeatmapModalOpen(true)}>
+                  Waveform Heatmap
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setIsSettingsModalOpen(true)}>
                   Settings
                 </DropdownMenuItem>
@@ -1272,9 +1279,8 @@ export default memo(function Topbar({
         </DialogContent>
       </Dialog>
       <div
-        className={` ${
-          !videoPlayerOpen ? 'hidden' : ''
-        } fixed bg-white z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-transparent`}
+        className={` ${!videoPlayerOpen ? 'hidden' : ''
+          } fixed bg-white z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-transparent`}
         style={{
           top: `${position.y}px`,
           left: `${position.x}px`,
@@ -1318,6 +1324,14 @@ export default memo(function Topbar({
         onClose={() => setIsSettingsModalOpen(false)}
         initialSettings={editorSettings}
         onSettingsChange={onSettingsChange}
+      />
+      <EditorHeatmapDialog
+        isOpen={isHeatmapModalOpen}
+        onClose={() => setIsHeatmapModalOpen(false)}
+        waveformUrl={waveformUrl}
+        listenCount={listenCount}
+        editedSegments={editedSegments}
+        duration={audioDuration}
       />
     </div>
   )

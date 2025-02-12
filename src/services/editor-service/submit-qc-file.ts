@@ -11,7 +11,6 @@ import {
 } from '@prisma/client'
 import axios from 'axios'
 
-import deliver from '../file-service/deliver'
 import preDeliverIfConfigured from '../file-service/pre-deliver-if-configured'
 import assignFileToReviewer from '../transcribe-service/assign-file-to-review'
 import { WORKER_QUEUE_NAMES, workerQueueService } from '../worker-service'
@@ -27,8 +26,8 @@ import qualityCriteriaPassed from '@/utils/qualityCriteriaPassed'
 
 type OrderWithFileData =
   | (Order & {
-      File: File | null
-    })
+    File: File | null
+  })
   | null
 
 async function completeQCJob(order: Order, transcriberId: number) {
@@ -226,7 +225,15 @@ export async function submitQCFile(
       }
     } else {
       if ((await preDeliverIfConfigured(order, transcriberId)) === false) {
-        await deliver(order, transcriberId)
+        // await deliver(order, transcriberId)
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { status: OrderStatus.SUBMITTED_FOR_APPROVAL },
+        })
+        await prisma.jobAssignment.updateMany({
+          where: { orderId: order.id, transcriberId: transcriberId, type: JobType.QC },
+          data: { status: JobStatus.SUBMITTED_FOR_APPROVAL },
+        })
       }
     }
   } catch (error) {

@@ -656,6 +656,8 @@ function EditorPage() {
     setHighlightWordsEnabled(editorSettings.wordHighlight)
   }, [editorSettings])
 
+  console.log(listenCount)
+
   return (
     <div className='bg-secondary h-screen flex flex-col p-1 gap-y-1'>
       <Topbar
@@ -676,6 +678,8 @@ function EditorPage() {
         editedSegments={editedSegments}
         editorSettings={editorSettings}
         onSettingsChange={setEditorSettings}
+        waveformUrl={waveformUrl}
+        audioDuration={audioDuration}
       />
 
       <Header
@@ -695,11 +699,10 @@ function EditorPage() {
       <div className='flex h-full overflow-hidden'>
         <div className='flex h-full flex-col items-center flex-1 overflow-hidden'>
           <div
-            className={`flex ${
-              step !== 'QC' && editorMode === 'Editor'
-                ? 'justify-between'
-                : 'justify-center'
-            } w-full h-full`}
+            className={`flex ${step !== 'QC' && editorMode === 'Editor'
+              ? 'justify-between'
+              : 'justify-center'
+              } w-full h-full`}
           >
             {step !== 'QC' && editorMode === 'Editor' && (
               <SectionSelector
@@ -709,11 +712,10 @@ function EditorPage() {
             )}
             <div className='flex w-full gap-x-1'>
               <div
-                className={`bg-white border border-customBorder ${
-                  step !== 'QC' && editorMode === 'Editor'
-                    ? 'rounded-r-md'
-                    : 'rounded-md'
-                } w-[80%]`}
+                className={`bg-white border border-customBorder ${step !== 'QC' && editorMode === 'Editor'
+                  ? 'rounded-r-md'
+                  : 'rounded-md'
+                  } w-[80%]`}
               >
                 {selectedSection === 'proceedings' && (
                   <Tabs
@@ -791,9 +793,8 @@ function EditorPage() {
               </div>
               <div className='w-[20%]'>
                 <div
-                  className={`flex flex-col h-full ${
-                    findAndReplaceOpen ? 'gap-y-1' : ''
-                  }`}
+                  className={`flex flex-col h-full ${findAndReplaceOpen ? 'gap-y-1' : ''
+                    }`}
                 >
                   {findAndReplaceOpen && (
                     <div className='bg-white border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out h-[50%]'>
@@ -888,9 +889,8 @@ function EditorPage() {
                   )}
 
                   <div
-                    className={`bg-white border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out ${
-                      findAndReplaceOpen ? 'h-[50%]' : 'h-full'
-                    }`}
+                    className={`bg-white border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out ${findAndReplaceOpen ? 'h-[50%]' : 'h-full'
+                      }`}
                   >
                     <div className='font-medium text-md border-b border-customBorder flex items-center p-2'>
                       Notes
