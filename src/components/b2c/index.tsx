@@ -562,7 +562,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                     activeStep >= step ? 'bg-[#36F0C3]' : 'bg-secondary'
                   }`}
                 >
-                  <Check className='h-4 w-4 font-bold' />
+                  <Check className='h-4 w-4 font-bold text-black' />
                 </div>
 
                 <div className='text-lg font-normal'>{label}</div>
@@ -630,14 +630,14 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                         </div>
                         <CollapsibleTrigger>
                           {templateCollapsible ? (
-                            <ChevronUp className='h-4 w-4 text-black cursor-pointer' />
+                            <ChevronUp className='h-4 w-4 cursor-pointer' />
                           ) : (
-                            <ChevronDown className='h-4 w-4 text-black cursor-pointer' />
+                            <ChevronDown className='h-4 w-4 cursor-pointer' />
                           )}
                         </CollapsibleTrigger>
                       </div>
                     </div>
-                    <CollapsibleContent className='mt-3 font-normal text-sm text-[#8A8A8A]'>
+                    <CollapsibleContent className='mt-3 font-normal text-sm text-muted-foreground'>
                       The templates used for formatting the delivery transcript
                       document(s). For custom templates please{' '}
                       <Link href='/' className='text-primary'>
@@ -679,14 +679,14 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                         </div>
                         <CollapsibleTrigger>
                           {spellingCollapsible ? (
-                            <ChevronUp className='h-4 w-4 text-black cursor-pointer' />
+                            <ChevronUp className='h-4 w-4 cursor-pointer' />
                           ) : (
-                            <ChevronDown className='h-4 w-4 text-black cursor-pointer' />
+                            <ChevronDown className='h-4 w-4 cursor-pointer' />
                           )}
                         </CollapsibleTrigger>
                       </div>
                     </div>
-                    <CollapsibleContent className='mt-3 font-normal text-sm text-[#8A8A8A]'>
+                    <CollapsibleContent className='mt-3 font-normal text-sm text-muted-foreground'>
                       The spelling style specifies the dictionary used for
                       spellchecks. Please{' '}
                       <Link href='/' className='text-primary'>
@@ -747,7 +747,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                     rows={4}
                     className='focus-visible:ring-0'
                   />
-                  <div className='text-sm text-[#8A8A8A] mt-2'>
+                  <div className='text-sm text-muted-foreground mt-2'>
                     Please enter special instructions, terms, acronyms,
                     keywords, names of places, speaker names, etc.
                   </div>
@@ -756,7 +756,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                   <div className='flex items-center gap-2'>
                     <div>
                       <div className='text-md font-medium'>Accents</div>
-                      <div className='text-sm text-[#8A8A8A] w-[250px] mt-2'>
+                      <div className='text-sm text-muted-foreground w-[250px] mt-2'>
                         An additional charge may be applicable for accents other
                         than North American/Canadian.
                       </div>
@@ -831,7 +831,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                       <div className='text-md font-medium'>
                         Speakers (in each file)
                       </div>
-                      <div className='text-sm text-[#8A8A8A] w-[250px] mt-2'>
+                      <div className='text-sm text-muted-foreground w-[250px] mt-2'>
                         Speaker tracking for 4 or more speakers is best effort
                         and may not be correct.
                       </div>
@@ -863,7 +863,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
               <div className='text-lg text-primary font-medium mb-10'>
                 Payment terms
               </div>
-              <ScrollArea className=''>
+              <ScrollArea>
                 <ol className='text-md text-muted-foreground mt-4 ml-2'>
                   <li className=''>
                     1. <b>Rate:</b> The client will be charged at a rate of $

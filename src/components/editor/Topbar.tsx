@@ -62,6 +62,7 @@ import { getTextFile } from '@/app/actions/get-text-file'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import TranscriberProfile from '@/app/transcribe/components/transcriberProfiles'
 import 'rc-slider/assets/index.css'
+import Profile from '@/components/navbar/profile'
 import { ThemeSwitcher } from '@/components/theme-switcher'
 import { FILE_CACHE_URL } from '@/constants'
 import { EditorSettings } from '@/types/editor'
@@ -81,6 +82,7 @@ import {
   playCurrentParagraphTimestamp,
   regenDocx,
 } from '@/utils/editorUtils'
+
 interface TopbarProps {
   quillRef: React.RefObject<ReactQuill> | undefined
   editorModeOptions: string[]
@@ -1033,7 +1035,9 @@ export default memo(function Topbar({
               </DialogContent>
             </Dialog>
           </div>
-          <TranscriberProfile />
+          {(session?.user?.role === 'CUSTOMER' || session?.user?.role === 'ADMIN')
+            ? <Profile />
+            : <TranscriberProfile />}
           <ThemeSwitcher />
         </div>
       </div>

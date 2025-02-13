@@ -244,7 +244,7 @@ const Invoice = () => {
     <>
       <div className='flex flex-1 flex-col p-4 gap-5'>
         <div className='border-b-2 border-customBorder space-y-4 pb-6'>
-          <h1 className='w-[222px] rounded-md p-4 border-2 border-customBorder text-lg font-semibold md:text-xl'>
+          <h1 className='w-fit rounded-md p-4 border-2 border-customBorder text-lg font-semibold md:text-xl'>
             Credit Balance{' '}
             <span className='text-primary ml-2'>${creditsBalance}</span>
           </h1>
