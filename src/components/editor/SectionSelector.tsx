@@ -8,7 +8,7 @@ interface SectionSelectorProps {
 }
 
 function SectionSelector({ selectedSection, sectionChangeHandler }: SectionSelectorProps) {
-    return <div className='bg-white h-full rounded-l-md border border-customBorder p-2'>
+    return <div className='bg-background h-full rounded-l-md border border-customBorder p-2'>
         <SectionButton onClick={sectionChangeHandler} value="title" selectedSection={selectedSection}>Title</SectionButton>
         <SectionButton onClick={sectionChangeHandler} value="case-details" selectedSection={selectedSection}>Case details</SectionButton>
         <SectionButton onClick={sectionChangeHandler} value="proceedings" selectedSection={selectedSection}>Proceedings</SectionButton>

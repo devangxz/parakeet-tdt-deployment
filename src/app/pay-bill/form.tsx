@@ -142,7 +142,7 @@ const PayBill = () => {
                 <h1 className='text-4xl font-semibold tracking-tight'>
                   Payment Successful
                 </h1>
-                <p className='mt-2 text-md text-gray-700'>
+                <p className='mt-2 text-md text-muted-foreground'>
                   Thank you for your payment of ${amount}
                 </p>
               </div>
@@ -202,7 +202,7 @@ const PayBill = () => {
                 <h1 className='text-4xl font-semibold tracking-tight'>
                   Make Payment
                 </h1>
-                <p className='mt-2 text-md text-gray-700'>
+                <p className='mt-2 text-md text-muted-foreground'>
                   Please complete your payment of ${amount}
                 </p>
               </div>

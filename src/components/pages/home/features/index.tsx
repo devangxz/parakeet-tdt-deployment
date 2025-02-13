@@ -101,7 +101,7 @@ const Features = () => {
                 What makes us <span className='text-primary'>different</span>
               </h2>
 
-              <p className='lg:hidden mt-4 sm:mt-6 lg:mt-8 text-gray-700 lg:max-w-2xl text-base sm:text-lg'>
+              <p className='lg:hidden mt-4 sm:mt-6 lg:mt-8 text-muted-foreground lg:max-w-2xl text-base sm:text-lg'>
                 Experience the perfect blend of technology and human expertise,
                 delivering unmatched quality and efficiency. We combine
                 cutting-edge innovation with expert knowledge to provide you
@@ -109,7 +109,7 @@ const Features = () => {
               </p>
             </div>
 
-            <div className='bg-secondary border border-gray-100 rounded-2xl p-4 sm:p-6 shadow-sm'>
+            <div className='bg-secondary border border-customBorder rounded-2xl p-4 sm:p-6 shadow-sm'>
               <div className='flex flex-col gap-4 sm:gap-6'>
                 <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
                   <div className='flex items-center gap-3'>
@@ -145,22 +145,22 @@ const Features = () => {
                         </div>
                       ))}
                     </div>
-                    <p className='text-xs sm:text-sm text-gray-700'>
+                    <p className='text-xs sm:text-sm text-muted-foreground'>
                       Trusted by{' '}
-                      <span className='font-semibold text-gray-900'>94K+</span>{' '}
+                      <span className='font-semibold text-foreground'>94K+</span>{' '}
                       users
                     </p>
                   </div>
                 </div>
 
-                <div className='flex items-center justify-between border-t border-gray-100 pt-4'>
+                <div className='flex items-center justify-between border-t border-customBorder pt-4'>
                   <div className='flex items-center gap-2'>
                     <div className='relative flex h-2 w-2 sm:h-3 sm:w-3'>
                       <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75' />
                       <span className='relative inline-flex rounded-full h-2 w-2 sm:h-3 sm:w-3 bg-green-500' />
                     </div>
-                    <span className='text-xs sm:text-sm text-gray-700'>
-                      <span className='font-semibold text-gray-900'>24/7</span>{' '}
+                    <span className='text-xs sm:text-sm text-muted-foreground'>
+                      <span className='font-semibold text-foreground'>24/7</span>{' '}
                       live support available
                     </span>
                   </div>
@@ -174,7 +174,7 @@ const Features = () => {
                         />
                       ))}
                     </div>
-                    <span className='text-xs sm:text-sm font-medium text-gray-900'>
+                    <span className='text-xs sm:text-sm font-medium text-foreground'>
                       4.9/5
                     </span>
                   </div>
@@ -192,7 +192,7 @@ const Features = () => {
                     className={`group relative w-full text-left p-4 rounded-2xl transition-all duration-300 ${
                       activeFeature === index
                         ? feature.lightColor + ' shadow-sm'
-                        : 'hover:bg-gray-50'
+                        : 'hover:bg-secondary'
                     }`}
                     onClick={() => setActiveFeature(index)}
                   >
@@ -202,7 +202,7 @@ const Features = () => {
                           activeFeature === index
                             ? feature.color +
                               ' text-primary-foreground shadow-lg'
-                            : 'bg-primary-foreground border border-gray-200 text-gray-400'
+                            : 'bg-primary-foreground border border-customBorder text-muted-foreground'
                         }`}
                       >
                         <span className='text-sm sm:text-base font-semibold'>
@@ -215,7 +215,7 @@ const Features = () => {
                           className={`text-lg sm:text-xl font-semibold transition-colors duration-300 ${
                             activeFeature === index
                               ? 'text-gray-900'
-                              : 'text-gray-700'
+                              : 'text-muted-foreground'
                           }`}
                         >
                           {feature.heading}
@@ -224,7 +224,7 @@ const Features = () => {
 
                       <div className='hidden lg:block'>
                         <ArrowUpRight
-                          className={`w-4 h-4 sm:w-5 sm:h-5 transform transition-all duration-300 ${
+                          className={`w-4 h-4 sm:w-5 sm:h-5 transform transition-all duration-300 text-muted-foreground ${
                             activeFeature === index
                               ? 'translate-x-0 opacity-100'
                               : '-translate-x-4 opacity-0'
@@ -249,7 +249,7 @@ const Features = () => {
 
           <div className='lg:col-span-7'>
             <div className='hidden lg:block mt-8 lg:mt-12 mb-12 lg:mb-16'>
-              <p className='text-gray-700 text-sm sm:text-base lg:text-lg max-w-none sm:max-w-xl lg:max-w-2xl mx-auto'>
+              <p className='text-muted-foreground text-sm sm:text-base lg:text-lg max-w-none sm:max-w-xl lg:max-w-2xl mx-auto'>
                 Experience the perfect blend of technology and human expertise,
                 delivering unmatched quality and efficiency. We combine
                 cutting-edge innovation with expert knowledge to provide you
@@ -275,7 +275,7 @@ const Features = () => {
                     }}
                   >
                     <div
-                      className={`${feature.bgGradient} border border-gray-100 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-xl`}
+                      className={`${feature.bgGradient} rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-xl`}
                     >
                       <div className='space-y-6 sm:space-y-8'>
                         <div
@@ -290,7 +290,7 @@ const Features = () => {
                           </p>
                         </div>
 
-                        <div className='grid grid-cols-3 gap-1 sm:gap-6 pt-4 border-t border-gray-100'>
+                        <div className='grid grid-cols-3 gap-1 sm:gap-6 pt-4'>
                           <div className='col-span-1 space-y-1 sm:space-y-2'>
                             <p className='text-xs sm:text-sm text-gray-700 font-semibold'>
                               {feature.stats.label}

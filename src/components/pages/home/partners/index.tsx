@@ -50,7 +50,7 @@ const CompanyLogo = ({ company }: CompanyLogoProps) => (
         alt={`${company.name} logo`}
         width={company.width}
         height={Math.round(company.width * 0.6)}
-        className='object-contain w-auto h-auto max-w-full max-h-full'
+        className={`object-contain w-auto h-auto max-w-full max-h-full ${(company.name === 'Cambridge' || company.name === 'ProTrainings') ? 'dark:bg-white dark:p-2' : ''}`}
         priority={true}
         quality={75}
         sizes='(max-width: 768px) 144px, 192px'
@@ -74,7 +74,7 @@ const Partners = () => (
             </div>
           </div>
           <div className='relative flex justify-center'>
-            <span className='px-6 bg-background text-sm font-semibold text-gray-600'>
+            <span className='px-6 bg-background text-sm font-semibold text-muted-foreground'>
               TRUSTED BY LEADING COMPANIES
             </span>
           </div>

@@ -108,7 +108,7 @@ export default function AdminDashboard() {
 
   return (
     <>
-      <div className='h-full flex-1 flex-col space-y-8 p-5 md:flex bg-muted/40'>
+      <div className='h-full flex-1 flex-col space-y-8 p-5 md:flex'>
         <h1 className='text-lg font-semibold md:text-lg'>User Info</h1>
         <Card>
           <CardHeader>
@@ -237,7 +237,7 @@ export default function AdminDashboard() {
                     <div
                       key={key}
                       className={`grid grid-cols-2 p-2 mt-3 ${
-                        index % 2 === 0 ? 'bg-gray-100' : 'bg-white'
+                        index % 2 === 0 ? 'bg-secondary' : 'bg-background'
                       }`}
                     >
                       <span className='font-semibold'>{key}</span>

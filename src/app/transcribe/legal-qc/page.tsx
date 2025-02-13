@@ -36,7 +36,7 @@ export default function LegalQCPage() {
             setActiveTab(value)
           }}
         >
-          <TabsList className='rounded-md bg-primary/5'>
+          <TabsList className='rounded-md'>
             <TabsTrigger value='available'>Available</TabsTrigger>
             <TabsTrigger value='assigned'>Assigned</TabsTrigger>
             <TabsTrigger value='history'>History</TabsTrigger>

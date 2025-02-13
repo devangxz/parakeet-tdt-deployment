@@ -179,7 +179,7 @@ export function SidebarNav() {
                 {earnings?.TODAY_CREDITED_HOURS?.toFixed(2)}
               </p>
             </div>
-            <p className='text-xs text-gray-700'>
+            <p className='text-xs text-muted-foreground'>
               Get a $5 bonus by submitting 4 hours by 2:30PM EDT (US).
             </p>
           </div>

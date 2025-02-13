@@ -2,6 +2,7 @@
 
 import axios from 'axios'
 import Image from 'next/image'
+import { useTheme } from 'next-themes'
 import React, { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -13,7 +14,7 @@ import { generateUniqueId } from '@/utils/generateUniqueId'
 const YouTubeImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
   const { setUploadingFiles, updateUploadStatus, isUploading, setIsUploading } =
     useUpload()
-
+  const { theme } = useTheme()
   const [urls, setUrls] = useState('')
 
   const handleImport = async (e: React.FormEvent) => {
@@ -111,13 +112,13 @@ const YouTubeImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
   }
 
   return (
-    <div className='bg-primary-foreground flex flex-col p-[12px] items-center justify-center rounded-md border-2 border-customBorder shadow-sm min-h-[245px]'>
+    <div className='bg-background flex flex-col p-[12px] items-center justify-center rounded-md border-2 border-customBorder shadow-sm min-h-[245px]'>
       <div className='group relative w-full flex rounded-md text-center transition'>
         <div className='self-center w-full flex flex-col items-center justify-center gap-y-3'>
           <div className='flex items-center gap-1 text-base font-medium leading-6'>
             <div className='relative w-10 h-10 flex items-center justify-center'>
               <Image
-                src='/assets/images/upload/youtube.svg'
+                src={theme === 'dark' ? '/assets/images/upload/youtube-dark.svg' : '/assets/images/upload/youtube.svg'}
                 alt='Link'
                 width={40}
                 height={40}
@@ -129,7 +130,7 @@ const YouTubeImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
           </div>
           <form onSubmit={handleImport} className='w-full flex flex-col gap-y-3'>
             <div className='w-full space-y-1'>
-              <p className='ml-[2px] text-xs self-stretch leading-5 text-start text-gray-700'>
+              <p className='ml-[2px] text-xs self-stretch leading-5 text-start text-muted-foreground'>
                 Please enter the YouTube video URLs in the box below, one per
                 line. Please note that the file must be publicly accessible to
                 be imported.
@@ -138,7 +139,7 @@ const YouTubeImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
                 value={urls}
                 onChange={(e) => setUrls(e.target.value)}
                 placeholder='Enter YouTube URLs, one per line, e.g. https://www.youtube.com/watch?v=example'
-                className='w-full px-4 py-2.5 rounded-md border border-customBorder placeholder:text-gray-500 focus:outline-none focus:border-primary text-sm resize-none text-gray-900 overflow-hidden'
+                className='w-full px-4 py-2.5 rounded-md border border-customBorder bg-transparent placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-sm resize-none overflow-hidden'
                 style={{
                   minHeight: '80px',
                   height: `${Math.max(80, urls.split('\n').length * 24)}px`,

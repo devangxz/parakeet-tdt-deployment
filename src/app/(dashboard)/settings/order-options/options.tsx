@@ -187,7 +187,7 @@ Please read the blog post here to learn more about these options.'
               )}
               <div className='space-y-0.5'>
                 <div className='font-semibold'>{option.heading}</div>
-                <div className='text-gray-500 text-sm not-italic font-normal leading-5'>
+                <div className='text-muted-foreground/80 text-sm not-italic font-normal leading-5'>
                   {option.description}
                 </div>
               </div>
@@ -211,7 +211,7 @@ Please read the blog post here to learn more about these options.'
             />
             <div className='space-y-0.5'>
               <div className='font-semibold'>Speaker Tracking</div>
-              <div className='text-gray-500 text-sm not-italic font-normal leading-5'>
+              <div className='text-muted-foreground/80 text-sm not-italic font-normal leading-5'>
                 The speaker initial will be added before each paragraph. The
                 names of speakers, as provided or as spoken in the audio, will
                 be used. Speaker 1, Speaker 2 and so on will be used if none are
@@ -234,7 +234,7 @@ Please read the blog post here to learn more about these options.'
                 <RadioGroupItem value='0' id='Initials' />
                 <Label
                   htmlFor='nitials'
-                  className='text-gray-900 text-sm not-italic font-medium leading-3'
+                  className='text-muted-foreground text-sm not-italic font-medium leading-3'
                 >
                   Initials
                 </Label>
@@ -244,7 +244,7 @@ Please read the blog post here to learn more about these options.'
                 <RadioGroupItem value='1' id='Full_names' />
                 <Label
                   htmlFor='Full_names'
-                  className='text-gray-900 text-sm not-italic font-medium leading-3'
+                  className='text-muted-foreground text-sm not-italic font-medium leading-3'
                 >
                   Full names
                 </Label>
@@ -302,7 +302,7 @@ Please read the blog post here to learn more about these options.'
               <RadioGroupItem value='en_US' id='american' />
               <Label
                 htmlFor='american'
-                className='text-gray-900 text-sm not-italic font-medium leading-3'
+                className='text-muted-foreground text-sm not-italic font-medium leading-3'
               >
                 American
               </Label>
@@ -312,7 +312,7 @@ Please read the blog post here to learn more about these options.'
               <RadioGroupItem value='en_AU' id='australian' />
               <Label
                 htmlFor='australian'
-                className='text-gray-900 text-sm not-italic font-medium leading-3'
+                className='text-muted-foreground text-sm not-italic font-medium leading-3'
               >
                 Australian
               </Label>
@@ -322,7 +322,7 @@ Please read the blog post here to learn more about these options.'
               <RadioGroupItem value='en_GB' id='british' />
               <Label
                 htmlFor='british'
-                className='text-gray-900 text-sm not-italic font-medium leading-3'
+                className='text-muted-foreground text-sm not-italic font-medium leading-3'
               >
                 British
               </Label>
@@ -332,7 +332,7 @@ Please read the blog post here to learn more about these options.'
               <RadioGroupItem value='en_CA' id='canadian' />
               <Label
                 htmlFor='canadian'
-                className='text-gray-900 text-sm not-italic font-medium leading-3'
+                className='text-muted-foreground text-sm not-italic font-medium leading-3'
               >
                 Canadian
               </Label>
@@ -370,7 +370,7 @@ Please read the blog post here to learn more about these options.'
               value={defaultInstruction}
               rows={5}
             />
-            <div className='text-gray-500 text-sm not-italic font-normal leading-5'>
+            <div className='text-muted-foreground/80 text-sm not-italic font-normal leading-5'>
               Terms, acronyms, keywords, names of places, speaker names etc.
             </div>
           </div>

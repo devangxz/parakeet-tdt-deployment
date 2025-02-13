@@ -680,7 +680,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       if (newAl?.startPos !== undefined && newAl?.endPos !== undefined) {
         // Highlight the new word
         quill.formatText(newAl.startPos, newAl.endPos - newAl.startPos, {
-          background: 'yellow',
+          background: 'var(--highlight-color)',
         })
 
         if (!isTyping) {

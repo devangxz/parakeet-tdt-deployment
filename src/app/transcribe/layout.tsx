@@ -19,7 +19,7 @@ export default function TranscribeLayout({
             </aside>
           </div>
           <main className='flex-1'>
-            <div className='h-full bg-muted/40'>{children}</div>
+            <div className='h-full'>{children}</div>
           </main>
         </div>
         <AuthenticatedFooter />

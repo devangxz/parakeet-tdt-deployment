@@ -428,7 +428,7 @@ const FileList = ({
             ) : (
               <Button
                 variant='order'
-                className='format-button text-black w-[140px]'
+                className='format-button w-[140px]'
                 onClick={() =>
                   orderFile(row.original.id, session?.user?.orderType as string)
                 }
@@ -559,7 +559,7 @@ const FileList = ({
           {(session?.user?.role === 'ADMIN' || session?.user?.adminAccess) && (
             <Button
               variant='order'
-              className='not-rounded text-black w-[140px]'
+              className='not-rounded w-[140px]'
               onClick={async () => {
                 try {
                   if (selectedFiles.length === 0) {
@@ -588,7 +588,7 @@ const FileList = ({
           ) : (
             <Button
               variant='order'
-              className='format-button text-black w-[140px]'
+              className='format-button w-[140px]'
               onClick={() =>
                 orderBulkFile(
                   selectedFiles.join(','),

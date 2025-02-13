@@ -51,7 +51,7 @@ const Process = () => {
             <span className='text-primary'>perfect transcription</span>
           </h2>
 
-          <p className='mt-4 sm:mt-6 lg:mt-8 text-gray-700 max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
+          <p className='mt-4 sm:mt-6 lg:mt-8 text-muted-foreground max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
             Get started in minutes with our streamlined process. No technical
             expertise required
           </p>
@@ -62,7 +62,7 @@ const Process = () => {
             {steps.map((step) => (
               <div
                 key={step.title}
-                className='group relative bg-background rounded-2xl p-8 hover:shadow-xl transition-all duration-500 border border-border overflow-hidden'
+                className='group relative bg-background rounded-2xl p-8 hover:shadow-xl transition-all duration-500 border border-customBorder overflow-hidden'
               >
                 <div className='absolute top-4 right-5 text-[60px] sm:text-[80px] md:text-[95px] lg:text-[110px] font-bold text-muted select-none z-0 leading-none'>
                   {step.number}
@@ -83,7 +83,7 @@ const Process = () => {
                     {step.title}
                   </h3>
 
-                  <p className='text-gray-700 leading-relaxed group-hover:text-gray-800'>
+                  <p className='text-muted-foreground leading-relaxed'>
                     {step.description}
                   </p>
                 </div>
@@ -101,7 +101,7 @@ const Process = () => {
               <span className='relative'>Start Transcribing Now</span>
             </Link>
 
-            <p className='mt-4 text-sm text-gray-700'>
+            <p className='mt-4 text-sm text-muted-foreground'>
               Pay with Card or PayPal • One time payment
             </p>
           </div>

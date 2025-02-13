@@ -292,7 +292,7 @@ const TranscriptionCategories = () => {
               {activeService.title} Transcription
             </h3>
 
-            <p className='text-gray-700 text-base sm:text-lg'>
+            <p className='text-muted-foreground text-base sm:text-lg'>
               {activeService.longDescription}
             </p>
           </div>
@@ -310,7 +310,7 @@ const TranscriptionCategories = () => {
             ))}
           </div>
 
-          <div className='bg-secondary rounded-2xl p-[22px] border border-border'>
+          <div className='bg-secondary rounded-2xl p-[22px] border border-customBorder'>
             <div className='flex gap-1 mb-4'>
               {[...Array(5)].map((_, i) => (
                 <Star
@@ -330,7 +330,7 @@ const TranscriptionCategories = () => {
                 <div className='font-semibold text-foreground'>
                   {activeService.testimonial.author}
                 </div>
-                <div className='text-sm text-gray-700'>
+                <div className='text-sm text-muted-foreground'>
                   {activeService.testimonial.role}
                 </div>
               </div>
@@ -362,16 +362,16 @@ const TranscriptionCategories = () => {
               </div>
             </div>
 
-            <div className='bg-background rounded-2xl border border-border overflow-hidden'>
+            <div className='bg-background rounded-2xl border border-customBorder overflow-hidden'>
               <div className='p-6'>
                 <div className='flex items-baseline gap-2 mb-4'>
                   <span className='text-3xl font-bold text-primary'>
                     {activeService.price}
                   </span>
-                  <span className='text-lg text-gray-600 line-through'>
+                  <span className='text-lg text-muted-foreground line-through'>
                     {activeService.originalPrice}
                   </span>
-                  <span className='text-sm text-gray-600'>/minute</span>
+                  <span className='text-sm text-muted-foreground'>/minute</span>
                 </div>
                 <button
                   onClick={() => router.push('/files/upload')}
@@ -381,7 +381,7 @@ const TranscriptionCategories = () => {
                   <ArrowRight className='w-4 h-4 transform group-hover:translate-x-1 transition-transform' />
                 </button>
               </div>
-              <div className='bg-secondary px-6 py-4 border-t border-border'>
+              <div className='bg-secondary px-6 py-4 border-t border-customBorder'>
                 <div className='flex items-center gap-2 text-sm text-primary'>
                   <Star className='w-4 h-4 fill-current' />
                   <span>Top-rated service</span>

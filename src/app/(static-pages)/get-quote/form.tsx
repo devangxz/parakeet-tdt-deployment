@@ -86,7 +86,7 @@ const GetQuote = () => {
               <h1 className='text-4xl font-semibold tracking-tight'>
                 Get a Quote
               </h1>
-              <p className='mt-2 text-md text-gray-700'>
+              <p className='mt-2 text-md text-muted-foreground'>
                 Get a customized quote for your transcription project
               </p>
             </div>

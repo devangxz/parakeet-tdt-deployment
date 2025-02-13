@@ -54,7 +54,7 @@ export default function Page() {
           <h1 className='text-4xl md:text-5xl lg:text-6xl font-bold text-foreground max-w-3xl lg:max-w-5xl mx-auto leading-tight md:leading-[1.3] lg:leading-[1.1]'>
             Privacy Policy
           </h1>
-          <p className='mt-4 sm:mt-6 lg:mt-8 text-gray-700 max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
+          <p className='mt-4 sm:mt-6 lg:mt-8 text-muted-foreground max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
             Effective date: 8th April, 2016
           </p>
         </header>
@@ -65,7 +65,7 @@ export default function Page() {
               Welcome to Scribie
             </h3>
             <div className='space-y-4'>
-              <p className='text-gray-600'>
+              <p className='text-muted-foreground'>
                 We collect personal information in a number of ways when you
                 visit our site or use our service. For example, you provide us
                 with personal information when you register for an account or
@@ -75,12 +75,12 @@ export default function Page() {
                 is used for billing, identification, authentication, service
                 improvement, research, and contact.
               </p>
-              <p className='text-gray-600'>
+              <p className='text-muted-foreground'>
                 We are committed to conducting our business in accordance with
                 these principles in order to ensure that the confidentiality of
                 personal information is protected and maintained.
               </p>
-              <p className='text-gray-600'>
+              <p className='text-muted-foreground'>
                 If you have questions or concerns about Scribie Technologies,
                 Inc.&apos;s Privacy Policy please send us a message here.
               </p>
@@ -94,7 +94,7 @@ export default function Page() {
                   <h5 className='text-xl font-semibold text-foreground'>
                     {section.title}
                   </h5>
-                  <div className='text-gray-600'>{section.content}</div>
+                  <div className='text-muted-foreground'>{section.content}</div>
                 </div>
               </div>
             ))}
