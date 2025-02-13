@@ -37,7 +37,7 @@ const BillBreakdownDialog = ({
           {files.map((file) => (
             <div
               key={file.name}
-              className='flex justify-between text-black mt-2'
+              className='flex justify-between mt-2 font-semibold'
             >
               <p>{file.name}</p>
               <p>{formatDuration(file.duration)}</p>

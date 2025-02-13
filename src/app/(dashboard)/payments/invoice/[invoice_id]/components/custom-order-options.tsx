@@ -105,9 +105,9 @@ export function CustomOrderOptions({
         <div className='text-md font-normal'>
           <CollapsibleTrigger>
             {isOpen ? (
-              <ChevronUp className='h-4 w-4 text-black cursor-pointer' />
+              <ChevronUp className='h-4 w-4 cursor-pointer' />
             ) : (
-              <ChevronDown className='h-4 w-4 text-black cursor-pointer' />
+              <ChevronDown className='h-4 w-4 cursor-pointer' />
             )}
           </CollapsibleTrigger>
         </div>
