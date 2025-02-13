@@ -37,6 +37,14 @@ export async function GET(req: NextRequest) {
       })
     }
 
+    if (user.role === 'ADMIN' || user.role === 'OM') {
+      logger.error(`Preventing admin access ${email}`)
+      return NextResponse.json({
+        success: false,
+        message: 'User not found',
+      })
+    }
+
     logger.info(`Successfully retrieved API key for user ${user.email}`)
 
     if (user.ApiKey && user.ApiKey.internalApiKey) {
