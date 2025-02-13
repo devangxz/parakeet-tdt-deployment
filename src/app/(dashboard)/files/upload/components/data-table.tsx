@@ -111,7 +111,7 @@ export function DataTable<TData, TValue>({
                   data-state={row.getIsSelected() && 'selected'}
                   className={`${
                     calculateDifferenceInHours(row.getValue('date')) <= 1 &&
-                    'bg-[#FFFBEB]'
+                    'dark:bg-indigo-950/40 bg-[#FFFBEB]'
                   }`}
                 >
                   {row.getVisibleCells().map((cell) => (
