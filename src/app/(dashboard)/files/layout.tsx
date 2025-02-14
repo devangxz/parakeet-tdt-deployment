@@ -7,7 +7,9 @@ import {
   PackageMinus,
   FileUp,
   Share2,
+  File,
 } from 'lucide-react'
+import { usePathname } from 'next/navigation'
 import React from 'react'
 
 import AuthenticatedFooter from '@/components/authenticated-footer'
@@ -20,6 +22,8 @@ export default function FilesLayout({
 }: {
   children: React.ReactNode
 }) {
+  const pathname = usePathname()
+
   const sidebarItems: SidebarItemType[] = [
     {
       href: '/files/upload',
@@ -58,6 +62,16 @@ export default function FilesLayout({
       isActive: false,
     },
   ]
+
+  if (pathname?.startsWith('/files/selected/')) {
+    sidebarItems.push({
+      href: pathname,
+      name: 'Selected',
+      icon: File,
+      isActive: true,
+    })
+  }
+
   return (
     <div className='flex min-h-screen flex-col'>
       <PaymentsNavbar />

@@ -46,6 +46,7 @@ export function DataTable<TData, TValue>({
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({
       orgName: false,
+      diff: false,
     })
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []

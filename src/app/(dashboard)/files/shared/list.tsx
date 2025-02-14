@@ -340,25 +340,25 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
           <div className='flex items-center'>
             {(session?.user?.role === 'ADMIN' ||
               session?.user?.adminAccess) && (
-                <Button
-                  variant='order'
-                  className='not-rounded w-[140px]'
-                  onClick={async () => {
-                    try {
-                      if (selectedFiles.length === 0) {
-                        toast.error('Please select at least one file')
-                        return
-                      }
-                      await navigator.clipboard.writeText(selectedFiles.join(','))
-                      toast.success('File Ids copied to clipboard')
-                    } catch (error) {
-                      toast.error('Failed to copy file Ids')
+              <Button
+                variant='order'
+                className='not-rounded w-[140px] mr-2'
+                onClick={async () => {
+                  try {
+                    if (selectedFiles.length === 0) {
+                      toast.error('Please select at least one file')
+                      return
                     }
-                  }}
-                >
-                  Copy file Ids
-                </Button>
-              )}
+                    await navigator.clipboard.writeText(selectedFiles.join(','))
+                    toast.success('File Ids copied to clipboard')
+                  } catch (error) {
+                    toast.error('Failed to copy file Ids')
+                  }
+                }}
+              >
+                Copy file Ids
+              </Button>
+            )}
             <Button
               variant='order'
               className='not-rounded w-[140px]'

@@ -73,7 +73,7 @@ async function deliver(order: Order, transcriberId: number) {
 
   const templateData = {
     transcript_name: file?.filename || '',
-    check_and_download: `https://${process.env.SERVER}/files/all-files/?ids=${file?.fileId}`,
+    check_and_download: `https://${process.env.SERVER}/files/selected/${file?.fileId}`,
   }
 
   await sendTemplateMail(
