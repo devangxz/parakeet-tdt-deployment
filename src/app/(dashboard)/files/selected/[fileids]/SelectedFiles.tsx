@@ -410,7 +410,6 @@ export function SelectedFiles({ initialFiles }: SelectedFilesClientProps) {
           filename={selectedFile.name || ''}
           toggleCheckAndDownload={toggleCheckAndDownload}
           setToggleCheckAndDownload={setToggleCheckAndDownload}
-          session={session as any}
           txtSignedUrl={signedUrls.txtSignedUrl}
           cfDocxSignedUrl={signedUrls.cfDocxSignedUrl}
         />
