@@ -570,6 +570,8 @@ function EditorPage() {
         setRegenCount={setRegenCount}
         setFileToUpload={setFileToUpload}
         fileToUpload={fileToUpload}
+        transcript={transcript}
+        ctms={ctms}
       />
 
       <Header

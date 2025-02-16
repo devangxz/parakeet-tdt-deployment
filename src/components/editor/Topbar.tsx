@@ -8,7 +8,8 @@ import {
 } from '@radix-ui/react-icons'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-import { useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
+import { Delta, Op } from 'quill/core'
+import React,{ useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
@@ -16,6 +17,7 @@ import ConfigureShortcutsDialog from './ConfigureShortcutsDialog'
 import DownloadDocxDialog from './DownloadDocxDialog'
 import FrequentTermsDialog from './FrequentTermsDialog'
 import ReportDialog from './ReportDialog'
+import ReviewTranscriptDialog from './ReviewWithGeminiDialog'
 import ShortcutsReferenceDialog from './ShortcutsReferenceDialog'
 import UploadDocxDialog from './UploadDocxDialog'
 import { Button } from '../ui/button'
@@ -68,6 +70,7 @@ import DefaultShortcuts, {
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   autoCapitalizeSentences,
+  CTMType,
   downloadMP3,
   getFrequentTermsHandler,
   handleSave,
@@ -100,6 +103,8 @@ interface TopbarProps {
     originalFile: File | null
     isUploaded?: boolean
   }
+  transcript: string
+  ctms: CTMType[]
 }
 
 export default memo(function Topbar({
@@ -116,6 +121,8 @@ export default memo(function Topbar({
   setRegenCount,
   setFileToUpload,
   fileToUpload,
+  transcript,
+  ctms,
 }: TopbarProps) {
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
@@ -151,6 +158,8 @@ export default memo(function Topbar({
     reportOption: '',
     reportComment: '',
   })
+
+  const [reviewModalOpen, setReviewModalOpen] = useState(false)
   const [buttonLoading, setButtonLoading] = useState({
     download: false,
     upload: false,
@@ -253,6 +262,67 @@ export default memo(function Topbar({
       toast.error('Failed to fetch formatting options')
     }
   }
+
+  const getFormattedContent = (text: string) => {
+    const formattedContent: Op[] = [];
+    let lastIndex = 0;
+    const lastSpeakerEnd = 0;
+    // Update pattern to explicitly include the timestamp+blank pattern
+    const pattern = /(\d:\d{2}:\d{2}\.\d\s+S\d+:|(?:\[\d:\d{2}:\d{2}\.\d\]\s+____)|\[[^\]]+\])/g;
+    let match;
+    
+    while ((match = pattern.exec(text)) !== null) {
+      if (match[0].match(/^\d:\d{2}:\d{2}\.\d\s+S\d+:/) && lastSpeakerEnd > 0) {
+        const contentBeforeSpeaker = text.slice(lastIndex, match.index).trim();
+        formattedContent.push({ 
+            insert: contentBeforeSpeaker + "\n\n" // Add double newline for spacing
+        });
+    } else if (match.index > lastIndex) {
+        formattedContent.push({ 
+            insert: text.slice(lastIndex, match.index)
+        });
+    }
+
+    const matchedText = match[0];
+        
+        // Rule 1: TS + Speaker labels
+        if (matchedText.match(/^\d:\d{2}:\d{2}\.\d\s+S\d+:/)) {
+            formattedContent.push({ 
+                insert: matchedText,
+                attributes: { bold: true }
+            });
+        }
+        // Rule 2: TS + blank (complete pattern)
+        else if (matchedText.match(/\[\d:\d{2}:\d{2}\.\d\]\s+____/)) {
+            formattedContent.push({ 
+                insert: matchedText,
+                attributes: { color: '#FF0000' }
+            });
+        }
+        // Rule 3: Any other bracketed content
+        else if (matchedText.startsWith('[')) {
+            formattedContent.push({ 
+                insert: matchedText,
+                attributes: { background: '#f5f5f5', color: '#4A4A4A' }
+            });
+        }
+        
+        lastIndex = match.index + matchedText.length;
+    }
+
+    if (lastIndex < text.length) {
+        formattedContent.push({ insert: text.slice(lastIndex) });
+    }
+
+    return formattedContent;
+};
+
+  const updateQuill = useCallback((transcript: string) =>{
+    const quill = quillRef?.current?.getEditor()
+    if (!quill) return;
+    const formattedContent = getFormattedContent(transcript);
+    quill.setContents({ ops: formattedContent} as Delta)
+  }, [quillRef])
 
   useEffect(() => {
     if (orderDetails.orderId) {
@@ -924,6 +994,11 @@ export default memo(function Topbar({
                     Frequent Terms
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuItem
+                    onClick={() => setReviewModalOpen(true)}
+                  >
+                    Review with Gemini
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={toggleAutoCapitalize}>
                   {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
                 </DropdownMenuItem>
@@ -1270,7 +1345,7 @@ export default memo(function Topbar({
         </div>
       </div>
 
-      <ReportDialog
+      {reportModalOpen && <ReportDialog
         reportModalOpen={reportModalOpen}
         setReportModalOpen={setReportModalOpen}
         reportDetails={reportDetails}
@@ -1278,7 +1353,17 @@ export default memo(function Topbar({
         orderDetails={orderDetails}
         buttonLoading={buttonLoading}
         setButtonLoading={setButtonLoading}
-      />
+      />}
+      {reviewModalOpen && <ReviewTranscriptDialog
+        reviewModalOpen={reviewModalOpen}
+        setReviewModalOpen={setReviewModalOpen}
+        orderDetails={orderDetails}
+        setButtonLoading={setButtonLoading}
+        buttonLoading={buttonLoading}
+        transcript={transcript}
+        ctms={ctms}
+        updateQuill={updateQuill}
+      />}
       <FrequentTermsDialog
         frequentTermsModalOpen={frequentTermsModalOpen}
         setFrequentTermsModalOpen={setFrequentTermsModalOpen}

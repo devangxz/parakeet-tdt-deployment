@@ -1149,6 +1149,137 @@ const scrollEditorToPos = (quill: Quill, pos: number) => {
     }
 }
 
+function timestampToSeconds(timestamp: string): number {
+  const [hours, minutes, seconds] = timestamp.split(':').map(Number);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+export interface TranscriptSegment {
+  content: string;
+  speaker: string;
+  timestamp: string;
+}
+
+export interface ChunkData {
+  fileKey: string;
+  startTime: number;
+  endTime: number;
+  transcript: string;
+}
+
+function parseTranscript(transcript: string): TranscriptSegment[] {
+  const lines = transcript.split("\n").filter((line) => line.trim());
+  return lines.map((line) => {
+    const match = line.match(/^(\d+:\d+:\d+\.\d+)\s+(S\d+):\s+(.+)$/);
+    if (!match) throw new Error(`Invalid line format: ${line}`);
+    return {
+      timestamp: match[1],
+      speaker: match[2],
+      content: match[3],
+    };
+  });
+}
+
+function findOptimalChunkPoints(segments: CTMType[]): number[] {
+  if (segments.length === 0) return [];
+  
+  const config = {
+    maxDuration: 1500,
+    minPauseDuration: 0.5,
+    minConfidence: 0.6,
+    maxWordsPerChunk: 300,
+  };
+  
+  const chunkPoints: number[] = [segments[0].start];
+  let currentChunkStart = segments[0].start;
+  
+  for (let i = 0; i < segments.length - 1; i++) {
+    const currentSegment = segments[i];
+    const nextSegment = segments[i + 1];
+    const currentDuration = nextSegment.start - currentChunkStart;
+    const pauseDuration = nextSegment.start - currentSegment.end;
+    const isSpeakerChange = currentSegment.speaker !== nextSegment.speaker;
+    
+    if (currentDuration >= config.maxDuration && isSpeakerChange && pauseDuration >= config.minPauseDuration) {
+      chunkPoints.push(currentSegment.end);
+      currentChunkStart = nextSegment.start;
+    }
+  }
+  
+  if (segments.length > 0) chunkPoints.push(segments[segments.length - 1].end);
+  
+  const finalChunkPoints = chunkPoints.filter((point, index) => {
+    if (index === 0 || index === chunkPoints.length - 1) return true;
+    const duration = chunkPoints[index + 1] - point;
+    return duration >= config.minPauseDuration;
+  });
+  finalChunkPoints[0] = 0;
+  return finalChunkPoints;
+}
+
+function chunkTranscript(transcript: string, chunkPoints: number[]): string[] {
+  const entries = parseTranscript(transcript);
+  const sortedPoints = [...chunkPoints].sort((a, b) => a - b);
+  const chunks: string[] = [];
+  for (let i = 0; i < sortedPoints.length - 1; i++) {
+    const chunkStart = sortedPoints[i];
+    const chunkEnd = sortedPoints[i + 1];
+    const chunkEntries = entries.filter((entry) => {
+      const entryTime = timestampToSeconds(entry.timestamp);
+      return entryTime >= chunkStart && entryTime < chunkEnd;
+    });
+    if (chunkEntries.length > 0) {
+      chunks.push(chunkEntries.map((entry) => `${entry.timestamp} ${entry.speaker}: ${entry.content}`).join("\n"));
+    }
+  }
+  return chunks;
+}
+
+function secondsToTimestamp(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  seconds %= 3600;
+  const minutes = Math.floor(seconds / 60);
+  seconds = Math.round((seconds % 60) * 10) / 10; // Round to 1 decimal place
+  
+  return `${hours}:${String(minutes).padStart(2, '0')}:${seconds.toFixed(1)}`;
+}
+
+function parseTranscriptLine(line: string): TranscriptSegment | null {
+  const match = line.match(/^(\d+:\d+:\d+\.\d+)\s+(S\d+):\s+(.+)$/);
+  if (!match) return null;
+
+  return {
+    timestamp: match[1],
+    speaker: match[2],
+    content: match[3]
+  };
+}
+
+function offsetTranscript(transcript: string, offsetTimestamp: string | null = null): {transcript: string, firstTimeStamp: string} | string {
+  
+  const lines = transcript.split('\n').filter(line => line.trim());
+  if (lines.length === 0) return '';
+
+  // Find the first timestamp
+  const firstUtterance = parseTranscriptLine(lines[0]);
+  if (!firstUtterance) return transcript;
+
+  const offsetSeconds = offsetTimestamp ? timestampToSeconds(offsetTimestamp) : timestampToSeconds(firstUtterance.timestamp);
+  // Process each line
+  const formattedTranscript = lines.map(line => {
+    const utterance = parseTranscriptLine(line);
+    if (!utterance) return line;
+
+    const originalSeconds = timestampToSeconds(utterance.timestamp);
+    const newSeconds = offsetTimestamp ? originalSeconds + offsetSeconds  : originalSeconds - offsetSeconds;
+    const newTimestamp = secondsToTimestamp(newSeconds);
+
+    return `${newTimestamp} ${utterance.speaker}: ${utterance.content}`;
+  }).join('\n');
+
+  return  offsetTimestamp ? formattedTranscript : {transcript: formattedTranscript , firstTimeStamp: firstUtterance.timestamp};
+}
+
 export {
     generateRandomColor,
     convertBlankToSeconds,
@@ -1174,6 +1305,13 @@ export {
     replaceTextHandler,
     insertTimestampBlankAtCursorPosition,
     insertTimestampAndSpeaker,
-    autoCapitalizeSentences
+    autoCapitalizeSentences,
+    parseTranscript,
+    findOptimalChunkPoints,
+    chunkTranscript,
+    timestampToSeconds,
+    parseTranscriptLine,
+    secondsToTimestamp,
+    offsetTranscript,
 }
 export type { CTMType }
