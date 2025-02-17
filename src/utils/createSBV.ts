@@ -1,5 +1,5 @@
 import { secondsToTs } from "./secondsToTs";
-import { AlignmentType } from "@/utils/transcript";
+import { AlignmentType } from "@/types/editor";
 
 function createSBV(alignments: AlignmentType[]): string {
     try {

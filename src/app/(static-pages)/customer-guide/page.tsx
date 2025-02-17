@@ -1,11 +1,12 @@
 // `app/page.tsx` is the UI for the `/` URL
 'use client'
-import { Pencil, ShoppingCart, Upload } from 'lucide-react'
+import { Pencil, ShoppingCart, Upload, Menu } from 'lucide-react'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { LegacyRef, useRef } from 'react'
+import { LegacyRef, useRef, useState } from 'react'
 
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { StaticContent } from '@/constants'
-
 const sidebarItems = StaticContent.faq['customer-guide']
 
 const content = [
@@ -45,37 +46,27 @@ const content = [
         </p>
         <br />
         <p className='text-slate-500'>
-          Our team of certified transcribers, who work from home, meticulously
-          prepare time-coded transcripts (see a{' '}
-          <a
-            href='#sample'
-            title='Sample transcript document for illustration of formatting'
-            className='text-blue-500 underline'
-          >
+          Our team of certified transcribers/editors, who work from home,
+          meticulously prepare timecoded transcripts (see a{' '}
+          <a className='text-blue-500 underline' href='/customer-guide#sample'>
             sample
           </a>
-          ) using our reliable human verified 4-step{' '}
-          <a
-            href='#process'
-            title='Learn more about our transcription process'
-            className='text-blue-500 underline'
-          >
+          ) using our reliable human-verified{' '}
+          <a className='text-blue-500 underline' href='/customer-guide#process'>
             transcription process
           </a>
           , ensuring high accuracy. You can even{' '}
           <a
-            href='#progress'
-            title='Draft transcript'
             className='text-blue-500 underline'
+            href='/customer-guide#progress'
           >
             check the transcript
           </a>{' '}
-          as it&apos;s being prepared. In case you require any further
-          revisions, we also offer{' '}
+          as it is being prepared. In case you require further revisions, we
+          also offer{' '}
           <a
-            href='#re-reviews'
-            title='Free re-reviews'
             className='text-blue-500 underline'
+            href='/customer-guide#re-reviews'
           >
             free re-review
           </a>{' '}
@@ -191,9 +182,9 @@ const content = [
         </p>{' '}
         <br />
         <p className='text-slate-500'>
-          Additionally, we offer billing and invoicing options for large orders.
-          To set up a billing account, a contract must be executed. If you
-          require further details, please feel free to{' '}
+          Additionally, we offer billing and invoicing options for large orders
+          (more than $1000/month). To set up a billing account, a contract must
+          be executed. If you require further details, please feel free to{' '}
           <a href='/contact' className='text-blue-500 underline'>
             contact us
           </a>
@@ -224,7 +215,7 @@ const content = [
             may apply for files with non-American accents, poor audio quality,
             distortions, distant speakers, high background and/or ambient noise.
             A full refund will be issued if the additional charges are
-            unacceptable, or if the file is un-transcribeable.
+            unacceptable, or if the file is untranscribable.
           </p>{' '}
           <br />
           <p className='text-slate-500'>
@@ -256,25 +247,24 @@ const content = [
         </p>
         <br />
         <p className='text-slate-500'>
+          Please note that we do not offer refunds for sections of the audio
+          file that are blank or contain no spoken content. We recommend using
+          audio editing software like{' '}
+          <a
+            className='text-blue-500 underline'
+            href='http://www.audacityteam.org/'
+          >
+            Audacity
+          </a>{' '}
+          or utilizing the Trim Audio feature on the files page to remove such
+          portions.
+        </p>
+        <br />
+        <p className='text-slate-500'>
           Once the transcript has been delivered, we do not offer refunds. We
           also do not offer refunds for duplicate files ordered in error. Please
           double-check your files to prevent unintentional duplication before
           proceeding with the order.
-        </p>
-        <br />
-        <p className='text-slate-500'>
-          Please note that we do not offer refunds for blank portions in the
-          audio file where there is no spoken audio. We recommend using audio
-          editing software like{' '}
-          <a
-            href='http://www.audacityteam.org/'
-            target='_blank'
-            className='text-blue-500 underline'
-          >
-            Audacity
-          </a>{' '}
-          or utilizing the Trim Audio functionality on the files page to remove
-          such portions.
         </p>
         <br />
         <p className='text-slate-500'>
@@ -470,11 +460,16 @@ const content = [
           <br />
           <p className='text-slate-500'>
             If the delivered transcript does not meet your satisfaction, you can
-            request a free{' '}
-            <a href='/customer-guidelines#re-review'>re-review</a>. This can be
-            done through your account, where you can provide specific
-            instructions. The file will undergo another round of proofreading
-            and be re-delivered within one business day.
+            request a{' '}
+            <a
+              className='text-blue-500 underline'
+              href='/customer-guide#re-reviews'
+            >
+              free re-review
+            </a>
+            . This can be done through your account, where you can provide
+            specific instructions. The file will undergo another round of
+            proofreading and be re-delivered within one business day.
           </p>
           <br />
           <p className='text-slate-500'>
@@ -496,11 +491,11 @@ const content = [
         <br />
         <p className='text-slate-500'>
           We understand that sometimes the quality of a transcript may not meet
-          your expectations, that&apos;s why we offer free re-reviews. If you&apos;re
-          unsatisfied with the quality after delivery, you can place a re-review
-          order from your account. Please provide specific instructions, and we
-          will proofread the file once more and send it back to you. The
-          re-review process takes approximately 1 business day.
+          your expectations, that&apos;s why we offer free re-reviews. If
+          you&apos;re unsatisfied with the quality after delivery, you can place
+          a re-review order from your account. Please provide specific
+          instructions, and we will proofread the file once more and send it
+          back to you. The re-review process takes approximately 1 business day.
         </p>
         <br />
         <p className='text-slate-500'>
@@ -605,9 +600,12 @@ const content = [
         </p>
         <br />
         <p className='text-slate-500'>
-          To get started with Folders, simply navigate to the All Files page of
-          your account and click on the &quot;New Folder&quot; button. You can
-          then name your folder and click the Create folder button.
+          To get started with Folders, simply navigate to the
+          <a className='text-blue-500 underline' href='/files/all-files'>
+            All Files
+          </a>{' '}
+          page of your account and click on the &quot;New Folder&quot; button.
+          You can then name your folder and click the Create folder button.
         </p>
         <br />
         <p className='text-slate-500'>
@@ -620,9 +618,16 @@ const content = [
         <p className='text-slate-500'>
           The Upload Folder feature allows you to quickly and easily upload
           large numbers of files to your account. You can either drag and drop a
-          zipped folder or click on the &quot;Upload&quot; button on the Uploads
+          zipped folder or click on the &quot;Upload&quot; button on the{' '}
+          <a className='text-blue-500 underline' href='/files/upload'>
+            Uploads
+          </a>{' '}
           page to select the zipped folder from your computer. You can also drag
-          and drop the zipped folder on the All Files page.
+          and drop the zipped folder on the{' '}
+          <a className='text-blue-500 underline' href='/files/all-files'>
+            All Files
+          </a>{' '}
+          page.
         </p>
         <p className='text-slate-500'>
           Please note that by default, folders are private and can only be
@@ -632,7 +637,14 @@ const content = [
         <br />
         <p className='text-slate-500'>
           For more information and screenshots on how to use this feature,
-          please visit the Scribie Folder Feature blog post.
+          please visit the{' '}
+          <a
+            className='text-blue-500 underline'
+            href='https://scribie.com/blog/2023/05/introducing-the-scribie-folder-feature/'
+          >
+            Scribie Folder Feature
+          </a>{' '}
+          blog post.
         </p>
       </div>
     ),
@@ -656,8 +668,12 @@ const content = [
         </p>
         <br />
         <p className='text-slate-500'>
-          You can add credits from the settings page. You can also choose to
-          send any refunds to your account credits from the settings page.
+          You can{' '}
+          <a href='/settings/credits' className='text-blue-500 underline'>
+            add credits
+          </a>{' '}
+          from the settings page. You can also choose to send any refunds to
+          your account credits from the settings page.
         </p>
       </div>
     ),
@@ -688,12 +704,25 @@ const content = [
         <br />
         <p className='text-slate-500'>
           Our philosophy is to keep re-working the transcript until the{' '}
-          <a href='/customer-guide' className='text-blue-500 underline'>
+          <a
+            href='/customer-guide#accuracy'
+            className='text-blue-500 underline'
+          >
             quality standard of 99%+ accuracy
           </a>{' '}
           is achieved. The following is an illustration of our process.
         </p>
         <br />
+        <div className='flex justify-center my-8'>
+          <Image
+            src='/assets/images/transcription-process.png'
+            alt="Scribie's transcription and formatting process diagram"
+            width={800}
+            height={400}
+            className='max-w-full h-auto'
+            priority
+          />
+        </div>
         <p className='text-slate-500'>
           Our online transcription system manages all of the above stages. All
           our transcribers are home-based freelancers who have gone through our
@@ -730,9 +759,21 @@ const content = [
         </ul>
         <br />
         <p className='text-slate-500'>
-          Our system is unique and can be best described as a Mechanical Turk
-          for audio transcription. You can learn more about our transcription
-          system in detail through a series of posts on our Transcription System
+          Our system is unique and can be best described as a{' '}
+          <a
+            className='text-blue-500 underline'
+            href='http://scribie.com/blog/2012/09/mturk-for-audio-transcription/'
+          >
+            Mechanical Turk for audio transcription.
+          </a>{' '}
+          You can learn more about our transcription system in detail through a
+          series of posts on our{' '}
+          <a
+            className='text-blue-500 underline'
+            href='http://scribie.com/blog/category/transcription-system-2/'
+          >
+            Transcription System
+          </a>{' '}
           blog category.
         </p>
       </div>
@@ -775,10 +816,16 @@ const content = [
           We provide audio timecoding and speaker tracking by default. If the
           names of speakers are provided or mentioned in the audio, we use them.
           Otherwise, we use &quot;Speaker 1,&quot; &quot;Speaker 2,&quot; and so
-          on. For an illustration of the formatting, you can check the sample
-          transcript. For monologues, the speaker name or &quot;Speaker 1&quot;
-          is used throughout. Monologues are also broken into paragraphs
-          approximately every 3 minutes.
+          on. For an illustration of the formatting, you can check the{' '}
+          <a
+            className='text-blue-500 underline'
+            href='/customer-guide#sample-transcript'
+          >
+            sample transcript
+          </a>
+          . For monologues, the speaker name or &quot;Speaker 1&quot; is used
+          throughout. Monologues are also broken into paragraphs approximately
+          every 3 minutes.
         </p>
         <br />
         <p className='text-slate-500'>
@@ -822,10 +869,17 @@ const content = [
         <br />
         <p className='text-slate-500'>
           In case you need extra formatting on your transcript that deviates
-          from our default formatting, please select the Format option when
-          placing your order. When Format is selected as the order type, we will
-          transcribe the file and then apply the formatting requirements based
-          on the instructions or guidelines and sample output provided.
+          from our{' '}
+          <a
+            className='text-blue-500 underline'
+            href='customer-guide#default-format'
+          >
+            default formatting
+          </a>
+          , please select the Format option when placing your order. When Format
+          is selected as the order type, we will transcribe the file and then
+          apply the formatting requirements based on the instructions or
+          guidelines and sample output provided.
         </p>
         <br />
         <p className='text-slate-500'>
@@ -845,22 +899,17 @@ const content = [
         </p>
         <br />
         <p className='text-slate-500'>
-          In case you need extra formatting on your transcript that deviates
-          from our{' '}
-          <a href='#default-format' className='text-blue-500 underline'>
-            default formatting
-          </a>
-          , please enable the Custom Formatting option when placing your order.
-          When enabled, we will apply your formatting requirements based on the
-          instructions and sample output provided.
-        </p>
-        <br />
-        <p className='text-slate-500'>
           If you already have the transcript and you want it to be custom
-          formatted, you can also order it from us. Please email us at
-          support@scribie.com with your custom formatting instructions and
-          sample files (input and output) and we will be happy to generate a
-          custom formatting quote for you.
+          formatted, you can also order it from us. Please email us at{' '}
+          <a
+            className='text-blue-500 underline'
+            href='mailto:support@scribie.com'
+          >
+            support@scribie.com
+          </a>{' '}
+          with your custom formatting instructions and sample files (input and
+          output) and we will be happy to generate a custom formatting quote for
+          you.
         </p>
       </div>
     ),
@@ -883,9 +932,15 @@ const content = [
         </ul>
         <br />
         <p className='text-slate-500'>
-          A template file is used for conversion for the first three formats.
-          The plain text file contains only the transcript in UTF-8 encoded
-          text.
+          A{' '}
+          <a
+            className='text-blue-500 underline'
+            href='/customer-guide#transcript-template'
+          >
+            template file
+          </a>{' '}
+          is used for conversion for the first three formats. The plain text
+          file contains only the transcript in UTF-8 encoded text.
         </p>
       </div>
     ),
@@ -999,8 +1054,15 @@ const content = [
           <br />
           <p className='text-slate-500'>
             For recommendations on how to avoid these charges, please refer to
-            our recording tips. You can also read our manifesto for a broader
-            understanding of the reasoning behind this policy.
+            our{' '}
+            <a
+              className='text-blue-500 underline'
+              href='/customer-guide#recording-tips'
+            >
+              recording tips
+            </a>
+            . You can also read our manifesto for a broader understanding of the
+            reasoning behind this policy.
           </p>
         </div>
       )
@@ -1023,8 +1085,14 @@ const content = [
         <br />
         <p className='text-slate-500'>
           We guarantee 99%+ accuracy for files with accented speakers. Please
-          note that accented files may require more time and may be subject to
-          additional charges.
+          note that accented files may require more time and may be subject to{' '}
+          <a
+            href='/customer-guide#additional-charges'
+            className='text-blue-500 underline'
+          >
+            additional charges
+          </a>
+          .
         </p>
       </div>
     ),
@@ -1046,8 +1114,15 @@ const content = [
         <br />
         <p className='text-slate-500'>
           Please note that noisy files may require additional time to process
-          and may also incur additional charges. In cases where the files are
-          deemed untranscribable, a full refund will be issued.
+          and may also incur{' '}
+          <a
+            href='/customer-guide#additional-charges'
+            className='text-blue-500 underline'
+          >
+            additional charges
+          </a>
+          . In cases where the files are deemed untranscribable, a full refund
+          will be issued.
         </p>
       </div>
     ),
@@ -1068,11 +1143,6 @@ const content = [
           transcripts, we recommend following these simple steps:
         </p>
         <br />
-        <p className='text-slate-500'>
-          Please note that noisy files may require additional time to process
-          and may also incur additional charges. In cases where the files are
-          deemed untranscribable, a full refund will be issued.
-        </p>
       </div>
     ),
   },
@@ -1087,12 +1157,6 @@ const content = [
           The following recommendations apply to all types of recordings.
         </p>
         <br />
-        <p className='text-slate-500'>
-          Please note that noisy files may require additional time to process
-          and may also incur additional charges. In cases where the files are
-          deemed untranscribable, a full refund will be issued.
-        </p>
-        <br />
         <ul className='list-disc pl-5 text-slate-500'>
           <li>
             Smartphones are the best recording devices available today, and we
@@ -1102,15 +1166,25 @@ const content = [
           <li>
             The first 30 seconds of the recording should always contain silence.
             This allows it to be used as a noise profile while cleaning the
-            file. We recommend using Audacity for cleaning.
-          </li>
-          <li>
-            We suggest recording with at least two devices to have an alternate
-            version available if needed.
+            file. We recommend using{' '}
+            <a
+              className='text-blue-500 underline'
+              href='http://www.audacityteam.org/'
+            >
+              Audacity
+            </a>{' '}
+            for cleaning.
           </li>
           <li>
             For optimal quality, we recommend using a minimum of 128 kbit/s
-            encoding sampling rate with a 16-bit depth.
+            encoding{' '}
+            <a
+              className='text-blue-500 underline'
+              href='https://en.wikipedia.org/wiki/Bit_rate#Encoding_bit_rate'
+            >
+              sampling rate
+            </a>{' '}
+            with a 16-bit depth.
           </li>
           <li>
             Recordings should be made in an environment with minimal ambient
@@ -1229,8 +1303,9 @@ const content = [
             <a
               className='text-blue-500 underline'
               href='https://scribie.com/blog/2016/03/how-can-a-good-quality-audio-file-reduce-your-cost-transcription/'
-            ></a>
-            More Recording Tips
+            >
+              More Recording Tips
+            </a>
           </li>
           <li>
             <a
@@ -1437,7 +1512,10 @@ const content = [
           if available, or their order of appearance in the audio, e.g. Speaker
           1, Speaker 2, etc. We also provide an option to specify the speaker
           names before the order is placed. The speaker names can also be
-          changed after the file has been delivered using our Integrated Editor.
+          changed after the file has been delivered using our{' '}
+          <a className='text-blue-500 underline' href='/customer-guide#editor'>
+            Integrated Editor.
+          </a>
         </p>
         <br />
         <p className='text-slate-500'>
@@ -1467,19 +1545,6 @@ const content = [
           We support the following spelling styles.
         </p>
         <br />
-        <p className='text-slate-500'>
-          We do not have a maximum number of speakers to be tracked. However, it
-          may be difficult to identify the speakers if there are four or more
-          speakers in any file. We mark such speakers as S? in the transcript.
-          This issue can be avoided if the speakers speak aloud their names at
-          each turn. Otherwise, the speaker tracking is best-effort and we
-          cannot guarantee the correctness.
-        </p>
-        <br />
-        <p className='text-slate-500'>
-          There is no extra charge for speaker tracking.
-        </p>
-        <br />
         <ul className='list-disc pl-5 text-slate-500'>
           <li>American</li>
           <li>British</li>
@@ -1491,45 +1556,80 @@ const content = [
   },
   {
     id: 'transcript-template',
-    Content: () => (
-      <div className='pt-0' id='transcript-template'>
-        <div className='mb-3'>
-          <h3 className='text-black text-xl'>Transcript Template</h3>
+    Content: () => {
+      const issues = [
+        {
+          issue: 'Scribie Single Line Spaced',
+          examples:
+            'Contains a title page, Scribie Logo, header, footer, and the transcript is single-line spaced',
+        },
+        {
+          issue: 'Scribie Double Line Spaced',
+          examples: 'Same as above, except the transcript is double-spaced',
+        },
+        {
+          issue: 'Blank Single Line Spaced',
+          examples: 'Contains only the transcript which is single-line spaced',
+        },
+        {
+          issue: 'Blank Double Line Spaced',
+          examples: 'Same as above, except the transcript is double-spaced',
+        },
+      ]
+      return (
+        <div className='pt-0' id='transcript-template'>
+          <div className='mb-3'>
+            <h3 className='text-black text-xl'>Transcript Template</h3>
+          </div>
+          <br />
+          <p className='text-slate-500'>
+            This option allows you to specify the template file used for
+            document conversion. The following transcript templates are
+            available.
+          </p>
+          <br />
+          <p className='text-slate-500'>
+            The{' '}
+            <a
+              href='/customer-guide#sample-transcript'
+              className='text-blue-500 underline'
+            >
+              sample transcript
+            </a>{' '}
+            has been formatted with Scribie Single Line Spaced template. We also
+            support custom template files. Please{' '}
+            <a href='/contact' className='text-blue-500 underline'>
+              contact us
+            </a>{' '}
+            with your template file to have it set up.
+          </p>
+          <br />
+          <table className='min-w-full bg-white shadow-md rounded-lg overflow-hidden'>
+            <thead className='bg-gray-200 text-gray-600 uppercase text-sm leading-normal'>
+              <tr>
+                <th className='py-3 px-6 text-left'>Free Options</th>
+                <th className='py-3 px-6 text-left'>
+                  Options with Additional Cost
+                </th>
+              </tr>
+            </thead>
+            <tbody className='text-gray-600 text-sm font-light'>
+              {issues.map((item, index) => (
+                <tr
+                  key={index}
+                  className='border-b border-gray-200 hover:bg-gray-100'
+                >
+                  <td className='py-3 px-6 text-left whitespace-nowrap'>
+                    {item.issue}
+                  </td>
+                  <td className='py-3 px-6 text-left'>{item.examples}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <br />
-        <p className='text-slate-500'>
-          This option allows you to specify the template file used for document
-          conversion. The following transcript templates are available.
-        </p>
-        <br />
-        <p className='text-slate-500'>
-          The{' '}
-          <a
-            href='https://scribie.com/help/customer-guide#sample'
-            className='text-blue-500 underline'
-          >
-            sample transcript
-          </a>{' '}
-          has been formatted with Scribie Single Line Spaced template. We also
-          support custom template files. Please
-          <a href='/contact' className='text-blue-500 underline'>
-            contact us
-          </a>
-          with your template file to have it set up.
-        </p>
-        <br />
-        <p className='text-slate-500'>
-          There is no extra charge for speaker tracking.
-        </p>
-        <br />
-        <ul className='list-disc pl-5 text-slate-500'>
-          <li>American</li>
-          <li>British</li>
-          <li>Australian</li>
-          <li>Canadian</li>
-        </ul>
-      </div>
-    ),
+      )
+    },
   },
   {
     id: 'closed-captions',
@@ -1554,9 +1654,12 @@ const content = [
         <br />
         <p className='text-slate-500'>
           If you require non-standard options such as specific caption placement
-          or FCC (Federal Communications Commission) compliance, please reach
-          out to us with a list of your requirements. The additional cost will
-          vary depending on the complexity of your requirements.
+          or FCC (Federal Communications Commission) compliance,{' '}
+          <a className='text-blue-500 underline' href='/contact'>
+            please reach out to us
+          </a>{' '}
+          with a list of your requirements. The additional cost will vary
+          depending on the complexity of your requirements.
         </p>
         <br />
       </div>
@@ -1591,9 +1694,15 @@ const content = [
             American speakers.
           </li>
           <li>
-            We are committed to quality. The additional charges ensure that the
-            transcript is as accurate as possible, regardless of the difficulty
-            level.
+            We are committed to quality. The{' '}
+            <a
+              className='text-blue-500 underline'
+              href='/customer-guide#additional-charges'
+            >
+              additional charges
+            </a>{' '}
+            ensure that the transcript is as accurate as possible, regardless of
+            the difficulty level.
           </li>
           <li>
             We carefully vet each one of our transcribers and continuously
@@ -1641,7 +1750,13 @@ const content = [
         <br />
         <p className='text-slate-500'>
           The following is a sample audio and the corresponding transcript. More
-          sample transcripts are available on our blog.
+          sample transcripts are available on{' '}
+          <a
+            className='text-blue-500 underline'
+            href='https://scribie.com/blog/category/sample-transcripts/'
+          >
+            our blog.
+          </a>
         </p>
         <br />
       </div>
@@ -1659,10 +1774,14 @@ const content = [
           We provide phone, live chat, and email support on weekdays and email
           support on weekends. Our customer support team is well-trained and
           responsive. We ensure that all questions and issues are addressed
-          promptly. Please do not hesitate to reach out to us.
+          promptly. Please do not hesitate to{' '}
+          <a className='text-blue-500 underline' href='/contact'>
+            reach out to us.
+          </a>
         </p>
         <br />
-        <br /><br />
+        <br />
+        <br />
       </div>
     ),
   },
@@ -1670,55 +1789,92 @@ const content = [
 
 export default function Page() {
   const pathname = usePathname()
-  const rightSidebarRef = useRef<HTMLElement | null>(null) // Create a ref for the right sidebar
+  const rightSidebarRef = useRef<HTMLElement | null>(null)
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
 
   const scrollToSection = (event: React.MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault()
-    const targetId = event.currentTarget.getAttribute('href')?.slice(1)
-    const targetElement = targetId ? document.getElementById(targetId) : null
-    if (targetElement && rightSidebarRef.current) {
-      const topPos = targetElement.offsetTop - rightSidebarRef.current.offsetTop
-      rightSidebarRef.current.scrollTo({
-        top: topPos,
+    const targetId = event.currentTarget.getAttribute('href')?.split('#')[1]
+    if (!targetId) return
+
+    const targetElement = document.getElementById(targetId)
+    if (targetElement) {
+      const headerOffset = 140
+      const elementPosition = targetElement.getBoundingClientRect().top
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset
+
+      window.scrollTo({
+        top: offsetPosition,
         behavior: 'smooth',
       })
+
+      // Close the sheet when a link is clicked
+      setIsSheetOpen(false)
     }
   }
-  return (
-    <div className='flex gap-8 w-[80%] h-screen mx-[10%] m-auto relative'>
-      {/* Adjust the sidebar container styles */}
-      <div className='h-[100%] flex lg:flex-col space-x-0 space-y-1 min-w-[20%] absolute left-0 top-0 z-1 overflow-y-auto overscroll-y-scroll no-scrollbar'>
-        {sidebarItems.map((item, index) => {
-          const isActive = pathname === `${item.link}${content[index]?.id}`
-          return (
-            <a
-              key={item.link}
-              href={item.link}
-              onClick={scrollToSection}
-              className={`flex items-center gap-2.5 rounded-lg py-2 transition-all ${
-                isActive ? 'text-primary bg-primary/10' : 'hover:text-primary'
-              }`}
-            >
-              {item.name}
-            </a>
-          )
-        })}
-      </div>
 
-      {/* Main content container (unchanged) */}
-      <div
-        ref={rightSidebarRef as LegacyRef<HTMLDivElement> | undefined}
-        className='h-[100%] flex space-x-2 lg:flex-col lg:space-x-0 font-medium overflow-auto w-[80%] absolute top-0 right-0  overflow-y-auto overscroll-y-contain no-scrollbar'
-      >
-        {content.map((item, index) => {
-          const Content = item.Content
-          return (
-            <div key={index}>
-              <Content />
+  const SidebarContent = () => (
+    <>
+      {sidebarItems.map((item) => {
+        const isActive = pathname === item.link
+        return (
+          <a
+            key={item.link}
+            href={item.link}
+            onClick={scrollToSection}
+            className={`flex items-center gap-2.5 rounded-lg py-2 transition-all ${
+              isActive ? 'text-primary bg-primary/10' : 'hover:text-primary'
+            }`}
+          >
+            {item.name}
+          </a>
+        )
+      })}
+    </>
+  )
+
+  return (
+    <>
+      <div className='w-full min-h-screen'>
+        <div className='flex flex-col lg:flex-row'>
+          {/* Mobile Hamburger Menu */}
+          <div className='lg:hidden w-full sticky top-[64px] z-40 bg-background border-b'>
+            <div className='px-4 md:px-8 py-4'>
+              <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                <SheetTrigger asChild>
+                  <button className='p-2 hover:bg-accent rounded-md'>
+                    <Menu className='h-6 w-6' />
+                  </button>
+                </SheetTrigger>
+                <SheetContent side='left' className='w-[80%] max-w-sm'>
+                  <nav className='flex flex-col space-y-1 mt-8 px-4'>
+                    <SidebarContent />
+                  </nav>
+                </SheetContent>
+              </Sheet>
             </div>
-          )
-        })}
+          </div>
+
+          {/* Rest of the code remains the same */}
+          <nav className='hidden lg:flex lg:flex-col space-y-1 w-[300px] h-[calc(100vh-64px)] sticky top-[64px] pt-8 pl-[10%] overflow-y-auto'>
+            <SidebarContent />
+          </nav>
+
+          <main
+            ref={rightSidebarRef as LegacyRef<HTMLDivElement>}
+            className='flex-1 pb-16 overflow-y-auto pl-16 pr-[10%]'
+          >
+            {content.map((item) => {
+              const Content = item.Content
+              return (
+                <div key={item.id} id={item.id}>
+                  <Content />
+                </div>
+              )
+            })}
+          </main>
+        </div>
       </div>
-    </div>
+    </>
   )
 }

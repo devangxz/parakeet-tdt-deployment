@@ -78,7 +78,7 @@ const GetDemo = () => {
               <h1 className='text-4xl font-semibold tracking-tight'>
                 Schedule a Demo
               </h1>
-              <p className='mt-2 text-md text-gray-700'>
+              <p className='mt-2 text-md text-muted-foreground'>
                 Learn how Scribie can help you with your transcription needs
               </p>
             </div>

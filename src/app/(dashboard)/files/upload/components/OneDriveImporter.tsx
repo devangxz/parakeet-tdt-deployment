@@ -623,10 +623,10 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
   }, [isUploading, authenticate, showPicker])
 
   return (
-    <div className='bg-primary-foreground flex flex-col p-[12px] items-center justify-center rounded-md border-2 border-customBorder shadow-sm min-h-[245px]'>
+    <div className='bg-background flex flex-col p-[12px] items-center justify-center rounded-md border-2 border-customBorder shadow-sm min-h-[245px]'>
       <div className='group relative w-full flex rounded-md px-5 py-2.5 text-center transition'>
         <div className='self-center w-full flex flex-col items-center justify-center gap-4 sm:px-5'>
-          <div className='flex items-center gap-1 text-base font-medium leading-6 text-gray-800'>
+          <div className='flex items-center gap-1 text-base font-medium leading-6'>
             <div className='relative w-10 h-10 flex items-center justify-center'>
               <Image
                 src='/assets/images/upload/one-drive.svg'
@@ -639,7 +639,7 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             </div>
             <h4 className='flex items-center'>OneDrive Importer</h4>
           </div>
-          <div className='text-xs self-stretch mt-4 leading-5 text-center text-gray-800 max-md:mr-1 max-md:max-w-full'>
+          <div className='text-xs self-stretch mt-4 leading-5 text-center text-muted-foreground max-md:mr-1 max-md:max-w-full'>
             Select files from your OneDrive to import. Please allow Scribie.ai
             Importer in the popup to access your OneDrive files for the import
             process. We will only access the selected files.

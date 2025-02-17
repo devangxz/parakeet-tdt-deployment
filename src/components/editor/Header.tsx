@@ -20,6 +20,7 @@ import PlayerButton from './PlayerButton'
 import Toolbar from './Toolbar'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
+import { EditorHandle } from '@/components/editor/Editor'
 import {
   TooltipProvider,
   Tooltip,
@@ -27,6 +28,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import 'rc-slider/assets/index.css'
+import { EditorSettings } from '@/types/editor'
 import {
   ShortcutControls,
   useShortcuts,
@@ -42,13 +44,23 @@ import formatDuration from '@/utils/formatDuration'
 const createShortcutControls = (
   audioPlayer: React.RefObject<HTMLAudioElement>,
   quill: Quill | null,
-  setVolumePercentage: React.Dispatch<React.SetStateAction<number>>
+  setSpeed: React.Dispatch<React.SetStateAction<number>>,
+  setVolumePercentage: React.Dispatch<React.SetStateAction<number>>,
+  editorSettings: EditorSettings
 ): ShortcutControls => ({
   togglePlay: () => {
     if (!audioPlayer.current) return
-    audioPlayer.current.paused
-      ? audioPlayer.current.play()
-      : audioPlayer.current.pause()
+    if (audioPlayer.current.paused) {
+      if (editorSettings.audioRewindSeconds > 0) {
+        audioPlayer.current.currentTime = Math.max(
+          0,
+          audioPlayer.current.currentTime - editorSettings.audioRewindSeconds
+        )
+      }
+      audioPlayer.current.play()
+    } else {
+      audioPlayer.current.pause()
+    }
   },
   pause: () => {
     audioPlayer.current?.pause()
@@ -56,6 +68,9 @@ const createShortcutControls = (
   skipAudio: (seconds: number) => {
     if (audioPlayer.current) {
       audioPlayer.current.currentTime += seconds
+      if (audioPlayer.current.paused) {
+        audioPlayer.current.play()
+      }
     }
   },
   playNextBlank: () => {},
@@ -69,23 +84,16 @@ const createShortcutControls = (
   decreaseFontSize: () => {},
   repeatLastFind: () => {},
   increaseVolume: () => {
-    setVolumePercentage((prevVol: number) => prevVol + 10)
+    setVolumePercentage((prevVol: number) => Math.min(500, prevVol + 10))
   },
   decreaseVolume: () => {
     setVolumePercentage((prevVol: number) => Math.max(0, prevVol - 10))
   },
   increasePlaybackSpeed: () => {
-    if (audioPlayer.current) {
-      audioPlayer.current.playbackRate += 0.1
-    }
+    setSpeed((prevSpeed: number) => Math.min(300, prevSpeed + 10))
   },
   decreasePlaybackSpeed: () => {
-    if (audioPlayer.current) {
-      audioPlayer.current.playbackRate = Math.max(
-        0.1,
-        audioPlayer.current.playbackRate - 0.1
-      )
-    }
+    setSpeed((prevSpeed: number) => Math.max(10, prevSpeed - 10))
   },
   playAudioFromTheStartOfCurrentParagraph: () => {},
   capitalizeFirstLetter: () => {},
@@ -118,14 +126,10 @@ const createShortcutControls = (
     adjustTimestamps(quill, 0, quill.getSelection())
   },
   playAt75Speed: () => {
-    if (!audioPlayer.current) return
-    audioPlayer.current.playbackRate = 0.75
-    audioPlayer.current.play()
+    setSpeed(75)
   },
   playAt100Speed: () => {
-    if (!audioPlayer.current) return
-    audioPlayer.current.playbackRate = 1.0
-    audioPlayer.current.play()
+    setSpeed(100)
   },
 })
 
@@ -134,9 +138,13 @@ interface HeaderProps {
   quillRef: React.RefObject<ReactQuill> | undefined
   orderDetails: OrderDetails
   toggleFindAndReplace: () => void
+  waveformUrl: string
   highlightWordsEnabled: boolean
   setHighlightWordsEnabled: (enabled: boolean) => void
-  waveformUrl: string
+  fontSize: number
+  setFontSize: (size: number) => void
+  editorSettings: EditorSettings
+  editorRef?: React.RefObject<EditorHandle>
 }
 
 export default memo(function Header({
@@ -144,9 +152,13 @@ export default memo(function Header({
   quillRef,
   orderDetails,
   toggleFindAndReplace,
+  waveformUrl,
   highlightWordsEnabled,
   setHighlightWordsEnabled,
-  waveformUrl,
+  fontSize,
+  setFontSize,
+  editorSettings,
+  editorRef,
 }: HeaderProps) {
   const [currentValue, setCurrentValue] = useState(0)
   const [currentTime, setCurrentTime] = useState('00:00')
@@ -161,20 +173,25 @@ export default memo(function Header({
   const [step, setStep] = useState<string>('')
   const [cfd, setCfd] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
-  const [speed, setSpeed] = useState(100)
-  const [fontSize, setFontSize] = useState(() => {
-    if (typeof window !== 'undefined' && quillRef?.current) {
-      const quill = quillRef.current.getEditor()
-      const container = quill.container as HTMLElement
-      return parseInt(window.getComputedStyle(container).fontSize)
-    }
-    return 16
-  })
-  const [volumePercentage, setVolumePercentage] = useState(100)
+  const [speed, setSpeed] = useState(editorSettings.playbackSpeed)
+  const [volumePercentage, setVolumePercentage] = useState(
+    editorSettings.volume
+  )
   const audioContextRef = useRef<AudioContext | null>(null)
   const gainNodeRef = useRef<GainNode | null>(null)
   const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null)
   const [isAudioInitialized, setIsAudioInitialized] = useState(false)
+
+  useEffect(() => {
+    if (quillRef?.current) {
+      const container = quillRef.current.getEditor().container as HTMLElement
+      container.style.fontSize = `${editorSettings.fontSize}px`
+    }
+
+    setSpeed(editorSettings.playbackSpeed)
+    setFontSize(editorSettings.fontSize)
+    setVolumePercentage(editorSettings.volume)
+  }, [editorSettings, quillRef, audioPlayer, isAudioInitialized])
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -255,9 +272,10 @@ export default memo(function Header({
       const quill = quillRef.current.getEditor()
       const container = quill.container as HTMLElement
       const currentSize = parseInt(window.getComputedStyle(container).fontSize)
-      const newSize = increase ? currentSize + 2 : currentSize - 2
-      container.style.fontSize = `${newSize}px`
-      setFontSize(Math.max(newSize, 0))
+      const newSize = increase ? currentSize + 1 : currentSize - 1
+      const clampedSize = Math.min(Math.max(newSize, 1), 400)
+      container.style.fontSize = `${clampedSize}px`
+      setFontSize(clampedSize)
     },
     [quillRef]
   )
@@ -270,9 +288,11 @@ export default memo(function Header({
       createShortcutControls(
         audioPlayer,
         quillRef?.current?.getEditor() || null,
-        setVolumePercentage
+        setSpeed,
+        setVolumePercentage,
+        editorSettings
       ),
-    [audioPlayer, quillRef]
+    [audioPlayer, quillRef, editorSettings]
   )
 
   useShortcuts(shortcutControls as ShortcutControls)
@@ -327,7 +347,6 @@ export default memo(function Header({
     const handleLoadedMetadata = () => {
       if (!audioDuration) {
         setAudioDuration(audio.duration)
-        setSpeed(audio.playbackRate * 100)
       }
     }
 
@@ -420,21 +439,6 @@ export default memo(function Header({
       quillRef?.current?.getEditor()
     )
   }, [audioPlayer, quillRef])
-
-  useEffect(() => {
-    const audio = audioPlayer.current
-    if (!audio) return
-
-    const handleRateChange = () => {
-      setSpeed(Math.round(audio.playbackRate * 100))
-    }
-
-    audio.addEventListener('ratechange', handleRateChange)
-
-    return () => {
-      audio.removeEventListener('ratechange', handleRateChange)
-    }
-  }, [audioPlayer])
 
   const markSection = () => {
     if (!quillRef?.current) return
@@ -562,6 +566,12 @@ export default memo(function Header({
     }
   }, [isAudioInitialized, volumePercentage])
 
+  useEffect(() => {
+    if (audioPlayer.current) {
+      audioPlayer.current.playbackRate = speed / 100
+    }
+  }, [isAudioInitialized, speed])
+
   // Cleanup Web Audio API on unmount
   useEffect(
     () => () => {
@@ -573,9 +583,9 @@ export default memo(function Header({
   )
 
   return (
-    <div className='border bg-white border-customBorder rounded-md relative'>
+    <div className='border bg-background border-customBorder rounded-md relative'>
       {!isPlayerLoaded && (
-        <div className='absolute inset-0 w-full h-full bg-white z-50 flex justify-center items-center'>
+        <div className='absolute inset-0 w-full h-full bg-background z-50 flex justify-center items-center rounded-md'>
           <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
           <span>Loading...</span>
         </div>
@@ -583,7 +593,7 @@ export default memo(function Header({
       <div className='h-12'>
         <div
           id='waveform'
-          className='relative h-full overflow-hidden cursor-pointer'
+          className='relative h-full overflow-hidden cursor-pointer rounded-t-md'
           onMouseMove={handleMouseMoveOnWaveform}
           onMouseLeave={() => {
             if (typeof document === 'undefined') return
@@ -598,17 +608,18 @@ export default memo(function Header({
             const x = e.clientX - rect.left
             const percentage = (x / rect.width) * 100
             seekTo(percentage)
+            editorRef?.current?.scrollToCurrentWord()
           }}
           style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.3)), url(${waveformUrl}), url('/assets/images/fallback-waveform.png')`,
-            backgroundSize: '100% 200%', // Double the height
+            backgroundImage: `url(${waveformUrl})`,
+            backgroundSize: '100% 200%',
             backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center top', // Position at top
+            backgroundPosition: 'center top',
           }}
         >
           <div
             id='time-tooltip'
-            className='fixed hidden z-50 bg-primary text-white px-1 py-0.5 rounded text-[11px] pointer-events-none'
+            className='fixed hidden z-50 bg-primary text-white px-1 py-0.5 rounded-md text-[11px] pointer-events-none'
             style={{ transform: 'translate(-50%, 200%)' }}
           />
           <div
@@ -618,10 +629,10 @@ export default memo(function Header({
               transition: 'width 0.1s linear',
             }}
           />
-          <span className='absolute top-0 left-0 bg-primary text-white px-1 py-0.5 rounded text-[11px]'>
+          <span className='absolute top-0 left-0 bg-primary text-white px-1 py-0.5 rounded-md text-[11px]'>
             {currentTime}
           </span>
-          <span className='absolute top-0 right-0 bg-primary text-white px-1 py-0.5 rounded text-[11px]'>
+          <span className='absolute top-0 right-0 bg-primary text-white px-1 py-0.5 rounded-md text-[11px]'>
             {formatDuration(audioDuration)}
           </span>
         </div>
@@ -756,7 +767,7 @@ export default memo(function Header({
                   </Tooltip>
                 </div>
 
-                <div className='h-full w-[1.2px] rounded-full bg-gray-200'></div>
+                <div className='h-full w-[1.2px] rounded-full bg-gray-200 dark:bg-gray-600'></div>
 
                 <div className='flex items-center gap-x-1 bg-secondary rounded-sm'>
                   <Toolbar

@@ -12,49 +12,49 @@ export default function AuthenticatedFooter() {
       <div className='flex flex-wrap items-center gap-x-8 font-semibold'>
         <Button
           variant='link'
-          className='text-gray-700 hover:text-primary hover:border-primary font-normal p-0 h-fit'
+          className='text-muted-foreground hover:text-primary hover:border-primary font-normal p-0 h-fit'
           onClick={() => router.push('/')}
         >
           Home
         </Button>
         <Button
           variant='link'
-          className='text-gray-700 hover:text-primary hover:border-primary font-normal p-0 h-fit'
+          className='text-muted-foreground hover:text-primary hover:border-primary font-normal p-0 h-fit'
           onClick={() => router.push('/about-us')}
         >
           About
         </Button>
         <Button
           variant='link'
-          className='text-gray-700 hover:text-primary hover:border-primary font-normal p-0 h-fit'
+          className='text-muted-foreground hover:text-primary hover:border-primary font-normal p-0 h-fit'
           onClick={() => router.push('/#pricing')}
         >
           Pricing
         </Button>
         <Button
           variant='link'
-          className='text-gray-700 hover:text-primary hover:border-primary font-normal p-0 h-fit'
+          className='text-muted-foreground hover:text-primary hover:border-primary font-normal p-0 h-fit'
           onClick={() => router.push('/terms')}
         >
           Terms
         </Button>
         <Button
           variant='link'
-          className='text-gray-700 hover:text-primary hover:border-primary font-normal p-0 h-fit'
+          className='text-muted-foreground hover:text-primary hover:border-primary font-normal p-0 h-fit'
           onClick={() => router.push('/privacy-policy')}
         >
           Privacy
         </Button>
         <Button
           variant='link'
-          className='text-gray-700 hover:text-primary hover:border-primary font-normal p-0 h-fit'
+          className='text-muted-foreground hover:text-primary hover:border-primary font-normal p-0 h-fit'
           onClick={() => router.push('/contact')}
         >
           Contact
         </Button>
         <Button
           variant='link'
-          className='text-gray-700 hover:text-primary hover:border-primary font-normal p-0 h-fit'
+          className='text-muted-foreground hover:text-primary hover:border-primary font-normal p-0 h-fit'
           onClick={() => router.push('/faq')}
         >
           FAQs

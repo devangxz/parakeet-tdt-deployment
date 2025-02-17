@@ -1,16 +1,17 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { Change } from 'diff'
 import ReactQuill from 'react-quill'
 
 import Diff from './Diff'
-import Editor from './Editor'
+import Editor, { EditorHandle } from './Editor'
 import { TabsContent } from './Tabs'
 import { Textarea } from '../ui/textarea'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
-import { CTMType, CustomerQuillSelection } from '@/utils/editorUtils'
+import { EditorSettings } from '@/types/editor'
+import { CTMType, CustomerQuillSelection, EditorData } from '@/utils/editorUtils'
+import { DmpDiff } from '@/utils/transcript/diff_match_patch'
 
 interface EditorTabComponentProps {
-  transcript: string
+  transcriptLoading: boolean
   ctms: CTMType[]
   audioPlayer: HTMLAudioElement | null
   audioDuration: number
@@ -20,11 +21,15 @@ interface EditorTabComponentProps {
   selection: CustomerQuillSelection | null
   searchHighlight: CustomerQuillSelection | null
   highlightWordsEnabled: boolean
+  setFontSize: (size: number) => void
   setEditedSegments: (segments: Set<number>) => void
+  editorSettings: EditorSettings
+  initialEditorData: EditorData
+  editorRef?: React.Ref<EditorHandle>
 }
 
 export const EditorTabComponent = ({
-  transcript,
+  transcriptLoading,
   ctms,
   audioPlayer,
   audioDuration,
@@ -34,25 +39,28 @@ export const EditorTabComponent = ({
   selection,
   searchHighlight,
   highlightWordsEnabled,
+  setFontSize,
   setEditedSegments,
+  editorSettings,
+  initialEditorData,
+  editorRef,
 }: EditorTabComponentProps) => (
   <TabsContent
     className='h-full mt-0 overflow-hidden pb-[41px]'
     value='transcribe'
   >
     <div className='h-full relative overflow-hidden'>
-      {!transcript && (
+      {transcriptLoading ? (
         <div className='h-full flex items-center justify-center'>
           <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
           <span>Loading...</span>
         </div>
-      )}
-      {transcript && (
+      ) : (
         <div className='h-full overflow-hidden'>
           <Editor
+            ref={editorRef}
             orderDetails={orderDetails}
             getQuillRef={getQuillRef}
-            transcript={transcript}
             ctms={ctms}
             audioPlayer={audioPlayer}
             duration={audioDuration}
@@ -60,7 +68,10 @@ export const EditorTabComponent = ({
             selection={selection}
             searchHighlight={searchHighlight}
             highlightWordsEnabled={highlightWordsEnabled}
+            setFontSize={setFontSize}
             setEditedSegments={setEditedSegments}
+            editorSettings={editorSettings}
+            initialEditorData={initialEditorData}
           />
         </div>
       )}
@@ -68,10 +79,12 @@ export const EditorTabComponent = ({
   </TabsContent>
 )
 
-export const DiffTabComponent = ({ diff }: { diff: Change[] }) => (
+export const DiffTabComponent = ({ diff }: { diff: DmpDiff[] }) => (
   <TabsContent className='h-full mt-0 overflow-hidden' value='diff'>
-    <div className='overflow-y-scroll h-full py-[12px] px-[15px]'>
-      <Diff diffOutput={diff} />
+    <div className='h-full overflow-y-auto py-[12px] px-[15px]'>
+      <div className='h-full'>
+        <Diff diffOutput={diff} />
+      </div>
     </div>
   </TabsContent>
 )

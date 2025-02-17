@@ -266,7 +266,7 @@
   },
   "SEND_INSTRUCTIONS": {
     "FROM": "$$ALERT_BE_EMAIL_ID$$",
-    "TO": ["$$SUPPORT_EMAIL_ID$$"],
+    "TO": ["$$SUPPORT_EMAIL$$"],
     "CC": [],
     "BCC": ["$$CONTACT_EMAIL_ID$$"],
     "SUBJECT": "Scribie.ai Transcript Order Instructions",

@@ -85,7 +85,7 @@ export default function Page() {
             <span className='text-primary'>AI precision</span>
           </h1>
 
-          <p className='mt-4 sm:mt-6 lg:mt-8 text-gray-700 max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
+          <p className='mt-4 sm:mt-6 lg:mt-8 text-muted-foreground max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
             Since 2008, we&apos;ve been on a mission to make transcription
             accurate, accessible, and effortless for everyone.
           </p>
@@ -94,7 +94,7 @@ export default function Page() {
           {stats.map((stat, i) => (
             <div
               key={i}
-              className='group relative flex flex-col items-center p-8 rounded-2xl bg-primary-foreground/60 backdrop-blur-sm border border-primary/20 hover:border-primary/40 transition-all duration-300 hover:-translate-y-1'
+              className='group relative flex flex-col items-center p-8 rounded-2xl bg-background backdrop-blur-sm border border-primary/20 hover:border-primary/40 transition-all duration-300 hover:-translate-y-1'
             >
               <div className='mb-4 p-3 bg-primary/10 rounded-xl transform transition-transform group-hover:scale-110'>
                 <stat.icon className='w-8 h-8 text-primary' />
@@ -122,7 +122,7 @@ export default function Page() {
               our refined product
             </h2>
 
-            <p className='mt-4 sm:mt-6 lg:mt-8 text-gray-700 max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
+            <p className='mt-4 sm:mt-6 lg:mt-8 text-muted-foreground max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
               We believe that every spoken word carries value. Our platform
               combines human expertise with AI precision to deliver transcripts
               that capture not just words, but context and meaning.
@@ -165,7 +165,7 @@ export default function Page() {
               <span className='text-primary'>forward</span>
             </h2>
 
-            <p className='mt-4 sm:mt-6 lg:mt-8 text-gray-700 max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
+            <p className='mt-4 sm:mt-6 lg:mt-8 text-muted-foreground max-w-sm sm:max-w-xl lg:max-w-2xl mx-auto text-base sm:text-lg'>
               Our core values drive innovation and excellence in everything we
               do - from our AI-powered solutions to our global team of expert
               transcribers.
@@ -176,12 +176,12 @@ export default function Page() {
             {values.map((value, i) => (
               <div key={i} className='group relative'>
                 <div className='absolute inset-0 bg-gradient-to-b from-primary to-primary/50 opacity-0 group-hover:opacity-100 rounded-2xl transition-opacity duration-300' />
-                <div className='relative bg-primary-foreground p-8 rounded-2xl h-full transition-transform group-hover:-translate-y-2 border border-border'>
+                <div className='relative bg-background p-8 rounded-2xl h-full transition-transform group-hover:-translate-y-2 border border-customBorder'>
                   <div className='w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6'>
                     <value.icon className='w-6 h-6 text-primary' />
                   </div>
                   <h3 className='text-xl font-semibold mb-4'>{value.title}</h3>
-                  <p className='text-gray-700'>{value.description}</p>
+                  <p className='text-muted-foreground'>{value.description}</p>
                 </div>
               </div>
             ))}
@@ -206,7 +206,7 @@ export default function Page() {
             {team.map((member, index) => (
               <div
                 key={index}
-                className='group bg-card rounded-2xl p-8 transition-all duration-300 hover:shadow-lg border border-border hover:border-primary/20'
+                className='group bg-card rounded-2xl p-8 transition-all duration-300 hover:shadow-lg border border-customBorder hover:border-primary/20'
               >
                 <div className='mb-8 relative'>
                   <Image
@@ -214,7 +214,7 @@ export default function Page() {
                     alt={member.name}
                     width={132}
                     height={132}
-                    className='relative mx-auto rounded-full'
+                    className='relative mx-auto rounded-full border border-customBorder'
                     quality={90}
                     loading='lazy'
                     placeholder='blur'
@@ -227,7 +227,7 @@ export default function Page() {
                 </div>
                 <h3 className='text-xl font-semibold mb-1'>{member.name}</h3>
                 <p className='text-lg text-primary font-semibold mb-4'>{member.role}</p>
-                <p className='text-gray-700 mb-4 leading-relaxed'>
+                <p className='text-muted-foreground mb-4 leading-relaxed'>
                   {member.bio}
                 </p>
                 <Link

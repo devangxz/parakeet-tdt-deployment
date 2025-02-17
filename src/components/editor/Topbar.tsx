@@ -6,6 +6,7 @@ import {
   ReloadIcon,
   ArrowUpIcon,
 } from '@radix-ui/react-icons'
+import axios from 'axios'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { Delta, Op } from 'quill/core'
@@ -15,6 +16,8 @@ import { toast } from 'sonner'
 
 import ConfigureShortcutsDialog from './ConfigureShortcutsDialog'
 import DownloadDocxDialog from './DownloadDocxDialog'
+import EditorHeatmapDialog from './EditorHeatmapDialog'
+import EditorSettingsDialog from './EditorSettingsDialog'
 import FrequentTermsDialog from './FrequentTermsDialog'
 import ReportDialog from './ReportDialog'
 import ReviewTranscriptDialog from './ReviewWithGeminiDialog'
@@ -49,6 +52,7 @@ import {
   SelectValue,
 } from '../ui/select'
 import { Textarea } from '../ui/textarea'
+import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
 import { getFormattingOptionsAction } from '@/app/actions/editor/get-formatting-options'
 import { getSpeakerNamesAction } from '@/app/actions/editor/get-speaker-names'
 import { requestReReviewAction } from '@/app/actions/editor/re-review'
@@ -60,13 +64,16 @@ import { getTextFile } from '@/app/actions/get-text-file'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import TranscriberProfile from '@/app/transcribe/components/transcriberProfiles'
 import 'rc-slider/assets/index.css'
+import Profile from '@/components/navbar/profile'
+import { ThemeSwitcher } from '@/components/theme-switcher'
 import { FILE_CACHE_URL } from '@/constants'
-import axiosInstance from '@/utils/axios'
+import { EditorSettings } from '@/types/editor'
 import DefaultShortcuts, {
   getAllShortcuts,
   setShortcut,
   ShortcutControls,
   useShortcuts,
+  defaultShortcuts,
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   autoCapitalizeSentences,
@@ -103,6 +110,12 @@ interface TopbarProps {
     originalFile: File | null
     isUploaded?: boolean
   }
+  listenCount: number[]
+  editedSegments: Set<number>
+  editorSettings: EditorSettings
+  onSettingsChange: (settings: EditorSettings) => void
+  waveformUrl: string
+  audioDuration: number
   transcript: string
   ctms: CTMType[]
 }
@@ -121,6 +134,12 @@ export default memo(function Topbar({
   setRegenCount,
   setFileToUpload,
   fileToUpload,
+  listenCount,
+  editedSegments,
+  editorSettings,
+  onSettingsChange,
+  waveformUrl,
+  audioDuration,
   transcript,
   ctms,
 }: TopbarProps) {
@@ -190,6 +209,8 @@ export default memo(function Topbar({
   const [reReviewComment, setReReviewComment] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
   const [timeoutCount, setTimeoutCount] = useState('')
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
+  const [isHeatmapModalOpen, setIsHeatmapModalOpen] = useState(false)
 
   useEffect(() => {
     if (cfd && step) return
@@ -331,15 +352,24 @@ export default memo(function Topbar({
   }, [orderDetails.orderId])
 
   useEffect(() => {
-    setShortcuts(getAllShortcuts())
-  }, [])
+    setShortcuts(
+      Object.entries({
+        ...defaultShortcuts,
+        ...editorSettings.shortcuts,
+      }).map(([key, shortcut]) => ({
+        key,
+        shortcut,
+      }))
+    )
+  }, [editorSettings.shortcuts])
 
-  const updateShortcut = (
+  const updateShortcut = async (
     action: keyof DefaultShortcuts,
     newShortcut: string
   ) => {
-    setShortcut(action, newShortcut)
-    setShortcuts(getAllShortcuts())
+    await setShortcut(action, newShortcut)
+    const updatedShortcuts = await getAllShortcuts()
+    setShortcuts(updatedShortcuts)
   }
 
   useEffect(() => {
@@ -453,8 +483,8 @@ export default memo(function Topbar({
       const capitalizeChar = (index: number): void => {
         const char = newText[index]
         if (/^[a-zA-Z]$/.test(char) && char !== char.toUpperCase()) {
-          quill.deleteText(index, 1)
-          quill.insertText(index, char.toUpperCase(), quill.getFormat())
+          quill.deleteText(index, 1, 'user')
+          quill.insertText(index, char.toUpperCase(), quill.getFormat(), 'user')
           quill.setSelection(index + 1, 0)
         }
       }
@@ -660,10 +690,19 @@ export default memo(function Topbar({
     }
 
     try {
-      await axiosInstance.post(`${FILE_CACHE_URL}/revert-transcript`, {
-        fileId: orderDetails.fileId,
-        type,
-      })
+      const tokenRes = await fileCacheTokenAction()
+      await axios.post(
+        `${FILE_CACHE_URL}/revert-transcript`,
+        {
+          fileId: orderDetails.fileId,
+          type,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${tokenRes.token}`,
+          },
+        }
+      )
       toast.success('Transcript reverted successfully')
       localStorage.removeItem('transcript')
       window.location.reload()
@@ -800,15 +839,14 @@ export default memo(function Topbar({
   }
 
   return (
-    <div className='bg-white border border-customBorder rounded-md p-2'>
+    <div className='bg-background border border-customBorder rounded-md p-2'>
       <div className='flex items-center justify-between'>
         <p className='font-semibold'>{orderDetails.filename}</p>
 
         {orderDetails.status === 'QC_ASSIGNED' && (
           <span
-            className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${
-              orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
-            }`}
+            className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
+              }`}
           >
             {timeoutCount}
           </span>
@@ -900,13 +938,13 @@ export default memo(function Topbar({
             {!['CUSTOMER', 'OM', 'ADMIN'].includes(
               session?.user?.role ?? ''
             ) && (
-              <Button
-                onClick={() => setSubmitting(true)}
-                className='format-button border-r-[1.5px] border-white/70'
-              >
-                Submit
-              </Button>
-            )}
+                <Button
+                  onClick={() => setSubmitting(true)}
+                  className='format-button border-r-[1.5px] border-white/70'
+                >
+                  Submit
+                </Button>
+              )}
 
             <DropdownMenu
               modal={false}
@@ -914,13 +952,12 @@ export default memo(function Topbar({
             >
               <DropdownMenuTrigger className='focus-visible:ring-0 outline-none'>
                 <Button
-                  className={`${
-                    !['CUSTOMER', 'OM', 'ADMIN'].includes(
-                      session?.user?.role ?? ''
-                    )
-                      ? 'px-2 format-icon-button'
-                      : ''
-                  } focus-visible:ring-0 outline-none`}
+                  className={`${!['CUSTOMER', 'OM', 'ADMIN'].includes(
+                    session?.user?.role ?? ''
+                  )
+                    ? 'px-2 format-icon-button'
+                    : ''
+                    } focus-visible:ring-0 outline-none`}
                 >
                   <span className='sr-only'>Open menu</span>
                   <ChevronDownIcon className='h-4 w-4' />
@@ -936,6 +973,8 @@ export default memo(function Topbar({
                       notes,
                       cfd,
                       setButtonLoading,
+                      listenCount,
+                      editedSegments,
                     })
                   }}
                 >
@@ -971,10 +1010,10 @@ export default memo(function Topbar({
                 {!['CUSTOMER', 'OM', 'ADMIN'].includes(
                   session?.user?.role || ''
                 ) && (
-                  <DropdownMenuItem onClick={requestExtension}>
-                    Request Extension
-                  </DropdownMenuItem>
-                )}
+                    <DropdownMenuItem onClick={requestExtension}>
+                      Request Extension
+                    </DropdownMenuItem>
+                  )}
                 {session?.user?.role !== 'CUSTOMER' && (
                   <DropdownMenuItem onClick={() => setReportModalOpen(true)}>
                     Report
@@ -1018,20 +1057,26 @@ export default memo(function Topbar({
                 )}
                 {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
                   orderDetails.status === 'FINALIZER_ASSIGNED') && (
-                  <DropdownMenuItem asChild>
-                    <a href={qcFileUrl} target='_blank'>
-                      Download QC text
-                    </a>
-                  </DropdownMenuItem>
-                )}
+                    <DropdownMenuItem asChild>
+                      <a href={qcFileUrl} target='_blank'>
+                        Download QC text
+                      </a>
+                    </DropdownMenuItem>
+                  )}
                 {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
                   orderDetails.status === 'FINALIZER_ASSIGNED') && (
-                  <DropdownMenuItem asChild>
-                    <a href={LLMFileUrl} target='_blank'>
-                      Download LLM text
-                    </a>
-                  </DropdownMenuItem>
-                )}
+                    <DropdownMenuItem asChild>
+                      <a href={LLMFileUrl} target='_blank'>
+                        Download LLM text
+                      </a>
+                    </DropdownMenuItem>
+                  )}
+                <DropdownMenuItem onClick={() => setIsHeatmapModalOpen(true)}>
+                  Waveform Heatmap
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setIsSettingsModalOpen(true)}>
+                  Settings
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -1065,10 +1110,12 @@ export default memo(function Topbar({
               </DialogContent>
             </Dialog>
           </div>
-          <TranscriberProfile />
+          {(session?.user?.role === 'CUSTOMER' || session?.user?.role === 'ADMIN')
+            ? <Profile />
+            : <TranscriberProfile />}
+          <ThemeSwitcher />
         </div>
       </div>
-
       <ShortcutsReferenceDialog
         isShortcutsReferenceModalOpen={isShortcutsReferenceModalOpen}
         setIsShortcutsReferenceModalOpen={setIsShortcutsReferenceModalOpen}
@@ -1081,7 +1128,6 @@ export default memo(function Topbar({
         shortcuts={shortcuts}
         updateShortcut={updateShortcut}
       />
-
       <Dialog
         open={isSpeakerNameModalOpen}
         onOpenChange={(value) => {
@@ -1132,7 +1178,7 @@ export default memo(function Topbar({
                         className='absolute right-2 p-1 hover:bg-gray-100 rounded-full transition-colors'
                         type='button'
                       >
-                        <ArrowUpIcon className='h-4 w-4 text-gray-500' />
+                        <ArrowUpIcon className='h-4 w-4 text-muted-foreground' />
                       </button>
                     )}
                   </div>
@@ -1150,11 +1196,11 @@ export default memo(function Topbar({
           </div>
 
           <div className='space-y-4 mt-4'>
-            <p className='text-sm text-gray-500'>
+            <p className='text-sm text-muted-foreground'>
               Please follow the rules below to determine the speaker name, in
               order:
             </p>
-            <ol className='list-decimal list-inside text-sm text-gray-500 space-y-1'>
+            <ol className='list-decimal list-inside text-sm text-muted-foreground space-y-1'>
               <li>
                 The name as spoken in the audio if the customer instruction is
                 present.
@@ -1172,7 +1218,7 @@ export default memo(function Topbar({
               </li>
             </ol>
             <p className='text-sm font-semibold'>Customer Instructions:</p>
-            <p className='text-sm text-gray-500 italic'>
+            <p className='text-sm text-muted-foreground italic'>
               {/* Add actual customer instructions here if available */}
               No specific instructions provided.
             </p>
@@ -1191,7 +1237,6 @@ export default memo(function Topbar({
           </div>
         </DialogContent>
       </Dialog>
-
       <Dialog
         open={revertTranscriptOpen}
         onOpenChange={setRevertTranscriptOpen}
@@ -1229,7 +1274,6 @@ export default memo(function Topbar({
           </DialogHeader>
         </DialogContent>
       </Dialog>
-
       <Dialog
         open={isFormattingOptionsModalOpen}
         onOpenChange={setIsFormattingOptionsModalOpen}
@@ -1315,11 +1359,9 @@ export default memo(function Topbar({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       <div
-        className={` ${
-          !videoPlayerOpen ? 'hidden' : ''
-        } fixed bg-white z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-transparent`}
+        className={` ${!videoPlayerOpen ? 'hidden' : ''
+          } fixed z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-background`}
         style={{
           top: `${position.y}px`,
           left: `${position.x}px`,
@@ -1337,7 +1379,7 @@ export default memo(function Topbar({
           ></video>
           <button
             onClick={() => setVideoPlayerOpen(false)}
-            className='absolute top-0 right-0 cursor-pointer bg-gray-100 p-2 rounded-lg mr-2 mt-2'
+            className='absolute top-0 right-0 cursor-pointer bg-secondary p-2 rounded-lg mr-2 mt-2'
             style={{ zIndex: 1 }}
           >
             <Cross1Icon />
@@ -1368,6 +1410,20 @@ export default memo(function Topbar({
         frequentTermsModalOpen={frequentTermsModalOpen}
         setFrequentTermsModalOpen={setFrequentTermsModalOpen}
         frequentTermsData={frequentTermsData}
+      />
+      <EditorSettingsDialog
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        initialSettings={editorSettings}
+        onSettingsChange={onSettingsChange}
+      />
+      <EditorHeatmapDialog
+        isOpen={isHeatmapModalOpen}
+        onClose={() => setIsHeatmapModalOpen(false)}
+        waveformUrl={waveformUrl}
+        listenCount={listenCount}
+        editedSegments={editedSegments}
+        duration={audioDuration}
       />
     </div>
   )

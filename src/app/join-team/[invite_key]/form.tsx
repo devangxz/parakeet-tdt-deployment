@@ -147,7 +147,7 @@ const JoinTeamForm = () => {
               <h1 className='text-4xl font-semibold tracking-tight'>
                 Welcome to Scribie
               </h1>
-              <p className='mt-2 text-md text-gray-700'>
+              <p className='mt-2 text-md text-muted-foreground'>
                 Please fill out the form to create your account and join{' '}
                 {ownerDetails.name} ({ownerDetails.email})&apos;s team
               </p>
@@ -303,7 +303,7 @@ const JoinTeamForm = () => {
                   control={form.control}
                   name='terms'
                   render={({ field }) => (
-                    <FormItem className='flex flex-row items-start space-x-3 space-y-0'>
+                    <FormItem className='flex flex-row items-center space-x-3 space-y-0'>
                       <FormControl>
                         <Checkbox
                           checked={field.value}
@@ -311,7 +311,7 @@ const JoinTeamForm = () => {
                         />
                       </FormControl>
                       <div className='space-y-1 leading-none'>
-                        <FormLabel>
+                        <FormLabel className='text-sm text-muted-foreground'>
                           I agree to the{' '}
                           <Link
                             href='/terms'
@@ -329,7 +329,7 @@ const JoinTeamForm = () => {
                   control={form.control}
                   name='receive_updates'
                   render={({ field }) => (
-                    <FormItem className='flex flex-row items-start space-x-3 space-y-0'>
+                    <FormItem className='flex flex-row items-center space-x-3 space-y-0'>
                       <FormControl>
                         <Checkbox
                           checked={field.value}
@@ -337,7 +337,7 @@ const JoinTeamForm = () => {
                         />
                       </FormControl>
                       <div className='space-y-1 leading-none'>
-                        <FormLabel className='text-sm text-gray-700'>
+                        <FormLabel className='text-sm text-muted-foreground'>
                           Receive updates and discount coupons (once every 3
                           months)
                         </FormLabel>

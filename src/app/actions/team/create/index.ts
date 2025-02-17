@@ -73,7 +73,7 @@ export async function createTeam(name: string) {
 
       const internalAdminUser = await prisma.user.create({
         data: {
-          email: internalUserEmail,
+          email: internalUserEmail.toLowerCase(),
           role: Role.INTERNAL_TEAM_USER,
           user: internalUserEmail,
           salt: '',

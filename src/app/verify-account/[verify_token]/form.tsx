@@ -130,7 +130,7 @@ const VerifyAccount = () => {
               <h1 className='text-4xl font-semibold tracking-tight'>
                 Invalid Token
               </h1>
-              <p className='mt-2 text-md text-gray-700'>
+              <p className='mt-2 text-md text-muted-foreground'>
                 The verification link appears to be invalid. Please check your
                 email for the correct link.
               </p>
@@ -161,7 +161,7 @@ const VerifyAccount = () => {
               <h1 className='text-4xl font-semibold tracking-tight'>
                 Thank you
               </h1>
-              <p className='mt-2 text-md text-gray-700'>
+              <p className='mt-2 text-md text-muted-foreground'>
                 Your email has been successfully verified
               </p>
             </div>

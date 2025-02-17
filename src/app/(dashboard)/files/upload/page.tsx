@@ -25,14 +25,14 @@ interface UploadType {
 
 const FileFormatDisplay = ({ formats }: { formats: string[] }) => (
   <div className='flex flex-wrap items-center gap-2'>
-    <span className='text-gray-700 font-medium text-sm'>
+    <span className='text-muted-foreground font-medium text-sm'>
       Supported File Formats:
     </span>
     {formats.map((format, index) => (
       <Badge
         key={index}
         variant='outline'
-        className='px-1.5 py-0.5 text-xs bg-secondary border-primary/20 text-primary'
+        className='px-1.5 pt-0 pb-[2px] text-xs bg-primary/10 border-primary/20 text-primary'
       >
         {format}
       </Badge>
@@ -141,7 +141,7 @@ const Dashboard = () => {
         <div className='flex items-start justify-between'>
           <h1 className='text-lg font-semibold md:text-xl'>{getPageTitle()}</h1>
 
-          <div className='bg-primary/5 rounded-md p-1'>
+          <div className='bg-primary/10 rounded-md p-1'>
             <ul className='flex items-center justify-center gap-3 max-w-3xl mx-auto'>
               {uploadTypes.map((type) => (
                 <li key={type.id}>
@@ -151,7 +151,7 @@ const Dashboard = () => {
                       'w-11 h-11 rounded-md flex items-center justify-center outline-none',
                       selectedTab === type.id
                         ? 'bg-white shadow-md'
-                        : 'hover:bg-white/40'
+                        : 'hover:bg-white'
                     )}
                   >
                     <div className='relative w-11 h-11'>

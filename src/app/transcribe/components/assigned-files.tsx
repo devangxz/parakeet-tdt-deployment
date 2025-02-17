@@ -11,6 +11,7 @@ import { unassignmentHandler } from './unassignmentHandler'
 import { determinePwerLevel } from './utils'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { getAssignedQCFiles } from '@/app/actions/qc/assigned-files'
+import { CancellationModal } from '@/components/cancellation-modal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -34,6 +35,7 @@ interface File extends BaseTranscriberFile {
   jobType: string
   orgName: string
   testFile: boolean
+  containsMp4: boolean
 }
 
 interface Props {
@@ -51,8 +53,25 @@ export default function AssignedFilesPage({ changeTab }: Props) {
   const [loadingFileOrder, setLoadingFileOrder] = useState<
     Record<string, boolean>
   >({})
+  const [showCancellationModal, setShowCancellationModal] = useState(false)
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
   const pathname = usePathname()
   const isLegalQCPage = pathname === '/transcribe/legal-qc'
+
+  const handleCancellation = (reason: string, comment: string) => {
+    if (selectedOrderId) {
+      unassignmentHandler({
+        id: selectedOrderId,
+        setLoadingFileOrder,
+        changeTab,
+        type: 'QC',
+        reason,
+        comment
+      })
+      setShowCancellationModal(false)
+      setSelectedOrderId(null)
+    }
+  }
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -113,6 +132,9 @@ export default function AssignedFilesPage({ changeTab }: Props) {
             jobType: assignment.type,
             orgName: assignment.order.orgName,
             testFile: assignment.order.isTestCustomer,
+            containsMp4:
+              assignment.order.File.fileKey?.split('.').pop().toLowerCase() ===
+              'mp4',
           }
         })
         setAssginedFiles(orders ?? [])
@@ -268,6 +290,14 @@ export default function AssignedFilesPage({ changeTab }: Props) {
                 Test File
               </Badge>
             )}
+            {row.original.containsMp4 && (
+              <Badge
+                variant='outline'
+                className='font-semibold text-[10px] text-green-600'
+              >
+                Contains Video
+              </Badge>
+            )}
           </div>
         </div>
       ),
@@ -347,10 +377,10 @@ export default function AssignedFilesPage({ changeTab }: Props) {
                       `/editor/${row.original.fileId}`,
                       '_blank',
                       'toolbar=no,location=no,menubar=no,width=' +
-                        window.screen.width +
-                        ',height=' +
-                        window.screen.height +
-                        ',left=0,top=0'
+                      window.screen.width +
+                      ',height=' +
+                      window.screen.height +
+                      ',left=0,top=0'
                     )
                   }
                 }}
@@ -366,14 +396,10 @@ export default function AssignedFilesPage({ changeTab }: Props) {
               ) : (
                 <DropdownMenuItem
                   className='text-destructive'
-                  onClick={() =>
-                    unassignmentHandler({
-                      id: row.original.orderId,
-                      setLoadingFileOrder,
-                      changeTab,
-                      type: 'QC',
-                    })
-                  }
+                  onClick={() => {
+                    setSelectedOrderId(row.original.orderId)
+                    setShowCancellationModal(true)
+                  }}
                 >
                   Cancel
                 </DropdownMenuItem>
@@ -398,6 +424,14 @@ export default function AssignedFilesPage({ changeTab }: Props) {
             </div>
           ) : null
         }
+      />
+      <CancellationModal
+        isOpen={showCancellationModal}
+        onClose={() => {
+          setShowCancellationModal(false)
+          setSelectedOrderId(null)
+        }}
+        onConfirm={handleCancellation}
       />
     </>
   )

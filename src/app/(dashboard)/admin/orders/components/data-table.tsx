@@ -31,6 +31,9 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
   onSelectedRowsChange?: (selectedRows: TData[]) => void
+  renderRowSubComponent?: (props: { row: unknown }) => React.ReactNode
+  renderWaveform?: (row: TData) => React.ReactNode
+
 }
 
 const isDeliveryDatePast = (deliveryTs: string) =>
@@ -40,6 +43,8 @@ export function DataTable<TData, TValue>({
   columns,
   data,
   onSelectedRowsChange,
+  renderRowSubComponent,
+  renderWaveform,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
 
@@ -88,7 +93,7 @@ export function DataTable<TData, TValue>({
   return (
     <div className='space-y-4'>
       <DataTableToolbar table={table} />
-      <div className='rounded-md border-2 border-customBorder bg-white'>
+      <div className='rounded-md border-2 border-customBorder bg-background'>
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -98,9 +103,9 @@ export function DataTable<TData, TValue>({
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -109,24 +114,48 @@ export function DataTable<TData, TValue>({
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                  className={`${
-                    isDeliveryDatePast(row.getValue('deliveryTs'))
-                      ? 'bg-red-200'
-                      : ''
-                  }`}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
+                <React.Fragment key={row.id}>
+                  {renderWaveform && (
+                    <TableRow className="border-b-0">
+                      <TableCell colSpan={columns.length} className="py-2">
+                        {renderWaveform(row.original)}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  <TableRow
+                    data-state={row.getIsSelected() && 'selected'}
+                    className={`${isDeliveryDatePast(row.getValue('deliveryTs'))
+                        ? 'bg-red-200 dark:bg-red-800'
+                        : ''
+                      }`}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  {renderRowSubComponent && row.original && (
+                    <>
+                      {(() => {
+                        const subComponent = renderRowSubComponent({ row })
+                        return subComponent ? (
+                          <TableRow>
+                            <TableCell
+                              colSpan={columns.length}
+                              className='p-0 px-3 pb-4'
+                            >
+                              {subComponent}
+                            </TableCell>
+                          </TableRow>
+                        ) : null
+                      })()}
+                    </>
+                  )}
+                </React.Fragment>
               ))
             ) : (
               <TableRow>

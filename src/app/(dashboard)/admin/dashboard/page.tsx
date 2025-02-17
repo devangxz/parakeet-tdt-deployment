@@ -19,13 +19,14 @@ import EnablePreDelivery from './components/enable-pre-delivery'
 import OrderWatch from './components/order-watch'
 import TransferCredits from './components/transfer-credits'
 import TransferFiles from './components/transfer-files'
+import UpdateICQCRates from './components/update-ic-qc-rates'
 import YouTubeVideoUploader from './components/youtube-video-uploader'
 
 export default function AdminDashboard() {
   const { data: session } = useSession()
   return (
     <>
-      <div className='h-full flex-1 flex-col space-y-8 p-5 md:flex bg-muted/40'>
+      <div className='h-full flex-1 flex-col space-y-8 p-5 md:flex'>
         <h1 className='text-lg font-semibold md:text-lg'>Admin Dashboard</h1>
         <AccountAccess />
         {session?.user?.role === 'ADMIN' && (
@@ -44,6 +45,7 @@ export default function AdminDashboard() {
             <EnableACRReview />
             <AddTestCustomer />
             <EnableCustomers />
+            <UpdateICQCRates />
             <AddMiscEarnings />
             <TransferCredits />
             <OrderWatch />

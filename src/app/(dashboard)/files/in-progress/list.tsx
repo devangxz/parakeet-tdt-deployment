@@ -121,6 +121,14 @@ export default function InprogressFilesPage({ files }: ListProps) {
     setSelectedFiles(selectedRowsData.map((file) => file.id))
   }
 
+  const handleBulkPermalink = () => {
+    if (selectedFiles.length === 0) {
+      toast.error('Please select at least one file')
+      return
+    }
+    router.push(`/files/permalink/${selectedFiles.join(',')}`)
+  }
+
   if (isLoading) {
     return (
       <div
@@ -316,6 +324,11 @@ export default function InprogressFilesPage({ files }: ListProps) {
               Go to folder
             </DropdownMenuItem>
             <DropdownMenuItem
+              onClick={() => router.push(`/files/permalink/${row.original.id}`)}
+            >
+              Permalink
+            </DropdownMenuItem>
+            <DropdownMenuItem
               className='text-red-500'
               onClick={() => {
                 handleCancelOrder(row.original.id, row.original.filename)
@@ -377,7 +390,7 @@ export default function InprogressFilesPage({ files }: ListProps) {
               session?.user?.adminAccess) && (
               <Button
                 variant='order'
-                className='not-rounded text-black w-[140px]'
+                className='not-rounded w-[140px] mr-2'
                 onClick={async () => {
                   try {
                     if (selectedFiles.length === 0) {
@@ -394,6 +407,13 @@ export default function InprogressFilesPage({ files }: ListProps) {
                 Copy file Ids
               </Button>
             )}
+            <Button
+              variant='order'
+              className='not-rounded text-black w-[140px] ml-2'
+              onClick={handleBulkPermalink}
+            >
+              Permalink
+            </Button>
           </div>
         </div>
         <DataTable

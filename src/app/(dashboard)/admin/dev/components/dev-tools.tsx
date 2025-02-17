@@ -280,7 +280,7 @@ function RISandCFDManagement() {
             value={formData.fd_ris_fileid}
             onChange={handleInputChange}
           />
-          <div className='w-1/2 border border-gray-300 rounded-md p-4 mt-2 h-64 overflow-auto bg-gray-50'>
+          <div className='w-1/2 border-2 border-customBorder rounded-md p-4 mt-2 h-64 overflow-auto'>
             <ScrollableReadOnlyKeyValuePairs data={formData.fd_ris_Details} />
           </div>
         </CardContent>
@@ -529,9 +529,6 @@ export default function DevTools() {
   const handleDownloadFromS3Click = async () => {
     try {
       setLoading(true)
-      console.log(
-        `handleDownloadFromS3Click ${formData.fd_s3_fileId} ${fd_s3_file_type}`
-      )
       const signedUrl = await downloadFromS3(
         formData.fd_s3_fileId,
         fd_s3_file_type
@@ -794,7 +791,7 @@ function B2BUserOnboarding() {
         <CardContent className='pt-6'>
           <div>
             <h4 className='text-md font-medium mb-2'>Add Template</h4>
-            <p className='text-sm text-gray-600 mb-4'>
+            <p className='text-sm text-muted-foreground mb-4'>
               Note: Double check the template name and make sure the template is
               added in the docxTemplate folder.
             </p>

@@ -5,6 +5,7 @@ import config from '../../../../config.json'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
+import getOrgName from '@/utils/getOrgName'
 
 export async function POST() {
   try {
@@ -12,7 +13,7 @@ export async function POST() {
     const assignedFiles = await prisma.jobAssignment.findMany({
       where: {
         status: JobStatus.ACCEPTED,
-        type: JobType.QC
+        type: JobType.QC,
       },
       include: {
         order: {
@@ -28,12 +29,32 @@ export async function POST() {
 
     for (const file of assignedFiles) {
       if (file.order.File?.duration) {
-        let durationInMs =
-          file.order.File.duration * config.job_timeout_multiplier * 60 * 1000
+        const orgName = await getOrgName(file.order.userId)
+        if (orgName && ['acr', 'remotelegal'].includes(orgName.toLowerCase())) {
+          continue
+        }
+
+        if (file.assignMode === 'MANUAL') {
+          continue
+        }
+
+        let timeoutMultiplier = 4
+        if (file.order.File.duration <= 1800) {
+          // Less than 30 mins
+          timeoutMultiplier = 6
+        } else if (file.order.File.duration <= 10800) {
+          // Between 30 mins and 3 hours
+          timeoutMultiplier = 5
+        }
+
+        let durationInMs = file.order.File.duration * timeoutMultiplier * 1000
+        if (file.order.File.duration <= 10800) {
+          durationInMs += 7200 * 1000 // Add 2 hours for files under 3 hours
+        }
 
         if (file.extensionRequested) {
           durationInMs +=
-            file.order.File.duration * extensionTimeMultiplier * 60 * 1000
+            file.order.File.duration * extensionTimeMultiplier * 1000
         }
 
         const requiredTime = new Date(Date.now() - durationInMs)

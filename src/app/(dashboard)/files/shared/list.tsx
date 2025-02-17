@@ -2,7 +2,6 @@
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import { Session } from 'next-auth'
 import { useSession } from 'next-auth/react'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -343,7 +342,7 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
               session?.user?.adminAccess) && (
               <Button
                 variant='order'
-                className='not-rounded text-black w-[140px]'
+                className='not-rounded w-[140px] mr-2'
                 onClick={async () => {
                   try {
                     if (selectedFiles.length === 0) {
@@ -362,7 +361,7 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
             )}
             <Button
               variant='order'
-              className='not-rounded text-black w-[140px]'
+              className='not-rounded w-[140px]'
               onClick={() => {
                 if (selectedFiles.length === 0) {
                   toast.error('Please select at least one file')
@@ -390,7 +389,6 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
           filename={selectedFile?.name || ''}
           toggleCheckAndDownload={toggleCheckAndDownload}
           setToggleCheckAndDownload={setToggleCheckAndDownload}
-          session={session as Session}
           txtSignedUrl={signedUrls.txtSignedUrl || ''}
           cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
         />

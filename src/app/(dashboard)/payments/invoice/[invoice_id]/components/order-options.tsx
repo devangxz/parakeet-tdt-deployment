@@ -45,15 +45,15 @@ export function OrderOptions({
           <div className='text-md font-medium ml-3'>{name}</div>
           <CollapsibleTrigger>
             {isOpen ? (
-              <ChevronUp className='h-4 w-4 text-black cursor-pointer' />
+              <ChevronUp className='h-4 w-4 cursor-pointer' />
             ) : (
-              <ChevronDown className='h-4 w-4 text-black cursor-pointer' />
+              <ChevronDown className='h-4 w-4 cursor-pointer' />
             )}
           </CollapsibleTrigger>
         </div>
         <div className='text-md font-normal'>{`+$${rate.toFixed(2)} / min`}</div>
       </div>
-      <CollapsibleContent className='mt-3 font-normal text-sm text-[#8A8A8A]'>
+      <CollapsibleContent className='mt-3 font-normal text-sm text-muted-foreground'>
         {description}
       </CollapsibleContent>
     </Collapsible>

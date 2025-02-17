@@ -244,7 +244,7 @@ const Invoice = () => {
     <>
       <div className='flex flex-1 flex-col p-4 gap-5'>
         <div className='border-b-2 border-customBorder space-y-4 pb-6'>
-          <h1 className='w-[222px] rounded-md p-4 border-2 border-customBorder text-lg font-semibold md:text-xl'>
+          <h1 className='w-fit rounded-md p-4 border-2 border-customBorder text-lg font-semibold md:text-xl'>
             Credit Balance{' '}
             <span className='text-primary ml-2'>${creditsBalance}</span>
           </h1>
@@ -257,7 +257,7 @@ const Invoice = () => {
           />
           <div className='space-y-2'>
             <p className='font-semibold'>Notes:</p>
-            <ol className='list-decimal pl-5 space-y-1.5 text-gray-700'>
+            <ol className='list-decimal pl-5 space-y-1.5 text-muted-foreground'>
               <li>Credits can be used to pay for invoices on Scribie</li>
               <li>
                 Credits do not expire and can be shared between team members

@@ -14,6 +14,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
+    const userId = user?.internalTeamUserId || user?.userId
+
     const fileId = req.nextUrl.searchParams.get('fileId')
     if (!fileId) {
       return NextResponse.json(
@@ -26,7 +28,7 @@ export async function GET(req: NextRequest) {
       where: {
         fileId,
         tag: FileTag.CF_CUSTOMER_DELIVERED,
-        userId: user.userId,
+        userId: userId,
       },
       orderBy: {
         updatedAt: 'desc',

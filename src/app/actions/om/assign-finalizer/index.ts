@@ -47,7 +47,8 @@ export async function assignFinalizer(fileId: string, userEmail: string) {
       orderInformation.id,
       fileId,
       user.id,
-      InputFileType.LLM_OUTPUT
+      InputFileType.LLM_OUTPUT,
+      'MANUAL'
     )
 
     logger.info(`Successfully assigned finalizer for file ${fileId}`)

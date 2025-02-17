@@ -485,10 +485,10 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
               <div className={`flex items-center justify-center gap-3`}>
                 <div
                   className={`rounded-full p-1 ${
-                    activeStep >= step ? 'bg-[#36F0C3]' : 'bg-violet-100'
+                    activeStep >= step ? 'bg-[#36F0C3]' : 'bg-secondary'
                   }`}
                 >
-                  <Check className='h-4 w-4 font-bold' />
+                  <Check className='h-4 w-4 font-bold text-black' />
                 </div>
 
                 <div className='text-lg font-normal'>{label}</div>
@@ -585,7 +585,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
                           <div className='text-sm text-muted-foreground w-[200px] mt-5'>
                             <div>
                               Due date{' '}
-                              <span className='text-black font-medium'>
+                              <span className='font-medium'>
                                 {file.dueDate
                                   ? new Date(file.dueDate).toDateString()
                                   : 'N/A'}
@@ -593,7 +593,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
                             </div>
                             <div className='mt-2'>
                               Cost{' '}
-                              <span className='text-black font-medium'>
+                              <span className='font-medium'>
                                 ${file.cost.toFixed(2)}
                               </span>
                             </div>
@@ -718,7 +718,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
                   Your bill
                 </div>
                 <div
-                  className='text-md cursor-pointer text-black font-medium mb-10 mr-5 underline'
+                  className='text-md cursor-pointer font-medium mb-10 mr-5 underline'
                   onClick={() => setBillBreakdownOpen(true)}
                 >
                   View invoice
@@ -905,7 +905,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
         </div>
         <Separator />
       </div>
-      <div className='flex items-center justify-end gap-5 p-4 sticky bottom-0 right-0 w-full bg-white border-t-2 border-customBorder'>
+      <div className='flex items-center justify-end gap-5 p-4 sticky bottom-0 right-0 w-full bg-background border-t-2 border-customBorder'>
         {paymentSuccess ? (
           <Button
             className='w-[170px]'

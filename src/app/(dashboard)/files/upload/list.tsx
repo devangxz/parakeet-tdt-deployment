@@ -14,10 +14,12 @@ import { getRefundInvoice } from '@/app/actions/file/refund-invoice'
 import { refetchFiles } from '@/app/actions/files'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { createOrder } from '@/app/actions/order'
+import { fetchWorkspaces } from '@/app/actions/workspaces'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
 import RenameFileDialog from '@/components/file-rename-dialog'
 import PaymentsDetailsModal from '@/components/payment-details-modal'
+import TransferFileModal from '@/components/transfer-files'
 import TrimFileModal from '@/components/trim-file-modal'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -87,6 +89,13 @@ const FileList = ({
   }>({})
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false)
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>('')
+  const [workspaces, setWorkspaces] = useState<
+    {
+      id: string
+      name: string
+    }[]
+  >([])
+  const [openTransferDialog, setOpenTransferDialog] = useState(false)
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -132,8 +141,24 @@ const FileList = ({
     }
   }
 
+  const getWorkspaces = async () => {
+    try {
+      const response = await fetchWorkspaces()
+      if (response.success) {
+        const fetchedTeams = response.data?.data?.map((team: any) => ({
+          name: team.teamName,
+          id: String(team.internalAdminUserId),
+        }))
+        setWorkspaces(fetchedTeams ?? [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch workspaces:', error)
+    }
+  }
+
   useEffect(() => {
     fetchPendingFiles(true)
+    getWorkspaces()
   }, [])
 
   useEffect(() => {
@@ -403,7 +428,7 @@ const FileList = ({
             ) : (
               <Button
                 variant='order'
-                className='format-button text-black w-[140px]'
+                className='format-button w-[140px]'
                 onClick={() =>
                   orderFile(row.original.id, session?.user?.orderType as string)
                 }
@@ -475,6 +500,11 @@ const FileList = ({
               Go to folder
             </DropdownMenuItem>
             <DropdownMenuItem
+              onClick={() => router.push(`/files/permalink/${row.original.id}`)}
+            >
+              Permalink
+            </DropdownMenuItem>
+            <DropdownMenuItem
               className='text-red-500'
               onClick={() => {
                 setSeletedFile({
@@ -524,6 +554,14 @@ const FileList = ({
     }
   }
 
+  const handleBulkPermalink = () => {
+    if (selectedFiles.length === 0) {
+      toast.error('Please select at least one file')
+      return
+    }
+    router.push(`/files/permalink/${selectedFiles.join(',')}`)
+  }
+
   return (
     <div className='h-full flex-1 flex-col md:flex'>
       <div className='flex items-start justify-between mb-3'>
@@ -534,7 +572,7 @@ const FileList = ({
           {(session?.user?.role === 'ADMIN' || session?.user?.adminAccess) && (
             <Button
               variant='order'
-              className='not-rounded text-black w-[140px]'
+              className='not-rounded w-[140px] mr-2'
               onClick={async () => {
                 try {
                   if (selectedFiles.length === 0) {
@@ -563,7 +601,7 @@ const FileList = ({
           ) : (
             <Button
               variant='order'
-              className='format-button text-black w-[140px]'
+              className='format-button w-[140px]'
               onClick={() =>
                 orderBulkFile(
                   selectedFiles.join(','),
@@ -597,6 +635,24 @@ const FileList = ({
                   Transcribe
                 </DropdownMenuItem>
               )}
+
+              {workspaces.length > 0 && (
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (selectedFiles.length === 0) {
+                      toast.error('Please select at least one file')
+                      return
+                    }
+                    setOpenTransferDialog(true)
+                  }}
+                >
+                  Transfer Files
+                </DropdownMenuItem>
+              )}
+
+              <DropdownMenuItem onClick={handleBulkPermalink}>
+                Permalink
+              </DropdownMenuItem>
 
               <DropdownMenuItem
                 className='text-red-500'
@@ -646,6 +702,13 @@ const FileList = ({
         onClose={() => setOpenDetailsDialog(false)}
         selectedInvoiceId={selectedInvoiceId}
         session={session!}
+      />
+      <TransferFileModal
+        open={openTransferDialog}
+        onClose={() => setOpenTransferDialog(false)}
+        fileIds={selectedFiles}
+        teams={workspaces}
+        refetch={fetchPendingFiles}
       />
     </div>
   )

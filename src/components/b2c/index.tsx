@@ -27,6 +27,7 @@ import { applyDiscount } from '@/app/actions/payment/apply-discount'
 import { checkout } from '@/app/actions/payment/checkout'
 import { checkoutViaCredits } from '@/app/actions/payment/checkout-via-credits'
 import { getClientTokenAction } from '@/app/actions/payment/client-token'
+import { saveDefaultInstructions } from '@/app/actions/user/default-instructions'
 import BillBreakdownDialog from '@/components/bill-breakdown'
 import { Icons } from '@/components/icons'
 import { Button } from '@/components/ui/button'
@@ -176,6 +177,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
     useState<boolean>(false)
   const [spellingCollapsible, setSpellingCollapsible] = useState<boolean>(false)
   const [billingEnabled, setBillingEnabled] = useState<boolean>(false)
+  const [loadingInstructions, setLoadingInstructions] = useState(false)
 
   useEffect(() => {
     const fetchOrderInformation = async () => {
@@ -508,6 +510,25 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
     )
   }
 
+  async function handleDefaultInstruction() {
+    setLoadingInstructions(true)
+    try {
+      const response = await saveDefaultInstructions(instructions.instructions)
+      if (response.success) {
+        const successToastId = toast.success(
+          'Successfully saved as default instructions'
+        )
+        toast.dismiss(successToastId)
+      } else {
+        toast.error(`Error updating default instructions`)
+      }
+    } catch (error) {
+      toast.error(`Error updating default instructions`)
+    } finally {
+      setLoadingInstructions(false)
+    }
+  }
+
   useEffect(() => {
     if (activeStep === 3 && braintreeRef.current) {
       braintreeRef.current.scrollIntoView({ behavior: 'smooth' })
@@ -538,10 +559,10 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
               <div className={`flex items-center justify-center gap-3`}>
                 <div
                   className={`rounded-full p-1 ${
-                    activeStep >= step ? 'bg-[#36F0C3]' : 'bg-violet-100'
+                    activeStep >= step ? 'bg-[#36F0C3]' : 'bg-secondary'
                   }`}
                 >
-                  <Check className='h-4 w-4 font-bold' />
+                  <Check className='h-4 w-4 font-bold text-black' />
                 </div>
 
                 <div className='text-lg font-normal'>{label}</div>
@@ -609,14 +630,14 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                         </div>
                         <CollapsibleTrigger>
                           {templateCollapsible ? (
-                            <ChevronUp className='h-4 w-4 text-black cursor-pointer' />
+                            <ChevronUp className='h-4 w-4 cursor-pointer' />
                           ) : (
-                            <ChevronDown className='h-4 w-4 text-black cursor-pointer' />
+                            <ChevronDown className='h-4 w-4 cursor-pointer' />
                           )}
                         </CollapsibleTrigger>
                       </div>
                     </div>
-                    <CollapsibleContent className='mt-3 font-normal text-sm text-[#8A8A8A]'>
+                    <CollapsibleContent className='mt-3 font-normal text-sm text-muted-foreground'>
                       The templates used for formatting the delivery transcript
                       document(s). For custom templates please{' '}
                       <Link href='/' className='text-primary'>
@@ -658,14 +679,14 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                         </div>
                         <CollapsibleTrigger>
                           {spellingCollapsible ? (
-                            <ChevronUp className='h-4 w-4 text-black cursor-pointer' />
+                            <ChevronUp className='h-4 w-4 cursor-pointer' />
                           ) : (
-                            <ChevronDown className='h-4 w-4 text-black cursor-pointer' />
+                            <ChevronDown className='h-4 w-4 cursor-pointer' />
                           )}
                         </CollapsibleTrigger>
                       </div>
                     </div>
-                    <CollapsibleContent className='mt-3 font-normal text-sm text-[#8A8A8A]'>
+                    <CollapsibleContent className='mt-3 font-normal text-sm text-muted-foreground'>
                       The spelling style specifies the dictionary used for
                       spellchecks. Please{' '}
                       <Link href='/' className='text-primary'>
@@ -726,7 +747,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                     rows={4}
                     className='focus-visible:ring-0'
                   />
-                  <div className='text-sm text-[#8A8A8A] mt-2'>
+                  <div className='text-sm text-muted-foreground mt-2'>
                     Please enter special instructions, terms, acronyms,
                     keywords, names of places, speaker names, etc.
                   </div>
@@ -735,7 +756,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                   <div className='flex items-center gap-2'>
                     <div>
                       <div className='text-md font-medium'>Accents</div>
-                      <div className='text-sm text-[#8A8A8A] w-[250px] mt-2'>
+                      <div className='text-sm text-muted-foreground w-[250px] mt-2'>
                         An additional charge may be applicable for accents other
                         than North American/Canadian.
                       </div>
@@ -810,7 +831,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                       <div className='text-md font-medium'>
                         Speakers (in each file)
                       </div>
-                      <div className='text-sm text-[#8A8A8A] w-[250px] mt-2'>
+                      <div className='text-sm text-muted-foreground w-[250px] mt-2'>
                         Speaker tracking for 4 or more speakers is best effort
                         and may not be correct.
                       </div>
@@ -842,7 +863,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
               <div className='text-lg text-primary font-medium mb-10'>
                 Payment terms
               </div>
-              <ScrollArea className=''>
+              <ScrollArea>
                 <ol className='text-md text-muted-foreground mt-4 ml-2'>
                   <li className=''>
                     1. <b>Rate:</b> The client will be charged at a rate of $
@@ -940,7 +961,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                   Your bill
                 </div>
                 <div
-                  className='text-md cursor-pointer text-black font-medium mb-10 mr-5 underline'
+                  className='text-md cursor-pointer font-medium mb-10 mr-5 underline'
                   onClick={() => setBillBreakdownOpen(true)}
                 >
                   View invoice
@@ -1130,7 +1151,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
         </div>
         <Separator />
       </div>
-      <div className='flex items-center justify-end gap-5 p-4 sticky bottom-0 right-0 w-full bg-white border-t-2 border-customBorder'>
+      <div className='flex items-center justify-end gap-5 p-4 sticky bottom-0 right-0 w-full bg-background border-t-2 border-customBorder'>
         {paymentSuccess ? (
           <Button
             className='w-[170px]'
@@ -1144,13 +1165,33 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
               className='w-[170px] border-primary border-2 text-primary rounded-[32px] transition-all duration-200 hover:opacity-90'
               variant='outline'
               onClick={
-                activeStep === 1
-                  ? () => router.push('/files/upload')
-                  : prevStep
+                activeStep === 1 ? () => router.push('/files/upload') : prevStep
               }
             >
               {activeStep === 1 ? 'Back to Dashboard' : 'Back'}
             </Button>
+            {activeStep === 2 && (
+              <>
+                {loadingInstructions ? (
+                  <Button
+                    disabled
+                    variant='outline'
+                    className='w-[170px] border-primary border-2 text-primary '
+                  >
+                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                    Save
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => handleDefaultInstruction()}
+                    variant='outline'
+                    className='w-[170px] border-primary border-2 text-primary '
+                  >
+                    Save As Default
+                  </Button>
+                )}
+              </>
+            )}
             {loadingPay ? (
               <Button disabled className='w-[170px]'>
                 Please wait

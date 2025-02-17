@@ -12,7 +12,6 @@ import { getPendingWithdrawalsAction } from '@/app/actions/admin/get-pending-wit
 import { initiateWithdrawalAction } from '@/app/actions/admin/initiate-withdrawal'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Separator } from '@/components/ui/separator'
 import { ADMIN_EMAILS } from '@/constants'
 
 interface Withdrawal {
@@ -364,7 +363,7 @@ export default function WithdrawalPage() {
       {session?.user?.role !== 'ADMIN' ||
       !ADMIN_EMAILS.includes(session?.user?.email ?? '') ? (
         <>
-          <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex bg-muted/40'>
+          <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
             <h1 className='text-lg font-semibold md:text-lg'>
               You are not authorized to access this page
             </h1>
@@ -372,7 +371,7 @@ export default function WithdrawalPage() {
         </>
       ) : (
         <>
-          <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex bg-muted/40'>
+          <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
             <div className='flex items-center justify-between space-y-2'>
               <div className='flex items-center gap-5'>
                 <h1 className='text-lg font-semibold md:text-lg'>
@@ -421,10 +420,7 @@ export default function WithdrawalPage() {
               onSelectedRowsChange={handleSelectedRowsChange}
             />
           </div>
-          <div className='bg-muted/40'>
-            <Separator className='mb-5' />
-          </div>
-          <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex bg-muted/40'>
+          <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
             <div className='flex items-center justify-between space-y-2'>
               <div className='flex items-center gap-5'>
                 <h1 className='text-lg font-semibold md:text-lg'>

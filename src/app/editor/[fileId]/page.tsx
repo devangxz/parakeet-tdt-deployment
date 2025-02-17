@@ -1,19 +1,18 @@
 'use client'
 
 import { Cross1Icon, ReloadIcon } from '@radix-ui/react-icons'
-import { Change, diffWords } from 'diff'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
-import { setPlayStatsAction } from '@/app/actions/editor/set-play-stats'
+import { getUserEditorSettingsAction } from '@/app/actions/editor/settings'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
+import { EditorHandle } from '@/components/editor/Editor'
 import Header from '@/components/editor/Header'
-import PlayStatsVisualization from '@/components/editor/PlayStatsVisualization'
 import SectionSelector from '@/components/editor/SectionSelector'
 import {
   DiffTabComponent,
@@ -23,6 +22,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/editor/Tabs'
 import renderTitleInputs from '@/components/editor/TitleInputs'
 import Topbar from '@/components/editor/Topbar'
+import WaveformHeatmap from '@/components/editor/WaveformHeatmap'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -38,9 +38,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { RenderPDFDocument } from '@/components/utils'
 import { AUTOSAVE_INTERVAL } from '@/constants'
 import usePreventMultipleTabs from '@/hooks/usePreventMultipleTabs'
+import { EditorSettings } from '@/types/editor'
 import {
   ShortcutControls,
   useShortcuts,
+  defaultShortcuts,
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   CTMType,
@@ -52,7 +54,12 @@ import {
   replaceTextHandler,
   CustomerQuillSelection,
   autoCapitalizeSentences,
+  getFormattedContent,
+  EditorData,
 } from '@/utils/editorUtils'
+import { persistEditorDataIDB, getEditorDataIDB } from '@/utils/indexedDB'
+import { getFormattedTranscript } from '@/utils/transcript'
+import { diff_match_patch, DmpDiff } from '@/utils/transcript/diff_match_patch'
 
 export type OrderDetails = {
   orderId: string
@@ -107,8 +114,7 @@ function EditorPage() {
     isUploaded?: boolean
   }>({ renamedFile: null, originalFile: null })
   const { data: session } = useSession()
-  const [diff, setDiff] = useState<Change[]>([])
-  const [transcript, setTranscript] = useState('')
+  const [diff, setDiff] = useState<DmpDiff[]>([])
   const [ctms, setCtms] = useState<CTMType[]>([])
   const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null)
   const [step, setStep] = useState<string>('')
@@ -126,7 +132,7 @@ function EditorPage() {
   })
   const [audioDuration, setAudioDuration] = useState(1)
   const [quillRef, setQuillRef] = useState<React.RefObject<ReactQuill>>()
-  const [asrTranscript, setAsrTranscript] = useState('')
+  const editorRef = useRef<EditorHandle>(null)
 
   const [findText, setFindText] = useState('')
   const [replaceText, setReplaceText] = useState('')
@@ -136,18 +142,32 @@ function EditorPage() {
   const [matchCount, setMatchCount] = useState(0)
   const [matchSelection, setMatchSelection] = useState(false)
   const findInputRef = useRef<HTMLInputElement>(null)
-  const [selection, setSelection] = useState<CustomerQuillSelection | null>(null)
-  const [searchHighlight, setSearchHighlight] = useState<{ index: number; length: number } | null>(null);
-  const [highlightWordsEnabled, setHighlightWordsEnabled] = useState(true);
+  const [selection, setSelection] = useState<CustomerQuillSelection | null>(
+    null
+  )
+  const [searchHighlight, setSearchHighlight] = useState<{
+    index: number
+    length: number
+  } | null>(null)
+  const [highlightWordsEnabled, setHighlightWordsEnabled] = useState(true)
+  const [fontSize, setFontSize] = useState(16)
   const lastTrackedSecondRef = useRef(-1)
-  const [playStats, setPlayStats] = useState<PlayStats>({ listenCount: [] })
-  const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set());
+  const [listenCount, setListenCount] = useState<number[]>([])
+  const [editedSegments, setEditedSegments] = useState<Set<number>>(new Set())
   const [waveformUrl, setWaveformUrl] = useState('')
   const [finalizerComment, setFinalizerComment] = useState('')
-
-  interface PlayStats {
-    listenCount: number[];
-  }
+  const [initialEditorData, setInitialEditorData] = useState<EditorData | null>(
+    null
+  )
+  const [editorSettings, setEditorSettings] = useState<EditorSettings>({
+    wordHighlight: true,
+    fontSize: 16,
+    audioRewindSeconds: 0,
+    volume: 100,
+    playbackSpeed: 100,
+    useNativeContextMenu: false,
+    shortcuts: { ...defaultShortcuts },
+  })
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -315,21 +335,39 @@ function EditorPage() {
           searchAndSelectInstance(findText, selection)
         }
       },
-
-      saveChanges: () => {
+      saveChanges: async () => {
+        if (editorRef.current) {
+          editorRef.current.clearAllHighlights()
+          editorRef.current.triggerAlignmentUpdate()
+        }
         autoCapitalizeSentences(quillRef)
-        savePlayStats()
-        handleSave({
+        await handleSave({
           getEditorText,
           orderDetails,
           notes,
           cfd,
           setButtonLoading,
+          listenCount,
+          editedSegments,
         })
+        updateFormattedTranscript()
       },
     }
     return controls as ShortcutControls
-  }, [getEditorText, orderDetails, notes, step, cfd, setButtonLoading, findText, replaceText, matchCase, lastSearchIndex, playStats, editedSegments])
+  }, [
+    getEditorText,
+    orderDetails,
+    notes,
+    step,
+    cfd,
+    setButtonLoading,
+    findText,
+    replaceText,
+    matchCase,
+    lastSearchIndex,
+    listenCount,
+    editedSegments,
+  ])
 
   useShortcuts(shortcutControls)
 
@@ -340,6 +378,11 @@ function EditorPage() {
       })
     }
   }, [audioPlayer])
+
+  useEffect(() => {
+    if (!initialEditorData || !orderDetails.fileId) return
+    persistEditorDataIDB(orderDetails.fileId, { listenCount })
+  }, [listenCount, orderDetails.fileId, initialEditorData])
 
   const sectionChangeHandler = (e: React.MouseEvent<HTMLButtonElement>) => {
     const value = e.currentTarget.dataset.value
@@ -369,24 +412,37 @@ function EditorPage() {
       router.push('/')
     }
 
-    fetchFileDetails({
-      params,
-      setOrderDetails,
-      setCfd,
-      setStep,
-      setTranscript,
-      setCtms,
-      setPlayStats,
-      setAsrTranscript,
-    })
-  }, [])
+    async function loadDetails() {
+      if (!session || !session.user) return
+      const result = await fetchFileDetails({
+        params,
+        setOrderDetails,
+        setCfd,
+        setStep,
+        setCtms,
+        setListenCount,
+      })
+      if (result) {
+        setOrderDetails(result.orderDetails)
+        setInitialEditorData(result.initialEditorData)
+      }
+    }
+    loadDetails()
+  }, [session])
 
-  const handleTabChange = () => {
-    if (!quillRef?.current) return
-    const quill = quillRef.current.getEditor()
-    const contentText = quill.getText() // Get text directly from editor
-    const diff = diffWords(asrTranscript || transcript, contentText)
-    setDiff(diff)
+  const handleTabsValueChange = async (value: string) => {
+    const contentText = getEditorText()
+    const dmp = new diff_match_patch()
+    const diffs = dmp.diff_wordMode(getFormattedTranscript(ctms), contentText)
+    dmp.diff_cleanupSemantic(diffs)
+    setDiff(diffs)
+
+    if (value === 'transcribe' && orderDetails.fileId) {
+      const persistedData = await getEditorDataIDB(orderDetails.fileId)
+      setInitialEditorData(
+        persistedData || { transcript: '', undoStack: [], redoStack: [] }
+      )
+    }
   }
 
   const getAudioPlayer = useCallback((audioPlayer: HTMLAudioElement | null) => {
@@ -396,7 +452,10 @@ function EditorPage() {
   useEffect(() => {
     const fetchWaveform = async () => {
       try {
-        const res = await getSignedUrlAction(`${orderDetails.fileId}_wf.png`, 300)
+        const res = await getSignedUrlAction(
+          `${orderDetails.fileId}_wf.png`,
+          300
+        )
         if (res.success && res.signedUrl) {
           setWaveformUrl(res.signedUrl)
         }
@@ -410,16 +469,6 @@ function EditorPage() {
     }
   }, [orderDetails.fileId])
 
-  const savePlayStats = async () => {
-    if (orderDetails.userId && orderDetails.fileId) {
-      await setPlayStatsAction({
-        fileId: orderDetails.fileId,
-        listenCount: playStats.listenCount,
-        editedSegments: Array.from(editedSegments)
-      })
-    }
-  }
-
   useEffect(() => {
     const interval = setInterval(async () => {
       await handleSave(
@@ -429,34 +478,40 @@ function EditorPage() {
           notes,
           cfd,
           setButtonLoading,
+          listenCount,
+          editedSegments,
         },
         false
       )
-      savePlayStats()
+      updateFormattedTranscript()
     }, 1000 * 60 * AUTOSAVE_INTERVAL)
 
     return () => clearInterval(interval)
-  }, [getEditorText, orderDetails, notes, step, cfd, playStats, editedSegments])
-
-  useEffect(() => {
-    setPlayStats(() => ({
-      listenCount: new Array(Math.ceil(audioDuration)).fill(0)
-    }))
-  }, [audioDuration])
+  }, [
+    getEditorText,
+    orderDetails,
+    notes,
+    step,
+    cfd,
+    listenCount,
+    editedSegments,
+  ])
 
   useEffect(() => {
     const handleTimeUpdate = () => {
       if (!audioPlayer) return
+
       const currentSecond = Math.floor(audioPlayer.currentTime)
 
       // Only update stats if we've moved to a new second
       if (currentSecond !== lastTrackedSecondRef.current) {
         lastTrackedSecondRef.current = currentSecond
 
-        setPlayStats(prev => {
-          const newListenCount = [...prev.listenCount]
-          newListenCount[currentSecond] = (newListenCount[currentSecond] || 0) + 1
-          return { listenCount: newListenCount }
+        setListenCount((prev) => {
+          const newListenCount = [...prev]
+          const prevCount = newListenCount[currentSecond] || 0
+          newListenCount[currentSecond] = prevCount + 1
+          return newListenCount
         })
       }
     }
@@ -469,8 +524,8 @@ function EditorPage() {
   }, [audioPlayer])
 
   const getPlayedPercentage = () => {
-    const playedSections = playStats.listenCount.filter(count => count > 0).length
-    return Math.round((playedSections / playStats.listenCount.length) * 100)
+    const playedSections = listenCount.filter((count) => count > 0).length
+    return Math.round((playedSections / listenCount.length) * 100)
   }
 
   const getEditorMode = useCallback((editorMode: string) => {
@@ -490,11 +545,10 @@ function EditorPage() {
       getEditorModeOptions()
     }
 
-    const file = localStorage.getItem(orderDetails?.fileId as string)
-    if (file) {
-      setNotes(JSON.parse(file).notes)
+    if (orderDetails.fileId && initialEditorData?.notes) {
+      setNotes(initialEditorData.notes)
     }
-  }, [orderDetails])
+  }, [orderDetails, initialEditorData])
 
   useEffect(() => {
     if (!orderDetails.orderId || !orderDetails.fileId) return
@@ -510,15 +564,33 @@ function EditorPage() {
     }
   }, [orderDetails, editorMode])
 
+  const updateFormattedTranscript = () => {
+    if (!quillRef?.current) return
+    const quill = quillRef.current.getEditor()
+
+    // Capture the current selection (cursor position)
+    const currentSelection = quill.getSelection()
+
+    const text = quill.getText()
+    const formattedDelta = getFormattedContent(text)
+
+    // Update the editor contents with the new delta
+    quill.setContents(formattedDelta)
+
+    // Restore the original cursor position if it exists
+    if (currentSelection) {
+      quill.setSelection(currentSelection)
+    }
+  }
+
   const getQuillRef = (quillRef: React.RefObject<ReactQuill>) => {
     setQuillRef(quillRef)
   }
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const text = e.target.value
-    setNotes(text)
-
-    localStorage.setItem(orderDetails.fileId, JSON.stringify({ notes: text }))
+    const notes = e.target.value
+    setNotes(notes)
+    persistEditorDataIDB(orderDetails.fileId, { notes })
   }
 
   const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -554,8 +626,40 @@ function EditorPage() {
     setMatchCount(countMatches(findText))
   }, [matchSelection, matchCase])
 
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await getUserEditorSettingsAction()
+        if (response.success && response.settings) {
+          const newSettings: EditorSettings = {
+            wordHighlight: response.settings.wordHighlight,
+            fontSize: response.settings.fontSize,
+            audioRewindSeconds: response.settings.audioRewindSeconds,
+            volume: response.settings.volume,
+            playbackSpeed: response.settings.playbackSpeed,
+            useNativeContextMenu: response.settings.useNativeContextMenu,
+            shortcuts: response.settings.shortcuts,
+          }
+
+          setEditorSettings(newSettings)
+          setHighlightWordsEnabled(newSettings.wordHighlight)
+        }
+      } catch (error) {
+        toast.error('Failed to load editor settings')
+      }
+    }
+
+    loadSettings()
+  }, [])
+
+  useEffect(() => {
+    setHighlightWordsEnabled(editorSettings.wordHighlight)
+  }, [editorSettings])
+
+  console.log(listenCount)
+
   return (
-    <div className='bg-secondary h-screen flex flex-col p-1 gap-y-1'>
+    <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
       <Topbar
         quillRef={quillRef}
         editorModeOptions={editorModeOptions}
@@ -570,6 +674,12 @@ function EditorPage() {
         setRegenCount={setRegenCount}
         setFileToUpload={setFileToUpload}
         fileToUpload={fileToUpload}
+        listenCount={listenCount}
+        editedSegments={editedSegments}
+        editorSettings={editorSettings}
+        onSettingsChange={setEditorSettings}
+        waveformUrl={waveformUrl}
+        audioDuration={audioDuration}
         transcript={transcript}
         ctms={ctms}
       />
@@ -579,9 +689,13 @@ function EditorPage() {
         quillRef={quillRef}
         orderDetails={orderDetails}
         toggleFindAndReplace={toggleFindAndReplace}
+        waveformUrl={waveformUrl}
         highlightWordsEnabled={highlightWordsEnabled}
         setHighlightWordsEnabled={setHighlightWordsEnabled}
-        waveformUrl={waveformUrl}
+        fontSize={fontSize}
+        setFontSize={setFontSize}
+        editorSettings={editorSettings}
+        editorRef={editorRef}
       />
 
       <div className='flex h-full overflow-hidden'>
@@ -600,14 +714,14 @@ function EditorPage() {
             )}
             <div className='flex w-full gap-x-1'>
               <div
-                className={`bg-white border border-customBorder ${step !== 'QC' && editorMode === 'Editor'
+                className={`bg-background border border-customBorder ${step !== 'QC' && editorMode === 'Editor'
                   ? 'rounded-r-md'
                   : 'rounded-md'
                   } w-[80%]`}
               >
                 {selectedSection === 'proceedings' && (
                   <Tabs
-                    onValueChange={handleTabChange}
+                    onValueChange={handleTabsValueChange}
                     defaultValue='transcribe'
                     className='h-full'
                   >
@@ -635,17 +749,27 @@ function EditorPage() {
                     </div>
 
                     <EditorTabComponent
-                      orderDetails={orderDetails}
-                      transcript={transcript}
+                      transcriptLoading={!initialEditorData}
                       ctms={ctms}
                       audioPlayer={audioPlayer}
                       audioDuration={audioDuration}
                       getQuillRef={getQuillRef}
+                      orderDetails={orderDetails}
                       setSelectionHandler={setSelectionHandler}
                       selection={selection}
                       searchHighlight={searchHighlight}
                       highlightWordsEnabled={highlightWordsEnabled}
+                      setFontSize={setFontSize}
                       setEditedSegments={setEditedSegments}
+                      editorSettings={editorSettings}
+                      initialEditorData={
+                        initialEditorData || {
+                          transcript: '',
+                          undoStack: [],
+                          redoStack: [],
+                        }
+                      }
+                      editorRef={editorRef}
                     />
 
                     <DiffTabComponent diff={diff} />
@@ -675,12 +799,12 @@ function EditorPage() {
                     }`}
                 >
                   {findAndReplaceOpen && (
-                    <div className='bg-white border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out h-[50%]'>
+                    <div className='bg-background border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out h-[50%]'>
                       <div className='font-medium text-md border-b border-customBorder flex justify-between items-center p-2'>
                         <span>Find & Replace</span>
                         <button
                           onClick={() => setFindAndReplaceOpen(false)}
-                          className='p-1 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors'
+                          className='p-1 rounded-md text-muted-foreground hover:bg-secondary transition-colors'
                         >
                           <Cross1Icon className='h-4 w-4' />
                         </button>
@@ -694,7 +818,7 @@ function EditorPage() {
                             ref={findInputRef}
                           />
                           {findText && (
-                            <span className='absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500'>
+                            <span className='absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground'>
                               {matchCount} matches
                             </span>
                           )}
@@ -767,7 +891,7 @@ function EditorPage() {
                   )}
 
                   <div
-                    className={`bg-white border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out ${findAndReplaceOpen ? 'h-[50%]' : 'h-full'
+                    className={`bg-background border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out ${findAndReplaceOpen ? 'h-[50%]' : 'h-full'
                       }`}
                   >
                     <div className='font-medium text-md border-b border-customBorder flex items-center p-2'>
@@ -786,7 +910,7 @@ function EditorPage() {
               </div>
             </div>
             {step !== 'QC' && editorMode === 'Editor' && (
-              <div className='bg-white w-[20%] rounded-md border border-customBorder overflow-hidden p-2 ml-1'>
+              <div className='bg-background w-[20%] rounded-md border border-customBorder overflow-hidden p-2 ml-1'>
                 <div className='overflow-y-scroll h-full'>
                   <RenderPDFDocument key={regenCount} file={pdfUrl} />
                 </div>
@@ -804,36 +928,49 @@ function EditorPage() {
             }
           }}
         >
-          <DialogContent className="max-w-4xl">
+          <DialogContent className='max-w-4xl'>
             <DialogHeader>
               <DialogTitle>Submit</DialogTitle>
               <DialogDescription>
                 Please confirm that you want to submit the transcript
               </DialogDescription>
 
-              <div className="py-4">
-                <p className="text-sm text-gray-500 mb-2">
-                  Audio Playback Coverage: <span className="font-medium">{getPlayedPercentage()}%</span>
+              <div className='py-4'>
+                <p className='text-sm text-muted-foreground/80 mb-2'>
+                  Audio Playback Coverage:{' '}
+                  <span className='font-medium'>{getPlayedPercentage()}%</span>
                 </p>
-                <PlayStatsVisualization
+                <WaveformHeatmap
                   waveformUrl={waveformUrl}
-                  playStats={playStats}
+                  listenCount={listenCount}
                   editedSegments={editedSegments}
                   duration={audioDuration}
                 />
               </div>
 
-              {orderDetails.status === 'FINALIZER_ASSIGNED' && <div className='mt-4'>
-                <Label htmlFor='finalizer-comment' className="text-sm text-gray-500">
-                  Comments for CF reviewer:
-                </Label>
-                <div className='h-2' />
-                <Textarea value={finalizerComment} onChange={(e) => { setFinalizerComment(e.target.value) }} id='finalizer-comment' placeholder="Comments for CF reviewer..." />
-              </div>}
+              {orderDetails.status === 'FINALIZER_ASSIGNED' && (
+                <div className='mt-4'>
+                  <Label
+                    htmlFor='finalizer-comment'
+                    className='text-sm text-gray-500'
+                  >
+                    Comments for CF reviewer:
+                  </Label>
+                  <div className='h-2' />
+                  <Textarea
+                    value={finalizerComment}
+                    onChange={(e) => {
+                      setFinalizerComment(e.target.value)
+                    }}
+                    id='finalizer-comment'
+                    placeholder='Comments for CF reviewer...'
+                  />
+                </div>
+              )}
 
-              <div className="flex justify-end gap-2 mt-4">
+              <div className='flex justify-end gap-2 mt-4'>
                 <Button
-                  variant="outline"
+                  variant='outline'
                   onClick={() => {
                     setSubmitting(false)
                     setIsSubmitModalOpen(false)
@@ -854,7 +991,7 @@ function EditorPage() {
                       getPlayedPercentage,
                       router,
                       quill,
-                      finalizerComment
+                      finalizerComment,
                     })
                     setSubmitting(false)
                     setIsSubmitModalOpen(false)
@@ -862,7 +999,7 @@ function EditorPage() {
                   disabled={buttonLoading.submit}
                 >
                   {buttonLoading.submit && (
-                    <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
                   )}
                   Confirm
                 </Button>

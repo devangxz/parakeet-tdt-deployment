@@ -81,7 +81,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className='space-y-4'>
-      <div className='rounded-md border-2 border-customBorder bg-white'>
+      <div className='rounded-md border-2 border-customBorder bg-background'>
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -111,7 +111,7 @@ export function DataTable<TData, TValue>({
                   data-state={row.getIsSelected() && 'selected'}
                   className={`${
                     calculateDifferenceInHours(row.getValue('date')) <= 1 &&
-                    'bg-[#FFFBEB]'
+                    'dark:bg-indigo-950/40 bg-[#FFFBEB]'
                   }`}
                 >
                   {row.getVisibleCells().map((cell) => (
