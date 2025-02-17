@@ -80,6 +80,7 @@ async function completeQCJob(order: Order, transcriberId: number) {
       order.fileId,
       transcriberId,
       inputFileType,
+      'AUTO',
       changeOrderStatus
     )
   }

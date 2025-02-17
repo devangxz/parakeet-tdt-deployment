@@ -60,7 +60,8 @@ export async function reassignReview(formData: {
       Number(orderId),
       orderInformation.fileId,
       user.id,
-      retainEarnings ? InputFileType.REVIEW_OUTPUT : InputFileType.LLM_OUTPUT
+      retainEarnings ? InputFileType.REVIEW_OUTPUT : InputFileType.LLM_OUTPUT,
+      'MANUAL'
     )
 
     await prisma.jobAssignment.update({

@@ -1,6 +1,12 @@
 'use server'
 
-import { JobStatus, JobType, OrderStatus, InputFileType } from '@prisma/client'
+import {
+  JobStatus,
+  JobType,
+  OrderStatus,
+  InputFileType,
+  AssignMode,
+} from '@prisma/client'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
@@ -94,7 +100,8 @@ export async function assignQC(orderId: number) {
       order.status === 'TRANSCRIBED'
         ? InputFileType.ASR_OUTPUT
         : InputFileType.LLM_OUTPUT,
-      order.fileId
+      order.fileId,
+      AssignMode.AUTO
     )
 
     logger.info(`QC ${transcriberId} assigned for order ${orderId}`)

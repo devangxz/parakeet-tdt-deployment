@@ -39,7 +39,7 @@ export default async function SelectedPage({ params }: PageProps) {
   if (fileIds.length === 0) {
     return (
       <div className='p-4'>
-        <h1 className='text-2xl font-semibold'>Selected Files</h1>
+        <h1 className='text-2xl font-semibold'>Permalink Files</h1>
         <p>No valid file IDs provided.</p>
       </div>
     )
@@ -49,7 +49,7 @@ export default async function SelectedPage({ params }: PageProps) {
   if (!response.success) {
     return (
       <div className='p-4'>
-        <h1 className='text-2xl font-semibold'>Selected Files</h1>
+        <h1 className='text-2xl font-semibold'>Permalink Files</h1>
         <p>Error fetching files: {response.message}</p>
       </div>
     )
@@ -74,7 +74,7 @@ export default async function SelectedPage({ params }: PageProps) {
       <div className='flex items-start justify-between mb-3'>
         <div>
           <h1 className='text-lg font-semibold md:text-lg'>
-            Selected ({selectedFiles?.length || 0})
+            Permalink ({selectedFiles?.length || 0})
           </h1>
         </div>
       </div>

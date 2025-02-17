@@ -437,6 +437,7 @@ model JobAssignment {
   type               JobType       @default(QC)
   inputFile          InputFileType @default(ASR_OUTPUT) @map("input_file")
   extensionRequested Boolean       @default(false) @map("extension_requested")
+  assignMode         AssignMode    @default(AUTO) @map("assign_mode")
 
   user  User  @relation(fields: [transcriberId], references: [id])
   order Order @relation(fields: [orderId], references: [id])

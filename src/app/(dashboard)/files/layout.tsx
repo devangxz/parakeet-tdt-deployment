@@ -63,7 +63,7 @@ export default function FilesLayout({
     },
   ]
 
-  if (pathname?.startsWith('/files/selected/')) {
+  if (pathname?.startsWith('/files/permalink/')) {
     sidebarItems.push({
       href: pathname,
       name: 'Selected',

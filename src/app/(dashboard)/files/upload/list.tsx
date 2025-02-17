@@ -500,7 +500,7 @@ const FileList = ({
               Go to folder
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => router.push(`/files/selected/${row.original.id}`)}
+              onClick={() => router.push(`/files/permalink/${row.original.id}`)}
             >
               Permalink
             </DropdownMenuItem>
@@ -559,7 +559,7 @@ const FileList = ({
       toast.error('Please select at least one file')
       return
     }
-    router.push(`/files/selected/${selectedFiles.join(',')}`)
+    router.push(`/files/permalink/${selectedFiles.join(',')}`)
   }
 
   return (
