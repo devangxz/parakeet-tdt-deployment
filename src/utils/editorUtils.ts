@@ -24,6 +24,7 @@ import {
     BACKEND_URL,
     FILE_CACHE_URL,
     MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
+    COMMON_ABBREVIATIONS,
 } from '@/constants'
 import { CTMType, UndoRedoItem } from '@/types/editor'
 import { getEditorDataIDB, persistEditorDataIDB, deleteEditorDataIDB } from '@/utils/indexedDB'
@@ -611,11 +612,11 @@ const handleSave = async (
     }
 }
 
-function autoCapitalizeSentences(quillRef: React.RefObject<ReactQuill> | undefined) {
-    if (!quillRef?.current) return;
+function autoCapitalizeSentences(quillRef: React.RefObject<ReactQuill> | undefined, autoCapitalizeEnabled: boolean) {
+    if (!quillRef?.current || !autoCapitalizeEnabled) return;
     const quill = quillRef.current.getEditor();
     const text = quill.getText();
-
+    
     // 1. Handle lines that start with a timestamp and speaker label pattern,
     // e.g. "00:00:00.0 S1:" followed by a lowercase letter.
     const regexTimestampSpeaker = /^(\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:)\s*([a-z])/gm;
@@ -632,14 +633,25 @@ function autoCapitalizeSentences(quillRef: React.RefObject<ReactQuill> | undefin
         quill.deleteText(charIndex, 1, 'user');
         quill.insertText(charIndex, group2.toUpperCase(), 'user');
     }
-
-    // 2. Auto capitalize sentences after punctuation (as your original logic)
-    const regex = /([.!?])\s+([a-z])/g;
-    while ((match = regex.exec(text)) !== null) {
-        // The letter to be capitalized is the last character (after punctuation and spaces)
+    
+    // 2. Auto capitalize after ! and ? (always capitalize these)
+    const regexExclamationQuestion = /([!?])\s+([a-z])/g;
+    while ((match = regexExclamationQuestion.exec(text)) !== null) {
         const charIndex = match.index + match[0].length - 1;
         quill.deleteText(charIndex, 1, 'user');
         quill.insertText(charIndex, match[2].toUpperCase(), 'user');
+    }
+    
+    // 3. Handle periods with abbreviation checking
+    const regexPeriod = /(\S+)\.\s+([a-z])/g;
+    while ((match = regexPeriod.exec(text)) !== null) {
+        const wordBeforePeriod = match[1].toLowerCase();
+        // Only capitalize if the word before period is not an abbreviation
+        if (!COMMON_ABBREVIATIONS.has(wordBeforePeriod)) {
+            const charIndex = match.index + match[0].length - 1;
+            quill.deleteText(charIndex, 1, 'user');
+            quill.insertText(charIndex, match[2].toUpperCase(), 'user');
+        }
     }
 }
 
