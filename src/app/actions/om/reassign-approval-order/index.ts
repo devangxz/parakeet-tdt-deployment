@@ -61,7 +61,8 @@ export async function reassignApprovalOrder(formData: {
       user.id,
       JobType.QC,
       retainTranscript ? InputFileType.QC_OUTPUT : InputFileType.ASR_OUTPUT,
-      orderInformation.fileId
+      orderInformation.fileId,
+      'MANUAL'
     )
 
     await prisma.jobAssignment.update({

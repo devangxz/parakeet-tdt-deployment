@@ -626,7 +626,7 @@ const InvoicesDetailDialog = ({
   }, [open])
 
   const handleCheckStatus = () => {
-    window.open(`/files/selected/${invoice?.fileIds}`, '_blank')
+    window.open(`/files/permalink/${invoice?.fileIds}`, '_blank')
   }
 
   return (

@@ -49,7 +49,8 @@ export async function assignQC(fileId: string, userEmail: string) {
       user.id,
       JobType.QC,
       InputFileType.ASR_OUTPUT,
-      fileId
+      fileId,
+      'MANUAL'
     )
 
     logger.info(`Successfully assigned qc for file ${fileId}`)

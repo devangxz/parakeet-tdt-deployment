@@ -1,4 +1,10 @@
-import { JobStatus, OrderStatus, JobType, InputFileType } from '@prisma/client'
+import {
+  JobStatus,
+  OrderStatus,
+  JobType,
+  InputFileType,
+  AssignMode,
+} from '@prisma/client'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
@@ -45,7 +51,8 @@ export const updateOrderAndCreateJobAssignment = async (
   currentOrderStatus: OrderStatus,
   transcriberId: number,
   jobType: JobType,
-  inputFile: InputFileType
+  inputFile: InputFileType,
+  assignMode: AssignMode
 ) => {
   logger.info(`--> updateOrderAndCreateJobAssignment ${orderId}`)
   try {
@@ -64,6 +71,7 @@ export const updateOrderAndCreateJobAssignment = async (
           type: jobType,
           transcriberId: transcriberId,
           inputFile: inputFile,
+          assignMode,
         },
       })
     })

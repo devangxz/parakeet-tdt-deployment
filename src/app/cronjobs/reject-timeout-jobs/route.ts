@@ -34,6 +34,10 @@ export async function POST() {
           continue
         }
 
+        if (file.assignMode === 'MANUAL') {
+          continue
+        }
+
         let timeoutMultiplier = 4
         if (file.order.File.duration <= 1800) {
           // Less than 30 mins

@@ -1,4 +1,4 @@
-import { InputFileType, OrderStatus, JobType } from '@prisma/client'
+import { InputFileType, OrderStatus, JobType, AssignMode } from '@prisma/client'
 
 import { updateOrderAndCreateJobAssignment } from './update-order'
 import logger from '@/lib/logger'
@@ -8,7 +8,8 @@ const assignFileToFinalizer = async (
   orderId: number,
   fileId: string,
   transcriberId: number,
-  inputFile: InputFileType
+  inputFile: InputFileType,
+  assignMode: AssignMode
 ) => {
   logger.info(`--> assignFileToFinalizer ${orderId} ${transcriberId}`)
   try {
@@ -17,7 +18,8 @@ const assignFileToFinalizer = async (
       OrderStatus.FINALIZER_ASSIGNED,
       transcriberId,
       JobType.FINALIZE,
-      inputFile
+      inputFile,
+      assignMode
     )
 
     const templateData = {

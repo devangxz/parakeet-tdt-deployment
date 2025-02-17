@@ -126,7 +126,7 @@ export default function InprogressFilesPage({ files }: ListProps) {
       toast.error('Please select at least one file')
       return
     }
-    router.push(`/files/selected/${selectedFiles.join(',')}`)
+    router.push(`/files/permalink/${selectedFiles.join(',')}`)
   }
 
   if (isLoading) {
@@ -324,7 +324,7 @@ export default function InprogressFilesPage({ files }: ListProps) {
               Go to folder
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => router.push(`/files/selected/${row.original.id}`)}
+              onClick={() => router.push(`/files/permalink/${row.original.id}`)}
             >
               Permalink
             </DropdownMenuItem>

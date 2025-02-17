@@ -607,7 +607,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() =>
-                      router.push(`/files/selected/${row.original.id}`)
+                      router.push(`/files/permalink/${row.original.id}`)
                     }
                   >
                     Permalink
@@ -732,7 +732,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
       toast.error('No files selected for permalink')
       return
     }
-    router.push(`/files/selected/${fileIds.join(',')}`)
+    router.push(`/files/permalink/${fileIds.join(',')}`)
   }
 
   return (
