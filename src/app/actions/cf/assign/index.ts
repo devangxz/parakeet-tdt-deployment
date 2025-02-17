@@ -88,7 +88,8 @@ export async function assignFileToReviewer(orderId: number) {
       orderId,
       order.fileId,
       transcriberId,
-      InputFileType.REVIEW_OUTPUT
+      InputFileType.REVIEW_OUTPUT,
+      'AUTO'
     )
 
     logger.info(`Reviewer ${transcriberId} assigned for order ${orderId}`)

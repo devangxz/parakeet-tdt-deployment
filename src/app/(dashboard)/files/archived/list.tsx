@@ -319,7 +319,7 @@ export default function ArchivedFilesPage({ files }: { files: File[] }) {
               session?.user?.adminAccess) && (
               <Button
                 variant='order'
-                className='not-rounded w-[140px]'
+                className='not-rounded w-[140px] mr-2'
                 onClick={async () => {
                   try {
                     if (selectedFiles.length === 0) {

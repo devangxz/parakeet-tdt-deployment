@@ -500,6 +500,11 @@ const FileList = ({
               Go to folder
             </DropdownMenuItem>
             <DropdownMenuItem
+              onClick={() => router.push(`/files/permalink/${row.original.id}`)}
+            >
+              Permalink
+            </DropdownMenuItem>
+            <DropdownMenuItem
               className='text-red-500'
               onClick={() => {
                 setSeletedFile({
@@ -549,6 +554,14 @@ const FileList = ({
     }
   }
 
+  const handleBulkPermalink = () => {
+    if (selectedFiles.length === 0) {
+      toast.error('Please select at least one file')
+      return
+    }
+    router.push(`/files/permalink/${selectedFiles.join(',')}`)
+  }
+
   return (
     <div className='h-full flex-1 flex-col md:flex'>
       <div className='flex items-start justify-between mb-3'>
@@ -559,7 +572,7 @@ const FileList = ({
           {(session?.user?.role === 'ADMIN' || session?.user?.adminAccess) && (
             <Button
               variant='order'
-              className='not-rounded w-[140px]'
+              className='not-rounded w-[140px] mr-2'
               onClick={async () => {
                 try {
                   if (selectedFiles.length === 0) {
@@ -636,6 +649,10 @@ const FileList = ({
                   Transfer Files
                 </DropdownMenuItem>
               )}
+
+              <DropdownMenuItem onClick={handleBulkPermalink}>
+                Permalink
+              </DropdownMenuItem>
 
               <DropdownMenuItem
                 className='text-red-500'

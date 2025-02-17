@@ -1,7 +1,7 @@
 'use client'
-
 import { Cross2Icon } from '@radix-ui/react-icons'
 import { Table } from '@tanstack/react-table'
+import * as React from 'react'
 
 import { DataTableFacetedFilter } from './table-filter'
 import { Button } from '@/components/ui/button'
@@ -17,8 +17,8 @@ export function DataTableToolbar<TData>({
   const isFiltered = table.getState().columnFilters.length > 0
 
   return (
-    <div className='flex items-center justify-between'>
-      <div className='flex flex-1 items-center space-x-2'>
+    <div className='flex flex-wrap items-center justify-between p-2'>
+      <div className='flex items-center space-x-2'>
         <Input
           placeholder='Search fileIds...'
           value={(table.getColumn('fileId')?.getFilterValue() as string) ?? ''}
@@ -31,9 +31,31 @@ export function DataTableToolbar<TData>({
           <DataTableFacetedFilter
             column={table.getColumn('orgName')}
             title='Organization'
+            options={Array.from(
+              table.getColumn('orgName')?.getFacetedUniqueValues().keys() || []
+            ).map((value) => ({ label: String(value), value: String(value) }))}
+          />
+        )}
+        {table.getColumn('diff') && (
+          <DataTableFacetedFilter
+            column={table.getColumn('diff')}
+            title='Difficulty'
             options={[
-              { value: 'REMOTELEGAL', label: 'Remote Legal' },
-              { value: 'ACR', label: 'ACR' },
+              { label: 'Low', value: 'LOW' },
+              { label: 'Medium', value: 'MEDIUM' },
+              { label: 'High', value: 'HIGH' },
+            ]}
+          />
+        )}
+        {/* Duration Filter */}
+        {table.getColumn('duration') && (
+          <DataTableFacetedFilter
+            column={table.getColumn('duration')}
+            title='Duration'
+            options={[
+              { label: '<2 hours', value: 'lt2' },
+              { label: '2-3 hours', value: '2to3' },
+              { label: '>3 hours', value: 'gt3' },
             ]}
           />
         )}

@@ -2,7 +2,13 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import { FileWarning, FolderClosed, FolderPlusIcon, Undo2Icon, X, } from 'lucide-react'
+import {
+  FileWarning,
+  FolderClosed,
+  FolderPlusIcon,
+  Undo2Icon,
+  X,
+} from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Session } from 'next-auth'
@@ -141,6 +147,8 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
   const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] =
     useState(false)
 
+  const [selectedFiles, setSelectedFiles] = useState<CustomFile[]>([])
+
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
@@ -191,7 +199,6 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
   }
 
   const fetchAllFolders = async () => {
-
     try {
       setIsAllFoldersLoading(true)
       const folders = await getFolders(folderId || 'null')
@@ -241,8 +248,6 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
   }, [folderId])
 
   const isPageLoading = isAllFilesLoading || isAllFoldersLoading || isLoading
-
-  const [selectedFiles, setSelectedFiles] = useState<CustomFile[]>([])
 
   const handleSelectedRowsChange = (selectedRowsData: CustomFile[]) => {
     setSelectedFiles(selectedRowsData)
@@ -396,6 +401,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
 
     return statuses[status as keyof typeof statuses] || statuses.DEFAULT
   }
+
   const columns: ColumnDef<CustomFile>[] = [
     {
       id: 'select',
@@ -599,23 +605,30 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
                   >
                     Move File
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      router.push(`/files/permalink/${row.original.id}`)
+                    }
+                  >
+                    Permalink
+                  </DropdownMenuItem>
                   {getStatus(row.original.status)?.label !==
                     'Draft Transcript' && (
-                      <DropdownMenuItem
-                        className='text-red-500'
-                        onClick={() => {
-                          setSeletedFile({
-                            fileId: row.original.id,
-                            name: row.original.name,
-                            orderId: row.original?.orderId?.toString() ?? '',
-                            orderType: row.original?.orderType ?? '',
-                          })
-                          setOpenDeleteDialog(true)
-                        }}
-                      >
-                        Delete
-                      </DropdownMenuItem>
-                    )}
+                    <DropdownMenuItem
+                      className='text-red-500'
+                      onClick={() => {
+                        setSeletedFile({
+                          fileId: row.original.id,
+                          name: row.original.name,
+                          orderId: row.original?.orderId?.toString() ?? '',
+                          orderType: row.original?.orderType ?? '',
+                        })
+                        setOpenDeleteDialog(true)
+                      }}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -711,6 +724,17 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
     }
   }
 
+  const handleBulkPermalink = () => {
+    const fileIds = selectedFiles
+      .filter((file) => 'orderType' in file && file.orderType)
+      .map((file) => file.id)
+    if (fileIds.length === 0) {
+      toast.error('No files selected for permalink')
+      return
+    }
+    router.push(`/files/permalink/${fileIds.join(',')}`)
+  }
+
   return (
     <>
       <div className='h-full flex-1 flex-col p-4 md:flex'>
@@ -777,7 +801,9 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
                   >
                     Download
                   </DropdownMenuItem>
-
+                  <DropdownMenuItem onClick={handleBulkPermalink}>
+                    Permalink
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     className='text-red-500'
                     onClick={handleBulkDelete}
@@ -802,7 +828,9 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
                 <BreadcrumbItem key={item?.id}>
                   {0 == index && <BreadcrumbSeparator />}
                   <BreadcrumbLink>
-                    <Link href={`/files/all-files?folderId=${item?.id}`}>{item?.name}</Link>
+                    <Link href={`/files/all-files?folderId=${item?.id}`}>
+                      {item?.name}
+                    </Link>
                   </BreadcrumbLink>
                   {parentFolders?.length - 1 > index && <BreadcrumbSeparator />}
                 </BreadcrumbItem>
@@ -811,14 +839,28 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
           </Breadcrumb>
           <div className='flex items-center gap-x-2'>
             <Button
-              variant="outline"
+              variant='outline'
               className='not-rounded gap-2 border-2 border-customBorder'
-              onClick={() => router.push(`/files/all-files${parentFolders?.[parentFolders.length - 1]?.parentId ? `?folderId=${parentFolders[parentFolders.length - 1].parentId}` : ''}`)}
+              onClick={() =>
+                router.push(
+                  `/files/all-files${
+                    parentFolders?.[parentFolders.length - 1]?.parentId
+                      ? `?folderId=${
+                          parentFolders[parentFolders.length - 1].parentId
+                        }`
+                      : ''
+                  }`
+                )
+              }
               disabled={!folderId}
             >
               <Undo2Icon size={18} />
             </Button>
-            <Button onClick={() => setIsCreateFolderDialogOpen(true)} variant="outline" className='not-rounded gap-2 border-2 border-customBorder'>
+            <Button
+              onClick={() => setIsCreateFolderDialogOpen(true)}
+              variant='outline'
+              className='not-rounded gap-2 border-2 border-customBorder'
+            >
               Create folder
               <FolderPlusIcon size={18} />
             </Button>
@@ -826,27 +868,30 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
         </div>
 
         <DataTable
-          data={[...(allFiles ?? []), ...(allFolders ?? [])] as unknown as CustomFile[]}
+          data={
+            [
+              ...(allFiles ?? []),
+              ...(allFolders ?? []),
+            ] as unknown as CustomFile[]
+          }
           columns={columns as ColumnDef<CustomFile, unknown>[]}
           onSelectedRowsChange={handleSelectedRowsChange}
           onFileDrop={handleFileDrop}
         />
       </div>
 
-      {
-        selectedFile && toggleCheckAndDownload && (
-          <CheckAndDownload
-            id={selectedFile.fileId || ''}
-            orderId={selectedFile.orderId || ''}
-            orderType={selectedFile.orderType || ''}
-            filename={selectedFile.name || ''}
-            toggleCheckAndDownload={toggleCheckAndDownload}
-            setToggleCheckAndDownload={setToggleCheckAndDownload}
-            txtSignedUrl={signedUrls.txtSignedUrl || ''}
-            cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
-          />
-        )
-      }
+      {selectedFile && toggleCheckAndDownload && (
+        <CheckAndDownload
+          id={selectedFile.fileId || ''}
+          orderId={selectedFile.orderId || ''}
+          orderType={selectedFile.orderType || ''}
+          filename={selectedFile.name || ''}
+          toggleCheckAndDownload={toggleCheckAndDownload}
+          setToggleCheckAndDownload={setToggleCheckAndDownload}
+          txtSignedUrl={signedUrls.txtSignedUrl || ''}
+          cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
+        />
+      )}
       <DraftTranscriptFileDialog
         open={openDraftTranscriptDialog}
         onClose={() => setDraftTranscriptDialog(false)}

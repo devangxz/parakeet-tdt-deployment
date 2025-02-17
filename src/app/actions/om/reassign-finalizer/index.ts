@@ -60,7 +60,8 @@ export async function reassignFinalizer(formData: {
       Number(orderId),
       orderInformation.fileId,
       user.id,
-      InputFileType.REVIEW_OUTPUT
+      InputFileType.REVIEW_OUTPUT,
+      'MANUAL'
     )
 
     await prisma.jobAssignment.update({

@@ -99,7 +99,7 @@ export const processPayment = async (
         body += `<td style='text-align:center;border:1px solid #cccccc;padding:5px' align='center' border='1' cellpadding='5'>${
           index + 1
         }</td>`
-        body += `<td style='text-align:left;border:1px solid #cccccc;padding:5px' align='left' border='1' cellpadding='5'><a target='_blank' href='https://${process.env.SERVER}/files/all-files/?ids=${file.fileId}'>${file.File.filename}</a></td>`
+        body += `<td style='text-align:left;border:1px solid #cccccc;padding:5px' align='left' border='1' cellpadding='5'><a target='_blank' href='https://${process.env.SERVER}/files/permalink/${file.fileId}'>${file.File.filename}</a></td>`
         body += `<td style='text-align:center;border:1px solid #cccccc;padding:5px' align='center' border='1' cellpadding='5'>${new Date(
           file.createdAt
         ).toLocaleDateString()}</td>`
@@ -110,7 +110,7 @@ export const processPayment = async (
       })
 
       const templateData = {
-        file_url: `https://${process.env.SERVER}/files/all-files/?ids=${invoice.itemNumber}`,
+        file_url: `https://${process.env.SERVER}/files/permalink/${invoice.itemNumber}`,
         rate_name: 'Manual (24 hours)',
         transaction_id: transactionId,
         payment_url: `https://${process.env.SERVER}/payments?id=${invoice.invoiceId}`,
