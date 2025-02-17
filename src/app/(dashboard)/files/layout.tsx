@@ -66,7 +66,7 @@ export default function FilesLayout({
   if (pathname?.startsWith('/files/permalink/')) {
     sidebarItems.push({
       href: pathname,
-      name: 'Selected',
+      name: 'Permalink',
       icon: File,
       isActive: true,
     })
