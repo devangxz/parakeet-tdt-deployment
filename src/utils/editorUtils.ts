@@ -2,7 +2,7 @@
 import axios from 'axios'
 import { Session } from 'next-auth'
 import Quill from 'quill'
-import { Op } from 'quill/core'
+import { Delta, Op } from 'quill/core'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
@@ -1288,6 +1288,24 @@ function getFormattedContent(text: string): Op[] {
     return formattedContent
 }
 
+const updateTranscript = (
+    quillRef: React.RefObject<ReactQuill> | undefined,
+    content: string,
+) => {
+    if (!quillRef?.current) return
+    const quill = quillRef.current.getEditor()
+
+    const formattedOps = getFormattedContent(content)
+    const updateDelta = new Delta().delete(quill.getText().length)
+    formattedOps.forEach((op) => {
+        if (op.insert !== undefined) {
+            updateDelta.insert(op.insert, op.attributes || {})
+        }
+    })
+
+    quill.updateContents(updateDelta, 'user')
+}
+
 export {
     generateRandomColor,
     convertBlankToSeconds,
@@ -1314,6 +1332,7 @@ export {
     insertTimestampBlankAtCursorPosition,
     insertTimestampAndSpeaker,
     autoCapitalizeSentences,
-    getFormattedContent
+    getFormattedContent,
+    updateTranscript
 }
 export type { CTMType }
