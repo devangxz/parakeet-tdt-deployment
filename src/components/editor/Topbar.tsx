@@ -287,7 +287,6 @@ export default memo(function Topbar({
   const getFormattedContent = (text: string) => {
     const formattedContent: Op[] = [];
     let lastIndex = 0;
-    const lastSpeakerEnd = 0;
     // Update pattern to explicitly include the timestamp+blank pattern
     const pattern = /(\d:\d{2}:\d{2}\.\d\s+S\d+:|(?:\[\d:\d{2}:\d{2}\.\d\]\s+____)|\[[^\]]+\])/g;
     let match;

@@ -1,8 +1,10 @@
 "use client";
 
 import { ReloadIcon } from "@radix-ui/react-icons";
+import { useTheme } from "next-themes";
 import React, { useCallback, useEffect, useMemo, useState, memo } from "react";
 
+import { Stepper } from "./Stepper";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
 import { Progress } from "../ui/progress";
@@ -15,8 +17,6 @@ import { cn } from "@/lib/utils";
 import axios from "@/utils/axios";
 import { ButtonLoading, chunkTranscript, CTMType, findOptimalChunkPoints, handleSave } from "@/utils/editorUtils";
 import { diff_match_patch, DIFF_DELETE, DIFF_INSERT, DIFF_EQUAL } from "@/utils/transcript/diff_match_patch";
-import { useTheme } from "next-themes";
-import { Stepper } from "./Stepper";
 
 interface ReviewWithGeminiDialogProps {
   reviewModalOpen: boolean;
@@ -428,7 +428,7 @@ export default function ReviewTranscriptDialog({
         )
       )
       .filter((element) => element !== null)
-  , [diffs, handleAccept, handleReject]);
+  ,[diffs, handleAccept, handleReject]);
 
   return (
     <Dialog open={reviewModalOpen} onOpenChange={setReviewModalOpen}>
@@ -448,9 +448,7 @@ export default function ReviewTranscriptDialog({
         <div className="px-4 pt-2">
           <Stepper steps={['Options', 'Review', 'Preview']} activeStep={activeStepIndex} />
         </div>
-        
-
-        
+                
         {step === 'options' && (
           transcript ? (
             <ReviewGeminiOptions

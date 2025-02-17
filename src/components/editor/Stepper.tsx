@@ -1,28 +1,28 @@
 'use client';
 
-import * as React from 'react';
-import { useTheme } from 'next-themes';
-import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
+import * as React from 'react';
+
+import { cn } from '@/lib/utils';
 
 // Define our theme tokens
-const getThemeTokens = (theme: 'dark' | 'light') => ({
-  colors: {
-    primary: {
-      main: theme === 'dark' ? 'hsl(var(--primary))' : 'hsl(var(--primary))',
-      light: theme === 'dark' ? 'hsl(var(--primary-foreground))' : 'hsl(var(--primary))',
-    },
-    background: {
-      default: theme === 'dark' ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
-      active: 'hsl(var(--primary))',
-    },
-    text: {
-      primary: theme === 'dark' ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))',
-      secondary: theme === 'dark' ? 'hsl(var(--muted-foreground))' : 'hsl(var(--muted-foreground))',
-      completed: theme === 'dark' ? 'hsl(var(--primary-foreground))' : 'hsl(var(--primary))',
-    },
-  },
-});
+// const getThemeTokens = (theme: 'dark' | 'light') => ({
+//   colors: {
+//     primary: {
+//       main: theme === 'dark' ? 'hsl(var(--primary))' : 'hsl(var(--primary))',
+//       light: theme === 'dark' ? 'hsl(var(--primary-foreground))' : 'hsl(var(--primary))',
+//     },
+//     background: {
+//       default: theme === 'dark' ? 'hsl(var(--muted))' : 'hsl(var(--muted))',
+//       active: 'hsl(var(--primary))',
+//     },
+//     text: {
+//       primary: theme === 'dark' ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))',
+//       secondary: theme === 'dark' ? 'hsl(var(--muted-foreground))' : 'hsl(var(--muted-foreground))',
+//       completed: theme === 'dark' ? 'hsl(var(--primary-foreground))' : 'hsl(var(--primary))',
+//     },
+//   },
+// });
 
 interface StepperProps {
   steps: string[];
@@ -34,11 +34,9 @@ interface StepperProps {
 const StepConnector: React.FC<{ active?: boolean; completed?: boolean }> = ({ 
   active, 
   completed 
-}) => {
-  const { theme } = useTheme();
-  const tokens = getThemeTokens(theme as 'dark' | 'light');
-
-  return (
+}) => 
+  // const { theme } = useTheme();
+ (
     <div
       className={cn(
         'absolute left-0 top-[15px] -ml-px h-0.5 w-full transition-colors duration-200',
@@ -49,7 +47,6 @@ const StepConnector: React.FC<{ active?: boolean; completed?: boolean }> = ({
       )}
     />
   );
-};
 
 // The step icon
 const StepIcon: React.FC<{ 
@@ -57,8 +54,8 @@ const StepIcon: React.FC<{
   completed?: boolean; 
   step: number;
 }> = ({ active, completed, step }) => {
-  const { theme } = useTheme();
-  const tokens = getThemeTokens(theme as 'dark' | 'light');
+  // const { theme } = useTheme();
+  // const tokens = getThemeTokens(theme as 'dark' | 'light');
 
   return (
     <div
@@ -85,8 +82,7 @@ const StepLabel: React.FC<{
   label: string; 
   active?: boolean; 
   completed?: boolean;
-}> = ({ label, active, completed }) => {
-  return (
+}> = ({ label, active, completed }) => (
     <span
       className={cn(
         'mt-2 text-sm font-medium transition-colors duration-200',
@@ -100,7 +96,6 @@ const StepLabel: React.FC<{
       {label}
     </span>
   );
-};
 
 export const Stepper: React.FC<StepperProps> = ({ 
   steps, 
