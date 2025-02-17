@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
 import { completeWithdrawalAction } from '@/app/actions/admin/complete-withdrawal'
+import { fetchPaypalAmount } from '@/app/actions/admin/fetch-paypal-amount'
 import { getInitiatedWithdrawalsAction } from '@/app/actions/admin/get-initiated-withdrawals'
 import { getPendingWithdrawalsAction } from '@/app/actions/admin/get-pending-withdrawals'
 import { initiateWithdrawalAction } from '@/app/actions/admin/initiate-withdrawal'
@@ -61,6 +62,15 @@ export default function WithdrawalPage() {
     useState(false)
   const [loadingCompleteWithdrawal, setLoadingCompleteWithdrawal] =
     useState(false)
+
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${(now.getMonth() + 1)
+      .toString()
+      .padStart(2, '0')}`
+  })
+  const [paypalAmount, setPaypalAmount] = useState<number | null>(null)
+  const [loadingPaypalAmount, setLoadingPaypalAmount] = useState(false)
 
   const fetchPendingWithdrawals = async (showLoader = false) => {
     if (showLoader) {
@@ -138,7 +148,6 @@ export default function WithdrawalPage() {
   const [selectedPendingWithdrawals, setSelectedPendingWithdrawals] = useState<
     Withdrawal[]
   >([])
-
   const [selectedInitiatedWithdrawals, setSelectedInitiatedWithdrawals] =
     useState<Withdrawal[]>([])
 
@@ -150,6 +159,31 @@ export default function WithdrawalPage() {
     selectedRowsData: Withdrawal[]
   ) => {
     setSelectedInitiatedWithdrawals(selectedRowsData)
+  }
+
+  const handleFetchPaypalAmount = async () => {
+    if (!selectedMonth) {
+      toast.error('Please select a valid month.')
+      return
+    }
+    const [year, month] = selectedMonth.split('-').map(Number)
+    const startDate = new Date(year, month - 1, 1)
+    const endDate = new Date(year, month, 0)
+    endDate.setHours(23, 59, 59, 999)
+
+    setLoadingPaypalAmount(true)
+    try {
+      const response = await fetchPaypalAmount({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      })
+      setPaypalAmount(response)
+      toast.success('Fetched PayPal amount successfully.')
+    } catch (err) {
+      toast.error('Failed to fetch PayPal amount.')
+    } finally {
+      setLoadingPaypalAmount(false)
+    }
   }
 
   if (isLoading || isInitiatedLoading) {
@@ -371,6 +405,42 @@ export default function WithdrawalPage() {
         </>
       ) : (
         <>
+          <div className='p-8'>
+            <div className='mb-4'>
+              <h2 className='text-lg font-semibold md:text-lg'>
+                Fetch PayPal Amount Paid
+              </h2>
+            </div>
+            <div className=''>
+              <input
+                type='month'
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className='p-2 border rounded'
+              />{' '}
+              <br />
+              <Button
+                variant='order'
+                className='not-rounded mt-4'
+                onClick={handleFetchPaypalAmount}
+                disabled={loadingPaypalAmount}
+              >
+                {loadingPaypalAmount ? (
+                  <>
+                    Fetching
+                    <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+                  </>
+                ) : (
+                  'Fetch Amount'
+                )}
+              </Button>
+            </div>
+            {paypalAmount !== null && (
+              <p className='mt-3 text-base'>
+                Total Amount Paid: <b>${paypalAmount.toFixed(2)}</b>
+              </p>
+            )}
+          </div>
           <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
             <div className='flex items-center justify-between space-y-2'>
               <div className='flex items-center gap-5'>
