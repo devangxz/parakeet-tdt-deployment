@@ -656,8 +656,6 @@ function EditorPage() {
     setHighlightWordsEnabled(editorSettings.wordHighlight)
   }, [editorSettings])
 
-  console.log(listenCount)
-
   return (
     <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
       <Topbar
@@ -680,7 +678,7 @@ function EditorPage() {
         onSettingsChange={setEditorSettings}
         waveformUrl={waveformUrl}
         audioDuration={audioDuration}
-        transcript={transcript}
+        transcript={initialEditorData?.transcript || ""}
         ctms={ctms}
       />
 

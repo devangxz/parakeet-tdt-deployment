@@ -293,12 +293,7 @@ export default memo(function Topbar({
     let match;
     
     while ((match = pattern.exec(text)) !== null) {
-      if (match[0].match(/^\d:\d{2}:\d{2}\.\d\s+S\d+:/) && lastSpeakerEnd > 0) {
-        const contentBeforeSpeaker = text.slice(lastIndex, match.index).trim();
-        formattedContent.push({ 
-            insert: contentBeforeSpeaker + "\n\n" // Add double newline for spacing
-        });
-    } else if (match.index > lastIndex) {
+       if (match.index > lastIndex) {
         formattedContent.push({ 
             insert: text.slice(lastIndex, match.index)
         });

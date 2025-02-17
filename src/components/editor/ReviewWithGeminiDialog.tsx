@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 import axios from "@/utils/axios";
 import { ButtonLoading, chunkTranscript, CTMType, findOptimalChunkPoints, handleSave } from "@/utils/editorUtils";
 import { diff_match_patch, DIFF_DELETE, DIFF_INSERT, DIFF_EQUAL } from "@/utils/transcript/diff_match_patch";
+import { useTheme } from "next-themes";
+import { Stepper } from "./Stepper";
 
 interface ReviewWithGeminiDialogProps {
   reviewModalOpen: boolean;
@@ -174,7 +176,7 @@ export function ReviewGeminiOptions({
         </div>
       </div>
       <div className='flex space-x-2'>
-        <p className="text-sm font-medium">Response Variability :</p>
+        <p className="text-sm font-medium">Temperature :</p>
         <Slider
           value={[temperature]}
           onValueChange={(value: number[]) => setTemperature(value[0])}
@@ -212,12 +214,13 @@ export const DiffSegmentItem: React.FC<DiffSegmentItemProps> = memo(function Dif
   onAccept,
   onReject,
 }) {
+  const { theme } = useTheme();
   const isActionable = diff.type === DIFF_INSERT || diff.type === DIFF_DELETE;
   const bgColor =
-    diff.type === DIFF_INSERT
-      ? 'bg-green-200'
+    diff.type === DIFF_INSERT ? 
+      theme === 'dark' ? 'bg-green-900' : 'bg-green-200'
       : diff.type === DIFF_DELETE
-      ? 'bg-red-200'
+      ? theme === 'dark' ? 'bg-red-900' : 'bg-red-200'
       : '';
 
   return (
@@ -263,10 +266,11 @@ export default function ReviewTranscriptDialog({
   updateQuill,
 }: ReviewWithGeminiDialogProps) {
   
-  const [step, setStep] = useState<'options' | 'review'>('options');
+  const [step, setStep] = useState<'options' | 'review' | 'preview'>('options');
   const [loading, setLoading] = useState(false);
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("Please try again later.");
+  const [finalTranscript, setFinalTranscript] = useState<string>('');
   const [diffs, setDiffs] = useState<DiffSegment[]>([]);
   const [selectedPrompts, setSelectedPrompts] = useState<string[]>([]);
   const [instructions, setInstructions] = useState<string>('');
@@ -274,6 +278,14 @@ export default function ReviewTranscriptDialog({
   const [progressValue, setProgressValue] = useState<number>(0);
   const [temperature, setTemperature] = useState<number>(1);
   const { fileId } = orderDetails;
+
+  // Map the step string to its corresponding index
+  const stepToIndex: Record<typeof step, number> = {
+    options: 0,
+    review: 1,
+    preview: 2,
+  };
+  const activeStepIndex = stepToIndex[step];
 
   const handleNextOptions = useCallback(async () => {
     
@@ -289,6 +301,8 @@ export default function ReviewTranscriptDialog({
       const transcriptChunks = chunkTranscript(transcript, chunkPoints);
       const totalChunks = (chunkPoints.length - 1) * 2;
       let progress = 0;
+
+      // start time
       for(let i = 0; i < chunkPoints.length - 1; i++) {
         setProgressMessage(`Initializing transcript part ${i + 1} of ${chunkPoints.length - 1}`);
         
@@ -315,6 +329,8 @@ export default function ReviewTranscriptDialog({
         progress++;
         setProgressValue(progress / totalChunks * 100);
       }  
+
+      // endtime
       setProgressMessage('Finalizing transcript review...');
       setProgressValue(100);
       const formattedGeminiTranscript = formatTimestamps(geminiTranscript);
@@ -333,26 +349,7 @@ export default function ReviewTranscriptDialog({
     setDiffs((prevDiffs) => {
       const newDiffs = [...prevDiffs];
       const currentDiff = newDiffs[index];
-
-      if (
-        currentDiff.type === DIFF_INSERT &&
-        index > 0 &&
-        newDiffs[index - 1].type === DIFF_DELETE
-      ) {
-        newDiffs.splice(index - 1, 1);
-        newDiffs[index - 1] = { ...currentDiff, type: DIFF_EQUAL };
-      }
-      else if (
-        currentDiff.type === DIFF_DELETE &&
-        index < newDiffs.length - 1 &&
-        newDiffs[index + 1].type === DIFF_INSERT
-      ) {
-        newDiffs.splice(index + 1, 1);
-        newDiffs[index] = { ...currentDiff, type: DIFF_EQUAL };
-      }
-      else {
-        newDiffs[index] = { ...currentDiff, type: DIFF_EQUAL };
-      }
+      newDiffs[index] = { ...currentDiff, type: DIFF_EQUAL };
       return newDiffs;
     });
   }, []);
@@ -373,9 +370,8 @@ export default function ReviewTranscriptDialog({
     const rejectedDiffs = rejectAllDiffs(diffs);
     setDiffs(rejectedDiffs);
     const finalTranscript = rejectedDiffs.map(diff => diff.text).join('');
-    updateQuill(finalTranscript);
-    setReviewModalOpen(false);
-    handleSaveButton(finalTranscript);
+    setFinalTranscript(finalTranscript);
+    setStep('preview');
   }, [diffs, updateQuill, setReviewModalOpen]);
 
   /**
@@ -385,25 +381,26 @@ export default function ReviewTranscriptDialog({
   const handleAcceptAll = useCallback(() => {
     const acceptedDiffs = acceptAllDiffs(diffs);
     setDiffs(acceptedDiffs);
-    const finalTranscript = acceptedDiffs.map(diff => diff.text).join('');
-    updateQuill(finalTranscript);
-    setReviewModalOpen(false);
-    handleSaveButton(finalTranscript);
+    const finalTranscript = acceptedDiffs.map(diff => diff.text).join('');  
+    setFinalTranscript(finalTranscript);
+    setStep('preview');
   }, [diffs, updateQuill, setReviewModalOpen]);
 
-  const handleSaveButton = async (finalTranscript: string) => {
-
+  const handleSaveButton = async () => {
+    updateQuill(finalTranscript);
+    setReviewModalOpen(false);
     await handleSave(
       {
         getEditorText: () => finalTranscript,
         orderDetails,
-        notes: '',   // supply any notes if applicable
-        cfd: '',     // supply the CFD value if applicable
-        setButtonLoading: () => {} // Replace with your actual loading state updater if needed
+        notes: '',
+        cfd: '',
+        setButtonLoading: () => {},
+        listenCount: [],
+        editedSegments: new Set()
       },
-      true // Optionally set showToast to true if you want toast notifications.
+      true
     );
-
   };
 
   useEffect(() => {
@@ -441,26 +438,38 @@ export default function ReviewTranscriptDialog({
           <DialogDescription>
             {step === 'options'
               ? "Select your prompt options and add any additional instructions below."
-              : "Hover over the text to accept or reject the suggested changes."}
+              : step === 'review'
+              ? "Hover over the text to accept or reject the suggested changes."
+              : "Review the final transcript and save your changes."}
           </DialogDescription>
         </DialogHeader>
-        {step === 'options' && (transcript ? (
-          <ReviewGeminiOptions
-            promptOptions={GEMINI_PROMPT_OPTIONS}
-            selectedPrompts={selectedPrompts}
-            setSelectedPrompts={setSelectedPrompts}
-            instructions={instructions}
-            setInstructions={setInstructions}
-            temperature={temperature}
-            setTemperature={setTemperature}
-            disabled={loading}
-          />
-        ) : (
-          <div className="flex space-x-2 justify-center items-center h-[60vh]">
-            <ReloadIcon className="h-4 w-4 animate-spin" />
-            <span>Loading</span>
-          </div>
-        ))}
+        
+        {/* Insert the stepper below the header */}
+        <div className="px-4 pt-2">
+          <Stepper steps={['Options', 'Review', 'Preview']} activeStep={activeStepIndex} />
+        </div>
+        
+
+        
+        {step === 'options' && (
+          transcript ? (
+            <ReviewGeminiOptions
+              promptOptions={GEMINI_PROMPT_OPTIONS}
+              selectedPrompts={selectedPrompts}
+              setSelectedPrompts={setSelectedPrompts}
+              instructions={instructions}
+              setInstructions={setInstructions}
+              temperature={temperature}
+              setTemperature={setTemperature}
+              disabled={loading}
+            />
+          ) : (
+            <div className="flex space-x-2 justify-center items-center h-[60vh]">
+              <ReloadIcon className="h-4 w-4 animate-spin" />
+              <span>Loading</span>
+            </div>
+          )
+        )}
         {step === 'review' && (
           <>
             {isError ? (
@@ -469,7 +478,7 @@ export default function ReviewTranscriptDialog({
               </div>
             ) : loading ? (
               <div className="flex flex-col space-y-4 justify-center items-center h-[60vh] ">
-                <Progress value={progressValue} className='w-1/3 sm:w-1/2 animate-pulse' color='primary' />
+                <Progress value={progressValue} className="w-1/3 sm:w-1/2 animate-pulse" color="primary" />
                 <span>{progressMessage}</span>
               </div>
             ) : (
@@ -478,6 +487,11 @@ export default function ReviewTranscriptDialog({
               </div>
             )}
           </>
+        )}
+        {step == 'preview' && (
+          <div className="p-2 px-4 overflow-y-auto h-[60vh] whitespace-pre-wrap">
+            {finalTranscript}
+          </div>
         )}
         <DialogFooter className="flex gap-2">
           {step === 'options' ? (
@@ -496,13 +510,22 @@ export default function ReviewTranscriptDialog({
                 Cancel
               </Button>
             </>
-          ) : (
+          ) : step == 'review' ? (
             <>
               <Button variant="default" onClick={handleRejectAll} disabled={loading || isError}>
                 Reject All
               </Button>
               <Button variant="default" onClick={handleAcceptAll} disabled={loading || isError}>
                 Accept All
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="default" onClick={handleSaveButton} disabled={loading || isError}>
+                Save
+              </Button>
+              <Button variant="default" onClick={() => setReviewModalOpen(false)} disabled={loading || isError}>
+                Cancel
               </Button>
             </>
           )}
