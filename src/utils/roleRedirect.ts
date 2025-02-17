@@ -16,6 +16,8 @@ export function getRedirectPathByRole(role: string) {
       return '/transcribe/legal-cf-reviewer'
     case 'CUSTOMER':
       return '/files/upload'
+    case 'OM':
+      return '/admin/dashboard'
     default:
       return '/'
   }
