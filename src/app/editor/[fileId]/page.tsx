@@ -168,6 +168,7 @@ function EditorPage() {
     useNativeContextMenu: false,
     shortcuts: { ...defaultShortcuts },
   })
+  const [autoCapitalize, setAutoCapitalize] = useState(true)
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -340,7 +341,7 @@ function EditorPage() {
           editorRef.current.clearAllHighlights()
           editorRef.current.triggerAlignmentUpdate()
         }
-        autoCapitalizeSentences(quillRef)
+        autoCapitalizeSentences(quillRef, autoCapitalize)
         await handleSave({
           getEditorText,
           orderDetails,
@@ -680,6 +681,8 @@ function EditorPage() {
         onSettingsChange={setEditorSettings}
         waveformUrl={waveformUrl}
         audioDuration={audioDuration}
+        autoCapitalize={autoCapitalize}
+        onAutoCapitalizeChange={setAutoCapitalize}
       />
 
       <Header

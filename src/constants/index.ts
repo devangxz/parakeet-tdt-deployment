@@ -85,3 +85,6 @@ export const SSE_RETRY_DELAY = config.sse_retry_delay
 export const DURATION_DIFF = config.durationDifference
 export const ERROR_CODES = config.errorCodes
 export const AFFILIATE_RATE = config.affiliate_rate
+
+//Editor
+export const COMMON_ABBREVIATIONS = new Set(config.common_abbreviations)
