@@ -49,7 +49,7 @@ export default function ReviewTranscriptDialog({
   const [diffs, setDiffs] = useState<DiffSegment[]>([]);
   const [selectedPrompts, setSelectedPrompts] = useState<string[]>([]);
   const [instructions, setInstructions] = useState<string>('');
-  const [progressMessage, setProgressMessage] = useState<string>('');
+  const [progressMessage, setProgressMessage] = useState<string>('Loading');
   const [progressValue, setProgressValue] = useState<number>(0);
   const [temperature, setTemperature] = useState<number>(1);
   const { fileId } = orderDetails;
@@ -185,9 +185,7 @@ export default function ReviewTranscriptDialog({
       setInstructions('');
       setIsError(false);
     }
-    if(transcript){
-      setLoading(false);
-    }
+
   }, [reviewModalOpen, transcript]);  
 
   const renderedDiffs = useMemo(() => 

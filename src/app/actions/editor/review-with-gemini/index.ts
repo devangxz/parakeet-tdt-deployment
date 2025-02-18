@@ -46,7 +46,7 @@ export async function geminiRequestAction(transcript: string, fileKey: string, c
   let mediaOutputPath: string = '';
   const TEMP_DIR: string = path.join(__dirname, '../../temp');
   try{
-    logger.info(`Starting geminiRequestAction for file ${fileKey}`);
+    logger.info(`Starting geminiRequestAction for file: ${fileKey}`);
     const ext = path.extname(fileKey);
 
     await fs.mkdir(TEMP_DIR, { recursive: true });
@@ -94,7 +94,7 @@ export async function geminiRequestAction(transcript: string, fileKey: string, c
 Strictly format the timestamps in format h:mm:ss.ms.(Example: 0:11:02.4 instead of 0:11:2.4)
 Provide the response in plain text not in markdown format.
 Remove styling like bold, italic, underline, etc.
-Every paragraph should be in the format of [timestamp] [Speaker]: [Paragraph] single line break.
+Every paragraph should be in the format of [timestamp] [Speaker]: [Paragraph] double line break.
 ${clientPrompt}
 
 <transcript>${offsetFormattedTranscript}</transcript>
@@ -133,7 +133,7 @@ ${clientPrompt}
       // Extract the transcript text from the response
       const transcriptText = chatCompletion.choices[0]?.message?.content;
       if (!transcriptText) {
-        logger.error("No transcript content received from Gemini for file: ", fileKey);
+        logger.error(`No transcript content received from Gemini for file: ${fileKey}`);
         throw new Error('No transcript content received from Gemini');
       }
 
@@ -148,14 +148,14 @@ ${clientPrompt}
 
     // Format the response with the correct timestamp offset
     if (!result) {
-      logger.error("No result received from Gemini request for file: ", fileKey);
+      logger.error(`No result received from Gemini request for file: ${fileKey}`);
       throw new Error('No result received from Gemini request');
     }
     const formatGeminiResponse = offsetTranscript(result?.data as string, firstTimeStamp);
     return typeof formatGeminiResponse === 'string' ? formatGeminiResponse : formatGeminiResponse.transcript;
 
   } catch(error) {
-    logger.error("Error in geminiRequestAction", error);
+    logger.error(`Error in geminiRequestAction : ${error}`);
     throw error; // Re-throw the error to be handled by the caller
   }
   finally {
@@ -165,7 +165,7 @@ ${clientPrompt}
       await deleteFileFromS3(fileKey)
 
     } catch (cleanupError) {
-      logger.error('Cleanup error:', cleanupError);
+      logger.error(`Cleanup error: ${cleanupError}`);
     }
   }
 }
