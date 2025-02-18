@@ -1466,6 +1466,7 @@ export default memo(function Topbar({
         fileId={orderDetails.fileId}
         userId={String(session?.user?.userId || '')}
         quillRef={quillRef}
+        updateQuill={updateTranscript}
       />
     </div>
   )
