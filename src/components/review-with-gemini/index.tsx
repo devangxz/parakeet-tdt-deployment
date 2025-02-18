@@ -112,6 +112,7 @@ export default function ReviewTranscriptDialog({
       const differences = computeDiffs(transcript, formattedGeminiTranscript);
       setDiffs(differences);
     } catch (error) {
+      console.log("error in handleNextOptions", error)
       setErrorMessage("Unable to review transcript. Please try again later.");
       setIsError(true);
     } finally {
@@ -162,16 +163,20 @@ export default function ReviewTranscriptDialog({
 
   const handleSaveButton = async () => {
     setReviewModalOpen(false);
-    updateQuill(quillRef, finalTranscript);
+    // Ensure the final transcript ends with a newline to prevent clipping.
+    const safeTranscript = finalTranscript.endsWith('\n')
+      ? finalTranscript
+      : finalTranscript + '\n';
+    updateQuill(quillRef, safeTranscript);
     await handleSave(
       {
-        getEditorText: () => finalTranscript,
+        getEditorText: () => safeTranscript,
         orderDetails,
         notes: '',
         cfd: '',
         setButtonLoading: () => {},
         listenCount: [],
-        editedSegments: new Set()
+        editedSegments: new Set(),
       },
       true
     );
