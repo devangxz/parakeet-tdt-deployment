@@ -9,7 +9,7 @@ import {
 import axios from 'axios'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-import { Delta, Op } from 'quill/core'
+import { Delta } from 'quill/core'
 import React,{ useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
