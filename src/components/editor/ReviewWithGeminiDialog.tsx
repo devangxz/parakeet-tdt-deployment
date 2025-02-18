@@ -30,7 +30,7 @@ interface ReviewWithGeminiDialogProps {
   setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
   transcript: string
   ctms: CTMType[]
-  updateQuill: (transcript: string) => void
+  updateQuill: (quillRef: React.RefObject<ReactQuill> | undefined, content: string,) => void
 }
 
 interface DiffSegment {
@@ -260,6 +260,7 @@ export const DiffSegmentItem: React.FC<DiffSegmentItemProps> = memo(function Dif
 });
 
 export default function ReviewTranscriptDialog({
+  quillRef,
   reviewModalOpen,
   setReviewModalOpen,
   orderDetails,
@@ -390,8 +391,7 @@ export default function ReviewTranscriptDialog({
 
   const handleSaveButton = async () => {
     setReviewModalOpen(false);
-    // updateQuill(finalTranscript);
-    // updateTranscript(quillRef, finalTranscript);
+    updateQuill(quillRef, finalTranscript);
     await handleSave(
       {
         getEditorText: () => finalTranscript,

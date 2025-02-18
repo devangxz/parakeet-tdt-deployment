@@ -1288,24 +1288,6 @@ function getFormattedContent(text: string): Op[] {
     return formattedContent
 }
 
-const updateTranscript = (
-    quillRef: React.RefObject<ReactQuill> | undefined,
-    content: string,
-) => {
-    if (!quillRef?.current) return
-    const quill = quillRef.current.getEditor()
-
-    const formattedOps = getFormattedContent(content)
-    const updateDelta = new Delta().delete(quill.getText().length)
-    formattedOps.forEach((op) => {
-        if (op.insert !== undefined) {
-            updateDelta.insert(op.insert, op.attributes || {})
-        }
-    })
-
-    quill.updateContents(updateDelta, 'user')
-}
-
 function timestampToSeconds(timestamp: string): number {
   const [hours, minutes, seconds] = timestamp.split(':').map(Number);
   return hours * 3600 + minutes * 60 + seconds;
@@ -1464,7 +1446,6 @@ export {
     insertTimestampAndSpeaker,
     autoCapitalizeSentences,
     getFormattedContent,
-    updateTranscript, 
     parseTranscript,
     findOptimalChunkPoints,
     chunkTranscript,

@@ -338,12 +338,21 @@ export default memo(function Topbar({
     return formattedContent;
 };
 
-  const updateQuill = useCallback((transcript: string) =>{
-    const quill = quillRef?.current?.getEditor()
-    if (!quill) return;
-    const formattedContent = getFormattedContent(transcript);
-    quill.setContents({ ops: formattedContent} as Delta)
-  }, [quillRef])
+  const updateTranscript = (
+    quillRef: React.RefObject<ReactQuill> | undefined,
+    content: string,
+) => {
+    if (!quillRef?.current) return
+    const quill = quillRef.current.getEditor()
+    const formattedOps = getFormattedContent(content)
+    const updateDelta = new Delta().delete(quill.getText().length)
+    formattedOps.forEach((op) => {
+        if (op.insert !== undefined) {
+            updateDelta.insert(op.insert, op.attributes || {})
+        }
+    })
+    quill.updateContents(updateDelta, 'user')
+}
 
   useEffect(() => {
     if (orderDetails.orderId) {
@@ -1422,6 +1431,7 @@ export default memo(function Topbar({
         setButtonLoading={setButtonLoading}
       />}
       {reviewModalOpen && <ReviewTranscriptDialog
+        quillRef={quillRef}
         reviewModalOpen={reviewModalOpen}
         setReviewModalOpen={setReviewModalOpen}
         orderDetails={orderDetails}
@@ -1429,7 +1439,7 @@ export default memo(function Topbar({
         buttonLoading={buttonLoading}
         transcript={transcript}
         ctms={ctms}
-        updateQuill={updateQuill}
+        updateQuill={updateTranscript}
       />}
       <FrequentTermsDialog
         frequentTermsModalOpen={frequentTermsModalOpen}
