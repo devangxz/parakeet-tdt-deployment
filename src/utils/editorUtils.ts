@@ -1419,6 +1419,86 @@ function offsetTranscript(transcript: string, offsetTimestamp: string | null = n
   return  offsetTimestamp ? formattedTranscript : {transcript: formattedTranscript , firstTimeStamp: firstUtterance.timestamp};
 }
 
+export interface DiffSegment {
+  type: typeof DIFF_DELETE | typeof DIFF_INSERT | typeof DIFF_EQUAL;
+  text: string;
+}
+
+function formatTimestamps(text: string): string {
+  // Pass 1: Insert a newline before every timestamp that doesn't already have one.
+  // Updated regex to match timestamps with 1 or 2 digits for seconds.
+  const textWithNewlines = text.replace(
+    /(?<!^)(?<!\n\n)(\d{1,2}:\d{2}:\d{1,2}(?:\.\d+)?)/g,
+    "\n$1"
+  );
+
+  // Pass 2: Reformat each timestamp to follow h:mm:ss.ms format, ensuring seconds are two digits.
+  const formatted = textWithNewlines.replace(
+    /^(\d{1,2}):(\d{2}):(\d{1,2})(?:\.(\d+))?/gm,
+    (_match, hour, minute, second, fraction) => {
+      const normalizedHour = Number(hour).toString(); // Remove any leading zeros for hour.
+      const paddedMinute = minute.padStart(2, '0');    // Ensure minute is two digits.
+      const paddedSecond = second.padStart(2, '0');      // Pad seconds if necessary.
+      const fractionDigit = fraction ? fraction.charAt(0) : "0"; // Exactly one decimal digit.
+      return `${normalizedHour}:${paddedMinute}:${paddedSecond}.${fractionDigit}`;
+    }
+  );
+  return formatted.trim();
+}
+
+/**
+ * Accepts all pending diffs by marking them as equal.
+ * For a DIFF_DELETE followed by a DIFF_INSERT, the insertion text (Gemini's suggestion)
+ * is kept. Standalone diffs are simply converted to equal type.
+ */
+function acceptAllDiffs(diffs: DiffSegment[]): DiffSegment[] {
+  const newDiffs: DiffSegment[] = [];
+  let i = 0;
+  while (i < diffs.length) {
+    const diff = diffs[i];
+    // If deletion is immediately followed by insertion, merge into Gemini text.
+    if (diff.type === DIFF_DELETE && i + 1 < diffs.length && diffs[i + 1].type === DIFF_INSERT) {
+      newDiffs.push({ type: DIFF_EQUAL, text: diffs[i + 1].text });
+      i += 2;
+    } else if (diff.type === DIFF_INSERT || diff.type === DIFF_DELETE) {
+      newDiffs.push({ type: DIFF_EQUAL, text: diff.text });
+      i++;
+    } else {
+      newDiffs.push(diff);
+      i++;
+    }
+  }
+  return newDiffs;
+}
+
+/**
+ * Rejects all pending diffs by discarding Gemini's changes.
+ * For a DIFF_DELETE followed by a DIFF_INSERT, the original text (the deletion content)
+ * is retained. Standalone DIFF_INSERTs are dropped.
+ */
+function rejectAllDiffs(diffs: DiffSegment[]): DiffSegment[] {
+  const newDiffs: DiffSegment[] = [];
+  let i = 0;
+  while (i < diffs.length) {
+    const diff = diffs[i];
+    if (diff.type === DIFF_DELETE && i + 1 < diffs.length && diffs[i + 1].type === DIFF_INSERT) {
+      // Retain the original text from the deletion segment.
+      newDiffs.push({ type: DIFF_EQUAL, text: diff.text });
+      i += 2;
+    } else if (diff.type === DIFF_INSERT) {
+      // Drop any unpaired insertions.
+      i++;
+    } else if (diff.type === DIFF_DELETE) {
+      newDiffs.push({ type: DIFF_EQUAL, text: diff.text });
+      i++;
+    } else {
+      newDiffs.push(diff);
+      i++;
+    }
+  }
+  return newDiffs;
+}
+
 export {
     generateRandomColor,
     convertBlankToSeconds,
@@ -1453,5 +1533,8 @@ export {
     parseTranscriptLine,
     secondsToTimestamp,
     offsetTranscript,
+    formatTimestamps,
+    acceptAllDiffs,
+    rejectAllDiffs,
 }
 export type { CTMType }

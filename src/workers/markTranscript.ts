@@ -32,8 +32,7 @@ async function makeLLMCall(
     ];
 
     const startTime = Date.now();
-    // const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
+    
     // PORTKEY wrapped openai instance
     const openai = new OpenAI({
       apiKey:  process.env.OPENAI_API_KEY, 

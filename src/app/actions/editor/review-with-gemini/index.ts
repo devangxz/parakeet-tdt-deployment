@@ -36,6 +36,7 @@ async function downloadAndSaveFile(url: string, outputPath: string): Promise<str
         reject(error);
       });
     } catch (error) {
+      logger.error("Error in downloading and saving the file", error);
       reject(error);
     }
   });
@@ -80,6 +81,7 @@ export async function geminiRequestAction(transcript: string, fileKey: string, c
     }
 
     if (file.state === FileState.FAILED) {
+      logger.error("Audio processing failed: ", fileKey);
       throw new Error("Audio processing failed.");
     }
 
@@ -131,6 +133,7 @@ ${clientPrompt}
       // Extract the transcript text from the response
       const transcriptText = chatCompletion.choices[0]?.message?.content;
       if (!transcriptText) {
+        logger.error("No transcript content received from Gemini for file: ", fileKey);
         throw new Error('No transcript content received from Gemini');
       }
 
@@ -145,9 +148,9 @@ ${clientPrompt}
 
     // Format the response with the correct timestamp offset
     if (!result) {
+      logger.error("No result received from Gemini request for file: ", fileKey);
       throw new Error('No result received from Gemini request');
     }
-    console.log("result", result?.data as string)
     const formatGeminiResponse = offsetTranscript(result?.data as string, firstTimeStamp);
     return typeof formatGeminiResponse === 'string' ? formatGeminiResponse : formatGeminiResponse.transcript;
 
