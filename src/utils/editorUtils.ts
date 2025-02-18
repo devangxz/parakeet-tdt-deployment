@@ -1464,7 +1464,7 @@ export {
     insertTimestampAndSpeaker,
     autoCapitalizeSentences,
     getFormattedContent,
-    updateTranscript,
+    updateTranscript, 
     parseTranscript,
     findOptimalChunkPoints,
     chunkTranscript,

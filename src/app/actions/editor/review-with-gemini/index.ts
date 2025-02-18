@@ -45,7 +45,7 @@ export async function geminiRequestAction(transcript: string, fileKey: string, c
   let mediaOutputPath: string = '';
   const TEMP_DIR: string = path.join(__dirname, '../../temp');
   try{
-    console.log("user prompt", clientPrompt);
+    logger.info(`Starting geminiRequestAction for file ${fileKey}`);
     const ext = path.extname(fileKey);
 
     await fs.mkdir(TEMP_DIR, { recursive: true });

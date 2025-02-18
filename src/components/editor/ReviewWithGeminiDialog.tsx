@@ -3,6 +3,7 @@
 import { ReloadIcon } from "@radix-ui/react-icons";
 import { useTheme } from "next-themes";
 import React, { useCallback, useEffect, useMemo, useState, memo } from "react";
+import ReactQuill from "react-quill";
 
 import { Stepper } from "./Stepper";
 import { Button } from "../ui/button";
@@ -19,6 +20,7 @@ import { ButtonLoading, chunkTranscript, CTMType, findOptimalChunkPoints, handle
 import { diff_match_patch, DIFF_DELETE, DIFF_INSERT, DIFF_EQUAL } from "@/utils/transcript/diff_match_patch";
 
 interface ReviewWithGeminiDialogProps {
+  quillRef: React.RefObject<ReactQuill> | undefined
   reviewModalOpen: boolean;
   setReviewModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   orderDetails: OrderDetails
@@ -387,8 +389,9 @@ export default function ReviewTranscriptDialog({
   }, [diffs, updateQuill, setReviewModalOpen]);
 
   const handleSaveButton = async () => {
-    updateQuill(finalTranscript);
     setReviewModalOpen(false);
+    // updateQuill(finalTranscript);
+    // updateTranscript(quillRef, finalTranscript);
     await handleSave(
       {
         getEditorText: () => finalTranscript,
