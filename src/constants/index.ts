@@ -88,3 +88,52 @@ export const AFFILIATE_RATE = config.affiliate_rate
 
 //Editor
 export const COMMON_ABBREVIATIONS = new Set(config.common_abbreviations)
+
+// Review with Gemini
+export const GEMINI_PROMPT_OPTIONS = [
+  {
+    id: 1,
+    title: 'Strict Speaker Tracking',
+    label: 'Track speakers separately (Example: Split "S5: Is if they had a history... S2: Of vaccine" into two distinct speaker segments)'
+  },
+  {
+    id: 2,
+    title: 'Capitalize Abbreviations and First Letter',
+    label: 'Capitalize abbreviations and proper nouns (Example: Change "cdc" to "CDC", "mmr" to "MMR")'
+  },
+  {
+    id: 3,
+    title: 'Separate Repeated Words with Hyphens',
+    label: 'Mark word repetitions with hyphens (Example: "under these -- under these" instead of "under these, under these")'
+  },
+  {
+    id: 4,
+    title: 'Format Spelled-out Words with Hyphens',
+    label: 'Use hyphens for spelled words (Example: "W-I-L-S-O-N" instead of "W, I, L, S, O, N")'
+  },
+  {
+    id: 5,
+    title: 'Prevent Speaker Overlap/Spillover',
+    label: 'Prevent speech overlap (Example: Move "would agree" from S3 to S5 when it belongs to the next speaker)'
+  },
+  {
+    id: 6,
+    title: 'Use Appropriate Punctuation for Clarity',
+    label: 'Add proper punctuation (Example: "Is that correct?" instead of "Is that correct.")'
+  },
+  {
+    id: 7,
+    title: 'Fix Run-On Sentences',
+    label: 'Separate run-on sentences (Example: "People perceive disability differently. To some people" instead of "differently, to some people")'
+  },
+  {
+    id: 8,
+    title: 'Capture Objections and Interruptions',
+    label: 'Include clear objections (Example: Capture opposing attorney interruptions even during witness testimony)'
+  },
+  {
+    id: 9,
+    title: 'Strict verbatim',
+    label: 'Should capture every single utterance, noise and word spoken on an audio file. (Example: "We uh-uh were going to do that")'
+  }
+];

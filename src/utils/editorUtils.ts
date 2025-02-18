@@ -1288,22 +1288,215 @@ function getFormattedContent(text: string): Op[] {
     return formattedContent
 }
 
-const updateTranscript = (
-    quillRef: React.RefObject<ReactQuill> | undefined,
-    content: string,
-) => {
-    if (!quillRef?.current) return
-    const quill = quillRef.current.getEditor()
+function timestampToSeconds(timestamp: string): number {
+  const [hours, minutes, seconds] = timestamp.split(':').map(Number);
+  return hours * 3600 + minutes * 60 + seconds;
+}
 
-    const formattedOps = getFormattedContent(content)
-    const updateDelta = new Delta().delete(quill.getText().length)
-    formattedOps.forEach((op) => {
-        if (op.insert !== undefined) {
-            updateDelta.insert(op.insert, op.attributes || {})
-        }
-    })
+export interface TranscriptSegment {
+  content: string;
+  speaker: string;
+  timestamp: string;
+}
 
-    quill.updateContents(updateDelta, 'user')
+export interface ChunkData {
+  fileKey: string;
+  startTime: number;
+  endTime: number;
+  transcript: string;
+}
+
+function parseTranscript(transcript: string): TranscriptSegment[] {
+  const lines = transcript.split("\n").filter((line) => line.trim());
+  return lines.map((line) => {
+    const match = line.match(/^(\d+:\d+:\d+\.\d+)\s+(S\d+):\s+(.+)$/);
+    if (!match) throw new Error(`Invalid line format: ${line}`);
+    return {
+      timestamp: match[1],
+      speaker: match[2],
+      content: match[3],
+    };
+  });
+}
+
+function findOptimalChunkPoints(segments: CTMType[]): number[] {
+  if (segments.length === 0) return [];
+  
+  const config = {
+    maxDuration: 1500,
+    minPauseDuration: 0.5,
+    minConfidence: 0.6,
+    maxWordsPerChunk: 300,
+  };
+  
+  const chunkPoints: number[] = [segments[0].start];
+  let currentChunkStart = segments[0].start;
+  
+  for (let i = 0; i < segments.length - 1; i++) {
+    const currentSegment = segments[i];
+    const nextSegment = segments[i + 1];
+    const currentDuration = nextSegment.start - currentChunkStart;
+    const pauseDuration = nextSegment.start - currentSegment.end;
+    const isSpeakerChange = currentSegment.speaker !== nextSegment.speaker;
+    
+    if (currentDuration >= config.maxDuration && isSpeakerChange && pauseDuration >= config.minPauseDuration) {
+      chunkPoints.push(currentSegment.end);
+      currentChunkStart = nextSegment.start;
+    }
+  }
+  
+  if (segments.length > 0) chunkPoints.push(segments[segments.length - 1].end);
+  
+  const finalChunkPoints = chunkPoints.filter((point, index) => {
+    if (index === 0 || index === chunkPoints.length - 1) return true;
+    const duration = chunkPoints[index + 1] - point;
+    return duration >= config.minPauseDuration;
+  });
+  finalChunkPoints[0] = 0;
+  return finalChunkPoints;
+}
+
+function chunkTranscript(transcript: string, chunkPoints: number[]): string[] {
+  const entries = parseTranscript(transcript);
+  const sortedPoints = [...chunkPoints].sort((a, b) => a - b);
+  const chunks: string[] = [];
+  for (let i = 0; i < sortedPoints.length - 1; i++) {
+    const chunkStart = sortedPoints[i];
+    const chunkEnd = sortedPoints[i + 1];
+    const chunkEntries = entries.filter((entry) => {
+      const entryTime = timestampToSeconds(entry.timestamp);
+      return entryTime >= chunkStart && entryTime < chunkEnd;
+    });
+    if (chunkEntries.length > 0) {
+      chunks.push(chunkEntries.map((entry) => `${entry.timestamp} ${entry.speaker}: ${entry.content}`).join("\n"));
+    }
+  }
+  return chunks;
+}
+
+function secondsToTimestamp(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  seconds %= 3600;
+  const minutes = Math.floor(seconds / 60);
+  seconds = Math.round((seconds % 60) * 10) / 10; // Round to 1 decimal place
+  
+  return `${hours}:${String(minutes).padStart(2, '0')}:${seconds.toFixed(1)}`;
+}
+
+function parseTranscriptLine(line: string): TranscriptSegment | null {
+  const match = line.match(/^(\d+:\d+:\d+\.\d+)\s+(S\d+):\s+(.+)$/);
+  if (!match) return null;
+
+  return {
+    timestamp: match[1],
+    speaker: match[2],
+    content: match[3]
+  };
+}
+
+function offsetTranscript(transcript: string, offsetTimestamp: string | null = null): {transcript: string, firstTimeStamp: string} | string {
+  
+  const lines = transcript.split('\n').filter(line => line.trim());
+  if (lines.length === 0) return '';
+
+  // Find the first timestamp
+  const firstUtterance = parseTranscriptLine(lines[0]);
+  if (!firstUtterance) return transcript;
+
+  const offsetSeconds = offsetTimestamp ? timestampToSeconds(offsetTimestamp) : timestampToSeconds(firstUtterance.timestamp);
+  // Process each line
+  const formattedTranscript = lines.map(line => {
+    const utterance = parseTranscriptLine(line);
+    if (!utterance) return line;
+
+    const originalSeconds = timestampToSeconds(utterance.timestamp);
+    const newSeconds = offsetTimestamp ? originalSeconds + offsetSeconds  : originalSeconds - offsetSeconds;
+    const newTimestamp = secondsToTimestamp(newSeconds);
+
+    return `${newTimestamp} ${utterance.speaker}: ${utterance.content}`;
+  }).join('\n');
+
+  return  offsetTimestamp ? formattedTranscript : {transcript: formattedTranscript , firstTimeStamp: firstUtterance.timestamp};
+}
+
+export interface DiffSegment {
+  type: typeof DIFF_DELETE | typeof DIFF_INSERT | typeof DIFF_EQUAL;
+  text: string;
+}
+
+function formatTimestamps(text: string): string {
+  // Pass 1: Insert a newline before every timestamp that doesn't already have one.
+  // Updated regex to match timestamps with 1 or 2 digits for seconds.
+  const textWithNewlines = text.replace(
+    /(?<!^)(?<!\n\n)(\d{1,2}:\d{2}:\d{1,2}(?:\.\d+)?)/g,
+    "\n$1"
+  );
+
+  // Pass 2: Reformat each timestamp to follow h:mm:ss.ms format, ensuring seconds are two digits.
+  const formatted = textWithNewlines.replace(
+    /^(\d{1,2}):(\d{2}):(\d{1,2})(?:\.(\d+))?/gm,
+    (_match, hour, minute, second, fraction) => {
+      const normalizedHour = Number(hour).toString(); // Remove any leading zeros for hour.
+      const paddedMinute = minute.padStart(2, '0');    // Ensure minute is two digits.
+      const paddedSecond = second.padStart(2, '0');      // Pad seconds if necessary.
+      const fractionDigit = fraction ? fraction.charAt(0) : "0"; // Exactly one decimal digit.
+      return `${normalizedHour}:${paddedMinute}:${paddedSecond}.${fractionDigit}`;
+    }
+  );
+  return formatted.trim();
+}
+
+/**
+ * Accepts all pending diffs by marking them as equal.
+ * For a DIFF_DELETE followed by a DIFF_INSERT, the insertion text (Gemini's suggestion)
+ * is kept. Standalone diffs are simply converted to equal type.
+ */
+function acceptAllDiffs(diffs: DiffSegment[]): DiffSegment[] {
+  const newDiffs: DiffSegment[] = [];
+  let i = 0;
+  while (i < diffs.length) {
+    const diff = diffs[i];
+    // If deletion is immediately followed by insertion, merge into Gemini text.
+    if (diff.type === DIFF_DELETE && i + 1 < diffs.length && diffs[i + 1].type === DIFF_INSERT) {
+      newDiffs.push({ type: DIFF_EQUAL, text: diffs[i + 1].text });
+      i += 2;
+    } else if (diff.type === DIFF_INSERT || diff.type === DIFF_DELETE) {
+      newDiffs.push({ type: DIFF_EQUAL, text: diff.text });
+      i++;
+    } else {
+      newDiffs.push(diff);
+      i++;
+    }
+  }
+  return newDiffs;
+}
+
+/**
+ * Rejects all pending diffs by discarding Gemini's changes.
+ * For a DIFF_DELETE followed by a DIFF_INSERT, the original text (the deletion content)
+ * is retained. Standalone DIFF_INSERTs are dropped.
+ */
+function rejectAllDiffs(diffs: DiffSegment[]): DiffSegment[] {
+  const newDiffs: DiffSegment[] = [];
+  let i = 0;
+  while (i < diffs.length) {
+    const diff = diffs[i];
+    if (diff.type === DIFF_DELETE && i + 1 < diffs.length && diffs[i + 1].type === DIFF_INSERT) {
+      // Retain the original text from the deletion segment.
+      newDiffs.push({ type: DIFF_EQUAL, text: diff.text });
+      i += 2;
+    } else if (diff.type === DIFF_INSERT) {
+      // Drop any unpaired insertions.
+      i++;
+    } else if (diff.type === DIFF_DELETE) {
+      newDiffs.push({ type: DIFF_EQUAL, text: diff.text });
+      i++;
+    } else {
+      newDiffs.push(diff);
+      i++;
+    }
+  }
+  return newDiffs;
 }
 
 export {
@@ -1333,6 +1526,15 @@ export {
     insertTimestampAndSpeaker,
     autoCapitalizeSentences,
     getFormattedContent,
-    updateTranscript
+    parseTranscript,
+    findOptimalChunkPoints,
+    chunkTranscript,
+    timestampToSeconds,
+    parseTranscriptLine,
+    secondsToTimestamp,
+    offsetTranscript,
+    formatTimestamps,
+    acceptAllDiffs,
+    rejectAllDiffs,
 }
 export type { CTMType }
