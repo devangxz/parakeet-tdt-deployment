@@ -9,7 +9,8 @@ import {
 import axios from 'axios'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-import { useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
+import { Delta } from 'quill/core'
+import React,{ useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
@@ -21,6 +22,7 @@ import FrequentTermsDialog from './FrequentTermsDialog'
 import ReportDialog from './ReportDialog'
 import ShortcutsReferenceDialog from './ShortcutsReferenceDialog'
 import UploadDocxDialog from './UploadDocxDialog'
+import ReviewTranscriptDialog from '../review-with-gemini'
 import { Button } from '../ui/button'
 import { Checkbox } from '../ui/checkbox'
 import {
@@ -76,7 +78,9 @@ import DefaultShortcuts, {
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   autoCapitalizeSentences,
+  CTMType,
   downloadMP3,
+  getFormattedContent,
   getFrequentTermsHandler,
   handleSave,
   navigateAndPlayBlanks,
@@ -116,6 +120,8 @@ interface TopbarProps {
   audioDuration: number
   autoCapitalize: boolean
   onAutoCapitalizeChange: (value: boolean) => void
+  transcript: string
+  ctms: CTMType[]
 }
 
 export default memo(function Topbar({
@@ -140,6 +146,8 @@ export default memo(function Topbar({
   audioDuration,
   autoCapitalize,
   onAutoCapitalizeChange,
+  transcript,
+  ctms,
 }: TopbarProps) {
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
@@ -174,6 +182,8 @@ export default memo(function Topbar({
     reportOption: '',
     reportComment: '',
   })
+
+  const [reviewModalOpen, setReviewModalOpen] = useState(false)
   const [buttonLoading, setButtonLoading] = useState({
     download: false,
     upload: false,
@@ -280,6 +290,22 @@ export default memo(function Topbar({
       toast.error('Failed to fetch formatting options')
     }
   }
+
+  const updateTranscript = (
+    quillRef: React.RefObject<ReactQuill> | undefined,
+    content: string,
+) => {
+    if (!quillRef?.current) return
+    const quill = quillRef.current.getEditor()
+    const formattedOps = getFormattedContent(content)
+    const updateDelta = new Delta().delete(quill.getText().length)
+    formattedOps.forEach((op) => {
+        if (op.insert !== undefined) {
+            updateDelta.insert(op.insert, op.attributes || {})
+        }
+    })
+    quill.updateContents(updateDelta, 'user')
+}
 
   useEffect(() => {
     if (orderDetails.orderId) {
@@ -985,6 +1011,11 @@ export default memo(function Topbar({
                     Frequent Terms
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuItem
+                    onClick={() => setReviewModalOpen(true)}
+                  >
+                    Review with Gemini
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={toggleAutoCapitalize}>
                   {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
                 </DropdownMenuItem>
@@ -1342,7 +1373,8 @@ export default memo(function Topbar({
           </button>
         </div>
       </div>
-      <ReportDialog
+
+      {reportModalOpen && <ReportDialog
         reportModalOpen={reportModalOpen}
         setReportModalOpen={setReportModalOpen}
         reportDetails={reportDetails}
@@ -1350,7 +1382,18 @@ export default memo(function Topbar({
         orderDetails={orderDetails}
         buttonLoading={buttonLoading}
         setButtonLoading={setButtonLoading}
-      />
+      />}
+      {reviewModalOpen && <ReviewTranscriptDialog
+        quillRef={quillRef}
+        reviewModalOpen={reviewModalOpen}
+        setReviewModalOpen={setReviewModalOpen}
+        orderDetails={orderDetails}
+        setButtonLoading={setButtonLoading}
+        buttonLoading={buttonLoading}
+        transcript={transcript}
+        ctms={ctms}
+        updateQuill={updateTranscript}
+      />}
       <FrequentTermsDialog
         frequentTermsModalOpen={frequentTermsModalOpen}
         setFrequentTermsModalOpen={setFrequentTermsModalOpen}
@@ -1375,6 +1418,7 @@ export default memo(function Topbar({
         onClose={() => setIsRestoreVersionModalOpen(false)}
         fileId={orderDetails.fileId}
         quillRef={quillRef}
+        updateQuill={updateTranscript}
       />
     </div>
   )

@@ -17,6 +17,7 @@ import EnableCustomFormattingReview from './components/enable-custom-format-revi
 import EnableCustomers from './components/enable-customers'
 import EnablePreDelivery from './components/enable-pre-delivery'
 import OrderWatch from './components/order-watch'
+import TranscriberWatch from './components/transcriber-watch'
 import TransferCredits from './components/transfer-credits'
 import TransferFiles from './components/transfer-files'
 import UpdateICQCRates from './components/update-ic-qc-rates'
@@ -49,6 +50,7 @@ export default function AdminDashboard() {
             <AddMiscEarnings />
             <TransferCredits />
             <OrderWatch />
+            <TranscriberWatch />
             <YouTubeVideoUploader />
           </>
         )}

@@ -11,6 +11,7 @@ import { determinePwerLevel } from './utils'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { assignQC } from '@/app/actions/qc/assign'
 import { getAvailableQCFiles } from '@/app/actions/qc/available-files'
+import { Alert, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -42,6 +43,7 @@ export default function AvailableFilesPage({ changeTab }: Props) {
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
+  const [isQCDisabled, setIsQCDisabled] = useState(false)
   const [loadingFileOrder, setLoadingFileOrder] = useState<
     Record<string, boolean>
   >({})
@@ -73,6 +75,10 @@ export default function AvailableFilesPage({ changeTab }: Props) {
 
       if (!response.success) {
         throw new Error(response.error || 'An error occurred')
+      }
+
+      if (response?.isQCDisabled) {
+        setIsQCDisabled(true)
       }
 
       if (response.data) {
@@ -285,7 +291,6 @@ export default function AvailableFilesPage({ changeTab }: Props) {
       header: 'Difficulty',
       filterFn: (row, id, filterValues: string[]) => {
         const diffVal = row.getValue(id) as string
-        console.log(diffVal)
         if (!filterValues || filterValues.length === 0) return true
         return filterValues.includes(diffVal)
       },
@@ -387,19 +392,30 @@ export default function AvailableFilesPage({ changeTab }: Props) {
 
   return (
     <>
-      <DataTable
-        showToolbar={true}
-        data={availableFiles ?? []}
-        columns={columns}
-        renderRowSubComponent={({ row }: { row: any }) =>
-          row.original.instructions ? (
-            <div className='p-2'>
-              <strong>Customer Instructions:</strong>
-              <p>{row.original.instructions}</p>
-            </div>
-          ) : null
-        }
-      />
+      {isQCDisabled ? (
+        <div className='mb-4 mt-4'>
+          <Alert variant='destructive'>
+            <AlertTitle>
+              QC is disabled for you. Please wait till the new test system roll
+              out.
+            </AlertTitle>
+          </Alert>
+        </div>
+      ) : (
+        <DataTable
+          showToolbar={true}
+          data={availableFiles ?? []}
+          columns={columns}
+          renderRowSubComponent={({ row }: { row: any }) =>
+            row.original.instructions ? (
+              <div className='p-2'>
+                <strong>Customer Instructions:</strong>
+                <p>{row.original.instructions}</p>
+              </div>
+            ) : null
+          }
+        />
+      )}
     </>
   )
 }

@@ -16,7 +16,6 @@ import {
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { FILE_CACHE_URL } from '@/constants'
-import { updateTranscript } from '@/utils/editorUtils'
 
 interface Version {
   commitHash: string
@@ -29,11 +28,13 @@ const RestoreVersionDialog = ({
   onClose,
   fileId,
   quillRef,
+  updateQuill,
 }: {
   isOpen: boolean
   onClose: () => void
   fileId: string
   quillRef: React.RefObject<ReactQuill> | undefined
+  updateQuill: (quillRef: React.RefObject<ReactQuill> | undefined, content: string,) => void
 }) => {
   const [versions, setVersions] = useState<Version[]>([])
   const [selectedVersion, setSelectedVersion] = useState('')
@@ -80,7 +81,7 @@ const RestoreVersionDialog = ({
       )
       const data = await res.json()
       if (data.success) {
-        updateTranscript(quillRef, data.transcript)
+        updateQuill(quillRef, data.transcript)
         toast.success('Version restored successfully')
       } else {
         toast.error('Failed to restore version. Please try again.')
