@@ -46,7 +46,8 @@ export const EditorTabComponent = ({
   editorRef,
 }: EditorTabComponentProps) => (
   <TabsContent
-    className='h-full mt-0 overflow-hidden pb-[41px]'
+    forceMount
+    className='data-[state=inactive]:hidden h-full mt-0 overflow-hidden pb-[41px]'
     value='transcribe'
   >
     <div className='h-full relative overflow-hidden'>
@@ -80,7 +81,7 @@ export const EditorTabComponent = ({
 )
 
 export const DiffTabComponent = ({ diff }: { diff: DmpDiff[] }) => (
-  <TabsContent className='h-full mt-0 overflow-hidden' value='diff'>
+  <TabsContent forceMount className='data-[state=inactive]:hidden h-full mt-0 overflow-hidden pb-[50px]' value='diff'>
     <div className='h-full overflow-y-auto py-[12px] px-[15px]'>
       <div className='h-full'>
         <Diff diffOutput={diff} />
@@ -94,7 +95,7 @@ export const InfoTabComponent = ({
 }: {
   orderDetails: OrderDetails
 }) => (
-  <TabsContent className='h-full mt-0 overflow-hidden' value='info'>
+  <TabsContent forceMount className='data-[state=inactive]:hidden h-full mt-0 overflow-hidden pb-[50px]' value='info'>
     <div className='h-full py-[12px] px-[15px]'>
       <Textarea
         placeholder='Customer instructions'

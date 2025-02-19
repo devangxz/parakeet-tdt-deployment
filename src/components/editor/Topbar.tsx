@@ -1417,7 +1417,6 @@ export default memo(function Topbar({
         isOpen={isRestoreVersionModalOpen}
         onClose={() => setIsRestoreVersionModalOpen(false)}
         fileId={orderDetails.fileId}
-        userId={String(session?.user?.userId || '')}
         quillRef={quillRef}
         updateQuill={updateTranscript}
       />
