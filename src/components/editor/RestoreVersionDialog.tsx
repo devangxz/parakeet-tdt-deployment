@@ -1,5 +1,5 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { format } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import React, { useState, useEffect } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
@@ -28,13 +28,11 @@ const RestoreVersionDialog = ({
   isOpen,
   onClose,
   fileId,
-  userId,
   quillRef,
 }: {
   isOpen: boolean
   onClose: () => void
   fileId: string
-  userId: string
   quillRef: React.RefObject<ReactQuill> | undefined
 }) => {
   const [versions, setVersions] = useState<Version[]>([])
@@ -48,7 +46,7 @@ const RestoreVersionDialog = ({
         setIsFetchingVersions(true)
         const tokenRes = await fileCacheTokenAction()
         const res = await fetch(
-          `${FILE_CACHE_URL}/get-user-versions/${fileId}/${userId}`,
+          `${FILE_CACHE_URL}/get-user-versions/${fileId}`,
           {
             headers: { Authorization: `Bearer ${tokenRes.token}` },
           }
@@ -67,7 +65,7 @@ const RestoreVersionDialog = ({
     if (isOpen) {
       fetchVersions()
     }
-  }, [isOpen, fileId, userId])
+  }, [isOpen, fileId])
 
   const handleRestore = async () => {
     try {
@@ -133,18 +131,25 @@ const RestoreVersionDialog = ({
                 {versions.map((version) => (
                   <div
                     key={version.commitHash}
-                    className='flex items-center space-x-2'
+                    className='flex flex-col'
                   >
-                    <RadioGroupItem
-                      value={version.commitHash}
-                      id={version.commitHash}
-                    />
-                    <Label
-                      htmlFor={version.commitHash}
-                      className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
-                    >
-                      {format(new Date(version.timestamp), 'MMMM d, h:mm a')}
-                    </Label>
+                    <div className='flex items-center space-x-2'>
+                      <RadioGroupItem
+                        value={version.commitHash}
+                        id={version.commitHash}
+                      />
+                      <Label
+                        htmlFor={version.commitHash}
+                        className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
+                      >
+                        {format(new Date(version.timestamp), 'MMMM d, h:mm a')}
+                      </Label>
+                    </div>
+                    <div className='pl-6'>
+                      <span className='text-xs text-muted-foreground'>
+                        {formatDistanceToNow(new Date(version.timestamp), { addSuffix: true })}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>

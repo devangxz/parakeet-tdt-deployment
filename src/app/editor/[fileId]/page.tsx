@@ -57,7 +57,7 @@ import {
   getFormattedContent,
   EditorData,
 } from '@/utils/editorUtils'
-import { persistEditorDataIDB, getEditorDataIDB } from '@/utils/indexedDB'
+import { persistEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
 import { diff_match_patch, DmpDiff } from '@/utils/transcript/diff_match_patch'
 
@@ -432,17 +432,12 @@ function EditorPage() {
   }, [session])
 
   const handleTabsValueChange = async (value: string) => {
-    const contentText = getEditorText()
-    const dmp = new diff_match_patch()
-    const diffs = dmp.diff_wordMode(getFormattedTranscript(ctms), contentText)
-    dmp.diff_cleanupSemantic(diffs)
-    setDiff(diffs)
-
-    if (value === 'transcribe' && orderDetails.fileId) {
-      const persistedData = await getEditorDataIDB(orderDetails.fileId)
-      setInitialEditorData(
-        persistedData || { transcript: '', undoStack: [], redoStack: [] }
-      )
+    if (value === 'diff') {
+      const contentText = getEditorText()
+      const dmp = new diff_match_patch()
+      const diffs = dmp.diff_wordMode(getFormattedTranscript(ctms), contentText)
+      dmp.diff_cleanupSemantic(diffs)
+      setDiff(diffs)
     }
   }
 
