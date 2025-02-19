@@ -268,9 +268,12 @@ const InvoicePDF = ({
                 borderRight: 'none',
               }}
             >
-              {invoice?.type === 'TRANSCRIPT' ? 'File Name' : 'Description'}
+              {invoice?.type === 'TRANSCRIPT' || invoice?.type === 'FORMATTING'
+                ? 'File Name'
+                : 'Description'}
             </Text>
-            {invoice?.type === 'TRANSCRIPT' && (
+            {(invoice?.type === 'TRANSCRIPT' ||
+              invoice?.type === 'FORMATTING') && (
               <>
                 <Text style={[styles.tableCellHeader, { paddingRight: 3 }]}>
                   Minutes
@@ -367,7 +370,8 @@ const InvoicePDF = ({
               </View>
             </>
           )}
-          {invoice?.type === 'TRANSCRIPT' && (
+          {(invoice?.type === 'TRANSCRIPT' ||
+            invoice?.type === 'FORMATTING') && (
             <View style={styles.tableRow}>
               <Text
                 style={{
@@ -689,6 +693,7 @@ const InvoicesDetailDialog = ({
             {/* Hide it for now*/}
             {/* <Button variant='order'>Print</Button> */}
             {(invoiceType === 'TRANSCRIPT' ||
+              invoiceType === 'FORMATTING' ||
               invoiceType === 'ADD_CREDITS') && (
               <>
                 <Button variant='order' onClick={handleCheckStatus}>

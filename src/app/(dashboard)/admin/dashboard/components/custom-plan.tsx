@@ -56,6 +56,7 @@ export default function CustomPlan() {
     customFormatDeadline: '',
     customFormattingOption: 'legal',
     orderType: 'TRANSCRIPTION',
+    outputFormat: '',
   })
   const [organizationName, setOrganizationName] = useState('')
   const [templateName, setTemplateName] = useState('')
@@ -135,6 +136,7 @@ export default function CustomPlan() {
               responseData.cfReviewMediumDifficultyRate.toString(),
             cfReviewHighDifficultyRate:
               responseData.cfReviewHighDifficultyRate.toString(),
+            outputFormat: responseData.outputFormat,
           }
           setRates(mappedRates)
         }
@@ -544,8 +546,20 @@ export default function CustomPlan() {
                       <SelectItem value='TRANSCRIPTION_FORMATTING'>
                         TRANSCRIPTION_FORMATTING
                       </SelectItem>
+                      <SelectItem value='FORMATTING'>FORMATTING</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className='grid gap-3'>
+                  <Label htmlFor='outputFormat'>Output Format</Label>
+                  <Input
+                    id='outputFormat'
+                    type='text'
+                    className='w-full'
+                    placeholder='Output Format'
+                    value={rates.outputFormat}
+                    onChange={handleInputChange}
+                  />
                 </div>
                 <div className='grid gap-3'>
                   <Label htmlFor='organizationName'>Organization Name</Label>

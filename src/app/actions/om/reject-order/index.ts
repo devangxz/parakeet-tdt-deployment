@@ -25,6 +25,8 @@ export async function rejectOrder(formData: { orderId: number }) {
           status:
             order.orderType === OrderType.TRANSCRIPTION_FORMATTING
               ? OrderStatus.FORMATTED
+              : order.orderType === OrderType.FORMATTING
+              ? OrderStatus.REVIEW_COMPLETED
               : OrderStatus.TRANSCRIBED,
           updatedAt: new Date(),
         },

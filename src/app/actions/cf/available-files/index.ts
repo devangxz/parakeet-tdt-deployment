@@ -19,7 +19,9 @@ export async function getAvailableFiles(type: string) {
     let cfFiles = await prisma.order.findMany({
       where: {
         status: OrderStatus.REVIEW_COMPLETED,
-        orderType: OrderType.TRANSCRIPTION_FORMATTING,
+        orderType: {
+          in: [OrderType.TRANSCRIPTION_FORMATTING, OrderType.FORMATTING],
+        },
       },
       include: {
         File: true,

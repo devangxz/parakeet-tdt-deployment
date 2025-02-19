@@ -143,6 +143,7 @@ export async function getUserInfo({ id }: GetUserInfoParams) {
               'ADDL_FORMATTING',
               'ADDL_PROOFREADING',
               'ADD_CREDITS',
+              'FORMATTING',
             ],
           },
         },

@@ -33,6 +33,7 @@ interface UpdateCustomPlanParams {
     cfReviewLowDifficultyRate: string
     cfReviewMediumDifficultyRate: string
     cfReviewHighDifficultyRate: string
+    outputFormat: string
   }
 }
 
@@ -161,6 +162,7 @@ export async function updateCustomPlan({
           ),
           deadline: parseInt(rates.customFormatDeadline),
           orderType: rates.orderType,
+          outputFormat: rates.outputFormat,
           updatedAt: new Date(),
         },
         create: {
@@ -194,6 +196,7 @@ export async function updateCustomPlan({
           ),
           deadline: parseInt(rates.customFormatDeadline),
           orderType: rates.orderType,
+          outputFormat: rates.outputFormat,
         },
       })
 

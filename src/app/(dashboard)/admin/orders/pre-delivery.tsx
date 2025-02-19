@@ -68,15 +68,17 @@ export default function PreDeliveryPage() {
   }>({})
   const [waveformUrls, setWaveformUrls] = useState<Record<string, string>>({})
   const [listenCounts, setListenCounts] = useState<Record<string, number[]>>({})
-  const [editedSegments, setEditedSegments] = useState<Record<string, Set<number>>>({})
+  const [editedSegments, setEditedSegments] = useState<
+    Record<string, Set<number>>
+  >({})
 
   const fetchWaveformUrl = async (fileId: string) => {
     try {
       const res = await getSignedUrlAction(`${fileId}_wf.png`, 300)
       if (res.success && res.signedUrl) {
-        setWaveformUrls(prev => ({
+        setWaveformUrls((prev) => ({
           ...prev,
-          [fileId]: res.signedUrl
+          [fileId]: res.signedUrl,
         }))
       }
     } catch (error) {
@@ -88,15 +90,15 @@ export default function PreDeliveryPage() {
     try {
       const data = await getListenCountAndEditedSegmentAction(fileId)
       if (data?.listenCount) {
-        setListenCounts(prev => ({
+        setListenCounts((prev) => ({
           ...prev,
-          [fileId]: data.listenCount as number[]
+          [fileId]: data.listenCount as number[],
         }))
       }
       if (data?.editedSegments) {
-        setEditedSegments(prev => ({
+        setEditedSegments((prev) => ({
           ...prev,
-          [fileId]: new Set(data.editedSegments as number[])
+          [fileId]: new Set(data.editedSegments as number[]),
         }))
       }
     } catch (error) {
@@ -129,7 +131,10 @@ export default function PreDeliveryPage() {
       if (response.success && response.details) {
         const orders = response.details.map((order, index) => {
           const qcNames = order.Assignment.filter(
-            (a) => a.status === 'ACCEPTED' || a.status === 'COMPLETED'
+            (a) =>
+              a.status === 'ACCEPTED' ||
+              a.status === 'COMPLETED' ||
+              a.status === 'SUBMITTED_FOR_APPROVAL'
           )
             .map((a) => `${a.user.firstname} ${a.user.lastname}`)
             .join(', ')
@@ -240,8 +245,8 @@ export default function PreDeliveryPage() {
                   {row.original.pwer > HIGH_PWER
                     ? 'HIGH'
                     : row.original.pwer < LOW_PWER
-                      ? 'LOW'
-                      : 'MEDIUM'}
+                    ? 'LOW'
+                    : 'MEDIUM'}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
@@ -302,20 +307,34 @@ export default function PreDeliveryPage() {
           style={{ minWidth: '250px', maxWidth: '250px' }}
         >
           {formatDuration(row.getValue('duration'))}
-          <p>
-            Transcription cost: <br /> $
-            {row.original.fileCost.transcriptionCost}
-            /ah ($
-            {row.original.fileCost.transcriptionRate}/ah + $
-            {row.original.rateBonus}/ah)
-          </p>
-          {row.original.orderType === 'TRANSCRIPTION_FORMATTING' && (
-            <p className='mt-1'>
-              Review cost: <br /> ${row.original.fileCost.customFormatCost}/ah
-              ($
-              {row.original.fileCost.customFormatRate}/ah + $
-              {row.original.rateBonus}/ah)
-            </p>
+          {row.original.orderType === 'FORMATTING' ? (
+            <>
+              <p>
+                Formatting cost: <br /> $
+                {row.original.fileCost.customFormatCost}
+                /ah ($
+                {row.original.fileCost.customFormatRate}/ah + $
+                {row.original.rateBonus}/ah)
+              </p>
+            </>
+          ) : (
+            <>
+              <p>
+                Transcription cost: <br /> $
+                {row.original.fileCost.transcriptionCost}
+                /ah ($
+                {row.original.fileCost.transcriptionRate}/ah + $
+                {row.original.rateBonus}/ah)
+              </p>
+              {row.original.orderType === 'TRANSCRIPTION_FORMATTING' && (
+                <p className='mt-1'>
+                  Review cost: <br /> ${row.original.fileCost.customFormatCost}
+                  /ah ($
+                  {row.original.fileCost.customFormatRate}/ah + $
+                  {row.original.rateBonus}/ah)
+                </p>
+              )}
+            </>
           )}
         </div>
       ),
@@ -357,10 +376,10 @@ export default function PreDeliveryPage() {
                 `/editor/${row.original.fileId}`,
                 '_blank',
                 'toolbar=no,location=no,menubar=no,width=' +
-                window.screen.width +
-                ',height=' +
-                window.screen.height +
-                ',left=0,top=0'
+                  window.screen.width +
+                  ',height=' +
+                  window.screen.height +
+                  ',left=0,top=0'
               )
             }
           >
@@ -396,7 +415,8 @@ export default function PreDeliveryPage() {
               >
                 Re-assign Editor
               </DropdownMenuItem>
-              {row.original.orderType === 'TRANSCRIPTION_FORMATTING' && (
+              {(row.original.orderType === 'TRANSCRIPTION_FORMATTING' ||
+                row.original.orderType === 'FORMATTING') && (
                 <DropdownMenuItem
                   className=''
                   onClick={() => {
@@ -437,9 +457,9 @@ export default function PreDeliveryPage() {
           data={preDeliveryFiles ?? []}
           columns={columns}
           renderWaveform={(row) => {
-            if (!('fileId' in row)) return null;
-            const fileId = row.fileId as string;
-            if (!waveformUrls[fileId]) return null;
+            if (!('fileId' in row)) return null
+            const fileId = row.fileId as string
+            if (!waveformUrls[fileId]) return null
 
             return (
               <WaveformHeatmap
@@ -448,7 +468,7 @@ export default function PreDeliveryPage() {
                 editedSegments={editedSegments[fileId] || new Set()}
                 duration={row.duration}
               />
-            );
+            )
           }}
         />
       </div>

@@ -15,6 +15,7 @@ import { refetchFiles } from '@/app/actions/files'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { createOrder } from '@/app/actions/order'
 import { fetchWorkspaces } from '@/app/actions/workspaces'
+import { CustomFormatRequestModal } from '@/components/custom-format-request'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
 import RenameFileDialog from '@/components/file-rename-dialog'
@@ -83,6 +84,7 @@ const FileList = ({
   const [bulkLoading, setBulkLoading] = useState(false)
   const [openBulkDeleteDialog, setOpenBulkDeleteDialog] = useState(false)
   const [openTrimFileDialog, setOpenTrimFileDialog] = useState(false)
+  const [openCustomFormatDialog, setOpenCustomFormatDialog] = useState(false)
   const [playing, setPlaying] = useState<Record<string, boolean>>({})
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
@@ -569,6 +571,15 @@ const FileList = ({
           Uploads ({pendingFiles?.length})
         </h2>
         <div className='flex items-center'>
+          {session?.user?.orderType === 'TRANSCRIPTION' && (
+            <Button
+              variant='order'
+              className='not-rounded mr-2'
+              onClick={() => setOpenCustomFormatDialog(true)}
+            >
+              Request Custom Formatting
+            </Button>
+          )}
           {(session?.user?.role === 'ADMIN' || session?.user?.adminAccess) && (
             <Button
               variant='order'
@@ -709,6 +720,10 @@ const FileList = ({
         fileIds={selectedFiles}
         teams={workspaces}
         refetch={fetchPendingFiles}
+      />
+      <CustomFormatRequestModal
+        open={openCustomFormatDialog}
+        onClose={() => setOpenCustomFormatDialog(false)}
       />
     </div>
   )

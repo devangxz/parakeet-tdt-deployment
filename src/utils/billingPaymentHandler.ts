@@ -12,7 +12,7 @@ interface PaymentSuccessData {
 }
 
 export const handleBillingPaymentMethod = async (
-  orderType: 'TRANSCRIPTION' | 'TRANSCRIPTION_FORMATTING',
+  orderType: string,
   invoiceId: string,
   setPaymentSuccessData: Dispatch<SetStateAction<PaymentSuccessData | null>>,
   setPaymentSuccess: Dispatch<SetStateAction<boolean>>,

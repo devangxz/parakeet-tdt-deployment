@@ -52,7 +52,9 @@ export const orderFiles = async (
   await prisma.invoice.deleteMany({
     where: {
       itemNumber: fileIds.join(','),
-      type: InvoiceType.TRANSCRIPT,
+      type: {
+        in: [InvoiceType.TRANSCRIPT, InvoiceType.FORMATTING],
+      },
       status: InvoiceStatus.PENDING,
       userId: userId,
     },
@@ -167,9 +169,7 @@ export const orderFiles = async (
   }
 
   for (const file of files) {
-    let price = calculatePrice(file.duration, rate)
-
-    if (orderType === OrderType.TRANSCRIPTION_FORMATTING) {
+    if (orderType === OrderType.FORMATTING) {
       const customPlanRates = await getUserRate(teamAdminUserId)
       if (!customPlanRates) {
         logger.error(`Failed to fetch custom plan rates for ${teamAdminUserId}`)
@@ -182,26 +182,55 @@ export const orderFiles = async (
         vb: customPlanRates.sv,
         ro: customPlanRates.ro,
       }
-      price += calculatePrice(file.duration, customPlanRates.cf)
+      const price = calculatePrice(file.duration, customPlanRates.cf)
       customFormattingRate = customPlanRates.cf
-    }
+      filesInfo.push({
+        filename: file.filename,
+        fileId: file.fileId,
+        duration: file.duration,
+        price: price,
+      })
 
-    // Calculate additional costs based on selected options
-    if (options.vb === 1) {
-      price += calculatePrice(file.duration, rates.vb)
-    }
-    if (options.exd === 1) {
-      price += calculatePrice(file.duration, rates.ro)
-    }
+      totalPrice += price
+    } else {
+      let price = calculatePrice(file.duration, rate)
 
-    filesInfo.push({
-      filename: file.filename,
-      fileId: file.fileId,
-      duration: file.duration,
-      price: price,
-    })
+      if (orderType === OrderType.TRANSCRIPTION_FORMATTING) {
+        const customPlanRates = await getUserRate(teamAdminUserId)
+        if (!customPlanRates) {
+          logger.error(
+            `Failed to fetch custom plan rates for ${teamAdminUserId}`
+          )
+          return {
+            success: false,
+            message: 'An error occurred. Please try again after some time.',
+          }
+        }
+        rates = {
+          vb: customPlanRates.sv,
+          ro: customPlanRates.ro,
+        }
+        price += calculatePrice(file.duration, customPlanRates.cf)
+        customFormattingRate = customPlanRates.cf
+      }
 
-    totalPrice += price
+      // Calculate additional costs based on selected options
+      if (options.vb === 1) {
+        price += calculatePrice(file.duration, rates.vb)
+      }
+      if (options.exd === 1) {
+        price += calculatePrice(file.duration, rates.ro)
+      }
+
+      filesInfo.push({
+        filename: file.filename,
+        fileId: file.fileId,
+        duration: file.duration,
+        price: price,
+      })
+
+      totalPrice += price
+    }
   }
 
   const discountRate = await getDiscountRate(teamAdminUserId)
@@ -218,14 +247,20 @@ export const orderFiles = async (
 
   const invoiceData = {
     invoiceId,
-    type: InvoiceType.TRANSCRIPT,
+    type:
+      orderType === OrderType.FORMATTING
+        ? InvoiceType.FORMATTING
+        : InvoiceType.TRANSCRIPT,
     userId,
     amount: Number(totalPrice.toFixed(2)),
     discount: Number(discount),
     itemNumber,
     options: JSON.stringify(options),
     instructions: instruction?.instructions ?? '',
-    orderRate: Number((rate + customFormattingRate).toFixed(2)),
+    orderRate:
+      orderType === OrderType.FORMATTING
+        ? Number(customFormattingRate.toFixed(2))
+        : Number((rate + customFormattingRate).toFixed(2)),
   }
 
   const invoice = await prisma.invoice.create({

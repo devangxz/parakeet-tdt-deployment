@@ -112,7 +112,10 @@ export function CheckAndDownload({
       if (error instanceof Error && error.message.includes('login')) {
         login() // Trigger new login if token expired
       } else {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to upload to Google Drive'
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : 'Failed to upload to Google Drive'
         toast.error(errorMessage)
       }
     } finally {
@@ -129,8 +132,8 @@ export function CheckAndDownload({
         fileId: id,
         filename,
         docType:
-          orderType == 'TRANSCRIPTION_FORMATTING'
-            ? 'TRANCRIPTIONCF_DOCX'
+          orderType == 'TRANSCRIPTION_FORMATTING' || orderType == 'FORMATTING'
+            ? 'TRANSCRIPTION_CF_DOCX'
             : 'TRANSCRIPTION_DOCX',
         rating,
       },
@@ -215,10 +218,10 @@ export function CheckAndDownload({
                       `/editor/${id}`,
                       '_blank',
                       'toolbar=no,location=no,menubar=no,width=' +
-                      window.screen.width +
-                      ',height=' +
-                      window.screen.height +
-                      ',left=0,top=0'
+                        window.screen.width +
+                        ',height=' +
+                        window.screen.height +
+                        ',left=0,top=0'
                     )
                   }
                 >
@@ -247,21 +250,20 @@ export function CheckAndDownload({
                   className='text-primary'
                 >{`${docx?.name}_cf.docx`}</a>
                 <div className='flex space-x-2'>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                  >
-                    <a
-                      href={cfDocxSignedUrl}
-                      target='_blank'
-                    >Save to device</a>
-
+                  <Button variant='outline' size='sm' asChild>
+                    <a href={cfDocxSignedUrl} target='_blank'>
+                      Save to device
+                    </a>
                   </Button>
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleGDriveUpload(cfDocxSignedUrl, `${docx?.name}_cf.docx`)}
+                    variant='outline'
+                    size='sm'
+                    onClick={() =>
+                      handleGDriveUpload(
+                        cfDocxSignedUrl,
+                        `${docx?.name}_cf.docx`
+                      )
+                    }
                     disabled={isUploading}
                   >
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
@@ -275,7 +277,12 @@ export function CheckAndDownload({
                     fileName={`${docx?.name}_cf.docx`}
                   />
                   <DropboxUploadButton
-                    files={[{ filename: `${docx?.name}_cf.docx`, url: cfDocxSignedUrl }]}
+                    files={[
+                      {
+                        filename: `${docx?.name}_cf.docx`,
+                        url: cfDocxSignedUrl,
+                      },
+                    ]}
                   />
                 </div>
               </div>
@@ -287,21 +294,23 @@ export function CheckAndDownload({
                   className='text-primary'
                 >{`${pdf?.name}_cf.pdf`}</a>
                 <div className='flex space-x-2'>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                  >
+                  <Button variant='outline' size='sm' asChild>
                     <a
                       href={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`}
                       target='_blank'
-                    >Save to device</a>
-
+                    >
+                      Save to device
+                    </a>
                   </Button>
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleGDriveUpload(`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`, `${pdf?.name}_cf.pdf`)}
+                    variant='outline'
+                    size='sm'
+                    onClick={() =>
+                      handleGDriveUpload(
+                        `${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`,
+                        `${pdf?.name}_cf.pdf`
+                      )
+                    }
                     disabled={isUploading}
                   >
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
@@ -315,7 +324,111 @@ export function CheckAndDownload({
                     fileName={`${pdf?.name}_cf.pdf`}
                   />
                   <DropboxUploadButton
-                    files={[{ filename: `${pdf?.name}_cf.pdf`, url: `${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}` }]}
+                    files={[
+                      {
+                        filename: `${pdf?.name}_cf.pdf`,
+                        url: `${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`,
+                      },
+                    ]}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {orderType == 'FORMATTING' && (
+            <div className='space-y-2'>
+              <p className='text-sm font-semibold text-slate-700'>
+                Custom Formatting
+              </p>
+              {/* docx  */}
+              <div className='max-w-full flex justify-between'>
+                <a
+                  target='_blank'
+                  href={cfDocxSignedUrl}
+                  className='text-primary'
+                >{`${docx?.name}_cf.docx`}</a>
+                <div className='flex space-x-2'>
+                  <Button variant='outline' size='sm' asChild>
+                    <a href={cfDocxSignedUrl} target='_blank'>
+                      Save to device
+                    </a>
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() =>
+                      handleGDriveUpload(
+                        cfDocxSignedUrl,
+                        `${docx?.name}_cf.docx`
+                      )
+                    }
+                    disabled={isUploading}
+                  >
+                    {isUploading ? 'Uploading...' : 'Save to Google Drive'}
+                  </Button>
+                  <OneDriveUploadButton
+                    fileUrl={cfDocxSignedUrl}
+                    fileName={`${docx?.name}_cf.docx`}
+                  />
+                  <BoxUploadButton
+                    fileUrl={cfDocxSignedUrl}
+                    fileName={`${docx?.name}_cf.docx`}
+                  />
+                  <DropboxUploadButton
+                    files={[
+                      {
+                        filename: `${docx?.name}_cf.docx`,
+                        url: cfDocxSignedUrl,
+                      },
+                    ]}
+                  />
+                </div>
+              </div>
+              {/* pdf  */}
+              <div className='max-w-full flex justify-between'>
+                <a
+                  href={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`}
+                  target='_blank'
+                  className='text-primary'
+                >{`${pdf?.name}_cf.pdf`}</a>
+                <div className='flex space-x-2'>
+                  <Button variant='outline' size='sm' asChild>
+                    <a
+                      href={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`}
+                      target='_blank'
+                    >
+                      Save to device
+                    </a>
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() =>
+                      handleGDriveUpload(
+                        `${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`,
+                        `${pdf?.name}_cf.pdf`
+                      )
+                    }
+                    disabled={isUploading}
+                  >
+                    {isUploading ? 'Uploading...' : 'Save to Google Drive'}
+                  </Button>
+                  <OneDriveUploadButton
+                    fileUrl={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`}
+                    fileName={`${pdf?.name}_cf.pdf`}
+                  />
+                  <BoxUploadButton
+                    fileUrl={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`}
+                    fileName={`${pdf?.name}_cf.pdf`}
+                  />
+                  <DropboxUploadButton
+                    files={[
+                      {
+                        filename: `${pdf?.name}_cf.pdf`,
+                        url: `${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`,
+                      },
+                    ]}
                   />
                 </div>
               </div>
@@ -335,21 +448,23 @@ export function CheckAndDownload({
                   className='text-primary'
                 >{`${docx?.name}.docx`}</a>
                 <div className='flex space-x-2'>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                  >
+                  <Button variant='outline' size='sm' asChild>
                     <a
                       href={`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${authToken}`}
                       target='_blank'
-                    >Save to device</a>
-
+                    >
+                      Save to device
+                    </a>
                   </Button>
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleGDriveUpload(`${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${authToken}`, `${docx?.name}.docx`)}
+                    variant='outline'
+                    size='sm'
+                    onClick={() =>
+                      handleGDriveUpload(
+                        `${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${authToken}`,
+                        `${docx?.name}.docx`
+                      )
+                    }
                     disabled={isUploading}
                   >
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
@@ -363,7 +478,12 @@ export function CheckAndDownload({
                     fileName={`${docx?.name}.docx`}
                   />
                   <DropboxUploadButton
-                    files={[{ filename: `${docx?.name}.docx`, url: `${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${authToken}` }]}
+                    files={[
+                      {
+                        filename: `${docx?.name}.docx`,
+                        url: `${FILE_CACHE_URL}/get-tr-docx/${id}?authToken=${authToken}`,
+                      },
+                    ]}
                   />
                 </div>
               </div>
@@ -375,21 +495,23 @@ export function CheckAndDownload({
                   className='text-primary'
                 >{`${pdf?.name}.pdf`}</a>
                 <div className='flex space-x-2'>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                  >
+                  <Button variant='outline' size='sm' asChild>
                     <a
                       href={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${authToken}`}
                       target='_blank'
-                    >Save to device</a>
-
+                    >
+                      Save to device
+                    </a>
                   </Button>
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleGDriveUpload(`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${authToken}`, `${pdf?.name}.pdf`)}
+                    variant='outline'
+                    size='sm'
+                    onClick={() =>
+                      handleGDriveUpload(
+                        `${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${authToken}`,
+                        `${pdf?.name}.pdf`
+                      )
+                    }
                     disabled={isUploading}
                   >
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
@@ -403,7 +525,12 @@ export function CheckAndDownload({
                     fileName={`${pdf?.name}.pdf`}
                   />
                   <DropboxUploadButton
-                    files={[{ filename: `${pdf?.name}.pdf`, url: `${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${authToken}` }]}
+                    files={[
+                      {
+                        filename: `${pdf?.name}.pdf`,
+                        url: `${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${authToken}`,
+                      },
+                    ]}
                   />
                 </div>
               </div>
@@ -415,21 +542,17 @@ export function CheckAndDownload({
                   className='text-primary'
                 >{`${txtFile?.name}.txt`}</a>
                 <div className='flex space-x-2'>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                  >
-                    <a
-                      href={txtSignedUrl}
-                      target='_blank'
-                    >Save to device</a>
-
+                  <Button variant='outline' size='sm' asChild>
+                    <a href={txtSignedUrl} target='_blank'>
+                      Save to device
+                    </a>
                   </Button>
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleGDriveUpload(txtSignedUrl, `${txtFile?.name}.txt`)}
+                    variant='outline'
+                    size='sm'
+                    onClick={() =>
+                      handleGDriveUpload(txtSignedUrl, `${txtFile?.name}.txt`)
+                    }
                     disabled={isUploading}
                   >
                     {isUploading ? 'Uploading...' : 'Save to Google Drive'}
@@ -443,7 +566,9 @@ export function CheckAndDownload({
                     fileName={`${txtFile?.name}.txt`}
                   />
                   <DropboxUploadButton
-                    files={[{ filename: `${txtFile?.name}.txt`, url: txtSignedUrl }]}
+                    files={[
+                      { filename: `${txtFile?.name}.txt`, url: txtSignedUrl },
+                    ]}
                   />
                 </div>
               </div>

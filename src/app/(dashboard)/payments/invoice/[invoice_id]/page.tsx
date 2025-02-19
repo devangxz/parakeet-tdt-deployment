@@ -47,7 +47,7 @@ const Invoice = ({ params }: InvoiceProps) => {
           orderType === 'TRANSCRIPTION' ? 'Transcribe' : 'Custom Format'
         }
       />
-      <OrderComponent invoiceId={invoice_id} />
+      <OrderComponent invoiceId={invoice_id} orderType={orderType} />
     </div>
   )
 }
