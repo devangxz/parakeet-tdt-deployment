@@ -30,6 +30,14 @@ export async function getAvailableQCFiles(type?: string | null) {
       },
     })
 
+    if (verifier?.qcDisabled) {
+      return {
+        success: true,
+        data: [],
+        isQCDisabled: true,
+      }
+    }
+
     const enabledCustomers =
       verifier?.enabledCustomers
         ?.split(',')
