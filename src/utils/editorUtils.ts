@@ -1309,7 +1309,7 @@ export interface ChunkData {
 function parseTranscript(transcript: string): TranscriptSegment[] {
   const lines = transcript.split("\n").filter((line) => line.trim());
   return lines.map((line) => {
-    const match = line.match(/^(\d+:\d+:\d+\.\d+)\s+(S\d+):\s+(.+)$/);
+    const match = line.match(/^(\d+:\d+:\d+\.\d+)\s+(S\d+)\s*:\s*(.+)$/);
     if (!match) throw new Error(`Invalid line format: ${line}`);
     return {
       timestamp: match[1],
@@ -1384,7 +1384,7 @@ function secondsToTimestamp(seconds: number): string {
 }
 
 function parseTranscriptLine(line: string): TranscriptSegment | null {
-  const match = line.match(/^(\d+:\d+:\d+\.\d+)\s+(S\d+):\s+(.+)$/);
+  const match = line.match(/^(\d+:\d+:\d+\.\d+)\s+(S\d+)\s*:\s*(.+)$/);
   if (!match) return null;
 
   return {
