@@ -67,7 +67,7 @@ export default function ReviewTranscriptDialog({
     
     setLoading(true);
     setIsError(false);
-    setStep('review');
+    setStep('processing');
     try {
       const userPrompt = selectedPrompts.join("\n") + "\n" + instructions;
       const chunkPoints = findOptimalChunkPoints(ctms);
@@ -109,6 +109,7 @@ export default function ReviewTranscriptDialog({
       // endtime
       setProgressMessage('Finalizing transcript review...');
       setProgressValue(100);
+      setStep('review');
       const formattedGeminiTranscript = formatTimestamps(geminiTranscript);
       const differences = computeDiffs(transcript, formattedGeminiTranscript);
       setDiffs(differences);
