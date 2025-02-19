@@ -112,7 +112,6 @@ export default function ReviewTranscriptDialog({
       const differences = computeDiffs(transcript, formattedGeminiTranscript);
       setDiffs(differences);
     } catch (error) {
-      console.log("error in handleNextOptions", error)
       setErrorMessage("Unable to review transcript. Please try again later.");
       setIsError(true);
     } finally {
