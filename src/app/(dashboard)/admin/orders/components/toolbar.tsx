@@ -2,12 +2,19 @@
 
 import { Cross2Icon } from '@radix-ui/react-icons'
 import { Table } from '@tanstack/react-table'
+import * as React from 'react'
 
 import { DataTableFacetedFilter } from './filter'
 import { DataTableViewOptions } from './view-options'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 interface DataTableToolbarProps<TData> {
   table: Table<TData>
 }
@@ -15,7 +22,22 @@ interface DataTableToolbarProps<TData> {
 export function DataTableToolbar<TData>({
   table,
 }: DataTableToolbarProps<TData>) {
+  const [watchlistFilter, setWatchlistFilter] = React.useState<string>('all')
   const isFiltered = table.getState().columnFilters.length > 0
+
+  const handleWatchlistChange = (value: string) => {
+    setWatchlistFilter(value)
+    if (value === 'customer') {
+      table.getColumn('customerWatch')?.setFilterValue('true')
+      table.getColumn('transcriberWatch')?.setFilterValue(null)
+    } else if (value === 'transcriber') {
+      table.getColumn('transcriberWatch')?.setFilterValue('true')
+      table.getColumn('customerWatch')?.setFilterValue(null)
+    } else {
+      table.getColumn('customerWatch')?.setFilterValue(null)
+      table.getColumn('transcriberWatch')?.setFilterValue(null)
+    }
+  }
 
   return (
     <div className='flex items-center justify-between'>
@@ -37,6 +59,24 @@ export function DataTableToolbar<TData>({
               { value: 'ACR', label: 'ACR' },
             ]}
           />
+        )}
+        {(table.getColumn('customerWatch') ||
+          table.getColumn('transcriberWatch')) && (
+          <div>
+            <Select
+              value={watchlistFilter}
+              onValueChange={handleWatchlistChange}
+            >
+              <SelectTrigger className='h-8 w-[150px] lg:w-[250px] rounded border p-1 text-sm'>
+                <SelectValue placeholder='Watchlist' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All</SelectItem>
+                <SelectItem value='customer'>Customer Watch</SelectItem>
+                <SelectItem value='transcriber'>Transcriber Watch</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         )}
         {table.getColumn('status') && (
           <DataTableFacetedFilter
@@ -68,7 +108,10 @@ export function DataTableToolbar<TData>({
         {isFiltered && (
           <Button
             variant='ghost'
-            onClick={() => table.resetColumnFilters()}
+            onClick={() => {
+              table.resetColumnFilters()
+              setWatchlistFilter('all')
+            }}
             className='h-8 px-2 lg:px-3 not-rounded'
           >
             Reset

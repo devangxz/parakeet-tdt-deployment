@@ -291,7 +291,6 @@ export default function AvailableFilesPage({ changeTab }: Props) {
       header: 'Difficulty',
       filterFn: (row, id, filterValues: string[]) => {
         const diffVal = row.getValue(id) as string
-        console.log(diffVal)
         if (!filterValues || filterValues.length === 0) return true
         return filterValues.includes(diffVal)
       },
