@@ -41,7 +41,7 @@ export default function ReviewTranscriptDialog({
   updateQuill,
 }: ReviewWithGeminiDialogProps) {
   
-  const [step, setStep] = useState<'options' | 'review' | 'preview'>('options');
+  const [step, setStep] = useState<'options' | 'processing' | 'review' | 'preview'>('options');
   const [loading, setLoading] = useState(false);
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("Please try again later.");
@@ -57,8 +57,9 @@ export default function ReviewTranscriptDialog({
   // Map the step string to its corresponding index
   const stepToIndex: Record<typeof step, number> = {
     options: 0,
-    review: 1,
-    preview: 2,
+    processing: 1,
+    review: 2,
+    preview: 3,
   };
   const activeStepIndex = stepToIndex[step];
 
@@ -181,6 +182,14 @@ export default function ReviewTranscriptDialog({
     );
   };
 
+  const handleCancelReviewProcess = async () => {
+    setReviewModalOpen(false)
+    await axios.post(`${FILE_CACHE_URL}/create-chunks`, {
+      fileId,
+      cancelRequest: true
+    });
+  }
+
   useEffect(() => {
     if (!reviewModalOpen) {
       setStep('options');
@@ -214,6 +223,8 @@ export default function ReviewTranscriptDialog({
           <DialogDescription>
             {step === 'options'
               ? "Select your prompt options and add any additional instructions below."
+              : step === 'processing'
+              ? "Processing transcript review, please wait..."
               : step === 'review'
               ? "Hover over the text to accept or reject the suggested changes."
               : "Review the final transcript and save your changes."}
@@ -222,7 +233,7 @@ export default function ReviewTranscriptDialog({
         
         {/* Insert the stepper below the header */}
         <div className="px-4 pt-2">
-          <Stepper steps={['Options', 'Review', 'Preview']} activeStep={activeStepIndex} />
+          <Stepper steps={['Options', 'Processing', 'Review', 'Preview']} activeStep={activeStepIndex} />
         </div>
                 
         {step === 'options' && (
@@ -243,6 +254,12 @@ export default function ReviewTranscriptDialog({
               <span>Loading</span>
             </div>
           )
+        )}
+        {step === 'processing' && (
+          <div className="flex flex-col space-y-4 justify-center items-center h-[60vh]">
+            <Progress value={progressValue} className="w-1/3 sm:w-1/2" color="primary" />
+            <span>{progressMessage}</span>
+          </div>
         )}
         {step === 'review' && (
           <>
@@ -270,7 +287,10 @@ export default function ReviewTranscriptDialog({
         <DialogFooter className="flex gap-2">
           {step === 'options' ? (
             <>
-              <Button onClick={handleNextOptions} disabled={loading}>
+             <Button variant="outline" onClick={() => setReviewModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleNextOptions} disabled={loading || isError}>
                 {loading ? (
                   <>
                     <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
@@ -280,12 +300,18 @@ export default function ReviewTranscriptDialog({
                   'Next'
                 )}
               </Button>
-              <Button variant="outline" onClick={() => setReviewModalOpen(false)}>
+            </>
+          ) : step == 'processing' ? (
+            <>
+              <Button variant="outline" onClick={handleCancelReviewProcess}>
                 Cancel
               </Button>
             </>
           ) : step == 'review' ? (
             <>
+              <Button variant="outline" onClick={handleCancelReviewProcess}>
+                Cancel
+              </Button>
               <Button variant="default" onClick={handleRejectAll} disabled={loading || isError}>
                 Reject All
               </Button>
@@ -295,11 +321,11 @@ export default function ReviewTranscriptDialog({
             </>
           ) : (
             <>
+              <Button variant="outline" onClick={() => setReviewModalOpen(false)} disabled={loading || isError}>
+                Cancel
+              </Button>
               <Button variant="default" onClick={handleSaveButton} disabled={loading || isError}>
                 Save
-              </Button>
-              <Button variant="default" onClick={() => setReviewModalOpen(false)} disabled={loading || isError}>
-                Cancel
               </Button>
             </>
           )}
