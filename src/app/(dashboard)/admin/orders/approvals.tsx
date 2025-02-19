@@ -47,6 +47,8 @@ interface File {
   fileCost: FileCost
   rateBonus: number
   type: string
+  transcriberWatch: boolean
+  customerWatch: boolean
 }
 
 export default function ApprovalPage() {
@@ -66,15 +68,17 @@ export default function ApprovalPage() {
   }>({})
   const [waveformUrls, setWaveformUrls] = useState<Record<string, string>>({})
   const [listenCounts, setListenCounts] = useState<Record<string, number[]>>({})
-  const [editedSegments, setEditedSegments] = useState<Record<string, Set<number>>>({})
+  const [editedSegments, setEditedSegments] = useState<
+    Record<string, Set<number>>
+  >({})
 
   const fetchWaveformUrl = async (fileId: string) => {
     try {
       const res = await getSignedUrlAction(`${fileId}_wf.png`, 300)
       if (res.success && res.signedUrl) {
-        setWaveformUrls(prev => ({
+        setWaveformUrls((prev) => ({
           ...prev,
-          [fileId]: res.signedUrl
+          [fileId]: res.signedUrl,
         }))
       }
     } catch (error) {
@@ -86,16 +90,16 @@ export default function ApprovalPage() {
     try {
       const data = await getListenCountAndEditedSegmentAction(fileId)
       if (data?.listenCount) {
-        setListenCounts(prev => ({
+        setListenCounts((prev) => ({
           ...prev,
-          [fileId]: data.listenCount as number[]
+          [fileId]: data.listenCount as number[],
         }))
       }
 
       if (data?.editedSegments) {
-        setEditedSegments(prev => ({
+        setEditedSegments((prev) => ({
           ...prev,
-          [fileId]: new Set(data.editedSegments as number[])
+          [fileId]: new Set(data.editedSegments as number[]),
         }))
       }
     } catch (error) {
@@ -152,6 +156,8 @@ export default function ApprovalPage() {
             fileCost: order.fileCost,
             rateBonus: order.rateBonus,
             type: order.orderType,
+            transcriberWatch: order.watchList.transcriber,
+            customerWatch: order.watchList.customer,
           }
         })
         setApprovalFiles(orders ?? [])
@@ -239,8 +245,8 @@ export default function ApprovalPage() {
                   {row.original.pwer > HIGH_PWER
                     ? 'HIGH'
                     : row.original.pwer < LOW_PWER
-                      ? 'LOW'
-                      : 'MEDIUM'}
+                    ? 'LOW'
+                    : 'MEDIUM'}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
@@ -343,6 +349,18 @@ export default function ApprovalPage() {
       ),
     },
     {
+      accessorKey: 'transcriberWatch',
+      header: 'Transcriber Watch',
+      enableHiding: true,
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    },
+    {
+      accessorKey: 'customerWatch',
+      header: 'Customer Watch',
+      enableHiding: true,
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    },
+    {
       id: 'actions',
       header: 'Actions',
       enableHiding: false,
@@ -420,9 +438,9 @@ export default function ApprovalPage() {
           data={approvalFiles ?? []}
           columns={columns}
           renderWaveform={(row) => {
-            if (!('fileId' in row)) return null;
-            const fileId = row.fileId as string;
-            if (!waveformUrls[fileId]) return null;
+            if (!('fileId' in row)) return null
+            const fileId = row.fileId as string
+            if (!waveformUrls[fileId]) return null
 
             return (
               <WaveformHeatmap
@@ -431,7 +449,7 @@ export default function ApprovalPage() {
                 editedSegments={editedSegments[fileId] || new Set()}
                 duration={row.duration}
               />
-            );
+            )
           }}
         />
       </div>

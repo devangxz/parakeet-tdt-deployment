@@ -57,7 +57,7 @@ import {
   getFormattedContent,
   EditorData,
 } from '@/utils/editorUtils'
-import { persistEditorDataIDB, getEditorDataIDB } from '@/utils/indexedDB'
+import { persistEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
 import { diff_match_patch, DmpDiff } from '@/utils/transcript/diff_match_patch'
 
@@ -168,6 +168,7 @@ function EditorPage() {
     useNativeContextMenu: false,
     shortcuts: { ...defaultShortcuts },
   })
+  const [autoCapitalize, setAutoCapitalize] = useState(true)
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -340,7 +341,7 @@ function EditorPage() {
           editorRef.current.clearAllHighlights()
           editorRef.current.triggerAlignmentUpdate()
         }
-        autoCapitalizeSentences(quillRef)
+        autoCapitalizeSentences(quillRef, autoCapitalize)
         await handleSave({
           getEditorText,
           orderDetails,
@@ -431,17 +432,12 @@ function EditorPage() {
   }, [session])
 
   const handleTabsValueChange = async (value: string) => {
-    const contentText = getEditorText()
-    const dmp = new diff_match_patch()
-    const diffs = dmp.diff_wordMode(getFormattedTranscript(ctms), contentText)
-    dmp.diff_cleanupSemantic(diffs)
-    setDiff(diffs)
-
-    if (value === 'transcribe' && orderDetails.fileId) {
-      const persistedData = await getEditorDataIDB(orderDetails.fileId)
-      setInitialEditorData(
-        persistedData || { transcript: '', undoStack: [], redoStack: [] }
-      )
+    if (value === 'diff') {
+      const contentText = getEditorText()
+      const dmp = new diff_match_patch()
+      const diffs = dmp.diff_wordMode(getFormattedTranscript(ctms), contentText)
+      dmp.diff_cleanupSemantic(diffs)
+      setDiff(diffs)
     }
   }
 
@@ -656,8 +652,6 @@ function EditorPage() {
     setHighlightWordsEnabled(editorSettings.wordHighlight)
   }, [editorSettings])
 
-  console.log(listenCount)
-
   return (
     <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
       <Topbar
@@ -680,6 +674,10 @@ function EditorPage() {
         onSettingsChange={setEditorSettings}
         waveformUrl={waveformUrl}
         audioDuration={audioDuration}
+        autoCapitalize={autoCapitalize}
+        onAutoCapitalizeChange={setAutoCapitalize}
+        transcript={initialEditorData?.transcript || ""}
+        ctms={ctms}
       />
 
       <Header

@@ -9,7 +9,8 @@ import {
 import axios from 'axios'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-import { useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
+import { Delta } from 'quill/core'
+import React,{ useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
@@ -21,6 +22,7 @@ import FrequentTermsDialog from './FrequentTermsDialog'
 import ReportDialog from './ReportDialog'
 import ShortcutsReferenceDialog from './ShortcutsReferenceDialog'
 import UploadDocxDialog from './UploadDocxDialog'
+import ReviewTranscriptDialog from '../review-with-gemini'
 import { Button } from '../ui/button'
 import { Checkbox } from '../ui/checkbox'
 import {
@@ -62,9 +64,10 @@ import { getTextFile } from '@/app/actions/get-text-file'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import TranscriberProfile from '@/app/transcribe/components/transcriberProfiles'
 import 'rc-slider/assets/index.css'
+import RestoreVersionDialog from '@/components/editor/RestoreVersionDialog'
 import Profile from '@/components/navbar/profile'
 import { ThemeSwitcher } from '@/components/theme-switcher'
-import { FILE_CACHE_URL } from '@/constants'
+import { FILE_CACHE_URL, COMMON_ABBREVIATIONS } from '@/constants'
 import { EditorSettings } from '@/types/editor'
 import DefaultShortcuts, {
   getAllShortcuts,
@@ -75,7 +78,9 @@ import DefaultShortcuts, {
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
   autoCapitalizeSentences,
+  CTMType,
   downloadMP3,
+  getFormattedContent,
   getFrequentTermsHandler,
   handleSave,
   navigateAndPlayBlanks,
@@ -113,6 +118,10 @@ interface TopbarProps {
   onSettingsChange: (settings: EditorSettings) => void
   waveformUrl: string
   audioDuration: number
+  autoCapitalize: boolean
+  onAutoCapitalizeChange: (value: boolean) => void
+  transcript: string
+  ctms: CTMType[]
 }
 
 export default memo(function Topbar({
@@ -135,6 +144,10 @@ export default memo(function Topbar({
   onSettingsChange,
   waveformUrl,
   audioDuration,
+  autoCapitalize,
+  onAutoCapitalizeChange,
+  transcript,
+  ctms,
 }: TopbarProps) {
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
@@ -150,7 +163,6 @@ export default memo(function Topbar({
     [key: string]: string
   } | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
-  const [autoCapitalize, setAutoCapitalize] = useState(true)
   const autoCapitalizeRef = useRef(autoCapitalize)
   const previousEditorContentRef = useRef('')
   const [isShortcutsReferenceModalOpen, setIsShortcutsReferenceModalOpen] =
@@ -170,6 +182,8 @@ export default memo(function Topbar({
     reportOption: '',
     reportComment: '',
   })
+
+  const [reviewModalOpen, setReviewModalOpen] = useState(false)
   const [buttonLoading, setButtonLoading] = useState({
     download: false,
     upload: false,
@@ -202,6 +216,8 @@ export default memo(function Topbar({
   const [timeoutCount, setTimeoutCount] = useState('')
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
   const [isHeatmapModalOpen, setIsHeatmapModalOpen] = useState(false)
+  const [isRestoreVersionModalOpen, setIsRestoreVersionModalOpen] =
+    useState(false)
 
   useEffect(() => {
     if (cfd && step) return
@@ -274,6 +290,22 @@ export default memo(function Topbar({
       toast.error('Failed to fetch formatting options')
     }
   }
+
+  const updateTranscript = (
+    quillRef: React.RefObject<ReactQuill> | undefined,
+    content: string,
+) => {
+    if (!quillRef?.current) return
+    const quill = quillRef.current.getEditor()
+    const formattedOps = getFormattedContent(content)
+    const updateDelta = new Delta().delete(quill.getText().length)
+    formattedOps.forEach((op) => {
+        if (op.insert !== undefined) {
+            updateDelta.insert(op.insert, op.attributes || {})
+        }
+    })
+    quill.updateContents(updateDelta, 'user')
+}
 
   useEffect(() => {
     if (orderDetails.orderId) {
@@ -407,8 +439,22 @@ export default memo(function Topbar({
 
       const change = delta.ops[0]
 
-      const shouldCapitalize = (index: number): boolean =>
-        index === 0 || (index > 0 && /[.!?]\s$/.test(newText.slice(0, index)))
+      const shouldCapitalize = (index: number): boolean => {
+        if (index === 0) return true
+        
+        const textBefore = newText.slice(0, index)
+        
+        // Check for ! or ? first - always capitalize after these
+        if (/[!?]\s$/.test(textBefore)) return true
+        
+        // Check for period - only then check abbreviations
+        if (/\.\s$/.test(textBefore)) {
+          const word = textBefore.trim().split(' ').pop()?.slice(0, -1).toLowerCase()
+          return !COMMON_ABBREVIATIONS.has(word || '')
+        }
+        
+        return false
+      }
 
       const capitalizeChar = (index: number): void => {
         const char = newText[index]
@@ -439,7 +485,7 @@ export default memo(function Topbar({
     },
     [quillRef]
   )
-
+      
   useEffect(() => {
     if (!quillRef?.current) return
 
@@ -479,7 +525,7 @@ export default memo(function Topbar({
   }
 
   const toggleAutoCapitalize = () => {
-    setAutoCapitalize(!autoCapitalize)
+    onAutoCapitalizeChange(!autoCapitalize)
   }
 
   const toggleNotes = () => {
@@ -775,8 +821,9 @@ export default memo(function Topbar({
 
         {orderDetails.status === 'QC_ASSIGNED' && (
           <span
-            className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
-              }`}
+            className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${
+              orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
+            }`}
           >
             {timeoutCount}
           </span>
@@ -868,13 +915,13 @@ export default memo(function Topbar({
             {!['CUSTOMER', 'OM', 'ADMIN'].includes(
               session?.user?.role ?? ''
             ) && (
-                <Button
-                  onClick={() => setSubmitting(true)}
-                  className='format-button border-r-[1.5px] border-white/70'
-                >
-                  Submit
-                </Button>
-              )}
+              <Button
+                onClick={() => setSubmitting(true)}
+                className='format-button border-r-[1.5px] border-white/70'
+              >
+                Submit
+              </Button>
+            )}
 
             <DropdownMenu
               modal={false}
@@ -882,12 +929,13 @@ export default memo(function Topbar({
             >
               <DropdownMenuTrigger className='focus-visible:ring-0 outline-none'>
                 <Button
-                  className={`${!['CUSTOMER', 'OM', 'ADMIN'].includes(
-                    session?.user?.role ?? ''
-                  )
-                    ? 'px-2 format-icon-button'
-                    : ''
-                    } focus-visible:ring-0 outline-none`}
+                  className={`${
+                    !['CUSTOMER', 'OM', 'ADMIN'].includes(
+                      session?.user?.role ?? ''
+                    )
+                      ? 'px-2 format-icon-button'
+                      : ''
+                  } focus-visible:ring-0 outline-none`}
                 >
                   <span className='sr-only'>Open menu</span>
                   <ChevronDownIcon className='h-4 w-4' />
@@ -896,7 +944,7 @@ export default memo(function Topbar({
               <DropdownMenuContent align='end' className='w-30'>
                 <DropdownMenuItem
                   onClick={() => {
-                    autoCapitalizeSentences(quillRef)
+                    autoCapitalizeSentences(quillRef, autoCapitalize)
                     handleSave({
                       getEditorText,
                       orderDetails,
@@ -940,10 +988,10 @@ export default memo(function Topbar({
                 {!['CUSTOMER', 'OM', 'ADMIN'].includes(
                   session?.user?.role || ''
                 ) && (
-                    <DropdownMenuItem onClick={requestExtension}>
-                      Request Extension
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem onClick={requestExtension}>
+                    Request Extension
+                  </DropdownMenuItem>
+                )}
                 {session?.user?.role !== 'CUSTOMER' && (
                   <DropdownMenuItem onClick={() => setReportModalOpen(true)}>
                     Report
@@ -963,6 +1011,11 @@ export default memo(function Topbar({
                     Frequent Terms
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuItem
+                    onClick={() => setReviewModalOpen(true)}
+                  >
+                    Review with Gemini
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={toggleAutoCapitalize}>
                   {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
                 </DropdownMenuItem>
@@ -982,22 +1035,27 @@ export default memo(function Topbar({
                 )}
                 {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
                   orderDetails.status === 'FINALIZER_ASSIGNED') && (
-                    <DropdownMenuItem asChild>
-                      <a href={qcFileUrl} target='_blank'>
-                        Download QC text
-                      </a>
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem asChild>
+                    <a href={qcFileUrl} target='_blank'>
+                      Download QC text
+                    </a>
+                  </DropdownMenuItem>
+                )}
                 {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
                   orderDetails.status === 'FINALIZER_ASSIGNED') && (
-                    <DropdownMenuItem asChild>
-                      <a href={LLMFileUrl} target='_blank'>
-                        Download LLM text
-                      </a>
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem asChild>
+                    <a href={LLMFileUrl} target='_blank'>
+                      Download LLM text
+                    </a>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={() => setIsHeatmapModalOpen(true)}>
                   Waveform Heatmap
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setIsRestoreVersionModalOpen(true)}
+                >
+                  Restore Version
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setIsSettingsModalOpen(true)}>
                   Settings
@@ -1035,9 +1093,12 @@ export default memo(function Topbar({
               </DialogContent>
             </Dialog>
           </div>
-          {(session?.user?.role === 'CUSTOMER' || session?.user?.role === 'ADMIN')
-            ? <Profile />
-            : <TranscriberProfile />}
+          {session?.user?.role === 'CUSTOMER' ||
+          session?.user?.role === 'ADMIN' ? (
+            <Profile />
+          ) : (
+            <TranscriberProfile />
+          )}
           <ThemeSwitcher />
         </div>
       </div>
@@ -1285,8 +1346,9 @@ export default memo(function Topbar({
         </DialogContent>
       </Dialog>
       <div
-        className={` ${!videoPlayerOpen ? 'hidden' : ''
-          } fixed z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-background`}
+        className={` ${
+          !videoPlayerOpen ? 'hidden' : ''
+        } fixed z-[999] overflow-hidden rounded-lg shadow-lg border aspect-video bg-background`}
         style={{
           top: `${position.y}px`,
           left: `${position.x}px`,
@@ -1311,7 +1373,8 @@ export default memo(function Topbar({
           </button>
         </div>
       </div>
-      <ReportDialog
+
+      {reportModalOpen && <ReportDialog
         reportModalOpen={reportModalOpen}
         setReportModalOpen={setReportModalOpen}
         reportDetails={reportDetails}
@@ -1319,7 +1382,18 @@ export default memo(function Topbar({
         orderDetails={orderDetails}
         buttonLoading={buttonLoading}
         setButtonLoading={setButtonLoading}
-      />
+      />}
+      {reviewModalOpen && <ReviewTranscriptDialog
+        quillRef={quillRef}
+        reviewModalOpen={reviewModalOpen}
+        setReviewModalOpen={setReviewModalOpen}
+        orderDetails={orderDetails}
+        setButtonLoading={setButtonLoading}
+        buttonLoading={buttonLoading}
+        transcript={transcript}
+        ctms={ctms}
+        updateQuill={updateTranscript}
+      />}
       <FrequentTermsDialog
         frequentTermsModalOpen={frequentTermsModalOpen}
         setFrequentTermsModalOpen={setFrequentTermsModalOpen}
@@ -1338,6 +1412,13 @@ export default memo(function Topbar({
         listenCount={listenCount}
         editedSegments={editedSegments}
         duration={audioDuration}
+      />
+      <RestoreVersionDialog
+        isOpen={isRestoreVersionModalOpen}
+        onClose={() => setIsRestoreVersionModalOpen(false)}
+        fileId={orderDetails.fileId}
+        quillRef={quillRef}
+        updateQuill={updateTranscript}
       />
     </div>
   )
