@@ -352,13 +352,11 @@ export default function ApprovalPage() {
       accessorKey: 'transcriberWatch',
       header: 'Transcriber Watch',
       enableHiding: true,
-      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
       accessorKey: 'customerWatch',
       header: 'Customer Watch',
       enableHiding: true,
-      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
       id: 'actions',
