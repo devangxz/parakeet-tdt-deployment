@@ -3,10 +3,11 @@ import B2B from '@/components/remote-legal-custom-format'
 
 //Add components for different organizations here
 const orderComponents: {
-  [key: string]: React.ComponentType<{ invoiceId: string }>
+  [key: string]: React.ComponentType<{ invoiceId: string; orderType: string }>
 } = {
   TRANSCRIPTION: B2C,
   TRANSCRIPTION_FORMATTING: B2B,
+  FORMATTING: B2B,
 }
 
 export const getOrderComponent = (orderType: string) =>
