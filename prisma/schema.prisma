@@ -315,6 +315,9 @@ model UserRate {
   cfReviewMediumDifficultyRate           Float     @default(6) @map("cf_review_medium_difficulty_rate")
   cfReviewHighDifficultyRate             Float     @default(8) @map("qc_high_difficulty_rate")
   orderType                              OrderType @default(TRANSCRIPTION) @map("order_type")
+  outputFormat                           String?   @default("docx") @map("output_format")
+  skipTranscription                      Boolean   @default(false) @map("skip_transcription")
+  defaultOrderButtonLabel                String?   @default("Format") @map("default_order_button_label")
   createdAt                              DateTime  @default(now()) @map("created_at")
   updatedAt                              DateTime  @default(now()) @map("updated_at")
 
@@ -619,6 +622,7 @@ model FileVersion {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @default(now()) @map("updated_at")
   tag         FileTag  @default(AUTO)
+  extension   String?  @map("extension")
   file        File     @relation(fields: [fileId], references: [fileId])
   user        User?    @relation(fields: [userId], references: [id])
 
@@ -828,6 +832,7 @@ enum OrderStatus {
 enum OrderType {
   TRANSCRIPTION
   TRANSCRIPTION_FORMATTING
+  FORMATTING
 }
 
 enum ReportMode {

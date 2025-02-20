@@ -16,6 +16,7 @@ import { orderController } from './controllers'
 import { downloadMp3 } from '@/app/actions/file/download-mp3'
 import { refetchFiles } from '@/app/actions/files'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
+import { getCustomFormatFilesSignedUrl } from '@/app/actions/order/custom-format-files-signed-url'
 import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
 import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
 import DeleteBulkFileModal from '@/components/delete-bulk-file'
@@ -87,6 +88,14 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
     cfDocxSignedUrl: '',
   })
   const [isDownloadDialogOpen, setIsDownloadDialogOpen] = useState(false)
+  const [customFormatFilesSignedUrls, setCustomFormatFilesSignedUrls] =
+    useState<
+      {
+        signedUrl: string
+        filename: string
+        extension: string
+      }[]
+    >([])
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -202,6 +211,10 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
         txtSignedUrl: txtRes.signedUrl || '',
         cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
       })
+      const customFormatRes = await getCustomFormatFilesSignedUrl(fileId)
+      if (customFormatRes.success) {
+        setCustomFormatFilesSignedUrls(customFormatRes.signedUrls || [])
+      }
       setLoadingOrder((prev) => ({ ...prev, [fileId]: false }))
       setToggleCheckAndDownload(true)
     } catch (error) {
@@ -627,6 +640,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
             setToggleCheckAndDownload={setToggleCheckAndDownload}
             txtSignedUrl={signedUrls.txtSignedUrl || ''}
             cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
+            customFormatFilesSignedUrls={customFormatFilesSignedUrls}
           />
         )}
       </div>

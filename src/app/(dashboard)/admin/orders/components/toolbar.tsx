@@ -28,10 +28,10 @@ export function DataTableToolbar<TData>({
   const handleWatchlistChange = (value: string) => {
     setWatchlistFilter(value)
     if (value === 'customer') {
-      table.getColumn('customerWatch')?.setFilterValue('true')
+      table.getColumn('customerWatch')?.setFilterValue(true)
       table.getColumn('transcriberWatch')?.setFilterValue(null)
     } else if (value === 'transcriber') {
-      table.getColumn('transcriberWatch')?.setFilterValue('true')
+      table.getColumn('transcriberWatch')?.setFilterValue(true)
       table.getColumn('customerWatch')?.setFilterValue(null)
     } else {
       table.getColumn('customerWatch')?.setFilterValue(null)
@@ -72,8 +72,10 @@ export function DataTableToolbar<TData>({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='all'>All</SelectItem>
-                <SelectItem value='customer'>Customer Watch</SelectItem>
-                <SelectItem value='transcriber'>Transcriber Watch</SelectItem>
+                <SelectItem value='customer'>Watchlist Customer</SelectItem>
+                <SelectItem value='transcriber'>
+                  Watchlist Transcriber
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>

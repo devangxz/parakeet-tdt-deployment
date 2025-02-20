@@ -24,7 +24,10 @@ const calculateFileCost = async (order: any) => {
     customFormat: 0,
   }
 
-  if (order.orderType === OrderType.TRANSCRIPTION_FORMATTING) {
+  if (
+    order.orderType === OrderType.TRANSCRIPTION_FORMATTING ||
+    order.orderType === OrderType.FORMATTING
+  ) {
     rates.customFormat = userRates
       ? pwerLevel === 'high'
         ? userRates.reviewerHighDifficultyRate

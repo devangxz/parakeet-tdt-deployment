@@ -235,7 +235,10 @@ export default memo(function Topbar({
     }
 
     if (orderDetails.status === 'PRE_DELIVERED') {
-      if (orderDetails.orderType === 'TRANSCRIPTION_FORMATTING') {
+      if (
+        orderDetails.orderType === 'TRANSCRIPTION_FORMATTING' ||
+        orderDetails.orderType === 'FORMATTING'
+      ) {
         currentStep = 'CF'
       } else {
         currentStep = 'QC'
@@ -441,18 +444,23 @@ export default memo(function Topbar({
 
       const shouldCapitalize = (index: number): boolean => {
         if (index === 0) return true
-        
+
         const textBefore = newText.slice(0, index)
-        
+
         // Check for ! or ? first - always capitalize after these
         if (/[!?]\s$/.test(textBefore)) return true
-        
+
         // Check for period - only then check abbreviations
         if (/\.\s$/.test(textBefore)) {
-          const word = textBefore.trim().split(' ').pop()?.slice(0, -1).toLowerCase()
+          const word = textBefore
+            .trim()
+            .split(' ')
+            .pop()
+            ?.slice(0, -1)
+            .toLowerCase()
           return !COMMON_ABBREVIATIONS.has(word || '')
         }
-        
+
         return false
       }
 
@@ -485,7 +493,7 @@ export default memo(function Topbar({
     },
     [quillRef]
   )
-      
+
   useEffect(() => {
     if (!quillRef?.current) return
 
@@ -1417,7 +1425,6 @@ export default memo(function Topbar({
         isOpen={isRestoreVersionModalOpen}
         onClose={() => setIsRestoreVersionModalOpen(false)}
         fileId={orderDetails.fileId}
-        userId={String(session?.user?.userId || '')}
         quillRef={quillRef}
         updateQuill={updateTranscript}
       />

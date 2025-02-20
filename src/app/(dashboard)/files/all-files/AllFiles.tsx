@@ -21,11 +21,13 @@ import { CheckAndDownload } from '../delivered/components/check-download'
 import { getAllFilesAction } from '@/app/actions/all-files'
 import { downloadMp3 } from '@/app/actions/file/download-mp3'
 import { moveFileAction } from '@/app/actions/files/move'
+import { getOrderButtonLabel } from '@/app/actions/files/order-button-label'
 import { getFolders } from '@/app/actions/folders'
 import { deleteFolderAction } from '@/app/actions/folders/delete'
 import { getFolderHierarchy } from '@/app/actions/folders/parent'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { createOrder } from '@/app/actions/order'
+import { getCustomFormatFilesSignedUrl } from '@/app/actions/order/custom-format-files-signed-url'
 import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
 import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
 import CreateFolderModal from '@/components/create-folder-modal'
@@ -148,6 +150,15 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
     useState(false)
 
   const [selectedFiles, setSelectedFiles] = useState<CustomFile[]>([])
+  const [orderButtonLabel, setOrderButtonLabel] = useState('Transcribe')
+  const [customFormatFilesSignedUrls, setCustomFormatFilesSignedUrls] =
+    useState<
+      {
+        signedUrl: string
+        filename: string
+        extension: string
+      }[]
+    >([])
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -165,6 +176,17 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
   useEffect(() => {
     setFileIdsLength(fileIds?.length || null)
   }, [fileIds])
+
+  const fetchOrderButtonLabel = async () => {
+    const response = await getOrderButtonLabel()
+    if (response?.success) {
+      setOrderButtonLabel(response.label)
+    }
+  }
+
+  useEffect(() => {
+    fetchOrderButtonLabel()
+  }, [])
 
   const fetchAllFiles = async () => {
     try {
@@ -322,6 +344,10 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
         txtSignedUrl: txtRes.signedUrl || '',
         cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
       })
+      const customFormatRes = await getCustomFormatFilesSignedUrl(fileId)
+      if (customFormatRes.success) {
+        setCustomFormatFilesSignedUrls(customFormatRes.signedUrls || [])
+      }
       setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
       setToggleCheckAndDownload(true)
     } catch (error) {
@@ -335,7 +361,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
       NOT_ORDERED: {
         label:
           session && session.user?.orderType !== 'TRANSCRIPTION'
-            ? 'Format'
+            ? orderButtonLabel
             : 'Transcribe',
         text: 'text-black',
         controller: (
@@ -772,7 +798,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
                   }
                 >
                   {session && session.user?.orderType !== 'TRANSCRIPTION'
-                    ? 'Format'
+                    ? orderButtonLabel
                     : 'Transcribe'}
                 </Button>
               )}
@@ -890,6 +916,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
           setToggleCheckAndDownload={setToggleCheckAndDownload}
           txtSignedUrl={signedUrls.txtSignedUrl || ''}
           cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
+          customFormatFilesSignedUrls={customFormatFilesSignedUrls}
         />
       )}
       <DraftTranscriptFileDialog

@@ -73,7 +73,13 @@ interface Template {
   name: string
 }
 
-const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
+const CustomFormatOrder = ({
+  invoiceId,
+  orderType,
+}: {
+  invoiceId: string
+  orderType: string
+}) => {
   const router = useRouter()
   const { data: session, status } = useSession()
   const steps = [
@@ -120,10 +126,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
 
       try {
         const tokenResponse = await getClientTokenAction()
-        const response = await getInvoiceDetails(
-          invoiceId,
-          'TRANSCRIPTION_FORMATTING'
-        )
+        const response = await getInvoiceDetails(invoiceId, orderType)
 
         if (!response.responseData) {
           throw new Error('No response data received')
@@ -290,7 +293,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
       const response = await checkout({
         paymentMethodNonce: nonce,
         invoiceId,
-        orderType: 'TRANSCRIPTION_FORMATTING',
+        orderType: orderType,
       })
 
       setLoadingPay(false)
@@ -320,7 +323,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
 
       const response = await checkoutViaCredits({
         invoiceId,
-        orderType: 'TRANSCRIPTION_FORMATTING',
+        orderType: orderType,
       })
 
       if (response.success) {
@@ -347,7 +350,7 @@ const CustomFormatOrder = ({ invoiceId }: { invoiceId: string }) => {
 
   const handlePaymentMethodViaBilling = async () => {
     await handleBillingPaymentMethod(
-      'TRANSCRIPTION_FORMATTING',
+      orderType,
       invoiceId,
       setPaymentSuccessData,
       setPaymentSuccess,

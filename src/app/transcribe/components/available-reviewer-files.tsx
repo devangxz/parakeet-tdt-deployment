@@ -29,6 +29,7 @@ interface File extends BaseTranscriberFile {
   orgName: string
   testFile: boolean
   containsMp4: boolean
+  customFormatOption: string
 }
 
 interface Props {
@@ -109,6 +110,7 @@ export default function AvailableFilesPage({ changeTab }: Props) {
             testFile: order.isTestCustomer,
             containsMp4:
               order.File.fileKey?.split('.').pop().toLowerCase() === 'mp4',
+            customFormatOption: order.customFormatOption,
           }
         })
         setAvailableFiles((orders as any) ?? [])
@@ -239,6 +241,14 @@ export default function AvailableFilesPage({ changeTab }: Props) {
                 className='font-semibold text-[10px] text-green-600'
               >
                 {row.original.orgName}
+              </Badge>
+            )}
+            {row.original.customFormatOption.length > 0 && (
+              <Badge
+                variant='outline'
+                className='font-semibold text-[10px] text-green-600'
+              >
+                {row.original.customFormatOption}
               </Badge>
             )}
             {row.original.testFile && (

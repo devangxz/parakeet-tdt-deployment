@@ -273,6 +273,15 @@
     "HTML": "SEND_INSTRUCTIONS.html",
     "TEXT": ""
   },
+  "CUSTOM_FORMAT_REQUEST": {
+    "FROM": "$$ALERT_BE_EMAIL_ID$$",
+    "TO": ["$$SUPPORT_EMAIL$$"],
+    "CC": [],
+    "BCC": ["$$CONTACT_EMAIL_ID$$"],
+    "SUBJECT": "Scribie.ai Custom Format Request from Customer",
+    "HTML": "CUSTOM_FORMAT_REQUEST.html",
+    "TEXT": ""
+  },
   "PUBLIC_PAY_BILL": {
     "FROM": "$$SUPPORT_EMAIL_ID$$",
     "TO": ["$$USER_EMAIL_ID$$"],
