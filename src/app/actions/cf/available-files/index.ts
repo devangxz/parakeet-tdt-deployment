@@ -9,6 +9,7 @@ import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { isTranscriberICQC, getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
+import getCustomFormatOption from '@/utils/getCustomFormatOption'
 import getOrgName from '@/utils/getOrgName'
 
 export async function getAvailableFiles(type: string) {
@@ -82,10 +83,12 @@ export async function getAvailableFiles(type: string) {
     for (const file of cfFiles as any) {
       const transcriberCost = await calculateTranscriberCost(file, userId)
       const orgName = await getOrgName(file.userId)
+      const customFormatOption = await getCustomFormatOption(file.userId)
       const isTestCustomer = await getTestCustomer(file.userId)
       file.cf_cost = transcriberCost.cost
       file.cf_rate = transcriberCost.rate
       file.orgName = orgName
+      file.customFormatOption = customFormatOption
       file.isTestCustomer = isTestCustomer
     }
 

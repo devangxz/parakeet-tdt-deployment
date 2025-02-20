@@ -57,6 +57,7 @@ export default function CustomPlan() {
     customFormattingOption: 'legal',
     orderType: 'TRANSCRIPTION',
     outputFormat: '',
+    defaultOrderButtonLabel: 'Format',
   })
   const [organizationName, setOrganizationName] = useState('')
   const [templateName, setTemplateName] = useState('')
@@ -137,6 +138,7 @@ export default function CustomPlan() {
             cfReviewHighDifficultyRate:
               responseData.cfReviewHighDifficultyRate.toString(),
             outputFormat: responseData.outputFormat,
+            defaultOrderButtonLabel: responseData.defaultOrderButtonLabel,
           }
           setRates(mappedRates)
         }
@@ -175,6 +177,7 @@ export default function CustomPlan() {
       'cfReviewLowDifficultyRate',
       'cfReviewMediumDifficultyRate',
       'cfReviewHighDifficultyRate',
+      'defaultOrderButtonLabel',
     ]
 
     for (const field of requiredFields) {
@@ -525,6 +528,15 @@ export default function CustomPlan() {
                       <Label htmlFor='medical'>Medical</Label>
                     </div>
                     <div className='flex items-center space-x-2'>
+                      <RadioGroupItem
+                        value='closedCaptioning'
+                        id='closedCaptioning'
+                      />
+                      <Label htmlFor='closedCaptioning'>
+                        Closed Captioning
+                      </Label>
+                    </div>
+                    <div className='flex items-center space-x-2'>
                       <RadioGroupItem value='general' id='general' />
                       <Label htmlFor='general'>General</Label>
                     </div>
@@ -558,6 +570,19 @@ export default function CustomPlan() {
                     className='w-full'
                     placeholder='Output Format'
                     value={rates.outputFormat}
+                    onChange={handleInputChange}
+                  />
+                </div>
+                <div className='grid gap-3'>
+                  <Label htmlFor='defaultOrderButtonLabel'>
+                    Default Order Button Label
+                  </Label>
+                  <Input
+                    id='defaultOrderButtonLabel'
+                    type='text'
+                    className='w-full'
+                    placeholder='Default Order Button Label'
+                    value={rates.defaultOrderButtonLabel}
                     onChange={handleInputChange}
                   />
                 </div>

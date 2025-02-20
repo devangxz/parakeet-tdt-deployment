@@ -30,6 +30,11 @@ interface CheckAndDownloadProps {
   setToggleCheckAndDownload: (value: boolean) => void
   txtSignedUrl: string
   cfDocxSignedUrl: string
+  customFormatFilesSignedUrls: {
+    signedUrl: string
+    filename: string
+    extension: string
+  }[]
 }
 
 export function CheckAndDownload({
@@ -41,6 +46,7 @@ export function CheckAndDownload({
   setToggleCheckAndDownload,
   txtSignedUrl,
   cfDocxSignedUrl,
+  customFormatFilesSignedUrls,
 }: CheckAndDownloadProps) {
   const storedrating = Number(localStorage.getItem('rating'))
   const [hover, setHover] = useState<null | number>(null)
@@ -341,97 +347,51 @@ export function CheckAndDownload({
               <p className='text-sm font-semibold text-slate-700'>
                 Custom Formatting
               </p>
-              {/* docx  */}
-              <div className='max-w-full flex justify-between'>
-                <a
-                  target='_blank'
-                  href={cfDocxSignedUrl}
-                  className='text-primary'
-                >{`${docx?.name}_cf.docx`}</a>
-                <div className='flex space-x-2'>
-                  <Button variant='outline' size='sm' asChild>
-                    <a href={cfDocxSignedUrl} target='_blank'>
-                      Save to device
-                    </a>
-                  </Button>
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    onClick={() =>
-                      handleGDriveUpload(
-                        cfDocxSignedUrl,
-                        `${docx?.name}_cf.docx`
-                      )
-                    }
-                    disabled={isUploading}
-                  >
-                    {isUploading ? 'Uploading...' : 'Save to Google Drive'}
-                  </Button>
-                  <OneDriveUploadButton
-                    fileUrl={cfDocxSignedUrl}
-                    fileName={`${docx?.name}_cf.docx`}
-                  />
-                  <BoxUploadButton
-                    fileUrl={cfDocxSignedUrl}
-                    fileName={`${docx?.name}_cf.docx`}
-                  />
-                  <DropboxUploadButton
-                    files={[
-                      {
-                        filename: `${docx?.name}_cf.docx`,
-                        url: cfDocxSignedUrl,
-                      },
-                    ]}
-                  />
-                </div>
-              </div>
-              {/* pdf  */}
-              <div className='max-w-full flex justify-between'>
-                <a
-                  href={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`}
-                  target='_blank'
-                  className='text-primary'
-                >{`${pdf?.name}_cf.pdf`}</a>
-                <div className='flex space-x-2'>
-                  <Button variant='outline' size='sm' asChild>
-                    <a
-                      href={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`}
-                      target='_blank'
+              {customFormatFilesSignedUrls.map((file, index) => (
+                <div key={index} className='max-w-full flex justify-between'>
+                  <a
+                    target='_blank'
+                    href={file.signedUrl}
+                    className='text-primary'
+                  >{`${file.filename}.${file.extension}`}</a>
+                  <div className='flex space-x-2'>
+                    <Button variant='outline' size='sm' asChild>
+                      <a href={file.signedUrl} target='_blank'>
+                        Save to device
+                      </a>
+                    </Button>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() =>
+                        handleGDriveUpload(
+                          file.signedUrl,
+                          `${file.filename}.${file.extension}`
+                        )
+                      }
+                      disabled={isUploading}
                     >
-                      Save to device
-                    </a>
-                  </Button>
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    onClick={() =>
-                      handleGDriveUpload(
-                        `${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`,
-                        `${pdf?.name}_cf.pdf`
-                      )
-                    }
-                    disabled={isUploading}
-                  >
-                    {isUploading ? 'Uploading...' : 'Save to Google Drive'}
-                  </Button>
-                  <OneDriveUploadButton
-                    fileUrl={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`}
-                    fileName={`${pdf?.name}_cf.pdf`}
-                  />
-                  <BoxUploadButton
-                    fileUrl={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`}
-                    fileName={`${pdf?.name}_cf.pdf`}
-                  />
-                  <DropboxUploadButton
-                    files={[
-                      {
-                        filename: `${pdf?.name}_cf.pdf`,
-                        url: `${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`,
-                      },
-                    ]}
-                  />
+                      {isUploading ? 'Uploading...' : 'Save to Google Drive'}
+                    </Button>
+                    <OneDriveUploadButton
+                      fileUrl={file.signedUrl}
+                      fileName={`${file.filename}.${file.extension}`}
+                    />
+                    <BoxUploadButton
+                      fileUrl={file.signedUrl}
+                      fileName={`${file.filename}.${file.extension}`}
+                    />
+                    <DropboxUploadButton
+                      files={[
+                        {
+                          filename: `${file.filename}.${file.extension}`,
+                          url: file.signedUrl,
+                        },
+                      ]}
+                    />
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
           )}
 
