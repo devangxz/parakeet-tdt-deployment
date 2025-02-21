@@ -18,18 +18,23 @@ export async function saveReviewWithGeminiStats(data: {
 }) {
   const session = await getServerSession(authOptions) 
   const user = session?.user
-  logger.info(`Saving review with gemini stats for user ${user?.userId} and file ${data.fileId}`);
-  return await prisma.reviewWithGeminiStats.create({
-    data: {
-      userId: user?.userId as number,
-      fileId: data.fileId,
-      options: data.options,
-      instructions: data.instructions,
-      temperature: data.temperature,
-      startTime: data.startTime,
-      endTime: data.endTime,
-      savedTime: data.savedTime,
-      duration: data.duration,
-    },
-  });
+  try{
+    logger.info(`Saving review with gemini stats for user ${user?.userId} and file ${data.fileId}`);
+    return await prisma.reviewWithGeminiStats.create({
+      data: {
+        userId: user?.userId as number,
+        fileId: data.fileId,
+        options: data.options,
+        instructions: data.instructions,
+        temperature: data.temperature,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        savedTime: data.savedTime,
+        duration: data.duration,
+      },
+    });
+  } catch (error) {
+    logger.error(`Error saving review with gemini stats for user ${user?.userId} and file ${data.fileId}: ${error}`);
+    throw error;
+  }
 } 
