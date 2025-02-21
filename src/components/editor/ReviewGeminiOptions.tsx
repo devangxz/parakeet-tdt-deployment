@@ -1,10 +1,10 @@
 "use client";
 
-import React, {  } from "react";
+import { InfoIcon } from "lucide-react";
+import React from "react";
 
 import { Slider } from "../ui/slider";
 import { Textarea } from "../ui/textarea";
-import { InfoIcon } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 export interface GeminiPromptOption {
