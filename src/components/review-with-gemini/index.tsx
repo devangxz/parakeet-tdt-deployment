@@ -203,6 +203,8 @@ export default function ReviewTranscriptDialog({
     const savedTimeVal = new Date();
     // Call the server action to store the ReviewWithGeminiStats data.
     // Replace userId with the authenticated user's id as appropriate.
+    setReviewModalOpen(false);
+    
     await saveReviewWithGeminiStats({
       fileId,
       options: selectedPrompts,
@@ -214,7 +216,6 @@ export default function ReviewTranscriptDialog({
       savedTime: savedTimeVal
     });
     
-    setReviewModalOpen(false);
     // Ensure the final transcript ends with a newline to prevent clipping.
     const safeTranscript = finalTranscript.endsWith('\n')
       ? finalTranscript
