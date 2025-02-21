@@ -8,27 +8,45 @@ import { computeDiffs, DiffSegmentItem } from "../editor/DiffSegmentItem";
 import { ReviewGeminiOptions } from "../editor/ReviewGeminiOptions";
 import { Stepper } from "../editor/Stepper";
 import { Button } from "../ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "../ui/dialog";
 import { Progress } from "../ui/progress";
 import { geminiRequestAction } from "@/app/actions/editor/review-with-gemini";
+import { saveReviewWithGeminiStats } from "@/app/actions/editor/save-gemini-stats";
 import { OrderDetails } from "@/app/editor/[fileId]/page";
 import { FILE_CACHE_URL, GEMINI_PROMPT_OPTIONS } from "@/constants";
 import axios from "@/utils/axios";
-import { ButtonLoading, chunkTranscript, CTMType, findOptimalChunkPoints, handleSave, DiffSegment, formatTimestamps, acceptAllDiffs, rejectAllDiffs } from "@/utils/editorUtils";
+import {
+  ButtonLoading,
+  chunkTranscript,
+  CTMType,
+  findOptimalChunkPoints,
+  handleSave,
+  DiffSegment,
+  formatTimestamps,
+  acceptAllDiffs,
+  rejectAllDiffs,
+} from "@/utils/editorUtils";
 import { DIFF_EQUAL } from "@/utils/transcript/diff_match_patch";
 
 interface ReviewWithGeminiDialogProps {
-  quillRef: React.RefObject<ReactQuill> | undefined
+  quillRef: React.RefObject<ReactQuill> | undefined;
   reviewModalOpen: boolean;
   setReviewModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  orderDetails: OrderDetails
+  orderDetails: OrderDetails;
   buttonLoading: {
       report: boolean;
   };
-  setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
-  transcript: string
-  ctms: CTMType[]
-  updateQuill: (quillRef: React.RefObject<ReactQuill> | undefined, content: string,) => void
+  setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>;
+  transcript: string;
+  ctms: CTMType[];
+  updateQuill: (quillRef: React.RefObject<ReactQuill> | undefined, content: string) => void;
 }
 
 export default function ReviewTranscriptDialog({
@@ -52,6 +70,10 @@ export default function ReviewTranscriptDialog({
   const [progressMessage, setProgressMessage] = useState<string>('Loading');
   const [progressValue, setProgressValue] = useState<number>(0);
   const [temperature, setTemperature] = useState<number>(1);
+  // Store processing start/end times
+  const [processingStartedAt, setProcessingStartedAt] = useState<Date | null>(null);
+  const [processingEndedAt, setProcessingEndedAt] = useState<Date | null>(null);
+  
   const { fileId } = orderDetails;
 
   // Map the step string to its corresponding index
@@ -64,7 +86,6 @@ export default function ReviewTranscriptDialog({
   const activeStepIndex = stepToIndex[step];
 
   const handleNextOptions = useCallback(async () => {
-    
     setLoading(true);
     setIsError(false);
     setStep('processing');
@@ -78,35 +99,48 @@ export default function ReviewTranscriptDialog({
       const totalChunks = (chunkPoints.length - 1) * 2;
       let progress = 0;
 
-      // start time
-      for(let i = 0; i < chunkPoints.length - 1; i++) {
+      // Record processing start time
+      const processingStart = new Date();
+      setProcessingStartedAt(processingStart);
+
+      for (let i = 0; i < chunkPoints.length - 1; i++) {
         setProgressMessage(`Initializing transcript part ${i + 1} of ${chunkPoints.length - 1}`);
         
         const createChunksAPI = await axios.post(`${FILE_CACHE_URL}/create-chunks`, {
           fileId,
           startTime: chunkPoints[i],
           endTime: chunkPoints[i + 1],
-          currentChunk: i+1,
-          totalChunks: chunkPoints.length - 1
+          currentChunk: i + 1,
+          totalChunks: chunkPoints.length - 1,
         });
         progress++;
-        setProgressValue(progress / totalChunks * 100);
+        setProgressValue((progress / totalChunks) * 100);
 
         if (createChunksAPI.data.success) {
           chunkKey = createChunksAPI.data.trimmedFileKey;
         }
-        if(!chunkKey) {
+        if (!chunkKey) {
           throw new Error('Failed to create all chunks for processing.');
         }
-        
+
         setProgressMessage(`Reviewing transcript part: ${i + 1} of ${chunkPoints.length - 1}`);
-        const geminiResult = await geminiRequestAction(transcriptChunks[i], chunkKey, i, chunkPoints.length - 1, temperature, userPrompt);
+        const geminiResult = await geminiRequestAction(
+          transcriptChunks[i],
+          chunkKey,
+          i,
+          chunkPoints.length - 1,
+          temperature,
+          userPrompt
+        );
         geminiTranscript += geminiResult + "\n";
         progress++;
-        setProgressValue(progress / totalChunks * 100);
-      }  
+        setProgressValue((progress / totalChunks) * 100);
+      }
 
-      // endtime
+      // Record processing end time
+      const processingEnd = new Date();
+      setProcessingEndedAt(processingEnd);
+
       setProgressMessage('Finalizing transcript review...');
       setProgressValue(100);
       setStep('review');
@@ -148,7 +182,7 @@ export default function ReviewTranscriptDialog({
     const finalTranscript = rejectedDiffs.map(diff => diff.text).join('');
     setFinalTranscript(finalTranscript);
     setStep('preview');
-  }, [diffs, updateQuill, setReviewModalOpen]);
+  }, [diffs]);
 
   /**
    * When accepting all, we mark every actionable diff as equal so that
@@ -160,9 +194,26 @@ export default function ReviewTranscriptDialog({
     const finalTranscript = acceptedDiffs.map(diff => diff.text).join('');  
     setFinalTranscript(finalTranscript);
     setStep('preview');
-  }, [diffs, updateQuill, setReviewModalOpen]);
+  }, [diffs]);
 
   const handleSaveButton = async () => {
+    const duration = processingStartedAt && processingEndedAt 
+      ? (processingEndedAt.getTime() - processingStartedAt.getTime()) / 1000
+      : 0;
+    const savedTimeVal = new Date();
+    // Call the server action to store the ReviewWithGeminiStats data.
+    // Replace userId with the authenticated user's id as appropriate.
+    await saveReviewWithGeminiStats({
+      fileId,
+      options: selectedPrompts,
+      instructions,
+      temperature,
+      duration,
+      startTime: processingStartedAt || new Date(),
+      endTime: processingEndedAt || new Date(),
+      savedTime: savedTimeVal
+    });
+    
     setReviewModalOpen(false);
     // Ensure the final transcript ends with a newline to prevent clipping.
     const safeTranscript = finalTranscript.endsWith('\n')
@@ -183,13 +234,13 @@ export default function ReviewTranscriptDialog({
     );
   };
 
-  const handleCancelReviewProcess = async () => {
-    setReviewModalOpen(false)
+  const handleCancelReviewProcess = useCallback(async () => {
+    setReviewModalOpen(false);
     await axios.post(`${FILE_CACHE_URL}/create-chunks`, {
       fileId,
-      cancelRequest: true
+      cancelRequest: true,
     });
-  }
+  }, [fileId]);
 
   useEffect(() => {
     if (!reviewModalOpen) {
@@ -199,11 +250,12 @@ export default function ReviewTranscriptDialog({
       setInstructions('');
       setIsError(false);
     }
+  }, [reviewModalOpen, transcript]);
 
-  }, [reviewModalOpen, transcript]);  
-
-  const renderedDiffs = useMemo(() => 
-    diffs.map((diff, index) => (
+  const renderedDiffs = useMemo(
+    () =>
+      diffs
+        .map((diff, index) => (
           <DiffSegmentItem
             key={index}
             index={index}
@@ -211,10 +263,10 @@ export default function ReviewTranscriptDialog({
             onAccept={handleAccept}
             onReject={handleReject}
           />
-        )
-      )
-      .filter((element) => element !== null)
-  ,[diffs, handleAccept, handleReject]);
+        ))
+        .filter((element) => element !== null),
+    [diffs, handleAccept, handleReject]
+  );
 
   return (
     <Dialog open={reviewModalOpen} onOpenChange={setReviewModalOpen}>
@@ -231,12 +283,12 @@ export default function ReviewTranscriptDialog({
               : "Review the final transcript and save your changes."}
           </DialogDescription>
         </DialogHeader>
-        
+
         {/* Insert the stepper below the header */}
         <div className="px-4 pt-2">
           <Stepper steps={['Options', 'Processing', 'Review', 'Preview']} activeStep={activeStepIndex} />
         </div>
-                
+
         {step === 'options' && (
           transcript ? (
             <ReviewGeminiOptions
@@ -280,7 +332,7 @@ export default function ReviewTranscriptDialog({
             )}
           </>
         )}
-        {step == 'preview' && (
+        {step === 'preview' && (
           <div className="p-2 px-4 overflow-y-auto h-[60vh] whitespace-pre-wrap">
             {finalTranscript}
           </div>
@@ -302,13 +354,13 @@ export default function ReviewTranscriptDialog({
                 )}
               </Button>
             </>
-          ) : step == 'processing' ? (
+          ) : step === 'processing' ? (
             <>
               <Button variant="outline" onClick={handleCancelReviewProcess}>
                 Cancel
               </Button>
             </>
-          ) : step == 'review' ? (
+          ) : step === 'review' ? (
             <>
               <Button variant="outline" onClick={handleCancelReviewProcess}>
                 Cancel

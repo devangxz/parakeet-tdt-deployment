@@ -80,6 +80,7 @@ model User {
   UploadSessions            UploadSession[]
   ApiKey                    ApiKey?
   PlayStats                 PlayStats[]
+  ReviewWithGeminiStats    ReviewWithGeminiStats[]
   editorSettings            UserEditorSettings?
   Cancellations             Cancellations[]
 
@@ -143,6 +144,7 @@ model File {
   SharedFile                SharedFile[]
   converted                 Boolean?      @map("converted")
   PlayStats                 PlayStats[]
+  ReviewWithGeminiStats    ReviewWithGeminiStats[]
 
   @@index([userId])
   @@index([fileId])
@@ -758,6 +760,26 @@ model Cancellations {
   @@index([fileId])
   @@map("scb_cancellations")
 }
+
+  model ReviewWithGeminiStats {
+    id           Int       @id @default(autoincrement())
+    userId       Int       @map("user_id")
+    fileId       String    @map("file_id")
+    options      String[]  @map("options")         // selected prompt options
+    instructions String    @map("instructions")
+    temperature  Float     @map("temperature")
+    startTime    DateTime  @map("start_time")
+    endTime      DateTime  @map("end_time")
+    duration     Int       @default(0) @map("duration")
+    savedTime    DateTime  @map("saved_time")      
+    createdAt    DateTime  @default(now()) @map("created_at")
+
+    user User @relation(fields: [userId], references: [id])
+    file File @relation(fields: [fileId], references: [fileId])
+    @@index([userId])
+    @@index([fileId])
+    @@map("scb_review_with_gemini_stats")
+  }
 
 //  ███████ ███    ██ ██    ██ ███    ███ ███████
 //  ██      ████   ██ ██    ██ ████  ████ ██
