@@ -92,7 +92,6 @@ export default memo(function ReviewTranscriptDialog({
     try {
       const userPrompt = selectedPrompts.join("\n") + "\n" + instructions;
       const chunkPoints = findOptimalChunkPoints(ctms);
-      console.log("chunkPoints", chunkPoints);
       let chunkKey: string | null = null;
       let geminiTranscript = '';
 
