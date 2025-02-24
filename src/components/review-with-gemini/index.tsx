@@ -233,6 +233,7 @@ export default memo(function ReviewTranscriptDialog({
         setButtonLoading: () => {},
         listenCount: [],
         editedSegments: new Set(),
+        isGeminiReviewed: true
       },
       true
     );

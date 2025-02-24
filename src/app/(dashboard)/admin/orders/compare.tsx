@@ -90,6 +90,9 @@ export default function ComparePage() {
                   {verificationDiff !== 'asr' && (
                     <SelectItem value='asr'>ASR</SelectItem>
                   )}
+                  {verificationDiff !== 'gemini' && (
+                    <SelectItem value='gemini'>GEMINI</SelectItem>
+                  )}
                   {verificationDiff !== 'qc' && (
                     <SelectItem value='qc'>QC Delivered</SelectItem>
                   )}
