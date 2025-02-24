@@ -6,11 +6,19 @@ import {
   ReloadIcon,
   ArrowUpIcon,
 } from '@radix-ui/react-icons'
+import { GoogleOAuthProvider } from '@react-oauth/google'
 import axios from 'axios'
 import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { Delta } from 'quill/core'
-import React,{ useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+  useCallback,
+  memo,
+} from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
@@ -18,13 +26,13 @@ import ConfigureShortcutsDialog from './ConfigureShortcutsDialog'
 import DownloadDocxDialog from './DownloadDocxDialog'
 import EditorHeatmapDialog from './EditorHeatmapDialog'
 import EditorSettingsDialog from './EditorSettingsDialog'
-import FrequentTermsDialog from './FrequentTermsDialog'
+// import FrequentTermsDialog from './FrequentTermsDialog'
+import FormattingOptionsDialog from './FormattingOptionsDialog'
 import ReportDialog from './ReportDialog'
 import ShortcutsReferenceDialog from './ShortcutsReferenceDialog'
 import UploadDocxDialog from './UploadDocxDialog'
 import ReviewTranscriptDialog from '../review-with-gemini'
 import { Button } from '../ui/button'
-import { Checkbox } from '../ui/checkbox'
 import {
   Dialog,
   DialogClose,
@@ -33,7 +41,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '../ui/dialog'
 import {
   DropdownMenu,
@@ -44,29 +51,24 @@ import {
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select'
 import { Textarea } from '../ui/textarea'
+import { CheckAndDownload } from '@/app/(dashboard)/files/delivered/components/check-download'
 import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
-import { getFormattingOptionsAction } from '@/app/actions/editor/get-formatting-options'
 import { getSpeakerNamesAction } from '@/app/actions/editor/get-speaker-names'
 import { requestReReviewAction } from '@/app/actions/editor/re-review'
 import { requestExtensionAction } from '@/app/actions/editor/request-extension'
-import { setFormattingOptionsAction } from '@/app/actions/editor/set-formatting-options'
 import { updateSpeakerNameAction } from '@/app/actions/editor/update-speaker-name'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { getTextFile } from '@/app/actions/get-text-file'
+import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
+import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import TranscriberProfile from '@/app/transcribe/components/transcriberProfiles'
 import 'rc-slider/assets/index.css'
 import RestoreVersionDialog from '@/components/editor/RestoreVersionDialog'
 import Profile from '@/components/navbar/profile'
 import { ThemeSwitcher } from '@/components/theme-switcher'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { FILE_CACHE_URL, COMMON_ABBREVIATIONS } from '@/constants'
 import { EditorSettings } from '@/types/editor'
 import DefaultShortcuts, {
@@ -81,7 +83,7 @@ import {
   CTMType,
   downloadMP3,
   getFormattedContent,
-  getFrequentTermsHandler,
+  // getFrequentTermsHandler,
   handleSave,
   navigateAndPlayBlanks,
   playCurrentParagraphTimestamp,
@@ -151,7 +153,6 @@ export default memo(function Topbar({
 }: TopbarProps) {
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
-  const [notesOpen, setNotesOpen] = useState(true)
   const [shortcuts, setShortcuts] = useState<
     { key: string; shortcut: string }[]
   >([])
@@ -172,17 +173,19 @@ export default memo(function Topbar({
   const { data: session } = useSession()
   const [isFormattingOptionsModalOpen, setIsFormattingOptionsModalOpen] =
     useState(false)
-  const [formattingOptions, setFormattingOptions] = useState({
-    timeCoding: true,
-    speakerTracking: true,
-    nameFormat: 'initials',
+  const [isReReviewModalOpen, setIsReReviewModalOpen] = useState(false)
+  const [toggleCheckAndDownload, setToggleCheckAndDownload] = useState(false)
+  const [isCheckAndDownloadLoading, setIsCheckAndDownloadLoading] =
+    useState(false)
+  const [signedUrls, setSignedUrls] = useState({
+    txtSignedUrl: '',
+    cfDocxSignedUrl: '',
   })
   const [reportModalOpen, setReportModalOpen] = useState(false)
   const [reportDetails, setReportDetails] = useState({
     reportOption: '',
     reportComment: '',
   })
-
   const [reviewModalOpen, setReviewModalOpen] = useState(false)
   const [buttonLoading, setButtonLoading] = useState({
     download: false,
@@ -194,17 +197,11 @@ export default memo(function Topbar({
     mp3: false,
     frequentTerms: false,
   })
-  const [allPublicTemplates, setAllPublicTemplates] = useState<
-    { name: string; id: string }[]
-  >([])
-  const [currentTemplate, setCurrentTemplate] = useState('1')
-
-  const [existingOptions, setExistingOptions] = useState<string>('')
-  const [frequentTermsModalOpen, setFrequentTermsModalOpen] = useState(false)
-  const [frequentTermsData, setFrequentTermsData] = useState({
-    autoGenerated: '',
-    edited: '',
-  })
+  // const [frequentTermsModalOpen, setFrequentTermsModalOpen] = useState(false)
+  // const [frequentTermsData, setFrequentTermsData] = useState({
+  //   autoGenerated: '',
+  //   edited: '',
+  // })
   const [step, setStep] = useState<string>('')
   const [cfd, setCfd] = useState('')
   const [downloadableType, setDownloadableType] = useState('no-marking')
@@ -263,55 +260,21 @@ export default memo(function Topbar({
     playCurrentParagraphTimestamp(quill, audioPlayer.current)
   }, [audioPlayer, quillRef])
 
-  const getFormattingOptions = async () => {
-    try {
-      const response = await getFormattingOptionsAction(
-        Number(orderDetails.orderId)
-      )
-      const { options, templates, currentTemplate } = response
-      setFormattingOptions({
-        timeCoding: options.ts === 1,
-        speakerTracking: options.sif === 1,
-        nameFormat: options.si === 0 ? 'initials' : 'full-names',
-      })
-      if (templates) {
-        setAllPublicTemplates(
-          templates?.map((temp: { name: string; id: number }) => ({
-            ...temp,
-            id: temp.id.toString(),
-          }))
-        )
-      }
-      if (currentTemplate) {
-        setCurrentTemplate(currentTemplate?.id.toString())
-      }
-      setExistingOptions(JSON.stringify(options))
-    } catch (error) {
-      toast.error('Failed to fetch formatting options')
-    }
-  }
-
   const updateTranscript = (
     quillRef: React.RefObject<ReactQuill> | undefined,
-    content: string,
-) => {
+    content: string
+  ) => {
     if (!quillRef?.current) return
     const quill = quillRef.current.getEditor()
     const formattedOps = getFormattedContent(content)
     const updateDelta = new Delta().delete(quill.getText().length)
     formattedOps.forEach((op) => {
-        if (op.insert !== undefined) {
-            updateDelta.insert(op.insert, op.attributes || {})
-        }
+      if (op.insert !== undefined) {
+        updateDelta.insert(op.insert, op.attributes || {})
+      }
     })
     quill.updateContents(updateDelta, 'user')
-}
-
-  useEffect(() => {
-    if (orderDetails.orderId) {
-      getFormattingOptions()
-    }
-  }, [orderDetails.orderId])
+  }
 
   useEffect(() => {
     setShortcuts(
@@ -441,18 +404,23 @@ export default memo(function Topbar({
 
       const shouldCapitalize = (index: number): boolean => {
         if (index === 0) return true
-        
+
         const textBefore = newText.slice(0, index)
-        
+
         // Check for ! or ? first - always capitalize after these
         if (/[!?]\s$/.test(textBefore)) return true
-        
+
         // Check for period - only then check abbreviations
         if (/\.\s$/.test(textBefore)) {
-          const word = textBefore.trim().split(' ').pop()?.slice(0, -1).toLowerCase()
+          const word = textBefore
+            .trim()
+            .split(' ')
+            .pop()
+            ?.slice(0, -1)
+            .toLowerCase()
           return !COMMON_ABBREVIATIONS.has(word || '')
         }
-        
+
         return false
       }
 
@@ -485,7 +453,7 @@ export default memo(function Topbar({
     },
     [quillRef]
   )
-      
+
   useEffect(() => {
     if (!quillRef?.current) return
 
@@ -526,10 +494,6 @@ export default memo(function Topbar({
 
   const toggleAutoCapitalize = () => {
     onAutoCapitalizeChange(!autoCapitalize)
-  }
-
-  const toggleNotes = () => {
-    setNotesOpen(!notesOpen)
   }
 
   const toggleRevertTranscript = () => {
@@ -689,25 +653,6 @@ export default memo(function Topbar({
     }
   }
 
-  const handleFormattingOptionChange = async () => {
-    const toastId = toast.loading('Updating formatting options...')
-    try {
-      await setFormattingOptionsAction(
-        Number(orderDetails.orderId),
-        formattingOptions,
-        JSON.parse(existingOptions),
-        +currentTemplate
-      )
-      toast.dismiss(toastId)
-      toast.success('Formatting options updated successfully')
-      localStorage.removeItem('transcript')
-      window.location.reload() // Refresh the page after success
-    } catch (error) {
-      toast.dismiss(toastId)
-      toast.error('Failed to update formatting options')
-    }
-  }
-
   const requestExtension = async () => {
     const toastId = toast.loading('Requesting extension...')
     try {
@@ -783,6 +728,28 @@ export default memo(function Topbar({
       toast.dismiss(successToastId)
     } catch (error) {
       toast.error('Failed to re-review the file')
+    }
+  }
+
+  const handleCheckAndDownload = async (fileId: string) => {
+    setIsCheckAndDownloadLoading(true)
+    try {
+      const txtRes = await getFileTxtSignedUrl(fileId)
+      const docxRes = await getFileDocxSignedUrl(
+        fileId,
+        'CUSTOM_FORMATTING_DOC'
+      )
+      setSignedUrls({
+        txtSignedUrl: txtRes.signedUrl || '',
+        cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
+      })
+      setIsCheckAndDownloadLoading(false)
+      setToggleCheckAndDownload(true)
+    } catch (error) {
+      toast.error('Error downloading files')
+      setIsCheckAndDownloadLoading(false)
+    } finally {
+      setIsCheckAndDownloadLoading(false)
     }
   }
 
@@ -875,46 +842,23 @@ export default memo(function Topbar({
             </Button>
           )}
 
-          {session?.user?.role === 'CUSTOMER' && (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button
-                  variant='outline'
-                  className='flex items-center border-primary border-2 justify-center px-2 py-1 text-sm font-medium text-primary rounded-[32px] cursor-pointer transition-all duration-200 hover:opacity-90'
-                >
-                  Re-Review
-                </Button>
-              </DialogTrigger>
-              <DialogContent className='w-2/5'>
-                <DialogHeader>
-                  <DialogTitle>Order Re-review</DialogTitle>
-                  <DialogDescription>
-                    Please enter specific instructions for the re-review, if any
-                  </DialogDescription>
-                </DialogHeader>
-                <div className='grid gap-4 py-4'>
-                  <Textarea
-                    onChange={(e) => setReReviewComment(e.target.value)}
-                    placeholder='Enter instructions...'
-                    className='min-h-[100px] resize-none'
-                  />
-                </div>
-                <div className='flex justify-end gap-3'>
-                  <DialogClose asChild>
-                    <Button variant='outline'>Cancel</Button>
-                  </DialogClose>
-                  <Button onClick={handleReReview} type='submit'>
-                    Order
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
-
           <div className='flex'>
-            {!['CUSTOMER', 'OM', 'ADMIN'].includes(
-              session?.user?.role ?? ''
-            ) && (
+            {['CUSTOMER', 'OM', 'ADMIN'].includes(session?.user?.role ?? '') ? (
+              <Button
+                disabled={isCheckAndDownloadLoading}
+                onClick={() => handleCheckAndDownload(orderDetails.fileId)}
+                className='format-button border-r-[1.5px] border-white/70'
+              >
+                {isCheckAndDownloadLoading ? (
+                  <>
+                    Please wait
+                    <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+                  </>
+                ) : (
+                  'Download'
+                )}
+              </Button>
+            ) : (
               <Button
                 onClick={() => setSubmitting(true)}
                 className='format-button border-r-[1.5px] border-white/70'
@@ -928,15 +872,7 @@ export default memo(function Topbar({
               onOpenChange={handleDropdownMenuOpenChange}
             >
               <DropdownMenuTrigger className='focus-visible:ring-0 outline-none'>
-                <Button
-                  className={`${
-                    !['CUSTOMER', 'OM', 'ADMIN'].includes(
-                      session?.user?.role ?? ''
-                    )
-                      ? 'px-2 format-icon-button'
-                      : ''
-                  } focus-visible:ring-0 outline-none`}
-                >
+                <Button className='px-2 format-icon-button focus-visible:ring-0 outline-none'>
                   <span className='sr-only'>Open menu</span>
                   <ChevronDownIcon className='h-4 w-4' />
                 </Button>
@@ -976,15 +912,16 @@ export default memo(function Topbar({
                 <DropdownMenuItem onClick={toggleVideo}>
                   Toggle Video
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={toggleNotes}>Notes</DropdownMenuItem>
                 <DropdownMenuItem onClick={toggleSpeakerName}>
                   Speaker Names
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={downloadMP3.bind(null, orderDetails)}
-                >
-                  Download MP3
-                </DropdownMenuItem>
+                {session?.user?.role !== 'CUSTOMER' && (
+                  <DropdownMenuItem
+                    onClick={downloadMP3.bind(null, orderDetails)}
+                  >
+                    Download MP3
+                  </DropdownMenuItem>
+                )}
                 {!['CUSTOMER', 'OM', 'ADMIN'].includes(
                   session?.user?.role || ''
                 ) && (
@@ -997,7 +934,7 @@ export default memo(function Topbar({
                     Report
                   </DropdownMenuItem>
                 )}
-                {session?.user?.role !== 'CUSTOMER' && (
+                {/* {session?.user?.role !== 'CUSTOMER' && (
                   <DropdownMenuItem
                     onClick={() =>
                       getFrequentTermsHandler(
@@ -1010,11 +947,9 @@ export default memo(function Topbar({
                   >
                     Frequent Terms
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuItem
-                    onClick={() => setReviewModalOpen(true)}
-                  >
-                    Review with Gemini
+                )} */}
+                <DropdownMenuItem onClick={() => setReviewModalOpen(true)}>
+                  Review with Gemini
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={toggleAutoCapitalize}>
                   {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
@@ -1024,6 +959,13 @@ export default memo(function Topbar({
                     onClick={() => setIsFormattingOptionsModalOpen(true)}
                   >
                     Formatting Options
+                  </DropdownMenuItem>
+                )}
+                {session?.user?.role === 'CUSTOMER' && (
+                  <DropdownMenuItem
+                    onClick={() => setIsReReviewModalOpen(true)}
+                  >
+                    Re-Review
                   </DropdownMenuItem>
                 )}
                 {orderDetails.status === 'QC_ASSIGNED' && (
@@ -1049,9 +991,11 @@ export default memo(function Topbar({
                     </a>
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onClick={() => setIsHeatmapModalOpen(true)}>
-                  Waveform Heatmap
-                </DropdownMenuItem>
+                {session?.user?.role !== 'CUSTOMER' && (
+                  <DropdownMenuItem onClick={() => setIsHeatmapModalOpen(true)}>
+                    Waveform Heatmap
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={() => setIsRestoreVersionModalOpen(true)}
                 >
@@ -1260,91 +1204,14 @@ export default memo(function Topbar({
           </DialogHeader>
         </DialogContent>
       </Dialog>
-      <Dialog
-        open={isFormattingOptionsModalOpen}
-        onOpenChange={setIsFormattingOptionsModalOpen}
-      >
-        <DialogContent className='sm:max-w-[425px]'>
-          <DialogHeader>
-            <DialogTitle>Formatting Options</DialogTitle>
-            <DialogDescription className='text-center text-red-500'>
-              These options discard all changes made and reverts the transcript
-              to the delivered version. Please set these options before making
-              any edits.
-            </DialogDescription>
-          </DialogHeader>
-          <div className='grid gap-4 py-4'>
-            <div className='flex items-center space-x-2'>
-              <Checkbox
-                id='time-coding'
-                checked={formattingOptions.timeCoding}
-                onCheckedChange={(checked) =>
-                  setFormattingOptions((prev) => ({
-                    ...prev,
-                    timeCoding: checked as boolean,
-                  }))
-                }
-              />
-              <Label htmlFor='time-coding'>Time-coding</Label>
-            </div>
-            <div className='flex items-center space-x-2'>
-              <Checkbox
-                id='speaker-tracking'
-                checked={formattingOptions.speakerTracking}
-                onCheckedChange={(checked) =>
-                  setFormattingOptions((prev) => ({
-                    ...prev,
-                    speakerTracking: checked as boolean,
-                  }))
-                }
-              />
-              <Label htmlFor='speaker-tracking'>Speaker Tracking</Label>
-            </div>
-            <RadioGroup
-              value={formattingOptions.nameFormat}
-              onValueChange={(value) =>
-                setFormattingOptions((prev) => ({ ...prev, nameFormat: value }))
-              }
-              className='pl-6 space-y-2'
-            >
-              <div className='flex items-center space-x-2'>
-                <RadioGroupItem value='initials' id='initials' />
-                <Label htmlFor='initials'>Initials</Label>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <RadioGroupItem value='full-names' id='full-names' />
-                <Label htmlFor='full-names'>Full Names</Label>
-              </div>
-            </RadioGroup>
-            <div className='space-y-2'>
-              <Label htmlFor='template'>Template</Label>
-              <Select
-                value={currentTemplate}
-                onValueChange={(value) => setCurrentTemplate(value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder='Select a template' />
-                </SelectTrigger>
-                <SelectContent>
-                  {allPublicTemplates.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setIsFormattingOptionsModalOpen(false)}>
-              Close
-            </Button>
-            <Button type='submit' onClick={handleFormattingOptionChange}>
-              Apply
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FormattingOptionsDialog
+        isFormattingOptionsModalOpen={isFormattingOptionsModalOpen}
+        setIsFormattingOptionsModalOpen={setIsFormattingOptionsModalOpen}
+        orderId={Number(orderDetails.orderId)}
+        fileId={orderDetails.fileId}
+        quillRef={quillRef}
+        updateQuill={updateTranscript}
+      />
       <div
         className={` ${
           !videoPlayerOpen ? 'hidden' : ''
@@ -1374,31 +1241,82 @@ export default memo(function Topbar({
         </div>
       </div>
 
-      {reportModalOpen && <ReportDialog
-        reportModalOpen={reportModalOpen}
-        setReportModalOpen={setReportModalOpen}
-        reportDetails={reportDetails}
-        setReportDetails={setReportDetails}
-        orderDetails={orderDetails}
-        buttonLoading={buttonLoading}
-        setButtonLoading={setButtonLoading}
-      />}
-      {reviewModalOpen && <ReviewTranscriptDialog
-        quillRef={quillRef}
-        reviewModalOpen={reviewModalOpen}
-        setReviewModalOpen={setReviewModalOpen}
-        orderDetails={orderDetails}
-        setButtonLoading={setButtonLoading}
-        buttonLoading={buttonLoading}
-        transcript={transcript}
-        ctms={ctms}
-        updateQuill={updateTranscript}
-      />}
-      <FrequentTermsDialog
+      <Dialog open={isReReviewModalOpen} onOpenChange={setIsReReviewModalOpen}>
+        <DialogContent className='w-2/5'>
+          <DialogHeader>
+            <DialogTitle>Order Re-review</DialogTitle>
+            <DialogDescription>
+              Please enter specific instructions for the re-review, if any
+            </DialogDescription>
+          </DialogHeader>
+          <div className='grid gap-4 py-4'>
+            <Textarea
+              onChange={(e) => setReReviewComment(e.target.value)}
+              placeholder='Enter instructions...'
+              className='min-h-[100px] resize-none'
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => setIsReReviewModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleReReview} type='submit'>
+              Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {toggleCheckAndDownload && (
+        <GoogleOAuthProvider
+          clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}
+        >
+          <TooltipProvider>
+            <CheckAndDownload
+              id={orderDetails.fileId || ''}
+              orderType={orderDetails.orderType || ''}
+              filename={orderDetails.filename || ''}
+              toggleCheckAndDownload={toggleCheckAndDownload}
+              setToggleCheckAndDownload={setToggleCheckAndDownload}
+              txtSignedUrl={signedUrls.txtSignedUrl || ''}
+              cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
+              isFromEditor={true}
+            />
+          </TooltipProvider>
+        </GoogleOAuthProvider>
+      )}
+      {reportModalOpen && (
+        <ReportDialog
+          reportModalOpen={reportModalOpen}
+          setReportModalOpen={setReportModalOpen}
+          reportDetails={reportDetails}
+          setReportDetails={setReportDetails}
+          orderDetails={orderDetails}
+          buttonLoading={buttonLoading}
+          setButtonLoading={setButtonLoading}
+        />
+      )}
+      {reviewModalOpen && (
+        <ReviewTranscriptDialog
+          quillRef={quillRef}
+          reviewModalOpen={reviewModalOpen}
+          setReviewModalOpen={setReviewModalOpen}
+          orderDetails={orderDetails}
+          setButtonLoading={setButtonLoading}
+          buttonLoading={buttonLoading}
+          transcript={transcript}
+          ctms={ctms}
+          updateQuill={updateTranscript}
+        />
+      )}
+      {/* <FrequentTermsDialog
         frequentTermsModalOpen={frequentTermsModalOpen}
         setFrequentTermsModalOpen={setFrequentTermsModalOpen}
         frequentTermsData={frequentTermsData}
-      />
+      /> */}
       <EditorSettingsDialog
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}

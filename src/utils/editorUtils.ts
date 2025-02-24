@@ -1246,7 +1246,7 @@ function getFormattedContent(text: string): Op[] {
     let lastIndex = 0
 
     // Update pattern to explicitly include the timestamp+blank pattern
-    const pattern = /(\d:\d{2}:\d{2}\.\d\s+S\d+:|(?:\[\d:\d{2}:\d{2}\.\d\]\s+____)|\[[^\]]+\])/g
+    const pattern = /(\d:\d{2}:\d{2}\.\d(?:\s+(?:S\d+:|Speaker\s+\d+:|[A-Za-z][A-Za-z\s]*:))?|\[\d:\d{2}:\d{2}\.\d\](?:\s+____)?|\[[^\]]+\])/g
     let match: RegExpExecArray | null
 
     while ((match = pattern.exec(text)) !== null) {
@@ -1257,7 +1257,7 @@ function getFormattedContent(text: string): Op[] {
         const matchedText = match[0]
 
         // Rule 1: TS + Speaker labels
-        if (matchedText.match(/^\d:\d{2}:\d{2}\.\d\s+S\d+:/)) {
+        if (matchedText.match(/^\d:\d{2}:\d{2}\.\d/)) {
             formattedContent.push({
                 insert: matchedText,
                 attributes: { bold: true }
