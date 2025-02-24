@@ -23,7 +23,7 @@ const Diff: React.FC<DiffComponentProps> = ({ diffOutput }) => {
   }
 
   return (
-    <div className="diff" tabIndex={0} onKeyDown={handleKeyDown}>
+    <div className="diff pb-[10px]" tabIndex={0} onKeyDown={handleKeyDown}>
       {diffOutput.map((part, index) => {
         const [op, text] = part
         
