@@ -1,95 +1,110 @@
-"use server"
+'use server'
 
-import { createWriteStream } from "fs";
-import fs, { unlink } from "fs/promises";
-import path from "path";
+import { createWriteStream } from 'fs'
+import fs, { unlink } from 'fs/promises'
+import path from 'path'
 
-import { GoogleAIFileManager, FileState } from "@google/generative-ai/server";
-import axios from "axios";
-import portkeyAI from "portkey-ai";
+import { GoogleAIFileManager, FileState } from '@google/generative-ai/server'
+import axios from 'axios'
+import { getSession } from 'next-auth/react'
+import portkeyAI from 'portkey-ai'
 
-import config from "../../../../../config.json";
-import logger from "@/lib/logger";
-import { withRetry } from "@/lib/retry";
-import { getSignedURLFromS3, deleteFileFromS3 } from "@/utils/backend-helper";
-import { offsetTranscript } from "@/utils/editorUtils";
+import config from '../../../../../config.json'
+import logger from '@/lib/logger'
+import { withRetry } from '@/lib/retry'
+import { getSignedURLFromS3, deleteFileFromS3 } from '@/utils/backend-helper'
+import { GeminiModel, offsetTranscript } from '@/utils/editorUtils'
 
-async function downloadAndSaveFile(url: string, outputPath: string): Promise<string> {
+async function downloadAndSaveFile(
+  url: string,
+  outputPath: string
+): Promise<string> {
   return new Promise(async (resolve, reject) => {
     try {
       const response = await axios({
         url,
         method: 'GET',
-        responseType: 'stream'
-      });
-      const writer = createWriteStream(outputPath);
-      response.data.pipe(writer);
+        responseType: 'stream',
+      })
+      const writer = createWriteStream(outputPath)
+      response.data.pipe(writer)
 
       writer.on('finish', () => {
-        writer.close();
-        resolve(outputPath);
-      });
+        writer.close()
+        resolve(outputPath)
+      })
 
       writer.on('error', async (error: unknown) => {
-        writer.close();
-        logger.error("Error in downloading and saving the file", error);
-        reject(error);
-      });
+        writer.close()
+        logger.error('Error in downloading and saving the file', error)
+        reject(error)
+      })
     } catch (error) {
-      logger.error("Error in downloading and saving the file", error);
-      reject(error);
+      logger.error('Error in downloading and saving the file', error)
+      reject(error)
     }
-  });
+  })
 }
 
-export async function geminiRequestAction(lastSegment: string, transcript: string, fileKey: string, chunkIndex: number, totalChunks: number, temperature: number, clientPrompt?: string,) {
-  let mediaOutputPath: string = '';
-  const TEMP_DIR: string = path.join(__dirname, '../../temp');
-  try{
-    logger.info(`Starting geminiRequestAction for file: ${fileKey}`);
-    const ext = path.extname(fileKey);
+export async function geminiRequestAction(
+  transcript: string,
+  fileKey: string,
+  chunkIndex: number,
+  totalChunks: number,
+  temperature: number,
+  model: GeminiModel,
+  clientPrompt?: string
+) {
+  const session = await getSession()
+  const user = session?.user
+  let mediaOutputPath: string = ''
+  const TEMP_DIR: string = path.join(__dirname, '../../temp')
+  try {
+    logger.info(`Starting geminiRequestAction for file: ${fileKey}`)
+    const ext = path.extname(fileKey)
 
-    await fs.mkdir(TEMP_DIR, { recursive: true });
+    await fs.mkdir(TEMP_DIR, { recursive: true })
 
-    mediaOutputPath = path.join(TEMP_DIR, fileKey);
+    mediaOutputPath = path.join(TEMP_DIR, fileKey)
     const mediaUrl = await getSignedURLFromS3(
       fileKey,
-      config.aws_signed_url_expiration,
-    );
-    await downloadAndSaveFile(mediaUrl, mediaOutputPath);
+      config.aws_signed_url_expiration
+    )
+    await downloadAndSaveFile(mediaUrl, mediaOutputPath)
 
-    const offsetTranscriptData  = offsetTranscript(transcript);
+    const offsetTranscriptData = offsetTranscript(transcript)
     if (typeof offsetTranscriptData === 'string') {
-      logger.error("Error in offsetting the transcript");
-      throw new Error("Error in offsetting the transcript");
+      logger.error('Error in offsetting the transcript')
+      throw new Error('Error in offsetting the transcript')
     }
-    const { transcript: offsetFormattedTranscript, firstTimeStamp } = offsetTranscriptData;
-    const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY!);
+    const { transcript: offsetFormattedTranscript, firstTimeStamp } =
+      offsetTranscriptData
+    const fileManager = new GoogleAIFileManager(process.env.GEMINI_API_KEY!)
 
-    const uploadResult = await fileManager.uploadFile(
-      mediaOutputPath,
-      {
-        mimeType: ext === ".mp3" ? "audio/mp3" : "video/mp4",
-        displayName: "Media file for Gemini",
-      },
-    );
+    const uploadResult = await fileManager.uploadFile(mediaOutputPath, {
+      mimeType: ext === '.mp3' ? 'audio/mp3' : 'video/mp4',
+      displayName: 'Media file for Gemini',
+    })
 
-    let file = await fileManager.getFile(uploadResult.file.name);
+    let file = await fileManager.getFile(uploadResult.file.name)
     while (file.state === FileState.PROCESSING) {
-      process.stdout.write(".");
-      file = await fileManager.getFile(uploadResult.file.name);
+      process.stdout.write('.')
+      file = await fileManager.getFile(uploadResult.file.name)
     }
 
     if (file.state === FileState.FAILED) {
-      logger.error("Audio processing failed: ", fileKey);
-      throw new Error("Audio processing failed.");
+      logger.error('Audio processing failed: ', fileKey)
+      throw new Error('Audio processing failed.')
     }
-
+    console.log(user?.email)
     const portkey = new portkeyAI({
       apiKey: process.env.PORTKEY_API_KEY!,
-      virtualKey: process.env.PORTKEY_PROD_GOOGLE_VIRTUAL_KEY
+      virtualKey: process.env.PORTKEY_PROD_GOOGLE_VIRTUAL_KEY,
     })
-    const userPrompt = {text: `You are provided with a transcript chunk generated by Assembly AI from an audio or video file. This is chunk ${chunkIndex+1} of ${totalChunks}. Your task as a transcriber is to carefully review the transcript and correct any misheard words, misspellings, or any other inconsistencies while ensuring that the transcript is as accurate as possible. Perform the task following the below instructions:
+    const userPrompt = {
+      text: `You are provided with a transcript chunk generated by Assembly AI from an audio or video file. This is chunk ${
+        chunkIndex + 1
+      } of ${totalChunks}. Your task as a transcriber is to carefully review the transcript and correct any misheard words, misspellings, or any other inconsistencies while ensuring that the transcript is as accurate as possible. Perform the task following the below instructions:
 
 Use the last segment only to ensure the continuity of the speaker in the transcript.
 Strictly format the timestamps in format h:mm:ss.ms.(Example: 0:11:02.4 instead of 0:11:2.4)
@@ -101,74 +116,86 @@ Every paragraph should be in the format of timestamp Speaker: Paragraph followin
 ${clientPrompt}
 
 <transcript>${offsetFormattedTranscript}</transcript>
-`}
-    const systemPrompt = { text: `You are an expert audio and video transcription/proofreader who verifies transcripts against audio/video inputs with high accuracy` }
-    
-    const result = await withRetry(async () => {
+`,
+    }
+    const systemPrompt = {
+      text: `You are an expert audio and video transcription/proofreader who verifies transcripts against audio/video inputs with high accuracy`,
+    }
 
-      const chatCompletion = await portkey.chat.completions.create({
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt.text
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: userPrompt.text
-              },
-              {
-                type: 'file',
-                file: {
-                  uri: uploadResult.file.uri,
-                  mimeType: uploadResult.file.mimeType
-                }
-              }
-            ]
-          },
-        ],
-        model: 'gemini-1.5-flash',
-        temperature: temperature
-      });
+    const result = await withRetry(
+      async () => {
+        const chatCompletion = await portkey.chat.completions.create({
+          messages: [
+            {
+              role: 'system',
+              content: systemPrompt.text,
+            },
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: userPrompt.text,
+                },
+                {
+                  type: 'file',
+                  file: {
+                    uri: uploadResult.file.uri,
+                    mimeType: uploadResult.file.mimeType,
+                  },
+                },
+              ],
+            },
+          ],
+          model: model,
+          temperature: temperature,
+          user: user?.email,
+        })
 
-      // Extract the transcript text from the response
-      const transcriptText = chatCompletion.choices[0]?.message?.content;
-      if (!transcriptText) {
-        logger.error(`No transcript content received from Gemini for file: ${fileKey}`);
-        throw new Error('No transcript content received from Gemini');
+        // Extract the transcript text from the response
+        const transcriptText = chatCompletion.choices[0]?.message?.content
+        if (!transcriptText) {
+          logger.error(
+            `No transcript content received from Gemini for file: ${fileKey}`
+          )
+          throw new Error('No transcript content received from Gemini')
+        }
+
+        return transcriptText
+      },
+      {
+        maxRetries: 3,
+        initialDelayMs: 1000,
+        maxDelayMs: 32000,
+        backoffFactor: 2,
+        retryErrors: ['Request failed with status code 429'],
       }
-
-      return transcriptText;
-    }, {
-      maxRetries: 3,
-      initialDelayMs: 1000,
-      maxDelayMs: 32000,
-      backoffFactor: 2,
-      retryErrors: ['Request failed with status code 429']    
-    });
+    )
 
     // Format the response with the correct timestamp offset
     if (!result) {
-      logger.error(`No result received from Gemini request for file: ${fileKey}`);
-      throw new Error('No result received from Gemini request');
+      logger.error(
+        `No result received from Gemini request for file: ${fileKey}`
+      )
+      throw new Error('No result received from Gemini request')
     }
-    const formatGeminiResponse = offsetTranscript(result?.data as string, firstTimeStamp);
-    return typeof formatGeminiResponse === 'string' ? formatGeminiResponse : formatGeminiResponse.transcript;
-
-  } catch(error) {
-    logger.error(`Error in geminiRequestAction : ${error}`);
-    throw error; // Re-throw the error to be handled by the caller
-  }
-  finally {
+    const formatGeminiResponse = offsetTranscript(
+      result?.data as string,
+      firstTimeStamp
+    )
+    return typeof formatGeminiResponse === 'string'
+      ? formatGeminiResponse
+      : formatGeminiResponse.transcript
+  } catch (error) {
+    logger.error(`Error in geminiRequestAction : ${error}`)
+    throw error // Re-throw the error to be handled by the caller
+  } finally {
     try {
       // Cleanup temporary files.
-      await unlink(mediaOutputPath);
+      await unlink(mediaOutputPath)
       await deleteFileFromS3(fileKey)
-
     } catch (cleanupError) {
-      logger.error(`Cleanup error: ${cleanupError}`);
+      logger.error(`Cleanup error: ${cleanupError}`)
     }
   }
 }

@@ -32,6 +32,7 @@ import {
   formatTimestamps,
   acceptAllDiffs,
   rejectAllDiffs,
+  GeminiModel,
 } from "@/utils/editorUtils";
 import { DIFF_EQUAL } from "@/utils/transcript/diff_match_patch";
 
@@ -73,7 +74,7 @@ export default memo(function ReviewTranscriptDialog({
   // Store processing start/end times
   const [processingStartedAt, setProcessingStartedAt] = useState<Date | null>(null);
   const [processingEndedAt, setProcessingEndedAt] = useState<Date | null>(null);
-  
+  const [model, setModel] = useState<GeminiModel>(GeminiModel.GEMINI_1_5_FLASH);
   const { fileId } = orderDetails;
 
   // Map the step string to its corresponding index
@@ -131,6 +132,7 @@ export default memo(function ReviewTranscriptDialog({
           i,
           chunkPoints.length - 1,
           temperature,
+          model,
           userPrompt
         );
         geminiTranscript += geminiResult + "\n";
@@ -302,6 +304,8 @@ export default memo(function ReviewTranscriptDialog({
               temperature={temperature}
               setTemperature={setTemperature}
               disabled={loading}
+              model={model}
+              setModel={setModel}
             />
           ) : (
             <div className="flex space-x-2 justify-center items-center h-[60vh]">
