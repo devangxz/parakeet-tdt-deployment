@@ -13,10 +13,17 @@ import { sendTemplateMail } from '@/lib/ses'
 import { getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 
-export async function submitFinalize(transcriberId: number, order: Order, finalizerComment: string) {
+export async function submitFinalize(
+  transcriberId: number,
+  order: Order,
+  finalizerComment: string
+) {
   logger.info(`--> OrderTranscriptionCFFlow:submitFinalize ${order.fileId}`)
   try {
-    if (order.orderType != OrderType.TRANSCRIPTION_FORMATTING) {
+    if (
+      order.orderType != OrderType.TRANSCRIPTION_FORMATTING &&
+      order.orderType != OrderType.FORMATTING
+    ) {
       logger.error(
         `OrderFlow:submitFinalize - Order ${order.id}-${order.orderType} is not supported`
       )

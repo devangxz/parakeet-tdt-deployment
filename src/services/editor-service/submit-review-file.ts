@@ -19,7 +19,10 @@ export default async function submitReview(
 ) {
   logger.info(`--> OrderTranscriptionCFFlow:submitReview ${order.fileId}`)
   try {
-    if (order.orderType != OrderType.TRANSCRIPTION_FORMATTING) {
+    if (
+      order.orderType != OrderType.TRANSCRIPTION_FORMATTING &&
+      order.orderType != OrderType.FORMATTING
+    ) {
       logger.error(
         `OrderFlow:submitReview - Order ${order.id}-${order.orderType} is not supported`
       )

@@ -15,6 +15,7 @@ import { CheckAndDownload } from '@/app/(dashboard)/files/delivered/components/c
 import { downloadMp3 } from '@/app/actions/file/download-mp3'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { createOrder } from '@/app/actions/order'
+import { getCustomFormatFilesSignedUrl } from '@/app/actions/order/custom-format-files-signed-url'
 import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
 import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
 import DeleteFileDialog from '@/components/delete-file-modal'
@@ -53,9 +54,13 @@ interface CustomFile {
 
 interface SelectedFilesClientProps {
   initialFiles: CustomFile[]
+  orderButtonLabel: string
 }
 
-export function SelectedFiles({ initialFiles }: SelectedFilesClientProps) {
+export function SelectedFiles({
+  initialFiles,
+  orderButtonLabel,
+}: SelectedFilesClientProps) {
   console.log(initialFiles)
   const { data: session } = useSession()
   const router = useRouter()
@@ -89,6 +94,14 @@ export function SelectedFiles({ initialFiles }: SelectedFilesClientProps) {
     [key: string]: string
   }>({})
   const [selectedRows, setSelectedRows] = useState<CustomFile[]>([])
+  const [customFormatFilesSignedUrls, setCustomFormatFilesSignedUrls] =
+    useState<
+      {
+        signedUrl: string
+        filename: string
+        extension: string
+      }[]
+    >([])
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -140,6 +153,10 @@ export function SelectedFiles({ initialFiles }: SelectedFilesClientProps) {
         txtSignedUrl: txtRes.signedUrl || '',
         cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
       })
+      const customFormatRes = await getCustomFormatFilesSignedUrl(fileId)
+      if (customFormatRes.success) {
+        setCustomFormatFilesSignedUrls(customFormatRes.signedUrls || [])
+      }
       setLoadingFileOrder((prev) => ({ ...prev, [fileId]: false }))
       setToggleCheckAndDownload(true)
     } catch (error) {
@@ -177,7 +194,7 @@ export function SelectedFiles({ initialFiles }: SelectedFilesClientProps) {
       NOT_ORDERED: {
         label:
           session && session.user?.orderType !== 'TRANSCRIPTION'
-            ? 'Format'
+            ? orderButtonLabel
             : 'Transcribe',
         text: 'text-black',
         controller: (
@@ -412,6 +429,7 @@ export function SelectedFiles({ initialFiles }: SelectedFilesClientProps) {
           setToggleCheckAndDownload={setToggleCheckAndDownload}
           txtSignedUrl={signedUrls.txtSignedUrl}
           cfDocxSignedUrl={signedUrls.cfDocxSignedUrl}
+          customFormatFilesSignedUrls={customFormatFilesSignedUrls}
         />
       )}
       <DraftTranscriptFileDialog

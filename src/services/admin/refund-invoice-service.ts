@@ -48,7 +48,10 @@ export async function refundInvoice({
       return { success: false, s: 'Failed to process refund' }
     }
 
-    if (invoice.type === InvoiceType.TRANSCRIPT) {
+    if (
+      invoice.type === InvoiceType.TRANSCRIPT ||
+      invoice.type === InvoiceType.FORMATTING
+    ) {
       const files = await prisma.invoiceFile.findMany({
         where: {
           invoiceId,

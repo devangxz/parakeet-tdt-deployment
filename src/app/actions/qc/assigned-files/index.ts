@@ -9,6 +9,7 @@ import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
+import getCustomFormatOption from '@/utils/getCustomFormatOption'
 import getOrgName from '@/utils/getOrgName'
 
 export async function getAssignedQCFiles(type?: string | null) {
@@ -88,11 +89,13 @@ export async function getAssignedQCFiles(type?: string | null) {
         transcriberId
       )
       const orgName = await getOrgName(file.order.userId)
+      const customFormatOption = await getCustomFormatOption(file.order.userId)
       const isTestCustomer = await getTestCustomer(file.order.userId)
       file.order.qc_cost = transcriberCost.cost
       file.order.rate = transcriberCost.rate
       file.order.orgName = orgName
       file.order.isTestCustomer = isTestCustomer
+      file.order.customFormatOption = customFormatOption
     }
 
     logger.info(

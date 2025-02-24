@@ -220,7 +220,10 @@ export default memo(function Header({
     }
 
     if (orderDetails.status === 'PRE_DELIVERED') {
-      if (orderDetails.orderType === 'TRANSCRIPTION_FORMATTING') {
+      if (
+        orderDetails.orderType === 'TRANSCRIPTION_FORMATTING' ||
+        orderDetails.orderType === 'FORMATTING'
+      ) {
         currentStep = 'CF'
       } else {
         currentStep = 'QC'

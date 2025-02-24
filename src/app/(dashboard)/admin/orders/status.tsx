@@ -89,7 +89,9 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
         const orderDetails = response.details as any
         const qcNames = orderDetails.Assignment.filter(
           (a: { status: string }) =>
-            a.status === 'ACCEPTED' || a.status === 'COMPLETED'
+            a.status === 'ACCEPTED' ||
+            a.status === 'COMPLETED' ||
+            a.status === 'SUBMITTED_FOR_APPROVAL'
         )
           .map(
             (a: { user: { firstname: string; lastname: string } }) =>
@@ -217,29 +219,50 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
                         return (
                           <div
                             key={key}
-                            className={`grid grid-cols-2 p-2 mt-2 ${index % 2 === 0 ? 'bg-secondary' : 'bg-background'
-                              }`}
+                            className={`grid grid-cols-2 p-2 mt-2 ${
+                              index % 2 === 0 ? 'bg-secondary' : 'bg-background'
+                            }`}
                           >
                             <span className='font-semibold'>
                               {fieldLabels[key]}
                             </span>
                             <span>
-                              <p>
-                                Transcription cost: <br /> $
-                                {value.transcriptionCost}/ah ($
-                                {value.transcriptionRate}/ah + $
-                                {orderInformation.rateBonus}/ah)
-                              </p>
-                              {orderInformation.type ===
-                                'TRANSCRIPTION_FORMATTING' && (
+                              {orderInformation.type === 'FORMATTING' ? (
+                                <>
                                   <p className='mt-1'>
-                                    Review cost: <br /> $
+                                    Formatting cost: <br /> $
                                     {orderInformation.fileCost.customFormatCost}
                                     /ah ($
                                     {orderInformation.fileCost.customFormatRate}
                                     /ah + ${orderInformation.rateBonus}/ah)
                                   </p>
-                                )}
+                                </>
+                              ) : (
+                                <>
+                                  <p>
+                                    Transcription cost: <br /> $
+                                    {value.transcriptionCost}/ah ($
+                                    {value.transcriptionRate}/ah + $
+                                    {orderInformation.rateBonus}/ah)
+                                  </p>
+                                  {orderInformation.type ===
+                                    'TRANSCRIPTION_FORMATTING' && (
+                                    <p className='mt-1'>
+                                      Review cost: <br /> $
+                                      {
+                                        orderInformation.fileCost
+                                          .customFormatCost
+                                      }
+                                      /ah ($
+                                      {
+                                        orderInformation.fileCost
+                                          .customFormatRate
+                                      }
+                                      /ah + ${orderInformation.rateBonus}/ah)
+                                    </p>
+                                  )}
+                                </>
+                              )}
                             </span>
                           </div>
                         )
@@ -247,8 +270,9 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
                       return (
                         <div
                           key={key}
-                          className={`grid grid-cols-2 p-2 mt-2 ${index % 2 === 0 ? 'bg-secondary' : 'bg-background'
-                            }`}
+                          className={`grid grid-cols-2 p-2 mt-2 ${
+                            index % 2 === 0 ? 'bg-secondary' : 'bg-background'
+                          }`}
                         >
                           <span className='font-semibold'>
                             {fieldLabels[key]}

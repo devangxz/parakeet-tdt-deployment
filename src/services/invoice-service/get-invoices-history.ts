@@ -32,6 +32,7 @@ export async function getInvoicesHistory(userId: number, onlyRefunds: boolean) {
             InvoiceType.ADDL_FORMATTING,
             InvoiceType.ADDL_PROOFREADING,
             InvoiceType.ADD_CREDITS,
+            InvoiceType.FORMATTING,
           ],
         },
         status: {

@@ -1,4 +1,4 @@
-import { JobStatus, JobType, BonusType } from '@prisma/client'
+import { JobStatus, JobType, BonusType, BonusStage } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
 import logger from '@/lib/logger'
@@ -13,18 +13,19 @@ interface TranscriberData {
   cfBonusEnabled?: boolean
 }
 
-const addBonus = async (userId: number, amount: number) => {
+const addBonus = async (userId: number, amount: number, jobType: JobType) => {
   const result = await prisma.bonus.create({
     data: {
       userId,
       amount,
       type: BonusType.MONTHLY,
+      stage: jobType === JobType.QC ? BonusStage.QC : BonusStage.FINALIZE,
     },
   })
   return result
 }
 
-export async function POST() {
+const giveBonus = async (jobType: JobType) => {
   try {
     const now = new Date()
     const startOfLastMonth = new Date(
@@ -41,7 +42,7 @@ export async function POST() {
     const transcribers = await prisma.jobAssignment.findMany({
       where: {
         status: JobStatus.COMPLETED,
-        type: JobType.QC,
+        type: jobType,
         completedTs: {
           gte: startOfLastMonth,
           lt: startOfCurrentMonth,
@@ -104,15 +105,25 @@ export async function POST() {
 
       logger.info(`Sending monthly bonus for ${user.email}`)
 
-      const amount = 10
-      await addBonus(user.transcriberId, amount)
+      const hoursWorked = Math.floor(user.totalHoursWorked / 3600)
+      const amount = Math.floor(hoursWorked / 3) * 10
+      await addBonus(user.transcriberId, amount, jobType)
 
       logger.info(`Successfully sent monthly bonus for ${user.email}`)
     }
+  } catch (error) {
+    logger.error(`Error sending monthly bonus: ${error}`)
+    throw error
+  }
+}
 
+export async function POST() {
+  try {
+    await giveBonus(JobType.QC)
+    await giveBonus(JobType.FINALIZE)
     return NextResponse.json({ message: 'Successfully sent monthly bonus' })
   } catch (error) {
-    console.error(error)
+    logger.error(`Error sending monthly bonus: ${error}`)
     return NextResponse.json(
       { error: 'An error occurred while sending monthly bonus' },
       { status: 500 }

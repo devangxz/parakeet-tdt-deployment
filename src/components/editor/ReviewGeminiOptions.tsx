@@ -1,9 +1,11 @@
 "use client";
 
-import React, {  } from "react";
+import { InfoIcon } from "lucide-react";
+import React from "react";
 
 import { Slider } from "../ui/slider";
 import { Textarea } from "../ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 export interface GeminiPromptOption {
   id: number;
@@ -61,7 +63,20 @@ export function ReviewGeminiOptions({
         </div>
       </div>
       <div className='flex space-x-2'>
-        <p className="text-sm font-medium">Temperature :</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium">Temperature </p>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <InfoIcon className="w-5 h-5 text-gray-500 cursor-pointer" />
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Decrease the temperature to reduce the creativity of the AI</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          :
+        </div>
         <Slider
           value={[temperature]}
           onValueChange={(value: number[]) => setTemperature(value[0])}
@@ -74,9 +89,21 @@ export function ReviewGeminiOptions({
         <span className="text-sm">{temperature}</span>
       </div>
       <div>
-        <p className="text-sm font-medium">Additional Instructions:</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium">Additional Instructions</p>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <InfoIcon className="w-5 h-5 text-gray-500 cursor-pointer" />
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Provide additional prompts for Gemini to follow.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
         <Textarea
-          placeholder="Enter additional instructions for Gemini to follow..."
+          placeholder="Enter additional instructions. (Example: 'Make the transcript as accurate as possible')"
           value={instructions}
           onChange={(e) => setInstructions(e.target.value)}
           className="mt-1 block w-full rounded border px-2 py-1 text-sm"
