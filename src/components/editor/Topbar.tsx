@@ -60,6 +60,7 @@ import { requestExtensionAction } from '@/app/actions/editor/request-extension'
 import { updateSpeakerNameAction } from '@/app/actions/editor/update-speaker-name'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { getTextFile } from '@/app/actions/get-text-file'
+import { getCustomFormatFilesSignedUrl } from '@/app/actions/order/custom-format-files-signed-url'
 import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
 import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
@@ -181,6 +182,14 @@ export default memo(function Topbar({
     txtSignedUrl: '',
     cfDocxSignedUrl: '',
   })
+  const [customFormatFilesSignedUrls, setCustomFormatFilesSignedUrls] =
+  useState<
+    {
+      signedUrl: string
+      filename: string
+      extension: string
+    }[]
+  >([])
   const [reportModalOpen, setReportModalOpen] = useState(false)
   const [reportDetails, setReportDetails] = useState({
     reportOption: '',
@@ -746,6 +755,11 @@ export default memo(function Topbar({
         txtSignedUrl: txtRes.signedUrl || '',
         cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
       })
+      const customFormatRes = await getCustomFormatFilesSignedUrl(fileId)
+      if (customFormatRes.success) {
+        setCustomFormatFilesSignedUrls(customFormatRes.signedUrls || [])
+      }
+
       setIsCheckAndDownloadLoading(false)
       setToggleCheckAndDownload(true)
     } catch (error) {
@@ -1286,6 +1300,7 @@ export default memo(function Topbar({
               setToggleCheckAndDownload={setToggleCheckAndDownload}
               txtSignedUrl={signedUrls.txtSignedUrl || ''}
               cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
+              customFormatFilesSignedUrls={customFormatFilesSignedUrls}
               isFromEditor={true}
             />
           </TooltipProvider>

@@ -47,12 +47,12 @@ interface CheckAndDownloadProps {
   setToggleCheckAndDownload: (value: boolean) => void
   txtSignedUrl: string
   cfDocxSignedUrl: string
-  isFromEditor?: boolean
   customFormatFilesSignedUrls: {
     signedUrl: string
     filename: string
     extension: string
   }[]
+  isFromEditor?: boolean
 }
 
 interface DownloadFileProps {
@@ -120,8 +120,8 @@ export function CheckAndDownload({
   setToggleCheckAndDownload,
   txtSignedUrl,
   cfDocxSignedUrl,
-  isFromEditor = false,
   customFormatFilesSignedUrls,
+  isFromEditor = false,
 }: CheckAndDownloadProps) {
   const storedrating = Number(localStorage.getItem('rating'))
   const [hover, setHover] = useState<null | number>(null)
