@@ -6,13 +6,14 @@ import path from "path";
 
 import { GoogleAIFileManager, FileState } from "@google/generative-ai/server";
 import axios from "axios";
+import { getSession } from "next-auth/react";
 import portkeyAI from "portkey-ai";
 
 import config from "../../../../../config.json";
 import logger from "@/lib/logger";
 import { withRetry } from "@/lib/retry";
 import { getSignedURLFromS3, deleteFileFromS3 } from "@/utils/backend-helper";
-import { offsetTranscript } from "@/utils/editorUtils";
+import { GeminiModel, offsetTranscript } from "@/utils/editorUtils";
 
 async function downloadAndSaveFile(url: string, outputPath: string): Promise<string> {
   return new Promise(async (resolve, reject) => {
@@ -42,7 +43,9 @@ async function downloadAndSaveFile(url: string, outputPath: string): Promise<str
   });
 }
 
-export async function geminiRequestAction(transcript: string, fileKey: string, chunkIndex: number, totalChunks: number, temperature: number, clientPrompt?: string,) {
+export async function geminiRequestAction(transcript: string, fileKey: string, chunkIndex: number, totalChunks: number, temperature: number, model: GeminiModel, clientPrompt?: string, ) {
+  const session = await getSession();
+  const user = session?.user;
   let mediaOutputPath: string = '';
   const TEMP_DIR: string = path.join(__dirname, '../../temp');
   try{
@@ -84,7 +87,7 @@ export async function geminiRequestAction(transcript: string, fileKey: string, c
       logger.error("Audio processing failed: ", fileKey);
       throw new Error("Audio processing failed.");
     }
-
+    console.log(user?.email)
     const portkey = new portkeyAI({
       apiKey: process.env.PORTKEY_API_KEY!,
       virtualKey: process.env.PORTKEY_PROD_GOOGLE_VIRTUAL_KEY
@@ -128,8 +131,9 @@ ${clientPrompt}
             ]
           },
         ],
-        model: 'gemini-1.5-flash',
-        temperature: temperature
+        model: model,
+        temperature: temperature,
+        user: user?.email
       });
 
       // Extract the transcript text from the response
