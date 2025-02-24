@@ -1,7 +1,7 @@
 "use client";
 
 import { ReloadIcon } from "@radix-ui/react-icons";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, memo } from "react";
 import ReactQuill from "react-quill";
 
 import { computeDiffs, DiffSegmentItem } from "../editor/DiffSegmentItem";
@@ -50,7 +50,7 @@ interface ReviewWithGeminiDialogProps {
   updateQuill: (quillRef: React.RefObject<ReactQuill> | undefined, content: string) => void;
 }
 
-export default function ReviewTranscriptDialog({
+export default memo(function ReviewTranscriptDialog({
   quillRef,
   reviewModalOpen,
   setReviewModalOpen,
@@ -64,7 +64,7 @@ export default function ReviewTranscriptDialog({
   const [loading, setLoading] = useState(false);
   const [isError, setIsError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("Please try again later.");
-  const [finalTranscript, setFinalTranscript] = useState<string>('');
+  const [newTranscript, setNewTranscript] = useState<string>(transcript);
   const [diffs, setDiffs] = useState<DiffSegment[]>([]);
   const [selectedPrompts, setSelectedPrompts] = useState<string[]>([]);
   const [instructions, setInstructions] = useState<string>('');
@@ -96,7 +96,7 @@ export default function ReviewTranscriptDialog({
       let chunkKey: string | null = null;
       let geminiTranscript = '';
 
-      const transcriptChunks = chunkTranscript(transcript, chunkPoints);
+      const transcriptChunks = chunkTranscript(newTranscript, chunkPoints);
       const totalChunks = (chunkPoints.length - 1) * 2;
       let progress = 0;
 
@@ -123,9 +123,10 @@ export default function ReviewTranscriptDialog({
         if (!chunkKey) {
           throw new Error('Failed to create all chunks for processing.');
         }
-
+        const lastSegment = i > 0 ? transcriptChunks[i-1] : '';
         setProgressMessage(`Reviewing transcript part: ${i + 1} of ${chunkPoints.length - 1}`);
         const geminiResult = await geminiRequestAction(
+          lastSegment,
           transcriptChunks[i],
           chunkKey,
           i,
@@ -147,7 +148,7 @@ export default function ReviewTranscriptDialog({
       setProgressValue(100);
       setStep('review');
       const formattedGeminiTranscript = formatTimestamps(geminiTranscript);
-      const differences = computeDiffs(transcript, formattedGeminiTranscript);
+      const differences = computeDiffs(newTranscript, formattedGeminiTranscript);
       setDiffs(differences);
     } catch (error) {
       setErrorMessage("Unable to review transcript. Please try again later.");
@@ -155,7 +156,7 @@ export default function ReviewTranscriptDialog({
     } finally {
       setLoading(false);
     }
-  }, [selectedPrompts, instructions, fileId, ctms, transcript, temperature]);
+  }, [selectedPrompts, instructions, fileId, ctms, newTranscript, temperature]);
 
   const handleAccept = useCallback((index: number) => {
     setDiffs((prevDiffs) => {
@@ -182,7 +183,7 @@ export default function ReviewTranscriptDialog({
     const rejectedDiffs = rejectAllDiffs(diffs);
     setDiffs(rejectedDiffs);
     const finalTranscript = rejectedDiffs.map(diff => diff.text).join('');
-    setFinalTranscript(finalTranscript);
+    setNewTranscript(finalTranscript);
     setStep('preview');
   }, [diffs]);
 
@@ -194,7 +195,7 @@ export default function ReviewTranscriptDialog({
     const acceptedDiffs = acceptAllDiffs(diffs);
     setDiffs(acceptedDiffs);
     const finalTranscript = acceptedDiffs.map(diff => diff.text).join('');  
-    setFinalTranscript(finalTranscript);
+    setNewTranscript(finalTranscript);
     setStep('preview');
   }, [diffs]);
 
@@ -206,7 +207,6 @@ export default function ReviewTranscriptDialog({
     // Call the server action to store the ReviewWithGeminiStats data.
     // Replace userId with the authenticated user's id as appropriate.
     setReviewModalOpen(false);
-    
     await saveReviewWithGeminiStats({
       fileId,
       options: selectedPrompts,
@@ -219,9 +219,10 @@ export default function ReviewTranscriptDialog({
     });
     
     // Ensure the final transcript ends with a newline to prevent clipping.
-    const safeTranscript = finalTranscript.endsWith('\n')
-      ? finalTranscript
-      : finalTranscript + '\n';
+    const safeTranscript = newTranscript.endsWith('\n')
+      ? newTranscript
+      : newTranscript + '\n';
+
     updateQuill(quillRef, safeTranscript);
     await handleSave(
       {
@@ -339,7 +340,7 @@ export default function ReviewTranscriptDialog({
         )}
         {step === 'preview' && (
           <div className="p-2 px-4 overflow-y-auto h-[60vh] whitespace-pre-wrap">
-            {finalTranscript}
+            {newTranscript}
           </div>
         )}
         <DialogFooter className="flex gap-2">
@@ -391,4 +392,4 @@ export default function ReviewTranscriptDialog({
       </DialogContent>
     </Dialog>
   );
-}
+})
