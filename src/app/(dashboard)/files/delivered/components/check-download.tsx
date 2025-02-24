@@ -72,7 +72,7 @@ const DownloadFile = ({
 }: DownloadFileProps) => (
   <div className='p-4 rounded-lg bg-secondary'>
     <div className='flex items-center gap-3 mb-5'>
-      <FileText className='w-6 h-6 text-gray-700' />
+      <FileText className='w-6 h-6 text-foreground' />
       <a target='_blank' href={url} className='text-primary hover:underline'>
         {name}
         {fileType}
@@ -355,8 +355,8 @@ export function CheckAndDownload({
               {orderType == 'TRANSCRIPTION_FORMATTING' && (
                 <div className='space-y-6'>
                   <div className='pb-4'>
-                    <h4 className='text-base font-medium text-gray-700 mb-4'>
-                      Custom Formatting
+                    <h4 className='text-base font-medium text-muted-foreground mb-4'>
+                      Custom Formatting Files
                     </h4>
 
                     <div className='space-y-4'>
@@ -383,8 +383,8 @@ export function CheckAndDownload({
               {orderType == 'FORMATTING' && (
                 <div className='space-y-6'>
                   <div className='pb-4'>
-                    <h4 className='text-base font-medium text-gray-700 mb-4'>
-                      Custom Formatting
+                    <h4 className='text-base font-medium text-muted-foreground mb-4'>
+                      Custom Formatting Files
                     </h4>
 
                     <div className='space-y-4'>
@@ -406,7 +406,7 @@ export function CheckAndDownload({
               {orderType == 'TRANSCRIPTION' && (
                 <div className='space-y-6'>
                   <div className='pb-4'>
-                    <h4 className='text-base font-medium text-gray-700 mb-4'>
+                    <h4 className='text-base font-medium text-muted-foreground mb-4'>
                       Transcription Files
                     </h4>
 
@@ -442,7 +442,7 @@ export function CheckAndDownload({
               {showSubtitle && orderType == 'TRANSCRIPTION' && (
                 <div id='subtitles-section' className='space-y-6'>
                   <div className='pb-4'>
-                    <h4 className='text-base font-medium text-gray-700 mb-4'>
+                    <h4 className='text-base font-medium text-muted-foreground mb-4'>
                       Subtitle Files
                     </h4>
 
