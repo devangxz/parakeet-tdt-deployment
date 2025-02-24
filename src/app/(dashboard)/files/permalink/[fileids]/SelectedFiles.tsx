@@ -422,7 +422,6 @@ export function SelectedFiles({
       {selectedFile && toggleCheckAndDownload && (
         <CheckAndDownload
           id={selectedFile.fileId || ''}
-          orderId={selectedFile.orderId || ''}
           orderType={selectedFile.orderType || ''}
           filename={selectedFile.name || ''}
           toggleCheckAndDownload={toggleCheckAndDownload}
