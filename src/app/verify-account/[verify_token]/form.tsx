@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { formSchema } from './controllers'
+import { updateSource } from '@/app/actions/auth/update-source'
 import { verifyAccount } from '@/app/actions/auth/verify-account'
 import SideImage from '@/components/side-image'
 import { Button } from '@/components/ui/button'
@@ -74,25 +75,16 @@ const VerifyAccount = () => {
     }
 
     verifyUserAccount()
-  }, [params?.verify_token, session, status, update])
+  }, [params?.verify_token])
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setLoading(true)
-      const response = await fetch(
-        `/api/auth/update-source/${params?.verify_token}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            source: values.source,
-          }),
-        }
+      const response = await updateSource(
+        params?.verify_token as string,
+        values.source
       )
-      const responseData = await response.json()
-      if (responseData.success) {
+      if (response.success) {
         const tId = toast.success(`Successfully saved!`)
         toast.dismiss(tId)
         window.location.href = '/signin'

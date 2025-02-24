@@ -2,6 +2,7 @@ import React from 'react'
 
 import SelectedFiles from './SelectedFiles'
 import { getAllFilesAction } from '@/app/actions/all-files'
+import { getOrderButtonLabel } from '@/app/actions/files/order-button-label'
 
 interface FileResponse {
   fileId: string
@@ -69,6 +70,9 @@ export default async function SelectedPage({ params }: PageProps) {
     folderId: file.parentId,
   }))
 
+  const orderButtonLabelResponse = await getOrderButtonLabel()
+  const orderButtonLabel = orderButtonLabelResponse.label
+
   return (
     <div className='h-full flex-1 flex-col p-4 md:flex'>
       <div className='flex items-start justify-between mb-3'>
@@ -78,7 +82,10 @@ export default async function SelectedPage({ params }: PageProps) {
           </h1>
         </div>
       </div>
-      <SelectedFiles initialFiles={selectedFiles} />
+      <SelectedFiles
+        initialFiles={selectedFiles}
+        orderButtonLabel={orderButtonLabel}
+      />
     </div>
   )
 }

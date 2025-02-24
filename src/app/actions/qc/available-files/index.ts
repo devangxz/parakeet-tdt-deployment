@@ -9,6 +9,7 @@ import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { isTranscriberICQC, getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
+import getCustomFormatOption from '@/utils/getCustomFormatOption'
 import getOrgName from '@/utils/getOrgName'
 
 export async function getAvailableQCFiles(type?: string | null) {
@@ -97,11 +98,13 @@ export async function getAvailableQCFiles(type?: string | null) {
     for (const file of qcFiles as any) {
       const transcriberCost = await calculateTranscriberCost(file, user.userId)
       const orgName = await getOrgName(file.userId)
+      const customFormatOption = await getCustomFormatOption(file.userId)
       const isTestCustomer = await getTestCustomer(file.userId)
       file.qc_cost = transcriberCost.cost
       file.rate = transcriberCost.rate
       file.orgName = orgName
       file.isTestCustomer = isTestCustomer
+      file.customFormatOption = customFormatOption
     }
 
     qcFiles = qcFiles.filter((file: any) => {

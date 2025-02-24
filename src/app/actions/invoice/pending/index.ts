@@ -17,7 +17,7 @@ export async function getPendingInvoices() {
       where: {
         userId: userId,
         type: {
-          notIn: [InvoiceType.TRANSCRIPT],
+          notIn: [InvoiceType.TRANSCRIPT, InvoiceType.FORMATTING],
         },
         status: InvoiceStatus.PENDING,
       },

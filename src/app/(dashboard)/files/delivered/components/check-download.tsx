@@ -48,6 +48,11 @@ interface CheckAndDownloadProps {
   txtSignedUrl: string
   cfDocxSignedUrl: string
   isFromEditor?: boolean
+  customFormatFilesSignedUrls: {
+    signedUrl: string
+    filename: string
+    extension: string
+  }[]
 }
 
 interface DownloadFileProps {
@@ -116,6 +121,7 @@ export function CheckAndDownload({
   txtSignedUrl,
   cfDocxSignedUrl,
   isFromEditor = false,
+  customFormatFilesSignedUrls,
 }: CheckAndDownloadProps) {
   const storedrating = Number(localStorage.getItem('rating'))
   const [hover, setHover] = useState<null | number>(null)
@@ -212,8 +218,8 @@ export function CheckAndDownload({
         fileId: id,
         filename,
         docType:
-          orderType == 'TRANSCRIPTION_FORMATTING'
-            ? 'TRANCRIPTIONCF_DOCX'
+          orderType == 'TRANSCRIPTION_FORMATTING' || orderType == 'FORMATTING'
+            ? 'TRANSCRIPTION_CF_DOCX'
             : 'TRANSCRIPTION_DOCX',
         rating,
       },
@@ -369,6 +375,29 @@ export function CheckAndDownload({
                         isUploading={isUploading}
                         handleGDriveUpload={handleGDriveUpload}
                       />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {orderType == 'FORMATTING' && (
+                <div className='space-y-6'>
+                  <div className='pb-4'>
+                    <h4 className='text-base font-medium text-gray-700 mb-4'>
+                      Custom Formatting
+                    </h4>
+
+                    <div className='space-y-4'>
+                      {customFormatFilesSignedUrls.map((file) => (
+                        <DownloadFile
+                          key={file.filename}
+                          name={file.filename}
+                          url={file.signedUrl}
+                          fileType={`.${file.extension}`}
+                          isUploading={isUploading}
+                          handleGDriveUpload={handleGDriveUpload}
+                        />
+                      ))}
                     </div>
                   </div>
                 </div>

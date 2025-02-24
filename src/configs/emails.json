@@ -28,7 +28,7 @@
   },
   "TEAM_NEW_USER_ACCOUNT_CREATE": {
     "FROM": "$$SUPPORT_EMAIL_ID$$",
-    "TO": ["$$USER_EMAIL_ID$$", "$$ADMIN_EMAIL_ID$$"],
+    "TO": ["$$USER_EMAIL_ID$$"],
     "CC": ["$$SUPPORT_EMAIL_ID$$"],
     "BCC": ["$$CONTACT_EMAIL_ID$$"],
     "SUBJECT": "Scribie.ai Team Invitation",
@@ -37,7 +37,7 @@
   },
   "TEAM_EXISTING_USER_ACCOUNT_INVITE": {
     "FROM": "$$SUPPORT_EMAIL_ID$$",
-    "TO": ["$$USER_EMAIL_ID$$", "$$ADMIN_EMAIL_ID$$"],
+    "TO": ["$$USER_EMAIL_ID$$"],
     "CC": ["$$SUPPORT_EMAIL_ID$$"],
     "BCC": ["$$CONTACT_EMAIL_ID$$"],
     "SUBJECT": " Scribie.ai Team Invitation",
@@ -46,7 +46,7 @@
   },
   "TEAM_EXISTING_USER_ACCOUNT_ACCEPT_INVITE": {
     "FROM": "$$SUPPORT_EMAIL_ID$$",
-    "TO": ["$$USER_EMAIL_ID$$", "$$ADMIN_EMAIL_ID$$"],
+    "TO": ["$$USER_EMAIL_ID$$"],
     "CC": ["$$SUPPORT_EMAIL_ID$$"],
     "BCC": ["$$CONTACT_EMAIL_ID$$"],
     "SUBJECT": "Scribie.ai Team Member Added",
@@ -55,7 +55,7 @@
   },
   "TEAM_EXISTING_USER_ACCOUNT_DECLINE_INVITE": {
     "FROM": "$$SUPPORT_EMAIL_ID$$",
-    "TO": ["$$USER_EMAIL_ID$$", "$$ADMIN_EMAIL_ID$$"],
+    "TO": ["$$USER_EMAIL_ID$$"],
     "CC": ["$$SUPPORT_EMAIL_ID$$"],
     "BCC": ["$$CONTACT_EMAIL_ID$$"],
     "SUBJECT": "Scribie.ai Team Member Declined",
@@ -64,7 +64,7 @@
   },
   "TEAM_MEMBER_REMOVE": {
     "FROM": "$$SUPPORT_EMAIL_ID$$",
-    "TO": ["$$USER_EMAIL_ID$$", "$$ADMIN_EMAIL_ID$$"],
+    "TO": ["$$USER_EMAIL_ID$$"],
     "CC": ["$$SUPPORT_EMAIL_ID$$"],
     "BCC": ["$$CONTACT_EMAIL_ID$$"],
     "SUBJECT": "Scribie.ai Team Membership Removed",
@@ -83,8 +83,7 @@
   "DURATION_DIFFERENCE_FLAGGED": {
     "FROM": "$$SUPPORT_EMAIL_ID$$",
     "TO": ["$$USER_EMAIL_ID$$", "$$ADMIN_EMAIL_ID$$"],
-    "CC": [],
-    "BCC": ["$$CONTACT_EMAIL_ID$$"],
+    "CC": ["$$SUPPORT_EMAIL_ID$$"],
     "SUBJECT": "Scribie.ai Duration Difference Flagged for Your File",
     "HTML": "",
     "TEXT": "Your file has been flagged for a duration difference. Please review the details."
@@ -186,7 +185,7 @@
   "QUOTE_REQUEST": {
     "FROM": "$$ADMIN_EMAIL_ID$$",
     "TO": ["$$HELLO_EMAIL_ID$$"],
-    "CC": [],
+    "CC": ["$$SUPPORT_EMAIL_ID$$"],
     "BCC": [],
     "SUBJECT": "Scribie.ai Quote Request",
     "HTML": "QUOTE_REQUEST.html",
@@ -194,7 +193,7 @@
   },
   "DEMO_REQUEST": {
     "FROM": "$$CONTACT_EMAIL_ID$$",
-    "TO": ["$$ADMIN_EMAIL_ID$$"],
+    "TO": ["$$SUPPORT_EMAIL$$"],
     "CC": [],
     "BCC": [],
     "SUBJECT": "Scribie.ai Demo Request",
@@ -203,7 +202,7 @@
   },
   "CONTACT": {
     "FROM": "$$CONTACT_EMAIL_ID$$",
-    "TO": ["$$ADMIN_EMAIL_ID$$"],
+    "TO": ["$$SUPPORT_EMAIL$$"],
     "CC": [],
     "BCC": [],
     "SUBJECT": "Scribie.ai CONTACT",
@@ -271,6 +270,15 @@
     "BCC": ["$$CONTACT_EMAIL_ID$$"],
     "SUBJECT": "Scribie.ai Transcript Order Instructions",
     "HTML": "SEND_INSTRUCTIONS.html",
+    "TEXT": ""
+  },
+  "CUSTOM_FORMAT_REQUEST": {
+    "FROM": "$$ALERT_BE_EMAIL_ID$$",
+    "TO": ["$$SUPPORT_EMAIL$$"],
+    "CC": [],
+    "BCC": ["$$CONTACT_EMAIL_ID$$"],
+    "SUBJECT": "Scribie.ai Custom Format Request from Customer",
+    "HTML": "CUSTOM_FORMAT_REQUEST.html",
     "TEXT": ""
   },
   "PUBLIC_PAY_BILL": {

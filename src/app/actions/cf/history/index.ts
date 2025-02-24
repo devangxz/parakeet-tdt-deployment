@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import getCustomFormatOption from '@/utils/getCustomFormatOption'
 import getOrgName from '@/utils/getOrgName'
 
 export async function getHistoryFiles(type: string) {
@@ -78,9 +79,11 @@ export async function getHistoryFiles(type: string) {
 
     for (const file of historyCFFiles as any) {
       const orgName = await getOrgName(file.order.userId)
+      const customFormatOption = await getCustomFormatOption(file.order.userId)
       file.earnings =
         file.order.status === OrderStatus.DELIVERED ? file.earnings : 0
       file.orgName = orgName
+      file.customFormatOption = customFormatOption
     }
 
     logger.info(`History CF files fetched successfully for ${transcriberId}`)

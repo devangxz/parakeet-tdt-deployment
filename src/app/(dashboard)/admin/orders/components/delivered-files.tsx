@@ -59,7 +59,10 @@ export default function DeliveredSection() {
       if (response.success && response.details) {
         const orders = response.details.map((order, index: number) => {
           const qcNames = order.Assignment.filter(
-            (a) => a.status === 'ACCEPTED' || a.status === 'COMPLETED'
+            (a) =>
+              a.status === 'ACCEPTED' ||
+              a.status === 'COMPLETED' ||
+              a.status === 'SUBMITTED_FOR_APPROVAL'
           )
             .map((a) => `${a.user.firstname} ${a.user.lastname}`)
             .join(', ')

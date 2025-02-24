@@ -21,7 +21,7 @@ export const processPayment = async (
 ) => {
   const ses = getAWSSesInstance()
   try {
-    if (type === InvoiceType.TRANSCRIPT) {
+    if (type === InvoiceType.TRANSCRIPT || type === InvoiceType.FORMATTING) {
       const invoice = await prisma.invoice.findUnique({
         where: { invoiceId },
       })
@@ -36,7 +36,10 @@ export const processPayment = async (
       const invoiceOptions = JSON.parse(invoice.options ?? '{}')
       for (const fileId of file_ids) {
         const tatHours = invoiceOptions.exd == 1 ? 12 : 24
-        if (orderType === OrderType.TRANSCRIPTION_FORMATTING) {
+        if (
+          orderType === OrderType.TRANSCRIPTION_FORMATTING ||
+          orderType === OrderType.FORMATTING
+        ) {
           const file = await prisma.file.findUnique({
             where: {
               fileId,
@@ -57,7 +60,10 @@ export const processPayment = async (
           create: {
             userId: invoice.userId,
             fileId,
-            status: OrderStatus.PENDING,
+            status:
+              orderType === OrderType.FORMATTING
+                ? OrderStatus.FORMATTED
+                : OrderStatus.PENDING,
             priority: 0,
             tat: tatHours,
             deadlineTs: addHours(new Date(), tatHours),
@@ -66,7 +72,10 @@ export const processPayment = async (
             orderType: orderType as OrderType,
           },
           update: {
-            status: OrderStatus.PENDING,
+            status:
+              orderType === OrderType.FORMATTING
+                ? OrderStatus.FORMATTED
+                : OrderStatus.PENDING,
             orderTs: new Date(),
             deadlineTs: addHours(new Date(), tatHours),
             deliveryTs: addHours(new Date(), tatHours),

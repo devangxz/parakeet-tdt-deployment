@@ -131,7 +131,10 @@ export default function OrdersPage() {
       if (response.success && response.details) {
         const orders = response.details.map((order, index) => {
           const qcNames = order.Assignment.filter(
-            (a) => a.status === 'ACCEPTED' || a.status === 'COMPLETED'
+            (a) =>
+              a.status === 'ACCEPTED' ||
+              a.status === 'COMPLETED' ||
+              a.status === 'SUBMITTED_FOR_APPROVAL'
           )
             .map((a) => `${a.user.firstname} ${a.user.lastname}`)
             .join(', ')
@@ -363,20 +366,35 @@ export default function OrdersPage() {
           style={{ minWidth: '250px', maxWidth: '250px' }}
         >
           {formatDuration(row.getValue('duration'))}
-          <p>
-            Transcription cost: <br /> $
-            {row.original.fileCost.transcriptionCost}
-            /ah ($
-            {row.original.fileCost.transcriptionRate}/ah + $
-            {row.original.rateBonus}/ah)
-          </p>
-          {row.original.type === 'TRANSCRIPTION_FORMATTING' && (
-            <p className='mt-1'>
-              Review cost: <br /> ${row.original.fileCost.customFormatCost}/ah
-              ($
-              {row.original.fileCost.customFormatRate}/ah + $
-              {row.original.rateBonus}/ah)
-            </p>
+          {row.original.type === 'FORMATTING' ? (
+            <>
+              <p>
+                Formatting cost: <br /> $
+                {row.original.fileCost.customFormatCost}
+                /ah ($
+                {row.original.fileCost.customFormatRate}/ah + $
+                {row.original.rateBonus}/ah)
+              </p>
+            </>
+          ) : (
+            <>
+              {' '}
+              <p>
+                Transcription cost: <br /> $
+                {row.original.fileCost.transcriptionCost}
+                /ah ($
+                {row.original.fileCost.transcriptionRate}/ah + $
+                {row.original.rateBonus}/ah)
+              </p>
+              {row.original.type === 'TRANSCRIPTION_FORMATTING' && (
+                <p className='mt-1'>
+                  Review cost: <br /> ${row.original.fileCost.customFormatCost}
+                  /ah ($
+                  {row.original.fileCost.customFormatRate}/ah + $
+                  {row.original.rateBonus}/ah)
+                </p>
+              )}
+            </>
           )}
         </div>
       ),

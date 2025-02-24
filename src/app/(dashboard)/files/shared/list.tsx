@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
 import { CheckAndDownload } from '../delivered/components/check-download'
+import { getCustomFormatFilesSignedUrl } from '@/app/actions/order/custom-format-files-signed-url'
 import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
 import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
 import { getFiles } from '@/app/actions/share-file/get-files'
@@ -76,6 +77,14 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
     cfDocxSignedUrl: '',
   })
   const [loadingOrder, setLoadingOrder] = useState<Record<string, boolean>>({})
+  const [customFormatFilesSignedUrls, setCustomFormatFilesSignedUrls] =
+    useState<
+      {
+        signedUrl: string
+        filename: string
+        extension: string
+      }[]
+    >([])
 
   const fetchSharedFiles = async (showLoader = false) => {
     if (showLoader) {
@@ -119,6 +128,10 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
         txtSignedUrl: txtRes.signedUrl || '',
         cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
       })
+      const customFormatRes = await getCustomFormatFilesSignedUrl(fileId)
+      if (customFormatRes.success) {
+        setCustomFormatFilesSignedUrls(customFormatRes.signedUrls || [])
+      }
       setLoadingOrder((prev) => ({ ...prev, [fileId]: false }))
       setToggleCheckAndDownload(true)
     } catch (error) {
@@ -390,6 +403,7 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
           setToggleCheckAndDownload={setToggleCheckAndDownload}
           txtSignedUrl={signedUrls.txtSignedUrl || ''}
           cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
+          customFormatFilesSignedUrls={customFormatFilesSignedUrls}
         />
       )}
       <AlertDialog open={openDeleteDialog}>

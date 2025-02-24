@@ -114,7 +114,7 @@ export const GEMINI_PROMPT_OPTIONS = [
   {
     id: 5,
     title: 'Prevent Speaker Overlap/Spillover',
-    label: 'Prevent speech overlap (Example: Move "would agree" from S3 to S5 when it belongs to the next speaker)'
+    label: 'Prevent speech overlap (Example: "0:21:32.34 S3: People perceive disability differently. To some people...", "0:21:32.34 S5: more than that." to some people shoudl belong the S5 speaker.)'
   },
   {
     id: 6,

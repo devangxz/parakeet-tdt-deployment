@@ -20,1408 +20,1467 @@ import { uploadDocxAction } from '@/app/actions/editor/upload-docx'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { OrderDetails, UploadFilesType } from '@/app/editor/[fileId]/page'
 import {
-    ALLOWED_META,
-    BACKEND_URL,
-    FILE_CACHE_URL,
-    MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
-    COMMON_ABBREVIATIONS,
+  ALLOWED_META,
+  BACKEND_URL,
+  FILE_CACHE_URL,
+  MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
+  COMMON_ABBREVIATIONS,
 } from '@/constants'
 import { CTMType, UndoRedoItem } from '@/types/editor'
-import { getEditorDataIDB, persistEditorDataIDB, deleteEditorDataIDB } from '@/utils/indexedDB'
-import { diff_match_patch, DIFF_INSERT, DIFF_DELETE, DIFF_EQUAL } from '@/utils/transcript/diff_match_patch'
+import {
+  getEditorDataIDB,
+  persistEditorDataIDB,
+  deleteEditorDataIDB,
+} from '@/utils/indexedDB'
+import {
+  diff_match_patch,
+  DIFF_INSERT,
+  DIFF_DELETE,
+  DIFF_EQUAL,
+} from '@/utils/transcript/diff_match_patch'
 
 export type ButtonLoading = {
-    upload: boolean
-    submit: boolean
-    save: boolean
-    report: boolean
-    regenDocx: boolean
-    mp3: boolean
-    download: boolean
-    frequentTerms: boolean
+  upload: boolean
+  submit: boolean
+  save: boolean
+  report: boolean
+  regenDocx: boolean
+  mp3: boolean
+  download: boolean
+  frequentTerms: boolean
 }
 
 const usableColors = [
-    '#FF4136', // Red
-    '#2ECC40', // Green
-    '#0074D9', // Blue
-    '#FFDC00', // Yellow
-    '#B10DC9', // Magenta
-    '#39CCCC', // Cyan
-    '#FF851B', // Orange
-    '#F012BE', // Purple
-    '#3D9970', // Teal
-    '#FF69B4', // Pink
-    '#01FF70', // Lime Green
-    '#85144b', // Dark Red
-    '#3F729B', // Dark Blue
-    '#FFD700', // Gold
-    '#9400D3', // Dark Violet
-    '#3CB371', // Medium Sea Green
-    '#FF1493', // Deep Pink
-    '#FF6347', // Tomato
-    '#20B2AA', // Light Sea Green
-    '#7B68EE', // Medium Slate Blue
+  '#FF4136', // Red
+  '#2ECC40', // Green
+  '#0074D9', // Blue
+  '#FFDC00', // Yellow
+  '#B10DC9', // Magenta
+  '#39CCCC', // Cyan
+  '#FF851B', // Orange
+  '#F012BE', // Purple
+  '#3D9970', // Teal
+  '#FF69B4', // Pink
+  '#01FF70', // Lime Green
+  '#85144b', // Dark Red
+  '#3F729B', // Dark Blue
+  '#FFD700', // Gold
+  '#9400D3', // Dark Violet
+  '#3CB371', // Medium Sea Green
+  '#FF1493', // Deep Pink
+  '#FF6347', // Tomato
+  '#20B2AA', // Light Sea Green
+  '#7B68EE', // Medium Slate Blue
 ]
 
 function generateRandomColor() {
-    const color = usableColors[0]
-    usableColors.splice(0, 1)
-    return color
+  const color = usableColors[0]
+  usableColors.splice(0, 1)
+  return color
 }
 
 function convertBlankToSeconds(timeString: string) {
-    const pattern = /\[(\d{1,2}):(\d{2}):(\d{2})\.(\d)\]/
-    const matches = timeString.match(pattern)
+  const pattern = /\[(\d{1,2}):(\d{2}):(\d{2})\.(\d)\]/
+  const matches = timeString.match(pattern)
 
-    if (!matches) {
-        return null // Invalid time format
-    }
+  if (!matches) {
+    return null // Invalid time format
+  }
 
-    const hours = parseInt(matches[1])
-    const minutes = parseInt(matches[2])
-    const seconds = parseInt(matches[3])
-    const tenths = parseInt(matches[4])
+  const hours = parseInt(matches[1])
+  const minutes = parseInt(matches[2])
+  const seconds = parseInt(matches[3])
+  const tenths = parseInt(matches[4])
 
-    const totalSeconds = hours * 3600 + minutes * 60 + seconds + tenths * 0.1
-    return totalSeconds
+  const totalSeconds = hours * 3600 + minutes * 60 + seconds + tenths * 0.1
+  return totalSeconds
 }
 
 function convertTimestampToSeconds(timestamp: string) {
-    const [hours, minutes, seconds] = timestamp.split(':').map(parseFloat)
-    const totalSeconds = hours * 3600 + minutes * 60 + seconds
-    return totalSeconds
+  const [hours, minutes, seconds] = timestamp.split(':').map(parseFloat)
+  const totalSeconds = hours * 3600 + minutes * 60 + seconds
+  return totalSeconds
 }
 
 const updatePlayedPercentage = (
-    audioPlayer: HTMLAudioElement | null,
-    audioPlayed: Set<number>,
-    setPlayedPercentage: React.Dispatch<React.SetStateAction<number>>
+  audioPlayer: HTMLAudioElement | null,
+  audioPlayed: Set<number>,
+  setPlayedPercentage: React.Dispatch<React.SetStateAction<number>>
 ) => {
-    if (!audioPlayer) return
-    const duration = audioPlayer.duration
-    const playedArray = Array.from(audioPlayed).sort((a, b) => a - b)
-    let uniquePlayedSeconds = 0
-    if (playedArray.length > 0) {
-        uniquePlayedSeconds = playedArray.reduce((acc, cur, index, srcArray) => {
-            if (index === 0) {
-                return 1 // Count the first second as played
-            } else {
-                // Only count as unique if it's not the same as the previous second
-                return cur !== srcArray[index - 1] ? acc + 1 : acc
-            }
-        }, 0)
-    }
-    const percentagePlayed = (uniquePlayedSeconds / duration) * 100
-    setPlayedPercentage(Math.min(100, percentagePlayed)) // Ensure percentage does not exceed 100
+  if (!audioPlayer) return
+  const duration = audioPlayer.duration
+  const playedArray = Array.from(audioPlayed).sort((a, b) => a - b)
+  let uniquePlayedSeconds = 0
+  if (playedArray.length > 0) {
+    uniquePlayedSeconds = playedArray.reduce((acc, cur, index, srcArray) => {
+      if (index === 0) {
+        return 1 // Count the first second as played
+      } else {
+        // Only count as unique if it's not the same as the previous second
+        return cur !== srcArray[index - 1] ? acc + 1 : acc
+      }
+    }, 0)
+  }
+  const percentagePlayed = (uniquePlayedSeconds / duration) * 100
+  setPlayedPercentage(Math.min(100, percentagePlayed)) // Ensure percentage does not exceed 100
 }
 
-const convertSecondsToTimestamp = (seconds: number) => secondsToTs(seconds, true, 1);
+const convertSecondsToTimestamp = (seconds: number) =>
+  secondsToTs(seconds, true, 1)
 
 const downloadMP3 = async (orderDetails: OrderDetails) => {
-    const toastId = toast.loading('Downloading MP3...')
-    try {
-        const response = await getSignedUrlAction(`${orderDetails.fileId}.mp3`, 60)
-        if (response.success && response.signedUrl) {
-            window.open(response.signedUrl, '_blank')
-            toast.dismiss(toastId)
-            toast.success(`MP3 downloaded successfully`)
-        } else {
-            throw new Error('No download URL received')
-        }
-    } catch (error) {
-        toast.dismiss(toastId)
-        toast.error('Error downloading mp3')
+  const toastId = toast.loading('Downloading MP3...')
+  try {
+    const response = await getSignedUrlAction(`${orderDetails.fileId}.mp3`, 60)
+    if (response.success && response.signedUrl) {
+      window.open(response.signedUrl, '_blank')
+      toast.dismiss(toastId)
+      toast.success(`MP3 downloaded successfully`)
+    } else {
+      throw new Error('No download URL received')
     }
+  } catch (error) {
+    toast.dismiss(toastId)
+    toast.error('Error downloading mp3')
+  }
 }
 
 const handleTextFilesUpload = async (
-    payload: UploadFilesType,
-    orderDetails: OrderDetails,
-    setFileToUpload: React.Dispatch<
-        React.SetStateAction<{
-            renamedFile: File | null
-            originalFile: File | null
-            isUploaded?: boolean
-        }>
-    >
+  payload: UploadFilesType,
+  orderDetails: OrderDetails,
+  setFileToUpload: React.Dispatch<
+    React.SetStateAction<{
+      renamedFile: File | null
+      originalFile: File | null
+      isUploaded?: boolean
+    }>
+  >
 ) => {
-    try {
-        if (payload.files.length > 1) {
-            toast.error('Only one file can be uploaded at a time.')
-            return
-        }
-
-        if (payload.files[0].type !== 'text/plain') {
-            toast.error('Only text files can be uploaded.')
-            return
-        }
-        const file = payload.files[0]
-        const renamedFile = new File([file], `${orderDetails.fileId}_qc.txt`, {
-            type: file.type,
-        })
-        setFileToUpload({ renamedFile, originalFile: file, isUploaded: false })
-    } catch (error) {
-        throw error
+  try {
+    if (payload.files.length > 1) {
+      toast.error('Only one file can be uploaded at a time.')
+      return
     }
+
+    if (payload.files[0].type !== 'text/plain') {
+      toast.error('Only text files can be uploaded.')
+      return
+    }
+    const file = payload.files[0]
+    const renamedFile = new File([file], `${orderDetails.fileId}_qc.txt`, {
+      type: file.type,
+    })
+    setFileToUpload({ renamedFile, originalFile: file, isUploaded: false })
+  } catch (error) {
+    throw error
+  }
 }
 
 const uploadTextFile = async (
-    fileToUpload: { renamedFile: File | null },
-    orderDetails: OrderDetails,
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
-    session: Session | null,
-    setFileToUpload: React.Dispatch<
-        React.SetStateAction<{
-            renamedFile: File | null
-            originalFile: File | null
-            isUploaded?: boolean
-        }>
-    >
+  fileToUpload: { renamedFile: File | null },
+  orderDetails: OrderDetails,
+  setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
+  session: Session | null,
+  setFileToUpload: React.Dispatch<
+    React.SetStateAction<{
+      renamedFile: File | null
+      originalFile: File | null
+      isUploaded?: boolean
+    }>
+  >
 ) => {
-    const file = fileToUpload.renamedFile
+  const file = fileToUpload.renamedFile
 
-    if (!file) return toast.error('Please select a file to upload.')
+  if (!file) return toast.error('Please select a file to upload.')
 
+  setButtonLoading((prevButtonLoading) => ({
+    ...prevButtonLoading,
+    upload: true,
+  }))
+
+  const formData = new FormData()
+  formData.append('file', file)
+
+  try {
+    await axiosInstance.post(
+      `${BACKEND_URL}/upload-text-file?fileId=${orderDetails.fileId}`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${session?.user?.token}`,
+        },
+      }
+    )
+    toast.success('File uploaded successfully')
+  } catch (uploadError) {
+    toast.error('Failed to upload file')
+  } finally {
+    setFileToUpload((prev) => ({ ...prev, isUploaded: true }))
     setButtonLoading((prevButtonLoading) => ({
-        ...prevButtonLoading,
-        upload: true,
+      ...prevButtonLoading,
+      upload: false,
     }))
-
-    const formData = new FormData()
-    formData.append('file', file)
-
-    try {
-        await axiosInstance.post(
-            `${BACKEND_URL}/upload-text-file?fileId=${orderDetails.fileId}`,
-            formData,
-            {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    Authorization: `Bearer ${session?.user?.token}`,
-                },
-            }
-        )
-        toast.success('File uploaded successfully')
-    } catch (uploadError) {
-        toast.error('Failed to upload file')
-    } finally {
-        setFileToUpload((prev) => ({ ...prev, isUploaded: true }))
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            upload: false,
-        }))
-    }
+  }
 }
 
 const uploadFile = async (
-    fileToUpload: { renamedFile: File | null },
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
-    session: Session | null,
-    setFileToUpload: React.Dispatch<
-        React.SetStateAction<{
-            renamedFile: File | null
-            originalFile: File | null
-            isUploaded?: boolean
-        }>
-    >,
-    fileId: string
+  fileToUpload: { renamedFile: File | null },
+  setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
+  session: Session | null,
+  setFileToUpload: React.Dispatch<
+    React.SetStateAction<{
+      renamedFile: File | null
+      originalFile: File | null
+      isUploaded?: boolean
+    }>
+  >,
+  fileId: string
 ) => {
-    const file = fileToUpload.renamedFile
-    if (!file) return toast.error('Please select a file to upload.')
+  const file = fileToUpload.renamedFile
+  if (!file) return toast.error('Please select a file to upload.')
 
-    if (!session?.user?.token) {
-        return
+  if (!session?.user?.token) {
+    return
+  }
+  const toastId = toast.loading('Uploading File...')
+  setButtonLoading((prevButtonLoading) => ({
+    ...prevButtonLoading,
+    upload: true,
+  }))
+
+  const formData = new FormData()
+  formData.append('file', file)
+  try {
+    const response = await uploadDocxAction(formData, fileId)
+
+    toast.dismiss(toastId)
+    if (response.success) {
+      toast.success('File uploaded successfully')
+      setFileToUpload({
+        renamedFile: null,
+        originalFile: null,
+        isUploaded: true,
+      })
+    } else {
+      throw new Error(response.message)
     }
-    const toastId = toast.loading('Uploading File...')
+  } catch (uploadError) {
+    toast.dismiss(toastId)
+    toast.error('Failed to upload file')
+    setFileToUpload({
+      renamedFile: null,
+      originalFile: null,
+      isUploaded: false,
+    })
+  } finally {
     setButtonLoading((prevButtonLoading) => ({
-        ...prevButtonLoading,
-        upload: true,
+      ...prevButtonLoading,
+      upload: false,
     }))
-
-    const formData = new FormData()
-    formData.append('file', file)
-    try {
-        const response = await uploadDocxAction(formData, fileId)
-
-        toast.dismiss(toastId)
-        if (response.success) {
-            toast.success("File uploaded successfully")
-            setFileToUpload({ renamedFile: null, originalFile: null, isUploaded: true })
-        } else {
-            throw new Error(response.message)
-        }
-    } catch (uploadError) {
-        toast.dismiss(toastId)
-        toast.error('Failed to upload file')
-        setFileToUpload({
-            renamedFile: null,
-            originalFile: null,
-            isUploaded: false,
-        })
-    } finally {
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            upload: false,
-        }))
-    }
+  }
 }
 
 const handleFilesUpload = async (
-    payload: UploadFilesType,
-    orderDetailsId: string,
-    setFileToUpload: React.Dispatch<
-        React.SetStateAction<{
-            renamedFile: File | null
-            originalFile: File | null
-            isUploaded?: boolean
-        }>
-    >
+  payload: UploadFilesType,
+  orderDetailsId: string,
+  setFileToUpload: React.Dispatch<
+    React.SetStateAction<{
+      renamedFile: File | null
+      originalFile: File | null
+      isUploaded?: boolean
+    }>
+  >
 ) => {
-    try {
-        if (payload.files.length > 1) {
-            toast.error('Only one file can be uploaded at a time.')
-            return
-        }
-
-        if (
-            payload.files[0].type !==
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        ) {
-            toast.error('Only docx files can be uploaded.')
-            return
-        }
-        const file = payload.files[0]
-        const renamedFile = new File([file], `${orderDetailsId}.docx`, {
-            type: file.type,
-        })
-        setFileToUpload({ renamedFile, originalFile: file })
-    } catch (error) {
-        throw error
+  try {
+    if (payload.files.length > 1) {
+      toast.error('Only one file can be uploaded at a time.')
+      return
     }
+
+    if (
+      payload.files[0].type !==
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ) {
+      toast.error('Only docx files can be uploaded.')
+      return
+    }
+    const file = payload.files[0]
+    const renamedFile = new File([file], `${orderDetailsId}.docx`, {
+      type: file.type,
+    })
+    setFileToUpload({ renamedFile, originalFile: file })
+  } catch (error) {
+    throw error
+  }
 }
 
 const reportHandler = async (
-    reportDetails: { reportComment: string; reportOption: string },
-    orderId: string,
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
-    setReportModalOpen: React.Dispatch<React.SetStateAction<boolean>>,
-    setReportDetails: React.Dispatch<
-        React.SetStateAction<{ reportComment: string; reportOption: string }>
-    >
+  reportDetails: { reportComment: string; reportOption: string },
+  orderId: string,
+  setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
+  setReportModalOpen: React.Dispatch<React.SetStateAction<boolean>>,
+  setReportDetails: React.Dispatch<
+    React.SetStateAction<{ reportComment: string; reportOption: string }>
+  >
 ) => {
-    const { reportComment, reportOption } = reportDetails
-    if (!reportComment || !reportOption)
-        return toast.error('Please enter a valid comment and report option.')
+  const { reportComment, reportOption } = reportDetails
+  if (!reportComment || !reportOption)
+    return toast.error('Please enter a valid comment and report option.')
+  setButtonLoading((prevButtonLoading) => ({
+    ...prevButtonLoading,
+    report: true,
+  }))
+  try {
+    await reportFileAction(
+      Number(orderId),
+      reportDetails.reportOption,
+      reportDetails.reportComment
+    )
+    setReportModalOpen(false)
+    setReportDetails({ reportComment: '', reportOption: '' })
+  } catch (error) {
+    toast.error('Failed to report file')
+  } finally {
     setButtonLoading((prevButtonLoading) => ({
-        ...prevButtonLoading,
-        report: true,
+      ...prevButtonLoading,
+      report: false,
     }))
-    try {
-        await reportFileAction(
-            Number(orderId),
-            reportDetails.reportOption,
-            reportDetails.reportComment
-        )
-        setReportModalOpen(false)
-        setReportDetails({ reportComment: '', reportOption: '' })
-    } catch (error) {
-        toast.error('Failed to report file')
-    } finally {
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            report: false,
-        }))
-    }
+  }
 }
 
 const fetchPdfFile = async (
-    fileId: string,
-    setPdfUrl: React.Dispatch<React.SetStateAction<string>>
+  fileId: string,
+  setPdfUrl: React.Dispatch<React.SetStateAction<string>>
 ) => {
-    try {
-        const response = await fetch(`${BACKEND_URL}/get-pdf-document/${fileId}`)
-        if (response.ok) {
-            const blob = await response.blob()
-            const url = URL.createObjectURL(blob)
-            setPdfUrl(url)
-        } else {
-            toast.error('Failed to fetch audio file')
-        }
-    } catch (error) {
-        toast.error('Failed to fetch pdf file')
+  try {
+    const response = await fetch(`${BACKEND_URL}/get-pdf-document/${fileId}`)
+    if (response.ok) {
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      setPdfUrl(url)
+    } else {
+      toast.error('Failed to fetch audio file')
     }
+  } catch (error) {
+    toast.error('Failed to fetch pdf file')
+  }
 }
 
 const regenDocx = async (
-    fileId: string,
-    orderId: string,
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
-    setRegenCount: React.Dispatch<React.SetStateAction<number>>,
-    setPdfUrl: React.Dispatch<React.SetStateAction<string>>
+  fileId: string,
+  orderId: string,
+  setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
+  setRegenCount: React.Dispatch<React.SetStateAction<number>>,
+  setPdfUrl: React.Dispatch<React.SetStateAction<string>>
 ) => {
+  setButtonLoading((prevButtonLoading) => ({
+    ...prevButtonLoading,
+    regenDocx: true,
+  }))
+  const toastId = toast.loading(`Generating Document...`)
+  try {
+    await axiosInstance.post(`${BACKEND_URL}/generate-cf-docx`, {
+      fileId: fileId,
+      orderId: orderId,
+    })
+    await fetchPdfFile(fileId, setPdfUrl)
+    setRegenCount((prevCount) => prevCount + 1)
+    toast.dismiss(toastId)
+    const successToastId = toast.success(`Document generated successfully`)
+    toast.dismiss(successToastId)
+  } catch (error) {
+    toast.dismiss(toastId)
+    const errorToastId = toast.error(`Error while generating document`)
+    toast.dismiss(errorToastId)
+  } finally {
     setButtonLoading((prevButtonLoading) => ({
-        ...prevButtonLoading,
-        regenDocx: true,
+      ...prevButtonLoading,
+      regenDocx: false,
     }))
-    const toastId = toast.loading(`Generating Document...`)
-    try {
-        await axiosInstance.post(`${BACKEND_URL}/generate-cf-docx`, {
-            fileId: fileId,
-            orderId: orderId,
-        })
-        await fetchPdfFile(fileId, setPdfUrl)
-        setRegenCount((prevCount) => prevCount + 1)
-        toast.dismiss(toastId)
-        const successToastId = toast.success(`Document generated successfully`)
-        toast.dismiss(successToastId)
-    } catch (error) {
-        toast.dismiss(toastId)
-        const errorToastId = toast.error(`Error while generating document`)
-        toast.dismiss(errorToastId)
-    } finally {
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            regenDocx: false,
-        }))
-    }
+  }
 }
 
 type FetchFileDetailsParams = {
-    params: Record<string, string | string[]> | null
-    setOrderDetails: React.Dispatch<React.SetStateAction<OrderDetails>>
-    setCfd: React.Dispatch<React.SetStateAction<string>>
-    setStep: React.Dispatch<React.SetStateAction<string>>
-    setCtms: React.Dispatch<React.SetStateAction<CTMType[]>>
-    setListenCount: React.Dispatch<React.SetStateAction<number[]>>
+  params: Record<string, string | string[]> | null
+  setOrderDetails: React.Dispatch<React.SetStateAction<OrderDetails>>
+  setCfd: React.Dispatch<React.SetStateAction<string>>
+  setStep: React.Dispatch<React.SetStateAction<string>>
+  setCtms: React.Dispatch<React.SetStateAction<CTMType[]>>
+  setListenCount: React.Dispatch<React.SetStateAction<number[]>>
 }
 
 export interface EditorData {
-    transcript?: string;
-    notes?: string;
-    listenCount?: number[];
-    updatedAt?: number;
-    undoStack?: UndoRedoItem[];
-    redoStack?: UndoRedoItem[];
+  transcript?: string
+  notes?: string
+  listenCount?: number[]
+  updatedAt?: number
+  undoStack?: UndoRedoItem[]
+  redoStack?: UndoRedoItem[]
 }
 
 type FetchFileDetailsReturn = {
-    orderDetails: OrderDetails;
-    initialEditorData: EditorData;
-};
+  orderDetails: OrderDetails
+  initialEditorData: EditorData
+}
 
 const fetchFileDetails = async ({
-    params,
-    setOrderDetails,
-    setCfd,
-    setStep,
-    setCtms,
-    setListenCount,
+  params,
+  setOrderDetails,
+  setCfd,
+  setStep,
+  setCtms,
+  setListenCount,
 }: FetchFileDetailsParams): Promise<FetchFileDetailsReturn | undefined> => {
-    try {
-        const tokenRes = await fileCacheTokenAction()
-        const orderRes = await getOrderDetailsAction(params?.fileId as string)
-        if (!orderRes?.orderDetails) {
-            throw new Error('Order details not found')
-        }
-
-        const orderDetailsFormatted = {
-            ...orderRes.orderDetails,
-            orderId: orderRes.orderDetails.orderId.toString(),
-            userId: orderRes.orderDetails.userId.toString(),
-            duration: orderRes.orderDetails.duration || '',
-        }
-        setOrderDetails(orderDetailsFormatted)
-        setCfd(orderRes.orderDetails.cfd)
-        const cfStatus = [
-            'FORMATTED',
-            'REVIEWER_ASSIGNED',
-            'REVIEW_COMPLETED',
-            'FINALIZER_ASSIGNED',
-            'FINALIZER_COMPLETED',
-        ]
-        let step = 'QC'
-        if (cfStatus.includes(orderRes.orderDetails.status)) {
-            step = 'CF'
-        }
-
-        if (orderRes.orderDetails.status === 'PRE_DELIVERED') {
-            if (orderRes.orderDetails.orderType === 'TRANSCRIPTION_FORMATTING') {
-                step = 'CF'
-            } else {
-                step = 'QC'
-            }
-        }
-        setStep(step)
-        const transcriptRes = await axios.get(
-            `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.orderDetails.fileId}&step=${step}&orderId=${orderRes.orderDetails.orderId}`, //step will be used later when cf editor is implemented
-            {
-                headers: {
-                    'Authorization': `Bearer ${tokenRes.token}`
-                }
-            }
-        )
-
-        // Retrieve editorData from IndexedDB once
-        const fileData = await getEditorDataIDB(orderRes.orderDetails.fileId)
-        const transcript = (fileData?.transcript || transcriptRes.data.result.transcript) as string;
-        await persistEditorDataIDB(orderRes.orderDetails.fileId, { transcript })
-        setCtms(transcriptRes.data.result.ctms)
-
-        const playStats = await getPlayStatsAction(params?.fileId as string)
-
-        if (fileData?.listenCount && Array.isArray(fileData.listenCount)) {
-            setListenCount(fileData.listenCount);
-        } else if (playStats.success && playStats.data?.listenCount && Array.isArray(playStats.data.listenCount)) {
-            setListenCount(playStats.data.listenCount as number[]);
-        } else if (orderRes.orderDetails.duration) {
-            const newListenCount = new Array(Math.ceil(Number(orderRes.orderDetails.duration))).fill(0);
-            setListenCount(newListenCount);
-        }
-
-        const initialEditorData: EditorData = {
-            ...fileData,
-            transcript,
-        }
-
-        return { orderDetails: orderDetailsFormatted, initialEditorData }
-    } catch (error) {
-        console.log(error)
-        if (
-            error instanceof Error &&
-            'response' in error &&
-            typeof error.response === 'object' &&
-            error.response &&
-            'data' in error.response &&
-            error.response.data === 'Unauthorized'
-        ) {
-            toast.error('You are not authorized to access this file')
-            window.location.href = '/'
-            return undefined;
-        }
-        toast.error('Failed to fetch file details')
-        return undefined;
+  try {
+    const tokenRes = await fileCacheTokenAction()
+    const orderRes = await getOrderDetailsAction(params?.fileId as string)
+    if (!orderRes?.orderDetails) {
+      throw new Error('Order details not found')
     }
+
+    const orderDetailsFormatted = {
+      ...orderRes.orderDetails,
+      orderId: orderRes.orderDetails.orderId.toString(),
+      userId: orderRes.orderDetails.userId.toString(),
+      duration: orderRes.orderDetails.duration || '',
+    }
+    setOrderDetails(orderDetailsFormatted)
+    setCfd(orderRes.orderDetails.cfd)
+    const cfStatus = [
+      'FORMATTED',
+      'REVIEWER_ASSIGNED',
+      'REVIEW_COMPLETED',
+      'FINALIZER_ASSIGNED',
+      'FINALIZER_COMPLETED',
+    ]
+    let step = 'QC'
+    if (cfStatus.includes(orderRes.orderDetails.status)) {
+      step = 'CF'
+    }
+
+    if (orderRes.orderDetails.status === 'PRE_DELIVERED') {
+      if (orderRes.orderDetails.orderType === 'TRANSCRIPTION_FORMATTING') {
+        step = 'CF'
+      } else {
+        step = 'QC'
+      }
+    }
+    setStep(step)
+    const transcriptRes = await axios.get(
+      `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.orderDetails.fileId}&step=${step}&orderId=${orderRes.orderDetails.orderId}`, //step will be used later when cf editor is implemented
+      {
+        headers: {
+          Authorization: `Bearer ${tokenRes.token}`,
+        },
+      }
+    )
+
+    // Retrieve editorData from IndexedDB once
+    const fileData = await getEditorDataIDB(orderRes.orderDetails.fileId)
+    const transcript = (fileData?.transcript ||
+      transcriptRes.data.result.transcript) as string
+    await persistEditorDataIDB(orderRes.orderDetails.fileId, { transcript })
+    setCtms(transcriptRes.data.result.ctms)
+
+    const playStats = await getPlayStatsAction(params?.fileId as string)
+
+    if (fileData?.listenCount && Array.isArray(fileData.listenCount)) {
+      setListenCount(fileData.listenCount)
+    } else if (
+      playStats.success &&
+      playStats.data?.listenCount &&
+      Array.isArray(playStats.data.listenCount)
+    ) {
+      setListenCount(playStats.data.listenCount as number[])
+    } else if (orderRes.orderDetails.duration) {
+      const newListenCount = new Array(
+        Math.ceil(Number(orderRes.orderDetails.duration))
+      ).fill(0)
+      setListenCount(newListenCount)
+    }
+
+    const initialEditorData: EditorData = {
+      ...fileData,
+      transcript,
+    }
+
+    return { orderDetails: orderDetailsFormatted, initialEditorData }
+  } catch (error) {
+    console.log(error)
+    if (
+      error instanceof Error &&
+      'response' in error &&
+      typeof error.response === 'object' &&
+      error.response &&
+      'data' in error.response &&
+      error.response.data === 'Unauthorized'
+    ) {
+      toast.error('You are not authorized to access this file')
+      window.location.href = '/'
+      return undefined
+    }
+    toast.error('Failed to fetch file details')
+    return undefined
+  }
 }
 
 type HandleSaveParams = {
-    getEditorText: () => string
-    orderDetails: OrderDetails
-    notes: string
-    cfd: string
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
-    listenCount: number[]
-    editedSegments: Set<number>
+  getEditorText: () => string
+  orderDetails: OrderDetails
+  notes: string
+  cfd: string
+  setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
+  listenCount: number[]
+  editedSegments: Set<number>
 }
 
 const handleSave = async (
-    {
-        getEditorText,
-        orderDetails,
-        notes,
-        cfd,
-        setButtonLoading,
-        listenCount,
-        editedSegments,
-    }: HandleSaveParams,
-    showToast = true
+  {
+    getEditorText,
+    orderDetails,
+    notes,
+    cfd,
+    setButtonLoading,
+    listenCount,
+    editedSegments,
+  }: HandleSaveParams,
+  showToast = true
 ) => {
-    setButtonLoading((prevButtonLoading) => ({
-        ...prevButtonLoading,
-        save: true,
-    }))
+  setButtonLoading((prevButtonLoading) => ({
+    ...prevButtonLoading,
+    save: true,
+  }))
 
-    const toastId = showToast ? toast.loading(`Saving Transcription...`) : null
+  const toastId = showToast ? toast.loading(`Saving Transcription...`) : null
 
-    try {
-        const fileData = await getEditorDataIDB(orderDetails.fileId);
-        if (!fileData || !fileData.transcript) {
-            if (showToast) {
-                return toast.error('Transcript is empty');
-            }
-            return;
-        }
-        
-        const transcript = fileData.transcript as string;
-        const paragraphs = transcript
-            .split('\n')
-            .filter((paragraph: string) => paragraph.trim() !== '')
-
-        // Helper function to detect meta-only paragraphs
-        const isMetaOnlyParagraph = (text: string) => {
-            const trimmed = text.trim()
-            return /^\[.*\]$/.test(trimmed)
-        }
-
-        const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/
-        for (const paragraph of paragraphs) {
-            // Skip validation for meta-only paragraphs
-            if (isMetaOnlyParagraph(paragraph)) continue;
-
-            if (
-                !paragraphRegex.test(paragraph) &&
-                orderDetails.orderType !== 'TRANSCRIPTION_FORMATTING'
-            ) {
-                if (showToast) {
-                    if (toastId) toast.dismiss(toastId)
-                    toast.error(
-                        'Invalid paragraph format detected. Each paragraph must start with a timestamp and speaker identification.'
-                    )
-                }
-                return
-            }
-        }
-
-        // Save notes and other data
-        const tokenRes = await fileCacheTokenAction()
-        await axios.post(`${FILE_CACHE_URL}/save-transcript`, {
-            fileId: orderDetails.fileId,
-            transcript,
-            cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
-            orderId: orderDetails.orderId,
-        }, {
-            headers: {
-                'Authorization': `Bearer ${tokenRes.token}`
-            }
-        })
-
-        await setPlayStatsAction({
-            fileId: orderDetails.fileId,
-            listenCount: (fileData.listenCount && Array.isArray(fileData.listenCount))
-                ? fileData.listenCount
-                : listenCount,
-            editedSegments: Array.from(editedSegments)
-        })
-
-        if (showToast) {
-            if (toastId) toast.dismiss(toastId)
-            const successToastId = toast.success(`Transcription saved successfully`)
-            toast.dismiss(successToastId)
-        }
-    } catch (error) {
-        if (showToast) {
-            if (toastId) toast.dismiss(toastId)
-            const errorToastId = toast.error(`Error while saving transcript`)
-            toast.dismiss(errorToastId)
-        }
-    } finally {
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            save: false,
-        }))
+  try {
+    const fileData = await getEditorDataIDB(orderDetails.fileId)
+    if (!fileData || !fileData.transcript) {
+      if (showToast) {
+        return toast.error('Transcript is empty')
+      }
+      return
     }
+
+    const transcript = fileData.transcript as string
+    const paragraphs = transcript
+      .split('\n')
+      .filter((paragraph: string) => paragraph.trim() !== '')
+
+    // Helper function to detect meta-only paragraphs
+    const isMetaOnlyParagraph = (text: string) => {
+      const trimmed = text.trim()
+      return /^\[.*\]$/.test(trimmed)
+    }
+
+    const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/
+    for (const paragraph of paragraphs) {
+      // Skip validation for meta-only paragraphs
+      if (isMetaOnlyParagraph(paragraph)) continue
+
+      if (
+        !paragraphRegex.test(paragraph) &&
+        orderDetails.orderType !== 'TRANSCRIPTION_FORMATTING'
+      ) {
+        if (showToast) {
+          if (toastId) toast.dismiss(toastId)
+          toast.error(
+            'Invalid paragraph format detected. Each paragraph must start with a timestamp and speaker identification.'
+          )
+        }
+        return
+      }
+    }
+
+    // Save notes and other data
+    const tokenRes = await fileCacheTokenAction()
+    await axios.post(
+      `${FILE_CACHE_URL}/save-transcript`,
+      {
+        fileId: orderDetails.fileId,
+        transcript,
+        cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
+        orderId: orderDetails.orderId,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${tokenRes.token}`,
+        },
+      }
+    )
+
+    await setPlayStatsAction({
+      fileId: orderDetails.fileId,
+      listenCount:
+        fileData.listenCount && Array.isArray(fileData.listenCount)
+          ? fileData.listenCount
+          : listenCount,
+      editedSegments: Array.from(editedSegments),
+    })
+
+    if (showToast) {
+      if (toastId) toast.dismiss(toastId)
+      const successToastId = toast.success(`Transcription saved successfully`)
+      toast.dismiss(successToastId)
+    }
+  } catch (error) {
+    if (showToast) {
+      if (toastId) toast.dismiss(toastId)
+      const errorToastId = toast.error(`Error while saving transcript`)
+      toast.dismiss(errorToastId)
+    }
+  } finally {
+    setButtonLoading((prevButtonLoading) => ({
+      ...prevButtonLoading,
+      save: false,
+    }))
+  }
 }
 
-function autoCapitalizeSentences(quillRef: React.RefObject<ReactQuill> | undefined, autoCapitalizeEnabled: boolean) {
-    if (!quillRef?.current || !autoCapitalizeEnabled) return;
-    const quill = quillRef.current.getEditor();
-    const text = quill.getText();
-    
-    // 1. Handle lines that start with a timestamp and speaker label pattern,
-    // e.g. "00:00:00.0 S1:" followed by a lowercase letter.
-    const regexTimestampSpeaker = /^(\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:)\s*([a-z])/gm;
-    let match: RegExpExecArray | null;
-    while ((match = regexTimestampSpeaker.exec(text)) !== null) {
-        // match[0] is the whole matching string, e.g. "00:00:00.0 S1: hello"
-        // match[1] is the timestamp & speaker label (e.g. "00:00:00.0 S1:")
-        // match[2] is the first lowercase letter of the sentence ("h" in "hello")
-        // Determine where the group2 begins relative to the document text.
-        const fullMatch = match[0];
-        const group2 = match[2];
-        const group2Offset = fullMatch.indexOf(group2);
-        const charIndex = match.index + group2Offset;
-        quill.deleteText(charIndex, 1, 'user');
-        quill.insertText(charIndex, group2.toUpperCase(), 'user');
+function autoCapitalizeSentences(
+  quillRef: React.RefObject<ReactQuill> | undefined,
+  autoCapitalizeEnabled: boolean
+) {
+  if (!quillRef?.current || !autoCapitalizeEnabled) return
+  const quill = quillRef.current.getEditor()
+  const text = quill.getText()
+
+  // 1. Handle lines that start with a timestamp and speaker label pattern,
+  // e.g. "00:00:00.0 S1:" followed by a lowercase letter.
+  const regexTimestampSpeaker = /^(\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:)\s*([a-z])/gm
+  let match: RegExpExecArray | null
+  while ((match = regexTimestampSpeaker.exec(text)) !== null) {
+    // match[0] is the whole matching string, e.g. "00:00:00.0 S1: hello"
+    // match[1] is the timestamp & speaker label (e.g. "00:00:00.0 S1:")
+    // match[2] is the first lowercase letter of the sentence ("h" in "hello")
+    // Determine where the group2 begins relative to the document text.
+    const fullMatch = match[0]
+    const group2 = match[2]
+    const group2Offset = fullMatch.indexOf(group2)
+    const charIndex = match.index + group2Offset
+    quill.deleteText(charIndex, 1, 'user')
+    quill.insertText(charIndex, group2.toUpperCase(), 'user')
+  }
+
+  // 2. Auto capitalize after ! and ? (always capitalize these)
+  const regexExclamationQuestion = /([!?])\s+([a-z])/g
+  while ((match = regexExclamationQuestion.exec(text)) !== null) {
+    const charIndex = match.index + match[0].length - 1
+    quill.deleteText(charIndex, 1, 'user')
+    quill.insertText(charIndex, match[2].toUpperCase(), 'user')
+  }
+
+  // 3. Handle periods with abbreviation checking
+  const regexPeriod = /(\S+)\.\s+([a-z])/g
+  while ((match = regexPeriod.exec(text)) !== null) {
+    const wordBeforePeriod = match[1].toLowerCase()
+    // Only capitalize if the word before period is not an abbreviation
+    if (!COMMON_ABBREVIATIONS.has(wordBeforePeriod)) {
+      const charIndex = match.index + match[0].length - 1
+      quill.deleteText(charIndex, 1, 'user')
+      quill.insertText(charIndex, match[2].toUpperCase(), 'user')
     }
-    
-    // 2. Auto capitalize after ! and ? (always capitalize these)
-    const regexExclamationQuestion = /([!?])\s+([a-z])/g;
-    while ((match = regexExclamationQuestion.exec(text)) !== null) {
-        const charIndex = match.index + match[0].length - 1;
-        quill.deleteText(charIndex, 1, 'user');
-        quill.insertText(charIndex, match[2].toUpperCase(), 'user');
-    }
-    
-    // 3. Handle periods with abbreviation checking
-    const regexPeriod = /(\S+)\.\s+([a-z])/g;
-    while ((match = regexPeriod.exec(text)) !== null) {
-        const wordBeforePeriod = match[1].toLowerCase();
-        // Only capitalize if the word before period is not an abbreviation
-        if (!COMMON_ABBREVIATIONS.has(wordBeforePeriod)) {
-            const charIndex = match.index + match[0].length - 1;
-            quill.deleteText(charIndex, 1, 'user');
-            quill.insertText(charIndex, match[2].toUpperCase(), 'user');
-        }
-    }
+  }
 }
 
 type HandleSubmitParams = {
-    orderDetails: OrderDetails
-    step: string
-    editorMode: string
-    fileToUpload: {
-        renamedFile: File | null
-        originalFile: File | null
-        isUploaded?: boolean
-    }
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
-    getPlayedPercentage: () => number
-    router: {
-        push: (path: string) => void
-    }
-    quill: Quill,
-    finalizerComment: string
+  orderDetails: OrderDetails
+  step: string
+  editorMode: string
+  fileToUpload: {
+    renamedFile: File | null
+    originalFile: File | null
+    isUploaded?: boolean
+  }
+  setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
+  getPlayedPercentage: () => number
+  router: {
+    push: (path: string) => void
+  }
+  quill: Quill
+  finalizerComment: string
 }
 
 const checkTranscriptForAllowedMeta = (quill: Quill) => {
-    if (!quill) return null
+  if (!quill) return null
 
-    const text = quill.getText()
-    const regex = /\[([^\]]+)\](?!\s+____)/g
-    let match
-    let error = null
+  const text = quill.getText()
+  const regex = /\[([^\]]+)\](?!\s+____)/g
+  let match
+  let error = null
 
-    while ((match = regex.exec(text)) !== null) {
-        const content = match[1]
-        if (!ALLOWED_META.includes(content.toLowerCase())) {
-            const index = match.index
-            const length = match[0].length
+  while ((match = regex.exec(text)) !== null) {
+    const content = match[1]
+    if (!ALLOWED_META.includes(content.toLowerCase())) {
+      const index = match.index
+      const length = match[0].length
 
-            quill.setSelection(index, length)
-            quill.scrollIntoView()
+      quill.setSelection(index, length)
+      quill.scrollIntoView()
 
-            error = { message: 'IMT' }
+      error = { message: 'IMT' }
 
-            break
-        }
+      break
     }
+  }
 
-    if (error?.message) {
-        throw new Error(error.message)
-    }
+  if (error?.message) {
+    throw new Error(error.message)
+  }
 }
 
 const handleSubmit = async ({
-    orderDetails,
-    step,
-    editorMode,
-    fileToUpload,
-    setButtonLoading,
-    getPlayedPercentage,
-    router,
-    quill,
-    finalizerComment
+  orderDetails,
+  step,
+  editorMode,
+  fileToUpload,
+  setButtonLoading,
+  getPlayedPercentage,
+  router,
+  quill,
+  finalizerComment,
 }: HandleSubmitParams) => {
-    if (!orderDetails || !orderDetails.orderId || !step) return
-    const toastId = toast.loading(`Submitting Transcription...`)
-    const transcript = quill.getText() || ''
+  if (!orderDetails || !orderDetails.orderId || !step) return
+  const toastId = toast.loading(`Submitting Transcription...`)
+  const transcript = quill.getText() || ''
 
-    try {
-        if (orderDetails.status === 'QC_ASSIGNED') {
-            checkTranscriptForAllowedMeta(quill)
-        }
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            submit: true,
-        }))
-        const playedPercentage = getPlayedPercentage()
-        if (playedPercentage < MINIMUM_AUDIO_PLAYBACK_PERCENTAGE) {
-            throw new Error(`MAPPNM`) //Stands for "Minimum Audio Playback Percentage Not Met"
-        }
-
-        if (step === 'CF') {
-            if (!fileToUpload.isUploaded) throw new Error('UF')
-            await submitReviewAction(
-                Number(orderDetails.orderId),
-                orderDetails.fileId,
-                transcript,
-                finalizerComment
-            )
-        } else {
-            await submitQCAction({
-                fileId: orderDetails.fileId,
-                orderId: Number(orderDetails.orderId),
-                transcript,
-            })
-        }
-
-        // TODO: remove this after March 1st
-        localStorage.removeItem('editorData');
-        await deleteEditorDataIDB(orderDetails.fileId);
-
-        toast.dismiss(toastId)
-        const successToastId = toast.success(`Transcription submitted successfully`)
-        toast.dismiss(successToastId)
-        router.push(`/transcribe/${step === 'QC' ? 'qc' : 'legal-cf-reviewer'}`)
-    } catch (error) {
-        setTimeout(() => {
-            toast.dismiss(toastId)
-        }, 100) //Had to use this setTimeout because the minimum percentage check gives an error Immediately
-
-        let errorText = 'Error while submitting transcript' // Default error message
-        switch ((error as Error).message) {
-            case 'MAPPNM':
-                errorText = `Please make sure you have at least ${MINIMUM_AUDIO_PLAYBACK_PERCENTAGE}% of the audio played.`
-                break
-            case 'UF':
-                errorText = `Please upload a file before submitting`
-                break
-            case 'IMT':
-                errorText = `Invalid meta found in transcript. Please remove the meta from the transcript.`
-            // Add more cases as needed
-        }
-        const errorToastId = toast.error(errorText)
-        toast.dismiss(errorToastId)
-    } finally {
-        setButtonLoading((prevButtonLoading) => ({
-            ...prevButtonLoading,
-            submit: false,
-        }))
+  try {
+    if (orderDetails.status === 'QC_ASSIGNED') {
+      checkTranscriptForAllowedMeta(quill)
     }
+    setButtonLoading((prevButtonLoading) => ({
+      ...prevButtonLoading,
+      submit: true,
+    }))
+    const playedPercentage = getPlayedPercentage()
+    if (playedPercentage < MINIMUM_AUDIO_PLAYBACK_PERCENTAGE) {
+      throw new Error(`MAPPNM`) //Stands for "Minimum Audio Playback Percentage Not Met"
+    }
+
+    if (step === 'CF') {
+      if (!fileToUpload.isUploaded) throw new Error('UF')
+      await submitReviewAction(
+        Number(orderDetails.orderId),
+        orderDetails.fileId,
+        transcript,
+        finalizerComment
+      )
+    } else {
+      await submitQCAction({
+        fileId: orderDetails.fileId,
+        orderId: Number(orderDetails.orderId),
+        transcript,
+      })
+    }
+
+    // TODO: remove this after March 1st
+    localStorage.removeItem('editorData')
+    await deleteEditorDataIDB(orderDetails.fileId)
+
+    toast.dismiss(toastId)
+    const successToastId = toast.success(`Transcription submitted successfully`)
+    toast.dismiss(successToastId)
+    router.push(`/transcribe/${step === 'QC' ? 'qc' : 'legal-cf-reviewer'}`)
+  } catch (error) {
+    setTimeout(() => {
+      toast.dismiss(toastId)
+    }, 100) //Had to use this setTimeout because the minimum percentage check gives an error Immediately
+
+    let errorText = 'Error while submitting transcript' // Default error message
+    switch ((error as Error).message) {
+      case 'MAPPNM':
+        errorText = `Please make sure you have at least ${MINIMUM_AUDIO_PLAYBACK_PERCENTAGE}% of the audio played.`
+        break
+      case 'UF':
+        errorText = `Please upload a file before submitting`
+        break
+      case 'IMT':
+        errorText = `Invalid meta found in transcript. Please remove the meta from the transcript.`
+      // Add more cases as needed
+    }
+    const errorToastId = toast.error(errorText)
+    toast.dismiss(errorToastId)
+  } finally {
+    setButtonLoading((prevButtonLoading) => ({
+      ...prevButtonLoading,
+      submit: false,
+    }))
+  }
 }
 
 const getFrequentTermsHandler = async (
-    userId: string,
-    setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
-    setFrequentTermsData: React.Dispatch<
-        React.SetStateAction<{ autoGenerated: string; edited: string }>
-    >,
-    setFrequentTermsModalOpen: React.Dispatch<React.SetStateAction<boolean>>
+  userId: string,
+  setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
+  setFrequentTermsData: React.Dispatch<
+    React.SetStateAction<{ autoGenerated: string; edited: string }>
+  >,
+  setFrequentTermsModalOpen: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
-    setButtonLoading((prev) => ({ ...prev, frequentTerms: true }))
+  setButtonLoading((prev) => ({ ...prev, frequentTerms: true }))
 
-    try {
-        const response = await getFrequentTermsAction()
-        if (response.success) {
-            const data = {
-                edited: response.edited ?? '',
-                autoGenerated: response.autoGenerated ?? '',
-            }
-            setFrequentTermsData(data)
-            setFrequentTermsModalOpen(true)
-        } else {
-            throw new Error('No frequent terms data found')
-        }
-    } catch (error) {
-        const errorMessage = axios.isAxiosError(error)
-            ? error.response?.data.error
-                ? error.response.data.error
-                : 'Failed to get frequent terms'
-            : 'An unexpected error occurred'
-
-        toast.error(errorMessage)
-    } finally {
-        setButtonLoading((prev) => ({ ...prev, frequentTerms: false }))
+  try {
+    const response = await getFrequentTermsAction()
+    if (response.success) {
+      const data = {
+        edited: response.edited ?? '',
+        autoGenerated: response.autoGenerated ?? '',
+      }
+      setFrequentTermsData(data)
+      setFrequentTermsModalOpen(true)
+    } else {
+      throw new Error('No frequent terms data found')
     }
+  } catch (error) {
+    const errorMessage = axios.isAxiosError(error)
+      ? error.response?.data.error
+        ? error.response.data.error
+        : 'Failed to get frequent terms'
+      : 'An unexpected error occurred'
+
+    toast.error(errorMessage)
+  } finally {
+    setButtonLoading((prev) => ({ ...prev, frequentTerms: false }))
+  }
 }
 
 const extractTimestamp = (text: string): number | null => {
-    const match = text.match(/(\d{1,2}):(\d{2}):(\d{2}\.\d)/)
-    if (match) {
-        const [, hours, minutes, seconds] = match
-        return parseInt(hours) * 3600 + parseInt(minutes) * 60 + parseFloat(seconds)
-    }
-    return null
+  const match = text.match(/(\d{1,2}):(\d{2}):(\d{2}\.\d)/)
+  if (match) {
+    const [, hours, minutes, seconds] = match
+    return parseInt(hours) * 3600 + parseInt(minutes) * 60 + parseFloat(seconds)
+  }
+  return null
 }
 
 const playAudioAtTimestamp = (
-    audioPlayer: HTMLAudioElement,
-    timestamp: number
+  audioPlayer: HTMLAudioElement,
+  timestamp: number
 ) => {
-    audioPlayer.currentTime = timestamp
-    audioPlayer.play()
+  audioPlayer.currentTime = timestamp
+  audioPlayer.play()
 }
 
 const findParagraphStart = (quill: Quill, index: number): number => {
-    let start = index
-    while (start > 0 && quill.getText(start - 1, 1) !== '\n') {
-        start--
-    }
-    return start
+  let start = index
+  while (start > 0 && quill.getText(start - 1, 1) !== '\n') {
+    start--
+  }
+  return start
 }
 
 const navigateAndPlayBlanks = (
-    quill: Quill,
-    audioPlayer: HTMLAudioElement | null,
-    goToPrevious = false
+  quill: Quill,
+  audioPlayer: HTMLAudioElement | null,
+  goToPrevious = false
 ) => {
-    if (!quill || !audioPlayer) return
+  if (!quill || !audioPlayer) return
 
-    const text: string = quill.getText()
-    const regex = /\[\d{1,2}:\d{2}:\d{2}\.\d\] ____/g
-    const matches = Array.from(text.matchAll(regex))
+  const text: string = quill.getText()
+  const regex = /\[\d{1,2}:\d{2}:\d{2}\.\d\] ____/g
+  const matches = Array.from(text.matchAll(regex))
 
-    if (matches.length === 0) return
+  if (matches.length === 0) return
 
-    let currentIndex = 0
-    const selection = quill.getSelection()
-    if (selection) {
-        currentIndex = matches.findIndex((match, index) => {
-            const nextMatch = matches[index + 1] || null
-            return nextMatch
-                ? selection.index >= match.index && selection.index < nextMatch.index
-                : selection.index >= match.index
-        })
-    }
+  let currentIndex = 0
+  const selection = quill.getSelection()
+  if (selection) {
+    currentIndex = matches.findIndex((match, index) => {
+      const nextMatch = matches[index + 1] || null
+      return nextMatch
+        ? selection.index >= match.index && selection.index < nextMatch.index
+        : selection.index >= match.index
+    })
+  }
 
-    currentIndex = goToPrevious
-        ? currentIndex > 0
-            ? currentIndex - 1
-            : matches.length - 1
-        : currentIndex >= 0 && currentIndex < matches.length - 1
-            ? currentIndex + 1
-            : 0
+  currentIndex = goToPrevious
+    ? currentIndex > 0
+      ? currentIndex - 1
+      : matches.length - 1
+    : currentIndex >= 0 && currentIndex < matches.length - 1
+    ? currentIndex + 1
+    : 0
 
-    const match = matches[currentIndex]
-    if (!match) return
+  const match = matches[currentIndex]
+  if (!match) return
 
-    quill.setSelection(match.index, match[0].length, 'silent')
-    quill.scrollIntoView()
+  quill.setSelection(match.index, match[0].length, 'silent')
+  quill.scrollIntoView()
 
-    const timestamp = extractTimestamp(match[0])
-    if (timestamp !== null) {
-        playAudioAtTimestamp(audioPlayer, timestamp)
-    }
-
+  const timestamp = extractTimestamp(match[0])
+  if (timestamp !== null) {
+    playAudioAtTimestamp(audioPlayer, timestamp)
+  }
 }
 
 const adjustTimestamps = (
-    quill: Quill,
-    adjustment: number,
-    selection: { index: number; length: number } | null
+  quill: Quill,
+  adjustment: number,
+  selection: { index: number; length: number } | null
 ) => {
-    if (!quill) return
+  if (!quill) return
 
-    if (!selection) {
-        toast.error('Please select text to adjust timestamps.')
-        return
-    }
+  if (!selection) {
+    toast.error('Please select text to adjust timestamps.')
+    return
+  }
 
-    const selectedText = quill.getText(selection.index, selection.length)
-    if (!selectedText.trim()) {
-        toast.error('Please select text to adjust timestamps.')
-        return
-    }
+  const selectedText = quill.getText(selection.index, selection.length)
+  if (!selectedText.trim()) {
+    toast.error('Please select text to adjust timestamps.')
+    return
+  }
 
-    const paragraphs = selectedText.split('\n\n')
+  const paragraphs = selectedText.split('\n\n')
 
-    const adjustedText = paragraphs
-        .map((paragraph) => {
-            const timestamp = extractTimestamp(paragraph)
-            if (timestamp !== null) {
-                const adjustedTimestamp = timestamp + adjustment
-                const newTimestamp = secondsToTs(adjustedTimestamp, true, 1)
-                return paragraph.replace(/^\d{1,2}:\d{2}:\d{2}\.\d/, newTimestamp)
-            }
-            return paragraph
-        })
-        .join('\n\n')
+  const adjustedText = paragraphs
+    .map((paragraph) => {
+      const timestamp = extractTimestamp(paragraph)
+      if (timestamp !== null) {
+        const adjustedTimestamp = timestamp + adjustment
+        const newTimestamp = secondsToTs(adjustedTimestamp, true, 1)
+        return paragraph.replace(/^\d{1,2}:\d{2}:\d{2}\.\d/, newTimestamp)
+      }
+      return paragraph
+    })
+    .join('\n\n')
 
-    quill.deleteText(selection.index, selection.length, 'user')
-    quill.insertText(selection.index, adjustedText, { bold: true }, 'user')
+  quill.deleteText(selection.index, selection.length, 'user')
+  quill.insertText(selection.index, adjustedText, { bold: true }, 'user')
 
-    toast.success('Timestamps adjusted successfully.')
+  toast.success('Timestamps adjusted successfully.')
 }
 
 const playCurrentParagraphTimestamp = (
-    quill: Quill,
-    audioPlayer: HTMLAudioElement | null,
+  quill: Quill,
+  audioPlayer: HTMLAudioElement | null
 ) => {
-    if (!quill || !audioPlayer) return
+  if (!quill || !audioPlayer) return
 
-    const selection = quill.getSelection()
-    if (!selection) {
-        toast.error('Please place the cursor in a paragraph.')
-        return
-    }
+  const selection = quill.getSelection()
+  if (!selection) {
+    toast.error('Please place the cursor in a paragraph.')
+    return
+  }
 
-    const paragraphStart = findParagraphStart(quill, selection.index)
-    const paragraphText = quill.getText(paragraphStart, 50)
-    const timestamp = extractTimestamp(paragraphText)
+  const paragraphStart = findParagraphStart(quill, selection.index)
+  const paragraphText = quill.getText(paragraphStart, 50)
+  const timestamp = extractTimestamp(paragraphText)
 
-    if (timestamp !== null) {
-        playAudioAtTimestamp(audioPlayer, timestamp)
-    } else {
-        toast.error('No timestamp found at the start of this paragraph.')
-    }
+  if (timestamp !== null) {
+    playAudioAtTimestamp(audioPlayer, timestamp)
+  } else {
+    toast.error('No timestamp found at the start of this paragraph.')
+  }
 }
 
 export interface CustomerQuillSelection {
-    index: number;
-    length: number;
+  index: number
+  length: number
 }
 
 const searchAndSelect = (
-    quill: Quill,
-    searchText: string,
-    matchCase: boolean,
-    lastSearchIndex: number,
-    setLastSearchIndex: (index: number) => void,
-    toastInstance: { error: (msg: string) => void },
-    selection: { index: number; length: number } | null,
-    setSelection: (selection: { index: number; length: number } | null) => void,
-    matchSelection: boolean,
-    searchBackwards: boolean = false,
-    setSearchHighlight: (highlight: CustomerQuillSelection | null) => void
+  quill: Quill,
+  searchText: string,
+  matchCase: boolean,
+  lastSearchIndex: number,
+  setLastSearchIndex: (index: number) => void,
+  toastInstance: { error: (msg: string) => void },
+  selection: { index: number; length: number } | null,
+  setSelection: (selection: { index: number; length: number } | null) => void,
+  matchSelection: boolean,
+  searchBackwards: boolean = false,
+  setSearchHighlight: (highlight: CustomerQuillSelection | null) => void
 ) => {
-    if (!quill || !searchText) return
+  if (!quill || !searchText) return
 
-    const searchRange = {
-        start: 0,
-        end: quill.getText().length
+  const searchRange = {
+    start: 0,
+    end: quill.getText().length,
+  }
+
+  // If there's a selection, limit search to that range
+  if (selection && selection.length > 0 && matchSelection) {
+    searchRange.start = selection.index
+    searchRange.end = selection.index + selection.length
+
+    // Clear the previous highlight if it exists and is valid
+    if (lastSearchIndex >= 0 && lastSearchIndex < quill.getText().length) {
+      quill.formatText(selection.index, selection.length, {
+        background: '#D9D9D9',
+      })
+    }
+  }
+
+  const text = quill.getText(
+    searchRange.start,
+    searchRange.end - searchRange.start
+  )
+  const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase()
+
+  let startIndex = searchBackwards
+    ? lastSearchIndex - 1 - searchRange.start
+    : lastSearchIndex + 1 - searchRange.start
+
+  if (startIndex < 0 || startIndex >= text.length) {
+    startIndex = searchBackwards ? text.length - 1 : 0
+  }
+
+  let index = -1
+  if (searchBackwards) {
+    index = matchCase
+      ? text.lastIndexOf(searchText, startIndex)
+      : text.toLowerCase().lastIndexOf(effectiveSearchText, startIndex)
+
+    // If not found searching backwards, wrap to end
+    if (index === -1 && startIndex !== text.length - 1) {
+      index = matchCase
+        ? text.lastIndexOf(searchText, text.length - 1)
+        : text.toLowerCase().lastIndexOf(effectiveSearchText, text.length - 1)
+    }
+  } else {
+    index = matchCase
+      ? text.indexOf(searchText, startIndex)
+      : text.toLowerCase().indexOf(effectiveSearchText, startIndex)
+
+    // If not found searching forwards, wrap to start
+    if (index === -1 && startIndex !== 0) {
+      index = matchCase
+        ? text.indexOf(searchText, 0)
+        : text.toLowerCase().indexOf(effectiveSearchText, 0)
+    }
+  }
+
+  if (index !== -1) {
+    // Adjust index relative to document start
+    const absoluteIndex = index + searchRange.start
+
+    // Apply new highlight
+    quill.formatText(absoluteIndex, searchText.length, {
+      background: '#b3d4fc',
+    })
+
+    // Store the current search highlight
+    setSearchHighlight({ index: absoluteIndex, length: searchText.length })
+
+    // Scroll the highlighted text into view
+    const bounds = quill.getBounds(absoluteIndex)
+    const editorElement = quill.root
+    const scrollingContainer = editorElement.closest('.ql-editor')
+    if (scrollingContainer && bounds) {
+      const containerRect = scrollingContainer.getBoundingClientRect()
+      const scrollTop =
+        bounds.top + scrollingContainer.scrollTop - containerRect.height / 2
+      scrollingContainer.scrollTop = scrollTop
     }
 
-    // If there's a selection, limit search to that range
-    if (selection && selection.length > 0 && matchSelection) {
-        searchRange.start = selection.index
-        searchRange.end = selection.index + selection.length
+    setLastSearchIndex(absoluteIndex)
+  } else {
+    setLastSearchIndex(-1)
+    setSearchHighlight(null)
+    toastInstance.error('Text not found in selected range')
+  }
 
-        // Clear the previous highlight if it exists and is valid
-        if (lastSearchIndex >= 0 && lastSearchIndex < quill.getText().length) {
-            quill.formatText(selection.index, selection.length, {
-                background: '#D9D9D9'
-            })
-        }
-    }
-
-    const text = quill.getText(searchRange.start, searchRange.end - searchRange.start)
-    const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase()
-
-    let startIndex = searchBackwards
-        ? lastSearchIndex - 1 - searchRange.start
-        : lastSearchIndex + 1 - searchRange.start
-
-    if (startIndex < 0 || startIndex >= text.length) {
-        startIndex = searchBackwards ? text.length - 1 : 0
-    }
-
-    let index = -1
-    if (searchBackwards) {
-        index = matchCase
-            ? text.lastIndexOf(searchText, startIndex)
-            : text.toLowerCase().lastIndexOf(effectiveSearchText, startIndex)
-
-        // If not found searching backwards, wrap to end
-        if (index === -1 && startIndex !== text.length - 1) {
-            index = matchCase
-                ? text.lastIndexOf(searchText, text.length - 1)
-                : text.toLowerCase().lastIndexOf(effectiveSearchText, text.length - 1)
-        }
-    } else {
-        index = matchCase
-            ? text.indexOf(searchText, startIndex)
-            : text.toLowerCase().indexOf(effectiveSearchText, startIndex)
-
-        // If not found searching forwards, wrap to start
-        if (index === -1 && startIndex !== 0) {
-            index = matchCase
-                ? text.indexOf(searchText, 0)
-                : text.toLowerCase().indexOf(effectiveSearchText, 0)
-        }
-    }
-
-    if (index !== -1) {
-        // Adjust index relative to document start
-        const absoluteIndex = index + searchRange.start
-
-        // Apply new highlight
-        quill.formatText(absoluteIndex, searchText.length, {
-            'background': '#b3d4fc'
-        })
-
-        // Store the current search highlight
-        setSearchHighlight({ index: absoluteIndex, length: searchText.length })
-
-        // Scroll the highlighted text into view
-        const bounds = quill.getBounds(absoluteIndex)
-        const editorElement = quill.root
-        const scrollingContainer = editorElement.closest('.ql-editor')
-        if (scrollingContainer && bounds) {
-            const containerRect = scrollingContainer.getBoundingClientRect()
-            const scrollTop = bounds.top + scrollingContainer.scrollTop - containerRect.height / 2
-            scrollingContainer.scrollTop = scrollTop
-        }
-
-        setLastSearchIndex(absoluteIndex)
-    } else {
-        setLastSearchIndex(-1)
-        setSearchHighlight(null)
-        toastInstance.error('Text not found in selected range')
-    }
-
-    setSelection(selection)
+  setSelection(selection)
 }
 
 const replaceTextHandler = (
-    quill: Quill,
-    searchText: string,
-    replaceWith: string,
-    replaceAll: boolean,
-    matchCase: boolean,
-    toastInstance: { error: (msg: string) => void },
-    selection: { index: number; length: number } | null,
-    matchSelection: boolean
+  quill: Quill,
+  searchText: string,
+  replaceWith: string,
+  replaceAll: boolean,
+  matchCase: boolean,
+  toastInstance: { error: (msg: string) => void },
+  selection: { index: number; length: number } | null,
+  matchSelection: boolean
 ) => {
-    if (!quill) return;
+  if (!quill) return
 
-    let replaced = false;
-    const searchRange = {
-        start: 0,
-        end: quill.getText().length
-    };
+  let replaced = false
+  const searchRange = {
+    start: 0,
+    end: quill.getText().length,
+  }
 
-    // Limit search range to the selected text if applicable
-    if (selection && selection.length > 0 && matchSelection) {
-        searchRange.start = selection.index;
-        searchRange.end = selection.index + selection.length;
-    }
+  // Limit search range to the selected text if applicable
+  if (selection && selection.length > 0 && matchSelection) {
+    searchRange.start = selection.index
+    searchRange.end = selection.index + selection.length
+  }
 
-    const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase();
+  const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase()
 
-    const replace = (index: number) => {
-        const absoluteIndex = index + searchRange.start;
-        quill.deleteText(absoluteIndex, searchText.length, "user");
-        quill.insertText(absoluteIndex, replaceWith, "user");
-        replaced = true;
-    };
+  const replace = (index: number) => {
+    const absoluteIndex = index + searchRange.start
+    quill.deleteText(absoluteIndex, searchText.length, 'user')
+    quill.insertText(absoluteIndex, replaceWith, 'user')
+    replaced = true
+  }
 
-    if (replaceAll) {
-        // Process each replacement asynchronously using setTimeout
-        const processNext = (startIndex: number) => {
-            const text = quill.getText(
-                searchRange.start,
-                searchRange.end - searchRange.start
-            );
-            const textToSearch = matchCase ? text : text.toLowerCase();
-            const index = textToSearch.indexOf(effectiveSearchText, startIndex);
+  if (replaceAll) {
+    // Process each replacement asynchronously using setTimeout
+    const processNext = (startIndex: number) => {
+      const text = quill.getText(
+        searchRange.start,
+        searchRange.end - searchRange.start
+      )
+      const textToSearch = matchCase ? text : text.toLowerCase()
+      const index = textToSearch.indexOf(effectiveSearchText, startIndex)
 
-            if (index !== -1) {
-                replace(index);
-                // Yield to the browser so UI stays responsive.
-                setTimeout(() => processNext(index + replaceWith.length), 0);
-            } else {
-                if (!replaced) {
-                    toastInstance.error("Text not found in selected range");
-                }
-            }
-        };
-
-        processNext(0);
-    } else {
-        // Single-instance replacement (synchronous)
-        const currentSelection = quill.getSelection();
-        if (currentSelection && currentSelection.length > 0) {
-            const selectedText = quill.getText(
-                currentSelection.index,
-                currentSelection.length
-            );
-            if (
-                (matchCase && selectedText === searchText) ||
-                (!matchCase &&
-                    selectedText.toLowerCase() === effectiveSearchText)
-            ) {
-                replace(currentSelection.index - searchRange.start);
-            }
-        } else {
-            const text = quill.getText(
-                searchRange.start,
-                searchRange.end - searchRange.start
-            );
-            const textToSearch = matchCase ? text : text.toLowerCase();
-            const index = textToSearch.indexOf(effectiveSearchText);
-            if (index !== -1) {
-                replace(index);
-            }
-        }
-
+      if (index !== -1) {
+        replace(index)
+        // Yield to the browser so UI stays responsive.
+        setTimeout(() => processNext(index + replaceWith.length), 0)
+      } else {
         if (!replaced) {
-            toastInstance.error("Text not found in selected range");
+          toastInstance.error('Text not found in selected range')
         }
+      }
     }
-};
+
+    processNext(0)
+  } else {
+    // Single-instance replacement (synchronous)
+    const currentSelection = quill.getSelection()
+    if (currentSelection && currentSelection.length > 0) {
+      const selectedText = quill.getText(
+        currentSelection.index,
+        currentSelection.length
+      )
+      if (
+        (matchCase && selectedText === searchText) ||
+        (!matchCase && selectedText.toLowerCase() === effectiveSearchText)
+      ) {
+        replace(currentSelection.index - searchRange.start)
+      }
+    } else {
+      const text = quill.getText(
+        searchRange.start,
+        searchRange.end - searchRange.start
+      )
+      const textToSearch = matchCase ? text : text.toLowerCase()
+      const index = textToSearch.indexOf(effectiveSearchText)
+      if (index !== -1) {
+        replace(index)
+      }
+    }
+
+    if (!replaced) {
+      toastInstance.error('Text not found in selected range')
+    }
+  }
+}
 
 const insertTimestampAndSpeaker = (
-    audioPlayer: HTMLAudioElement | null,
-    quill: Quill | undefined
+  audioPlayer: HTMLAudioElement | null,
+  quill: Quill | undefined
 ) => {
-    if (!audioPlayer || !quill) return;
+  if (!audioPlayer || !quill) return
 
-    const currentTime = audioPlayer.currentTime;
-    const formattedTime = convertSecondsToTimestamp(currentTime);
-    const currentSelection = quill.getSelection();
+  const currentTime = audioPlayer.currentTime
+  const formattedTime = convertSecondsToTimestamp(currentTime)
+  const currentSelection = quill.getSelection()
 
-    let paragraphStart = currentSelection ? currentSelection.index : 0;
-    while (paragraphStart > 0 && quill.getText(paragraphStart - 1, 1) !== '\n') {
-        paragraphStart--;
+  let paragraphStart = currentSelection ? currentSelection.index : 0
+  while (paragraphStart > 0 && quill.getText(paragraphStart - 1, 1) !== '\n') {
+    paragraphStart--
+  }
+
+  // Check and remove any existing timestamp and speaker pattern at the start of the line
+  const lineText = quill.getText(paragraphStart, 14)
+  const timestampSpeakerPattern = /^\d{1}:\d{2}:\d{2}\.\d{1} S\d+: /
+  if (timestampSpeakerPattern.test(lineText)) {
+    const match = lineText.match(timestampSpeakerPattern)
+    if (match) {
+      quill.deleteText(paragraphStart, match[0].length, 'user')
     }
+  }
 
-    // Check and remove any existing timestamp and speaker pattern at the start of the line
-    const lineText = quill.getText(paragraphStart, 14);
-    const timestampSpeakerPattern = /^\d{1}:\d{2}:\d{2}\.\d{1} S\d+: /;
-    if (timestampSpeakerPattern.test(lineText)) {
-        const match = lineText.match(timestampSpeakerPattern);
-        if (match) {
-            quill.deleteText(paragraphStart, match[0].length, 'user');
-        }
-    }
+  // Insert the bold part (formatted time and speaker label without trailing space)
+  const boldPart = formattedTime + ' S1:'
+  quill.insertText(paragraphStart, boldPart, { bold: true }, 'user')
 
-    // Insert the bold part (formatted time and speaker label without trailing space)
-    const boldPart = formattedTime + ' S1:';
-    quill.insertText(paragraphStart, boldPart, { bold: true }, 'user');
+  // Insert a space after the colon with normal formatting to reset bold style
+  const nonBoldPart = ' '
+  quill.insertText(
+    paragraphStart + boldPart.length,
+    nonBoldPart,
+    { bold: false },
+    'user'
+  )
 
-    // Insert a space after the colon with normal formatting to reset bold style
-    const nonBoldPart = ' ';
-    quill.insertText(paragraphStart + boldPart.length, nonBoldPart, { bold: false }, 'user');
-
-    // Set selection to the speaker number for easy editing (selects the digit in "S1")
-    const speakerNumberStart = paragraphStart + formattedTime.length + 2; // +2 for " S"
-    quill.setSelection(speakerNumberStart, 1);
-};
+  // Set selection to the speaker number for easy editing (selects the digit in "S1")
+  const speakerNumberStart = paragraphStart + formattedTime.length + 2 // +2 for " S"
+  quill.setSelection(speakerNumberStart, 1)
+}
 
 const insertTimestampBlankAtCursorPosition = (
-    audioPlayer: HTMLAudioElement | null,
-    quill: Quill | undefined
+  audioPlayer: HTMLAudioElement | null,
+  quill: Quill | undefined
 ) => {
-    if (!audioPlayer || !quill) return
+  if (!audioPlayer || !quill) return
 
-    const cursorPosition = quill.getSelection()?.index || 0
+  const cursorPosition = quill.getSelection()?.index || 0
 
-    // Check if cursor is at start of paragraph
-    let isStartOfParagraph = true;
-    if (cursorPosition > 0) {
-        const textBeforeCursor = quill.getText(cursorPosition - 1, 1);
-        if (textBeforeCursor !== '\n') {
-            isStartOfParagraph = false;
-        }
+  // Check if cursor is at start of paragraph
+  let isStartOfParagraph = true
+  if (cursorPosition > 0) {
+    const textBeforeCursor = quill.getText(cursorPosition - 1, 1)
+    if (textBeforeCursor !== '\n') {
+      isStartOfParagraph = false
     }
+  }
 
-    if (isStartOfParagraph) {
-        // Call the other function instead
-        insertTimestampAndSpeaker(audioPlayer, quill);
-        return;
-    }
+  if (isStartOfParagraph) {
+    // Call the other function instead
+    insertTimestampAndSpeaker(audioPlayer, quill)
+    return
+  }
 
-    const currentTime = audioPlayer.currentTime;
-    const formattedTime = `[${secondsToTs(currentTime, true, 1)}] ____`;
+  const currentTime = audioPlayer.currentTime
+  const formattedTime = `[${secondsToTs(currentTime, true, 1)}] ____`
 
-    // Insert the blank with the red color style.
-    quill.insertText(cursorPosition, formattedTime, { color: '#FF0000' }, 'user');
+  // Insert the blank with the red color style.
+  quill.insertText(cursorPosition, formattedTime, { color: '#FF0000' }, 'user')
 
-    // Set the selection after the inserted text.
-    quill.setSelection(cursorPosition + formattedTime.length, 0);
-    
-    // Reset the text format so that new text is not red.
-    quill.format('color', false);
+  // Set the selection after the inserted text.
+  quill.setSelection(cursorPosition + formattedTime.length, 0)
+
+  // Reset the text format so that new text is not red.
+  quill.format('color', false)
 }
 
 const scrollEditorToPos = (quill: Quill, pos: number) => {
-    const [line] = quill.getLine(pos);
-    if (!line) return;
+  const [line] = quill.getLine(pos)
+  if (!line) return
 
-    const lineOffset = line.offset();
-    const bounds = quill.getBounds(lineOffset);
-    if (!bounds) return;
+  const lineOffset = line.offset()
+  const bounds = quill.getBounds(lineOffset)
+  if (!bounds) return
 
-    const editorContainer = quill.root.closest('.ql-editor');
-    if (!editorContainer) return;
+  const editorContainer = quill.root.closest('.ql-editor')
+  if (!editorContainer) return
 
-    // Get positions relative to editor container
-    const rect = line.domNode.getBoundingClientRect();
-    const containerRect = editorContainer.getBoundingClientRect();
+  // Get positions relative to editor container
+  const rect = line.domNode.getBoundingClientRect()
+  const containerRect = editorContainer.getBoundingClientRect()
 
-    // Check if line's bottom is beyond 80% of container height
-    const lineBottomRelative = rect.bottom - containerRect.top;
-    const threshold = containerRect.height * 0.8;
+  // Check if line's bottom is beyond 80% of container height
+  const lineBottomRelative = rect.bottom - containerRect.top
+  const threshold = containerRect.height * 0.8
 
-    if (lineBottomRelative > threshold) {
-        editorContainer.scrollTo({
-            top: editorContainer.scrollTop + bounds.top - 50, // scroll to put line near top
-            behavior: 'smooth'
-        });
-    }
+  if (lineBottomRelative > threshold) {
+    editorContainer.scrollTo({
+      top: editorContainer.scrollTop + bounds.top - 50, // scroll to put line near top
+      behavior: 'smooth',
+    })
+  }
 }
 
 function getFormattedContent(text: string): Op[] {
-    const formattedContent: Op[] = []
-    let lastIndex = 0
+  const formattedContent: Op[] = []
+  let lastIndex = 0
 
     // Update pattern to explicitly include the timestamp+blank pattern
     const pattern = /(\d:\d{2}:\d{2}\.\d(?:\s+(?:S\d+:|Speaker\s+\d+:|[A-Za-z][A-Za-z\s]*:))?|\[\d:\d{2}:\d{2}\.\d\](?:\s+____)?|\[[^\]]+\])/g
     let match: RegExpExecArray | null
 
     while ((match = pattern.exec(text)) !== null) {
-        if (match.index > lastIndex) {
-            formattedContent.push({ insert: text.slice(lastIndex, match.index) })
-        }
+      if (match.index > lastIndex) {
+          formattedContent.push({ insert: text.slice(lastIndex, match.index) })
+      }
 
-        const matchedText = match[0]
+      const matchedText = match[0]
 
-        // Rule 1: TS + Speaker labels
-        if (matchedText.match(/^\d:\d{2}:\d{2}\.\d/)) {
-            formattedContent.push({
-                insert: matchedText,
-                attributes: { bold: true }
-            })
-        }
-        // Rule 2: TS + blank (complete pattern)
-        else if (matchedText.match(/\[\d:\d{2}:\d{2}\.\d\]\s+____/)) {
-            formattedContent.push({
-                insert: matchedText,
-                attributes: { color: '#FF0000' }
-            })
-        }
-        // Rule 3: Any other bracketed content
-        else if (matchedText.startsWith('[')) {
-            formattedContent.push({
-                insert: matchedText,
-                attributes: { background: '#f5f5f5', color: '#4A4A4A' }
-            })
-        }
+      // Rule 1: TS + Speaker labels
+      if (matchedText.match(/^\d:\d{2}:\d{2}\.\d/)) {
+          formattedContent.push({
+              insert: matchedText,
+              attributes: { bold: true }
+          })
+      }
+      // Rule 2: TS + blank (complete pattern)
+      else if (matchedText.match(/\[\d:\d{2}:\d{2}\.\d\]\s+____/)) {
+          formattedContent.push({
+              insert: matchedText,
+              attributes: { color: '#FF0000' }
+          })
+      }
+      // Rule 3: Any other bracketed content
+      else if (matchedText.startsWith('[')) {
+          formattedContent.push({
+              insert: matchedText,
+              attributes: { background: '#f5f5f5', color: '#4A4A4A' }
+          })
+      }
 
-        lastIndex = match.index + matchedText.length
+      lastIndex = match.index + matchedText.length
     }
 
-    if (lastIndex < text.length) {
-        formattedContent.push({ insert: text.slice(lastIndex) })
-    }
+  if (lastIndex < text.length) {
+    formattedContent.push({ insert: text.slice(lastIndex) })
+  }
 
-    return formattedContent
+  return formattedContent
 }
 
 function timestampToSeconds(timestamp: string): number {
-  const [hours, minutes, seconds] = timestamp.split(':').map(Number);
-  return hours * 3600 + minutes * 60 + seconds;
+  const [hours, minutes, seconds] = timestamp.split(':').map(Number)
+  return hours * 3600 + minutes * 60 + seconds
 }
 
 export interface TranscriptSegment {
-  content: string;
-  speaker: string;
-  timestamp: string;
+  content: string
+  speaker: string
+  timestamp: string
 }
 
 export interface ChunkData {
-  fileKey: string;
-  startTime: number;
-  endTime: number;
-  transcript: string;
+  fileKey: string
+  startTime: number
+  endTime: number
+  transcript: string
 }
 
 function parseTranscript(transcript: string): TranscriptSegment[] {
-  const lines = transcript.split("\n").filter((line) => line.trim());
+  const lines = transcript.split('\n').filter((line) => line.trim())
   return lines.map((line) => {
-    const match = line.match(/^(\d+:\d+:\d+\.\d+)\s+(S\d+)\s*:\s*(.+)$/);
-    if (!match) throw new Error(`Invalid line format: ${line}`);
+    const match = line.match(/^(\d+:\d+:\d+\.\d+)\s+(S\d+)\s*:\s*(.+)$/)
+    if (!match) throw new Error(`Invalid line format: ${line}`)
     return {
       timestamp: match[1],
       speaker: match[2],
       content: match[3],
-    };
-  });
+    }
+  })
 }
 
 function findOptimalChunkPoints(segments: CTMType[]): number[] {
-  if (segments.length === 0) return [];
-  
+  if (segments.length === 0) return []
+
   const config = {
     maxDuration: 1500,
     minPauseDuration: 0.5,
     minConfidence: 0.6,
     maxWordsPerChunk: 300,
-  };
-  
-  const chunkPoints: number[] = [segments[0].start];
-  let currentChunkStart = segments[0].start;
-  
+  }
+
+  const chunkPoints: number[] = [segments[0].start]
+  let currentChunkStart = segments[0].start
+
   for (let i = 0; i < segments.length - 1; i++) {
-    const currentSegment = segments[i];
-    const nextSegment = segments[i + 1];
-    const currentDuration = nextSegment.start - currentChunkStart;
-    const pauseDuration = nextSegment.start - currentSegment.end;
-    const isSpeakerChange = currentSegment.speaker !== nextSegment.speaker;
-    
-    if (currentDuration >= config.maxDuration && isSpeakerChange && pauseDuration >= config.minPauseDuration) {
-      chunkPoints.push(currentSegment.end);
-      currentChunkStart = nextSegment.start;
+    const currentSegment = segments[i]
+    const nextSegment = segments[i + 1]
+    const currentDuration = nextSegment.start - currentChunkStart
+    const pauseDuration = nextSegment.start - currentSegment.end
+    const isSpeakerChange = currentSegment.speaker !== nextSegment.speaker
+
+    if (
+      currentDuration >= config.maxDuration &&
+      isSpeakerChange &&
+      pauseDuration >= config.minPauseDuration
+    ) {
+      chunkPoints.push(currentSegment.end)
+      currentChunkStart = nextSegment.start
     }
   }
-  
-  if (segments.length > 0) chunkPoints.push(segments[segments.length - 1].end);
-  
+
+  if (segments.length > 0) chunkPoints.push(segments[segments.length - 1].end)
+
   const finalChunkPoints = chunkPoints.filter((point, index) => {
-    if (index === 0 || index === chunkPoints.length - 1) return true;
-    const duration = chunkPoints[index + 1] - point;
-    return duration >= config.minPauseDuration;
-  });
-  finalChunkPoints[0] = 0;
-  return finalChunkPoints;
+    if (index === 0 || index === chunkPoints.length - 1) return true
+    const duration = chunkPoints[index + 1] - point
+    return duration >= config.minPauseDuration
+  })
+  finalChunkPoints[0] = 0
+  return finalChunkPoints
 }
 
 function chunkTranscript(transcript: string, chunkPoints: number[]): string[] {
-  const entries = parseTranscript(transcript);
-  const sortedPoints = [...chunkPoints].sort((a, b) => a - b);
-  const chunks: string[] = [];
+  const entries = parseTranscript(transcript)
+  const sortedPoints = [...chunkPoints].sort((a, b) => a - b)
+  const chunks: string[] = []
   for (let i = 0; i < sortedPoints.length - 1; i++) {
-    const chunkStart = sortedPoints[i];
-    const chunkEnd = sortedPoints[i + 1];
+    const chunkStart = sortedPoints[i]
+    const chunkEnd = sortedPoints[i + 1]
     const chunkEntries = entries.filter((entry) => {
-      const entryTime = timestampToSeconds(entry.timestamp);
-      return entryTime >= chunkStart && entryTime < chunkEnd;
-    });
+      const entryTime = timestampToSeconds(entry.timestamp)
+      return entryTime >= chunkStart && entryTime < chunkEnd
+    })
     if (chunkEntries.length > 0) {
-      chunks.push(chunkEntries.map((entry) => `${entry.timestamp} ${entry.speaker}: ${entry.content}`).join("\n"));
+      chunks.push(
+        chunkEntries
+          .map(
+            (entry) => `${entry.timestamp} ${entry.speaker}: ${entry.content}`
+          )
+          .join('\n')
+      )
     }
   }
-  return chunks;
+  return chunks
 }
 
 function secondsToTimestamp(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  seconds %= 3600;
-  const minutes = Math.floor(seconds / 60);
-  seconds = Math.round((seconds % 60) * 10) / 10; // Round to 1 decimal place
-  
-  return `${hours}:${String(minutes).padStart(2, '0')}:${seconds.toFixed(1)}`;
+  const hours = Math.floor(seconds / 3600)
+  seconds %= 3600
+  const minutes = Math.floor(seconds / 60)
+  seconds = Math.round((seconds % 60) * 10) / 10 // Round to 1 decimal place
+
+  return `${hours}:${String(minutes).padStart(2, '0')}:${seconds.toFixed(1)}`
 }
 
 function parseTranscriptLine(line: string): TranscriptSegment | null {
-  const match = line.match(/^(\d+:\d+:\d+\.\d+)\s+(S\d+)\s*:\s*(.+)$/);
-  if (!match) return null;
+  const match = line.match(/^(\d+:\d+:\d+\.\d+)\s+(S\d+)\s*:\s*(.+)$/)
+  if (!match) return null
 
   return {
     timestamp: match[1],
     speaker: match[2],
-    content: match[3]
-  };
+    content: match[3],
+  }
 }
 
-function offsetTranscript(transcript: string, offsetTimestamp: string | null = null): {transcript: string, firstTimeStamp: string} | string {
-  
-  const lines = transcript.split('\n').filter(line => line.trim());
-  if (lines.length === 0) return '';
+function offsetTranscript(
+  transcript: string,
+  offsetTimestamp: string | null = null
+): { transcript: string; firstTimeStamp: string } | string {
+  const lines = transcript.split('\n').filter((line) => line.trim())
+  if (lines.length === 0) return ''
 
   // Find the first timestamp
-  const firstUtterance = parseTranscriptLine(lines[0]);
-  if (!firstUtterance) return transcript;
+  const firstUtterance = parseTranscriptLine(lines[0])
+  if (!firstUtterance) return transcript
 
-  const offsetSeconds = offsetTimestamp ? timestampToSeconds(offsetTimestamp) : timestampToSeconds(firstUtterance.timestamp);
+  const offsetSeconds = offsetTimestamp
+    ? timestampToSeconds(offsetTimestamp)
+    : timestampToSeconds(firstUtterance.timestamp)
   // Process each line
-  const formattedTranscript = lines.map(line => {
-    const utterance = parseTranscriptLine(line);
-    if (!utterance) return line;
+  const formattedTranscript = lines
+    .map((line) => {
+      const utterance = parseTranscriptLine(line)
+      if (!utterance) return line
 
-    const originalSeconds = timestampToSeconds(utterance.timestamp);
-    const newSeconds = offsetTimestamp ? originalSeconds + offsetSeconds  : originalSeconds - offsetSeconds;
-    const newTimestamp = secondsToTimestamp(newSeconds);
+      const originalSeconds = timestampToSeconds(utterance.timestamp)
+      const newSeconds = offsetTimestamp
+        ? originalSeconds + offsetSeconds
+        : originalSeconds - offsetSeconds
+      const newTimestamp = secondsToTimestamp(newSeconds)
 
-    return `${newTimestamp} ${utterance.speaker}: ${utterance.content}`;
-  }).join('\n');
+      return `${newTimestamp} ${utterance.speaker}: ${utterance.content}`
+    })
+    .join('\n')
 
-  return  offsetTimestamp ? formattedTranscript : {transcript: formattedTranscript , firstTimeStamp: firstUtterance.timestamp};
+  return offsetTimestamp
+    ? formattedTranscript
+    : {
+        transcript: formattedTranscript,
+        firstTimeStamp: firstUtterance.timestamp,
+      }
 }
 
 export interface DiffSegment {
-  type: typeof DIFF_DELETE | typeof DIFF_INSERT | typeof DIFF_EQUAL;
-  text: string;
+  type: typeof DIFF_DELETE | typeof DIFF_INSERT | typeof DIFF_EQUAL
+  text: string
 }
 
 function formatTimestamps(text: string): string {
@@ -1429,21 +1488,21 @@ function formatTimestamps(text: string): string {
   // Updated regex to match timestamps with 1 or 2 digits for seconds.
   const textWithNewlines = text.replace(
     /(?<!^)(?<!\n\n)(\d{1,2}:\d{2}:\d{1,2}(?:\.\d+)?)/g,
-    "\n$1"
-  );
+    '\n$1'
+  )
 
   // Pass 2: Reformat each timestamp to follow h:mm:ss.ms format, ensuring seconds are two digits.
   const formatted = textWithNewlines.replace(
     /^(\d{1,2}):(\d{2}):(\d{1,2})(?:\.(\d+))?/gm,
     (_match, hour, minute, second, fraction) => {
-      const normalizedHour = Number(hour).toString(); // Remove any leading zeros for hour.
-      const paddedMinute = minute.padStart(2, '0');    // Ensure minute is two digits.
-      const paddedSecond = second.padStart(2, '0');      // Pad seconds if necessary.
-      const fractionDigit = fraction ? fraction.charAt(0) : "0"; // Exactly one decimal digit.
-      return `${normalizedHour}:${paddedMinute}:${paddedSecond}.${fractionDigit}`;
+      const normalizedHour = Number(hour).toString() // Remove any leading zeros for hour.
+      const paddedMinute = minute.padStart(2, '0') // Ensure minute is two digits.
+      const paddedSecond = second.padStart(2, '0') // Pad seconds if necessary.
+      const fractionDigit = fraction ? fraction.charAt(0) : '0' // Exactly one decimal digit.
+      return `${normalizedHour}:${paddedMinute}:${paddedSecond}.${fractionDigit}`
     }
-  );
-  return formatted.trim();
+  )
+  return formatted.trim()
 }
 
 /**
@@ -1452,23 +1511,27 @@ function formatTimestamps(text: string): string {
  * is kept. Standalone diffs are simply converted to equal type.
  */
 function acceptAllDiffs(diffs: DiffSegment[]): DiffSegment[] {
-  const newDiffs: DiffSegment[] = [];
-  let i = 0;
+  const newDiffs: DiffSegment[] = []
+  let i = 0
   while (i < diffs.length) {
-    const diff = diffs[i];
+    const diff = diffs[i]
     // If deletion is immediately followed by insertion, merge into Gemini text.
-    if (diff.type === DIFF_DELETE && i + 1 < diffs.length && diffs[i + 1].type === DIFF_INSERT) {
-      newDiffs.push({ type: DIFF_EQUAL, text: diffs[i + 1].text });
-      i += 2;
+    if (
+      diff.type === DIFF_DELETE &&
+      i + 1 < diffs.length &&
+      diffs[i + 1].type === DIFF_INSERT
+    ) {
+      newDiffs.push({ type: DIFF_EQUAL, text: diffs[i + 1].text })
+      i += 2
     } else if (diff.type === DIFF_INSERT || diff.type === DIFF_DELETE) {
-      newDiffs.push({ type: DIFF_EQUAL, text: diff.text });
-      i++;
+      newDiffs.push({ type: DIFF_EQUAL, text: diff.text })
+      i++
     } else {
-      newDiffs.push(diff);
-      i++;
+      newDiffs.push(diff)
+      i++
     }
   }
-  return newDiffs;
+  return newDiffs
 }
 
 /**
@@ -1477,64 +1540,68 @@ function acceptAllDiffs(diffs: DiffSegment[]): DiffSegment[] {
  * is retained. Standalone DIFF_INSERTs are dropped.
  */
 function rejectAllDiffs(diffs: DiffSegment[]): DiffSegment[] {
-  const newDiffs: DiffSegment[] = [];
-  let i = 0;
+  const newDiffs: DiffSegment[] = []
+  let i = 0
   while (i < diffs.length) {
-    const diff = diffs[i];
-    if (diff.type === DIFF_DELETE && i + 1 < diffs.length && diffs[i + 1].type === DIFF_INSERT) {
+    const diff = diffs[i]
+    if (
+      diff.type === DIFF_DELETE &&
+      i + 1 < diffs.length &&
+      diffs[i + 1].type === DIFF_INSERT
+    ) {
       // Retain the original text from the deletion segment.
-      newDiffs.push({ type: DIFF_EQUAL, text: diff.text });
-      i += 2;
+      newDiffs.push({ type: DIFF_EQUAL, text: diff.text })
+      i += 2
     } else if (diff.type === DIFF_INSERT) {
       // Drop any unpaired insertions.
-      i++;
+      i++
     } else if (diff.type === DIFF_DELETE) {
-      newDiffs.push({ type: DIFF_EQUAL, text: diff.text });
-      i++;
+      newDiffs.push({ type: DIFF_EQUAL, text: diff.text })
+      i++
     } else {
-      newDiffs.push(diff);
-      i++;
+      newDiffs.push(diff)
+      i++
     }
   }
-  return newDiffs;
+  return newDiffs
 }
 
 export {
-    generateRandomColor,
-    convertBlankToSeconds,
-    convertTimestampToSeconds,
-    updatePlayedPercentage,
-    scrollEditorToPos,
-    convertSecondsToTimestamp,
-    downloadMP3,
-    handleTextFilesUpload,
-    uploadTextFile,
-    uploadFile,
-    handleFilesUpload,
-    regenDocx,
-    reportHandler,
-    fetchFileDetails,
-    handleSave,
-    handleSubmit,
-    getFrequentTermsHandler,
-    adjustTimestamps,
-    playCurrentParagraphTimestamp,
-    navigateAndPlayBlanks,
-    searchAndSelect,
-    replaceTextHandler,
-    insertTimestampBlankAtCursorPosition,
-    insertTimestampAndSpeaker,
-    autoCapitalizeSentences,
-    getFormattedContent,
-    parseTranscript,
-    findOptimalChunkPoints,
-    chunkTranscript,
-    timestampToSeconds,
-    parseTranscriptLine,
-    secondsToTimestamp,
-    offsetTranscript,
-    formatTimestamps,
-    acceptAllDiffs,
-    rejectAllDiffs,
+  generateRandomColor,
+  convertBlankToSeconds,
+  convertTimestampToSeconds,
+  updatePlayedPercentage,
+  scrollEditorToPos,
+  convertSecondsToTimestamp,
+  downloadMP3,
+  handleTextFilesUpload,
+  uploadTextFile,
+  uploadFile,
+  handleFilesUpload,
+  regenDocx,
+  reportHandler,
+  fetchFileDetails,
+  handleSave,
+  handleSubmit,
+  getFrequentTermsHandler,
+  adjustTimestamps,
+  playCurrentParagraphTimestamp,
+  navigateAndPlayBlanks,
+  searchAndSelect,
+  replaceTextHandler,
+  insertTimestampBlankAtCursorPosition,
+  insertTimestampAndSpeaker,
+  autoCapitalizeSentences,
+  getFormattedContent,
+  parseTranscript,
+  findOptimalChunkPoints,
+  chunkTranscript,
+  timestampToSeconds,
+  parseTranscriptLine,
+  secondsToTimestamp,
+  offsetTranscript,
+  formatTimestamps,
+  acceptAllDiffs,
+  rejectAllDiffs,
 }
 export type { CTMType }
