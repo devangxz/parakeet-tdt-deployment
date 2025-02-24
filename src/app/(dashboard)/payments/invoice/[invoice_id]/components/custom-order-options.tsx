@@ -2,7 +2,7 @@
 
 import { CalendarIcon } from '@radix-ui/react-icons'
 import { format } from 'date-fns'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, InfoIcon } from 'lucide-react'
 import * as React from 'react'
 
 import JsonEditor from '@/components/json-editor'
@@ -37,6 +37,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import {
+  Tooltip,
+  TooltipProvider,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 interface Template {
@@ -115,7 +121,19 @@ export function CustomOrderOptions({
       <CollapsibleContent className='mt-5 ml-5'>
         <div className='flex items-center justify-between gap-5'>
           <div className='w-[229px]'>
-            <Label>Select template</Label>
+            <div className='flex items-center gap-1'>
+              <Label>Select template</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <InfoIcon className='h-4 w-4 text-muted-foreground' />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    For other templates, please contact support.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <Select
               defaultValue={templateId}
               onValueChange={handleTranscriptTemplateChange}
