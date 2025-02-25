@@ -597,14 +597,7 @@ const handleSave = async (
 
     // Save notes and other data
     const tokenRes = await fileCacheTokenAction()
-    console.log({
-      fileId: orderDetails.fileId,
-      transcript,
-      cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
-      orderId: orderDetails.orderId,
-      isGeminiReviewed,
-      Authorization: `Bearer ${tokenRes.token}`
-    },)
+    
     await axios.post(
       `${FILE_CACHE_URL}/save-transcript`,
       {
