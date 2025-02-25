@@ -219,14 +219,15 @@ export default memo(function ReviewTranscriptDialog({
     });
     
     // Ensure the final transcript ends with a newline to prevent clipping.
-    const safeTranscript = newTranscript.endsWith('\n')
+    const saveTranscript = newTranscript.endsWith('\n')
       ? newTranscript
       : newTranscript + '\n';
 
-    updateQuill(quillRef, safeTranscript);
+    updateQuill(quillRef, saveTranscript);
+    console.log('saveTranscript', saveTranscript)
     await handleSave(
       {
-        getEditorText: () => safeTranscript,
+        getEditorText: () => saveTranscript,
         orderDetails,
         notes: '',
         cfd: '',
