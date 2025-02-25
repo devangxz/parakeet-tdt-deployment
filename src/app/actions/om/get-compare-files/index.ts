@@ -14,6 +14,7 @@ export async function getCompareFiles(
   try {
     const fileVersionMap = {
       asr: FileTag.AUTO,
+      gemini: FileTag.GEMINI,
       qc: FileTag.QC_DELIVERED,
       'customer-delivered': FileTag.CUSTOMER_DELIVERED,
       'customer-edit': FileTag.CUSTOMER_EDIT,

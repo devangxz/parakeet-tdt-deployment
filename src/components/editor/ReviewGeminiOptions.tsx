@@ -3,9 +3,12 @@
 import { InfoIcon } from "lucide-react";
 import React from "react";
 
+import { Button } from "../ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { Slider } from "../ui/slider";
 import { Textarea } from "../ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { GeminiModel } from "@/utils/editorUtils";
 
 export interface GeminiPromptOption {
   id: number;
@@ -22,6 +25,8 @@ interface GeminiOptionsProps {
   temperature: number;
   setTemperature: React.Dispatch<React.SetStateAction<number>>;
   disabled?: boolean;
+  model: GeminiModel;
+  setModel: React.Dispatch<React.SetStateAction<GeminiModel>>
 }
 
 export function ReviewGeminiOptions({
@@ -33,8 +38,9 @@ export function ReviewGeminiOptions({
   temperature,
   setTemperature,
   disabled,
+  model,
+  setModel
 }: GeminiOptionsProps) {
-
   function togglePrompt(option: string) {
     setSelectedPrompts((prev) =>
       prev.includes(option)
@@ -87,6 +93,18 @@ export function ReviewGeminiOptions({
           className="w-1/3"
         />
         <span className="text-sm">{temperature}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <p className="text-sm font-medium">Model: </p>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">{model}</Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={() => setModel(GeminiModel.GEMINI_1_5_FLASH)}>Gemini 1.5 Flash</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setModel(GeminiModel.GEMINI_2_0_FLASH)}>Gemini 2.0 Flash</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <div>
         <div className="flex items-center gap-2">
