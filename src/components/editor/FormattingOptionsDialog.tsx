@@ -79,7 +79,6 @@ const FormattingOptionsDialog = ({
     setIsLoading(true)
     try {
       const response = await getFormattingOptionsAction(orderId)
-      console.log('response', response)
       const { options, templates, currentTemplate } = response
       const newFormattingOptions = {
         timeCoding: options.ts === 1,
@@ -117,6 +116,9 @@ const FormattingOptionsDialog = ({
         JSON.parse(existingOptions),
         +currentTemplate
       )
+
+      setInitialFormattingOptions({...formattingOptions})
+      setInitialTemplate(currentTemplate)
 
       const response = await getFileTxtSignedUrl(fileId)
       if (!response.signedUrl) {
