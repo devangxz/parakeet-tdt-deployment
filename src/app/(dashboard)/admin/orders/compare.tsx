@@ -122,6 +122,9 @@ export default function ComparePage() {
                   {reviewDiff !== 'asr' && (
                     <SelectItem value='asr'>ASR</SelectItem>
                   )}
+                  {reviewDiff !== 'gemini' && (
+                    <SelectItem value='gemini'>GEMINI</SelectItem>
+                  )}
                   {reviewDiff !== 'qc' && (
                     <SelectItem value='qc'>QC Delivered</SelectItem>
                   )}
