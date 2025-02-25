@@ -224,7 +224,6 @@ export default memo(function ReviewTranscriptDialog({
       : newTranscript + '\n';
 
     updateQuill(quillRef, saveTranscript);
-    console.log('saveTranscript', saveTranscript)
     await handleSave(
       {
         getEditorText: () => saveTranscript,

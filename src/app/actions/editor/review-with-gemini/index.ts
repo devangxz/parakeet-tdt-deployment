@@ -96,7 +96,7 @@ export async function geminiRequestAction(
       logger.error('Audio processing failed: ', fileKey)
       throw new Error('Audio processing failed.')
     }
-    console.log(user?.email)
+
     const portkey = new portkeyAI({
       apiKey: process.env.PORTKEY_API_KEY!,
       virtualKey: process.env.PORTKEY_PROD_GOOGLE_VIRTUAL_KEY,
@@ -106,11 +106,10 @@ export async function geminiRequestAction(
         chunkIndex + 1
       } of ${totalChunks}. Your task as a transcriber is to carefully review the transcript and correct any misheard words, misspellings, or any other inconsistencies while ensuring that the transcript is as accurate as possible. Perform the task following the below instructions:
 
-Use the last segment only to ensure the continuity of the speaker in the transcript.
 Strictly format the timestamps in format h:mm:ss.ms.(Example: 0:11:02.4 instead of 0:11:2.4)
 Provide the response in plain text not in markdown format.
 Remove styling like bold, italic, underline, etc.
-Add meta tags to the transcript to indicate laughter and chuckles. Use square brackets to mark these instances, i.e., [laughter] or [chuckles], immediately after the relevant speech. (Example: 1:23:20.34 S2: You are right. [laughter].) 
+Add meta tags to the transcript to indicate laughter and chuckles. Use square brackets to mark these instances, i.e., [laughter] or [chuckles], immediately after the relevant speech. (Example: 1:23:20.34 S2: [laughter] You are right. .) 
 Speakers should be marked with lable S1, S2, S3, etc. according to the order of their appearance in the transcript.
 Every paragraph should be in the format of timestamp Speaker: Paragraph following by a double line break. (Example: 0:11:02.4 S1: I am speaking against the motion.)
 ${clientPrompt}
