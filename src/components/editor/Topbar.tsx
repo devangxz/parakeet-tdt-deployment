@@ -1325,7 +1325,7 @@ export default memo(function Topbar({
           orderDetails={orderDetails}
           setButtonLoading={setButtonLoading}
           buttonLoading={buttonLoading}
-          transcript={transcript}
+          transcript={quillRef?.current ? quillRef.current.getEditor().getText() : transcript}
           ctms={ctms}
           updateQuill={updateTranscript}
         />
