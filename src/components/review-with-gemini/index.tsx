@@ -34,6 +34,7 @@ import {
   rejectAllDiffs,
   GeminiModel,
 } from "@/utils/editorUtils";
+import { persistEditorDataIDB } from "@/utils/indexedDB";
 import { DIFF_EQUAL } from "@/utils/transcript/diff_match_patch";
 
 interface ReviewWithGeminiDialogProps {
@@ -200,6 +201,12 @@ export default memo(function ReviewTranscriptDialog({
   }, [diffs]);
 
   const handleSaveButton = async () => {
+    const saveTranscript = newTranscript.endsWith('\n')
+      ? newTranscript
+      : newTranscript + '\n';
+
+    updateQuill(quillRef, saveTranscript);
+    await persistEditorDataIDB(fileId, { transcript: saveTranscript })
     const duration = processingStartedAt && processingEndedAt 
       ? (processingEndedAt.getTime() - processingStartedAt.getTime()) / 1000
       : 0;
@@ -219,11 +226,6 @@ export default memo(function ReviewTranscriptDialog({
     });
     
     // Ensure the final transcript ends with a newline to prevent clipping.
-    const saveTranscript = newTranscript.endsWith('\n')
-      ? newTranscript
-      : newTranscript + '\n';
-
-    updateQuill(quillRef, saveTranscript);
     await handleSave(
       {
         getEditorText: () => saveTranscript,
