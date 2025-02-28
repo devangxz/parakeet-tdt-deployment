@@ -103,7 +103,9 @@ export const processPayment = async (
         },
       })
       let body = ''
+      let total = 0
       fileInfo.forEach((file, index) => {
+        total += file.price
         body += '<tr>'
         body += `<td style='text-align:center;border:1px solid #cccccc;padding:5px' align='center' border='1' cellpadding='5'>${
           index + 1
@@ -117,6 +119,12 @@ export const processPayment = async (
         )}</td>`
         body += '</tr>'
       })
+      body += '<tr>'
+      body += `<td colspan="3" style='text-align:right;border:1px solid #cccccc;padding:5px' align='right' border='1' cellpadding='5'><strong>Total</strong></td>`
+      body += `<td style='text-align:center;border:1px solid #cccccc;padding:5px' align='center' border='1' cellpadding='5'><strong>$${total.toFixed(
+        2
+      )}</strong></td>`
+      body += '</tr>'
 
       const templateData = {
         file_url: `https://${process.env.SERVER}/files/permalink/${invoice.itemNumber}`,
