@@ -26,8 +26,8 @@ import qualityCriteriaPassed from '@/utils/qualityCriteriaPassed'
 
 type OrderWithFileData =
   | (Order & {
-    File: File | null
-  })
+      File: File | null
+    })
   | null
 
 async function completeQCJob(order: Order, transcriberId: number) {
@@ -232,7 +232,12 @@ export async function submitQCFile(
           data: { status: OrderStatus.SUBMITTED_FOR_APPROVAL },
         })
         await prisma.jobAssignment.updateMany({
-          where: { orderId: order.id, transcriberId: transcriberId, type: JobType.QC },
+          where: {
+            orderId: order.id,
+            transcriberId: transcriberId,
+            type: JobType.QC,
+            status: JobStatus.ACCEPTED,
+          },
           data: { status: JobStatus.SUBMITTED_FOR_APPROVAL },
         })
       }
