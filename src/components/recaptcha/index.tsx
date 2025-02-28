@@ -3,7 +3,7 @@
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
 import ReCAPTCHA from 'react-google-recaptcha'
-// import { toast } from 'sonner'
+import { toast } from 'sonner'
 
 import { verifyRecaptcha } from '@/app/actions/recaptcha'
 
@@ -33,15 +33,12 @@ function Recaptcha({ setCaptcha }: { setCaptcha: (value: boolean) => void }) {
       if (response.success) {
         setCaptcha(true)
       } else {
-        setCaptcha(true)
-        // setCaptcha(false)
-        // toast.error('CAPTCHA verification failed. Please try again.')
+        setCaptcha(false)
+        toast.error('CAPTCHA verification failed. Please try again.')
       }
     } catch (err) {
-      //disable captcha for now
-      setCaptcha(true)
-      // toast.error('Error verifying CAPTCHA. Please try again.')
-      // setCaptcha(false)
+      toast.error('Error verifying CAPTCHA. Please try again.')
+      setCaptcha(false)
     }
   }
 
