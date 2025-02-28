@@ -40,7 +40,7 @@ export async function verifyRecaptcha(token: string) {
     }
 
     const data = await response.json()
-    logger.info(`--> verifyRecaptcha data ${data}`)
+    logger.info(`--> verifyRecaptcha data ${JSON.stringify(data)}`)
     if (!data.success) {
       return {
         success: false,
