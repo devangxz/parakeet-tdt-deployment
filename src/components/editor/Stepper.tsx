@@ -35,7 +35,7 @@ const StepIcon: React.FC<{
       className={cn(
         'relative z-10 flex h-8 w-8 items-center justify-center rounded-full transition-colors duration-200',
         {
-          'bg-primary text-secondary': active || completed,
+          'bg-primary text-white': active || completed,
           'bg-muted text-muted-foreground': !active && !completed,
         }
       )}

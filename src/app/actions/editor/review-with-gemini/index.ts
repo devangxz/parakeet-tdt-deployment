@@ -6,7 +6,6 @@ import path from 'path'
 
 import { GoogleAIFileManager, FileState } from '@google/generative-ai/server'
 import axios from 'axios'
-import { getSession } from 'next-auth/react'
 import portkeyAI from 'portkey-ai'
 
 import config from '../../../../../config.json'
@@ -51,12 +50,10 @@ export async function geminiRequestAction(
   fileKey: string,
   chunkIndex: number,
   totalChunks: number,
-  temperature: number,
+  temperature: number, 
   model: GeminiModel,
   clientPrompt?: string
-) {
-  const session = await getSession()
-  const user = session?.user
+ ) {
   let mediaOutputPath: string = ''
   const TEMP_DIR: string = path.join(__dirname, '../../temp')
   try {
@@ -148,7 +145,6 @@ ${clientPrompt}
           ],
           model: model,
           temperature: temperature,
-          user: user?.email,
         })
 
         // Extract the transcript text from the response

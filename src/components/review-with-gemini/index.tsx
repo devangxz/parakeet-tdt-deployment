@@ -124,10 +124,9 @@ export default memo(function ReviewTranscriptDialog({
         if (!chunkKey) {
           throw new Error('Failed to create all chunks for processing.');
         }
-        const lastSegment = i > 0 ? transcriptChunks[i-1] : '';
+        
         setProgressMessage(`Reviewing transcript part: ${i + 1} of ${chunkPoints.length - 1}`);
         const geminiResult = await geminiRequestAction(
-          lastSegment,
           transcriptChunks[i],
           chunkKey,
           i,
