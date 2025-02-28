@@ -11,19 +11,19 @@ interface DemoRequestData {
 
 export async function sendDemoRequestEmail(formData: DemoRequestData) {
   try {
-    const params: string[] = []
-    Object.keys(formData).forEach((key) => {
-      params.push(`${key}: ${formData[key]}`)
-    })
+    const innerHtml = Object.entries(formData)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('<br/>')
 
     const emailData = {
       userEmailId: 'support@scribie.com',
     }
 
     const templateData = {
-      innerHtml: `${params.join('<br/>')}`,
-      Name: formData.Name,
+      innerHtml,
     }
+
+    console.log('templateData', templateData)
 
     const ses = getAWSSesInstance()
     await ses.sendMail('DEMO_REQUEST', emailData, templateData)
@@ -32,8 +32,8 @@ export async function sendDemoRequestEmail(formData: DemoRequestData) {
       success: true,
       message: templateData.innerHtml,
     }
-  } catch (err) {
-    logger.error('Error sending demo request email', err)
+  } catch (error) {
+    logger.error('Error sending demo request email', error)
     return {
       success: false,
       message: 'Error sending demo request email',

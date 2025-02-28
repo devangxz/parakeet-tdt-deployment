@@ -32,7 +32,9 @@ import {
   formatTimestamps,
   acceptAllDiffs,
   rejectAllDiffs,
+  GeminiModel,
 } from "@/utils/editorUtils";
+import { persistEditorDataIDB } from "@/utils/indexedDB";
 import { DIFF_EQUAL } from "@/utils/transcript/diff_match_patch";
 
 interface ReviewWithGeminiDialogProps {
@@ -73,7 +75,7 @@ export default memo(function ReviewTranscriptDialog({
   // Store processing start/end times
   const [processingStartedAt, setProcessingStartedAt] = useState<Date | null>(null);
   const [processingEndedAt, setProcessingEndedAt] = useState<Date | null>(null);
-  
+  const [model, setModel] = useState<GeminiModel>(GeminiModel.GEMINI_1_5_FLASH);
   const { fileId } = orderDetails;
 
   // Map the step string to its corresponding index
@@ -122,15 +124,15 @@ export default memo(function ReviewTranscriptDialog({
         if (!chunkKey) {
           throw new Error('Failed to create all chunks for processing.');
         }
-        const lastSegment = i > 0 ? transcriptChunks[i-1] : '';
+        
         setProgressMessage(`Reviewing transcript part: ${i + 1} of ${chunkPoints.length - 1}`);
         const geminiResult = await geminiRequestAction(
-          lastSegment,
           transcriptChunks[i],
           chunkKey,
           i,
           chunkPoints.length - 1,
           temperature,
+          model,
           userPrompt
         );
         geminiTranscript += geminiResult + "\n";
@@ -198,6 +200,12 @@ export default memo(function ReviewTranscriptDialog({
   }, [diffs]);
 
   const handleSaveButton = async () => {
+    const saveTranscript = newTranscript.endsWith('\n')
+      ? newTranscript
+      : newTranscript + '\n';
+
+    updateQuill(quillRef, saveTranscript);
+    await persistEditorDataIDB(fileId, { transcript: saveTranscript })
     const duration = processingStartedAt && processingEndedAt 
       ? (processingEndedAt.getTime() - processingStartedAt.getTime()) / 1000
       : 0;
@@ -217,20 +225,16 @@ export default memo(function ReviewTranscriptDialog({
     });
     
     // Ensure the final transcript ends with a newline to prevent clipping.
-    const safeTranscript = newTranscript.endsWith('\n')
-      ? newTranscript
-      : newTranscript + '\n';
-
-    updateQuill(quillRef, safeTranscript);
     await handleSave(
       {
-        getEditorText: () => safeTranscript,
+        getEditorText: () => saveTranscript,
         orderDetails,
         notes: '',
         cfd: '',
         setButtonLoading: () => {},
         listenCount: [],
         editedSegments: new Set(),
+        isGeminiReviewed: true
       },
       true
     );
@@ -302,6 +306,8 @@ export default memo(function ReviewTranscriptDialog({
               temperature={temperature}
               setTemperature={setTemperature}
               disabled={loading}
+              model={model}
+              setModel={setModel}
             />
           ) : (
             <div className="flex space-x-2 justify-center items-center h-[60vh]">

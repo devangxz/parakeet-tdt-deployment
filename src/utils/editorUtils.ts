@@ -533,6 +533,7 @@ type HandleSaveParams = {
   setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
   listenCount: number[]
   editedSegments: Set<number>
+  isGeminiReviewed?: boolean
 }
 
 const handleSave = async (
@@ -544,6 +545,7 @@ const handleSave = async (
     setButtonLoading,
     listenCount,
     editedSegments,
+    isGeminiReviewed = false
   }: HandleSaveParams,
   showToast = true
 ) => {
@@ -595,6 +597,7 @@ const handleSave = async (
 
     // Save notes and other data
     const tokenRes = await fileCacheTokenAction()
+    
     await axios.post(
       `${FILE_CACHE_URL}/save-transcript`,
       {
@@ -602,6 +605,7 @@ const handleSave = async (
         transcript,
         cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
         orderId: orderDetails.orderId,
+        isGeminiReviewed,
       },
       {
         headers: {
@@ -1564,6 +1568,11 @@ function rejectAllDiffs(diffs: DiffSegment[]): DiffSegment[] {
     }
   }
   return newDiffs
+}
+
+export enum GeminiModel {
+  GEMINI_1_5_FLASH = 'gemini-1.5-flash',
+  GEMINI_2_0_FLASH = 'gemini-2.0-flash',
 }
 
 export {

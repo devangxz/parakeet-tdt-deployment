@@ -312,7 +312,7 @@ export default function PreDeliveryPage() {
               <p>
                 Formatting cost: <br /> $
                 {row.original.fileCost.customFormatCost}
-                /ah ($
+                ($
                 {row.original.fileCost.customFormatRate}/ah + $
                 {row.original.rateBonus}/ah)
               </p>
@@ -322,14 +322,14 @@ export default function PreDeliveryPage() {
               <p>
                 Transcription cost: <br /> $
                 {row.original.fileCost.transcriptionCost}
-                /ah ($
+                ($
                 {row.original.fileCost.transcriptionRate}/ah + $
                 {row.original.rateBonus}/ah)
               </p>
               {row.original.orderType === 'TRANSCRIPTION_FORMATTING' && (
                 <p className='mt-1'>
                   Review cost: <br /> ${row.original.fileCost.customFormatCost}
-                  /ah ($
+                  ($
                   {row.original.fileCost.customFormatRate}/ah + $
                   {row.original.rateBonus}/ah)
                 </p>

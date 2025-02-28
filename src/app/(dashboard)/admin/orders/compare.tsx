@@ -90,6 +90,9 @@ export default function ComparePage() {
                   {verificationDiff !== 'asr' && (
                     <SelectItem value='asr'>ASR</SelectItem>
                   )}
+                  {verificationDiff !== 'gemini' && (
+                    <SelectItem value='gemini'>GEMINI</SelectItem>
+                  )}
                   {verificationDiff !== 'qc' && (
                     <SelectItem value='qc'>QC Delivered</SelectItem>
                   )}
@@ -118,6 +121,9 @@ export default function ComparePage() {
                 <SelectContent>
                   {reviewDiff !== 'asr' && (
                     <SelectItem value='asr'>ASR</SelectItem>
+                  )}
+                  {reviewDiff !== 'gemini' && (
+                    <SelectItem value='gemini'>GEMINI</SelectItem>
                   )}
                   {reviewDiff !== 'qc' && (
                     <SelectItem value='qc'>QC Delivered</SelectItem>
