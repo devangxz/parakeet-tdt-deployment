@@ -29,7 +29,7 @@ export async function getDownloadUrl({ fileId }: GetDownloadUrlParams) {
     const command = new GetObjectCommand({
       Bucket: process.env.AWS_S3_BUCKET_NAME,
       Key: `${fileId}.mp3`,
-      ResponseContentDisposition: `attachment; filename=${encodedFilename}`,
+      ResponseContentDisposition: `attachment; filename=${encodedFilename}.mp3`,
     })
 
     const signedUrl = await getSignedUrl(s3Client, command, {

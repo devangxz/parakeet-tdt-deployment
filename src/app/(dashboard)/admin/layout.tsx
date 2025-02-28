@@ -7,6 +7,8 @@ import {
   PackageMinus,
   CreditCard,
   Wrench,
+  CircleDollarSign,
+  // Building2,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import React from 'react'
@@ -70,6 +72,18 @@ export default function FilesLayout({
       icon: Wrench,
       isActive: false,
     },
+    {
+      href: '/admin/revenue-dashboard',
+      name: 'Revenue Dashboard',
+      icon: CircleDollarSign,
+      isActive: false,
+    },
+    // {
+    //   href: '/admin/org-dashboard',
+    //   name: 'Org Dashboard',
+    //   icon: Building2,
+    //   isActive: false,
+    // },
   ]
 
   const displayedSidebarItems =
