@@ -127,7 +127,10 @@ export async function checkout(payload: CheckoutPayload) {
         invoice: invoiceData,
       }
     } else {
-      logger.error(`Payment failed for invoice ${invoiceId}`, result)
+      logger.error(
+        `Payment failed for invoice ${invoice.itemNumber} ${invoiceId}`,
+        result
+      )
       return { success: false, message: result.message }
     }
   } catch (error) {
