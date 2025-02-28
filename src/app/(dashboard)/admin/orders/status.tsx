@@ -232,7 +232,7 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
                                   <p className='mt-1'>
                                     Formatting cost: <br /> $
                                     {orderInformation.fileCost.customFormatCost}
-                                    /ah ($
+                                    ($
                                     {orderInformation.fileCost.customFormatRate}
                                     /ah + ${orderInformation.rateBonus}/ah)
                                   </p>
@@ -241,7 +241,7 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
                                 <>
                                   <p>
                                     Transcription cost: <br /> $
-                                    {value.transcriptionCost}/ah ($
+                                    {value.transcriptionCost} ($
                                     {value.transcriptionRate}/ah + $
                                     {orderInformation.rateBonus}/ah)
                                   </p>
@@ -253,7 +253,7 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
                                         orderInformation.fileCost
                                           .customFormatCost
                                       }
-                                      /ah ($
+                                      ($
                                       {
                                         orderInformation.fileCost
                                           .customFormatRate
