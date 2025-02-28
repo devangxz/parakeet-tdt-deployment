@@ -8,7 +8,7 @@ import ReCAPTCHA from 'react-google-recaptcha'
 import { verifyRecaptcha } from '@/app/actions/recaptcha'
 
 function Recaptcha({ setCaptcha }: { setCaptcha: (value: boolean) => void }) {
-  const reCaptch_sitekey = '6Lf53DwqAAAAACd_p9uw1si7V7r3qDjRgU3Celao'
+  const reCaptch_sitekey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
   const { theme, systemTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [key, setKey] = useState(0)
