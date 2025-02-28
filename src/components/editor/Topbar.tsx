@@ -28,6 +28,7 @@ import EditorHeatmapDialog from './EditorHeatmapDialog'
 import EditorSettingsDialog from './EditorSettingsDialog'
 // import FrequentTermsDialog from './FrequentTermsDialog'
 import FormattingOptionsDialog from './FormattingOptionsDialog'
+import ProcessWithLLM from './ProcessWithLLM'
 import ReportDialog from './ReportDialog'
 import ShortcutsReferenceDialog from './ShortcutsReferenceDialog'
 import UploadDocxDialog from './UploadDocxDialog'
@@ -196,6 +197,7 @@ export default memo(function Topbar({
     reportComment: '',
   })
   const [reviewModalOpen, setReviewModalOpen] = useState(false)
+  const [processWithLLMModelOpen, setProcessWithLLMModelOpen] = useState(false)
   const [buttonLoading, setButtonLoading] = useState({
     download: false,
     upload: false,
@@ -1317,6 +1319,7 @@ export default memo(function Topbar({
           setButtonLoading={setButtonLoading}
         />
       )}
+      {/* review with gemini */}
       {reviewModalOpen && (
         <ReviewTranscriptDialog
           quillRef={quillRef}
@@ -1327,6 +1330,17 @@ export default memo(function Topbar({
           buttonLoading={buttonLoading}
           transcript={quillRef?.current ? quillRef.current.getEditor().getText() : transcript}
           ctms={ctms}
+          updateQuill={updateTranscript}
+        />
+      )}
+      {/* process with llm */}
+      {processWithLLMModelOpen && (
+        <ProcessWithLLM
+          transcript={quillRef?.current ? quillRef.current.getEditor().getText() : transcript}
+          processWithLLMModalOpen={processWithLLMModelOpen}
+          setprocessWithLLMModalOpen={setProcessWithLLMModelOpen}
+          quillRef={quillRef}
+          orderDetails={orderDetails}
           updateQuill={updateTranscript}
         />
       )}
