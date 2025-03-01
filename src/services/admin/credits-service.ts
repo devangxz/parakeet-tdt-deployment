@@ -1,7 +1,10 @@
 import { Role, InvoiceType, InvoiceStatus } from '@prisma/client'
+import { getServerSession } from 'next-auth'
 
+import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { getAWSSesInstance } from '@/lib/ses'
 import {
   generateInvoiceId,
   generateUniqueTransactionId,
@@ -18,6 +21,9 @@ export async function addFreeCredits({
   userEmail,
 }: AddFreeCreditsParams) {
   const amountToAdd = parseFloat(amount as string)
+
+  const session = await getServerSession(authOptions)
+  const userDetails = session?.user
 
   if (!isValidEmail(userEmail)) {
     logger.error(`Invalid email: ${userEmail}`)
@@ -43,28 +49,6 @@ export async function addFreeCredits({
     return { success: false, s: 'Invalid amountToAdd' }
   }
 
-  const result = await prisma.invoice.aggregate({
-    where: {
-      userId: user.id,
-      type: 'FREE_CREDITS',
-    },
-    _sum: {
-      amount: true,
-    },
-  })
-
-  const freeCreditsGiven = result._sum.amount || 0
-
-  if (freeCreditsGiven > 0) {
-    logger.error(
-      `Free credits has already been added for this customer: ${userEmail} ${freeCreditsGiven}`
-    )
-    return {
-      success: false,
-      s: 'Free credits has already been added for this customer',
-    }
-  }
-
   try {
     const invoiceId = generateInvoiceId('CGFC')
     const transactionId = generateUniqueTransactionId()
@@ -80,8 +64,15 @@ export async function addFreeCredits({
       },
     })
 
+    const awsSes = getAWSSesInstance()
+    await awsSes.sendAlert(
+      `Free Credits Added`,
+      `${userDetails?.email} has added $${amountToAdd} free credits to ${userEmail}`,
+      'software'
+    )
+
     logger.info(
-      `free credits added successfully for user ${user.email}, by ${user?.user}`
+      `free credits added successfully for user ${user.email}, by ${userDetails?.email}`
     )
     return {
       success: true,

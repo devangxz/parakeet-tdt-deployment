@@ -1,4 +1,5 @@
 'use server'
+import logger from '@/lib/logger'
 
 export async function verifyRecaptcha(token: string) {
   try {
@@ -9,6 +10,8 @@ export async function verifyRecaptcha(token: string) {
       }
     }
 
+    logger.info(`--> verifyRecaptcha ${token}`)
+
     const secret = process.env.RECAPTCHA_SECRET_KEY
     if (!secret) {
       return {
@@ -17,6 +20,8 @@ export async function verifyRecaptcha(token: string) {
       }
     }
 
+    logger.info(`--> verifyRecaptcha ${secret}`)
+
     const response = await fetch(
       `https://www.google.com/recaptcha/api/siteverify?secret=${secret}&response=${token}`,
       {
@@ -24,7 +29,10 @@ export async function verifyRecaptcha(token: string) {
       }
     )
 
+    logger.info(`--> verifyRecaptcha ${response}`)
+
     if (!response.ok) {
+      logger.error(`--> verifyRecaptcha ${response}`)
       return {
         success: false,
         error: 'Failed to verify reCAPTCHA',
@@ -32,6 +40,7 @@ export async function verifyRecaptcha(token: string) {
     }
 
     const data = await response.json()
+    logger.info(`--> verifyRecaptcha data ${JSON.stringify(data)}`)
     if (!data.success) {
       return {
         success: false,
@@ -45,6 +54,7 @@ export async function verifyRecaptcha(token: string) {
       response: data,
     }
   } catch (error) {
+    logger.error(`--> verifyRecaptcha error ${error}`)
     return {
       success: false,
       error: 'Internal server error',
