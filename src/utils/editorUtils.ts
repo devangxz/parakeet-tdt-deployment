@@ -607,7 +607,7 @@ const handleSave = async (
         cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
         orderId: orderDetails.orderId,
         isGeminiReviewed,
-        currentAlignments,
+        currentAlignments: currentAlignments || [],
       },
       {
         headers: {

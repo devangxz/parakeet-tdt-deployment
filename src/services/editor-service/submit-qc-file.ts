@@ -108,7 +108,7 @@ export async function submitQCFile(
   orderId: number,
   transcriberId: number,
   transcript: string,
-  currentAlignments: CTMType[]
+  currentAlignments?: CTMType[]
 ) {
   try {
     const assignment = await prisma.jobAssignment.findFirst({
@@ -148,7 +148,7 @@ export async function submitQCFile(
         fileId: order.fileId,
         transcript: transcript,
         userId: transcriberId,
-        currentAlignments,
+        currentAlignments: currentAlignments || [],
       },
       {
         headers: {
@@ -168,7 +168,7 @@ export async function submitQCFile(
         fileId: order.fileId,
         transcript: customerTranscript,
         userId: order.userId,
-        currentAlignments,
+        currentAlignments: currentAlignments || [],
       },
       {
         headers: {

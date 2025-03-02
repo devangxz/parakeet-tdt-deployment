@@ -50,7 +50,7 @@ export async function submitReviewAction(
         fileId: order.fileId,
         transcript: transcript,
         userId: transcriberId,
-        currentAlignments,
+        currentAlignments: currentAlignments || [],
       },
       {
         headers: {
