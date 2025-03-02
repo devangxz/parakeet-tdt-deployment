@@ -371,7 +371,7 @@ export default function OrdersPage() {
               <p>
                 Formatting cost: <br /> $
                 {row.original.fileCost.customFormatCost}
-                /ah ($
+                ($
                 {row.original.fileCost.customFormatRate}/ah + $
                 {row.original.rateBonus}/ah)
               </p>
@@ -382,14 +382,14 @@ export default function OrdersPage() {
               <p>
                 Transcription cost: <br /> $
                 {row.original.fileCost.transcriptionCost}
-                /ah ($
+                ($
                 {row.original.fileCost.transcriptionRate}/ah + $
                 {row.original.rateBonus}/ah)
               </p>
               {row.original.type === 'TRANSCRIPTION_FORMATTING' && (
                 <p className='mt-1'>
                   Review cost: <br /> ${row.original.fileCost.customFormatCost}
-                  /ah ($
+                  ($
                   {row.original.fileCost.customFormatRate}/ah + $
                   {row.original.rateBonus}/ah)
                 </p>

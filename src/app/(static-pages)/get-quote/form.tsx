@@ -2,7 +2,14 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { Mail, User, Phone, Timer, MessageSquare, FileSpreadsheet } from 'lucide-react'
+import {
+  Mail,
+  User,
+  Phone,
+  Timer,
+  MessageSquare,
+  FileSpreadsheet,
+} from 'lucide-react'
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -52,7 +59,7 @@ const GetQuote = () => {
         UserEmail: values.userEmail,
         Phone: values.phone,
         Duration: Number(values.duration),
-        message: values.additionalInfo,
+        message: values?.additionalInfo ?? '',
         options: [
           ...(values.strictVerbatim ? [{ 'Strict Verbatim': true }] : []),
           ...(values.accentedSpeakers ? [{ 'Accented Speakers': true }] : []),

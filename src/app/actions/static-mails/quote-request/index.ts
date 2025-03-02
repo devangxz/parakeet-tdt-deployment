@@ -1,33 +1,52 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use server'
 
 import logger from '@/lib/logger'
 import { getAWSSesInstance } from '@/lib/ses'
 
 interface QuoteRequestData {
-  UserEmail: string
   Name: string
-  options: any
+  UserEmail: string
+  Phone: string
+  Duration: number
+  message: string
+  options: Array<
+    Partial<
+      Record<
+        | 'Strict Verbatim'
+        | 'Accented Speakers'
+        | 'Noisy Audio'
+        | 'Srt Vtt'
+        | 'Custom Formatting'
+        | 'Recurring Orders',
+        boolean
+      >
+    >
+  >
 }
 
 export async function sendQuoteRequestEmail(formData: QuoteRequestData) {
   try {
-    const params: string[] = []
-    formData.options.forEach((option: any) => {
-      for (const [key, value] of Object.entries(option)) {
-        if (value === true) {
-          params.push(`${key}: ${value ? '1' : '0'}`)
-        }
-      }
+    const optionParams: string[] = []
+    formData.options.forEach((option) => {
+      Object.entries(option).forEach(([key, value]) => {
+        optionParams.push(`${key}: ${value ? '1' : '0'}`)
+      })
     })
 
     const emailData = {
       userEmailId: 'support@scribie.com',
     }
 
+    const innerHtml =
+      `Name: ${formData.Name}<br/>` +
+      `Email: ${formData.UserEmail}<br/>` +
+      `Phone: ${formData.Phone}<br/>` +
+      `Duration: ${formData.Duration}<br/>` +
+      `Message: ${formData.message}<br/>` +
+      `Options:<br/>${optionParams.join('<br/>')}`
+
     const templateData = {
-      innerHtml: `${params.join('<br/>')}`,
-      Name: formData.Name,
+      innerHtml,
     }
 
     const ses = getAWSSesInstance()

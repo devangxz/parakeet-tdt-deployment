@@ -88,7 +88,7 @@ export async function submitReviewAction(
       message: 'Review submitted',
     }
   } catch (error) {
-    logger.error('Error in submitReviewAction:', error)
+    logger.error(`Error in submitReviewAction: ${fileId} ${orderId} ${error}`)
     return {
       success: false,
       error: 'Internal Server Error',

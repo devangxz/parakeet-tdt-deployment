@@ -1023,6 +1023,7 @@ enum FileTag {
   CF_CUSTOMER_DELIVERED
   LLM
   CF_OM_DELIVERED
+  GEMINI
 }
 
 enum SharedFilePermission {

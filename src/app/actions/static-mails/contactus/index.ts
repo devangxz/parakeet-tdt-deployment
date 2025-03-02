@@ -6,23 +6,36 @@ import { getAWSSesInstance } from '@/lib/ses'
 interface ContactFormData {
   Email: string
   Name: string
-  [key: string]: string
+  Subject?: string
+  QueryType?: string
+  Phone?: string
+  Message?: string
+  [key: string]: string | undefined
 }
 
 export async function sendContactEmail(formData: ContactFormData) {
   try {
-    const params: string[] = []
-    Object.keys(formData).forEach((key) => {
-      params.push(`${key}: ${formData[key]}`)
-    })
+    console.log('formData', formData)
+
+    const orderedFields = [
+      'Name',
+      'Email',
+      'Subject',
+      'QueryType',
+      'Phone',
+      'Message',
+    ]
+    const innerHtml = orderedFields
+      .filter((field) => formData[field] !== undefined)
+      .map((field) => `${field}: ${formData[field]}`)
+      .join('<br/>')
 
     const emailData = {
       userEmailId: 'support@scribie.com',
     }
 
     const templateData = {
-      innerHtml: `${params.join('<br/>')}`,
-      Name: formData.Name,
+      innerHtml,
     }
 
     const ses = getAWSSesInstance()
