@@ -24,6 +24,7 @@ import { toast } from 'sonner'
 
 import ConfigureShortcutsDialog from './ConfigureShortcutsDialog'
 import DownloadDocxDialog from './DownloadDocxDialog'
+import { EditorHandle } from './Editor'
 import EditorHeatmapDialog from './EditorHeatmapDialog'
 import EditorSettingsDialog from './EditorSettingsDialog'
 // import FrequentTermsDialog from './FrequentTermsDialog'
@@ -125,6 +126,7 @@ interface TopbarProps {
   onAutoCapitalizeChange: (value: boolean) => void
   transcript: string
   ctms: CTMType[]
+  editorRef?: React.Ref<EditorHandle>
 }
 
 export default memo(function Topbar({
@@ -151,6 +153,7 @@ export default memo(function Topbar({
   onAutoCapitalizeChange,
   transcript,
   ctms,
+  editorRef,
 }: TopbarProps) {
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
@@ -897,6 +900,11 @@ export default memo(function Topbar({
               <DropdownMenuContent align='end' className='w-30'>
                 <DropdownMenuItem
                   onClick={() => {
+                    let currentAlignments: CTMType[] = []
+                    if (editorRef && typeof editorRef !== 'function' && editorRef.current) {
+                      editorRef.current.triggerAlignmentUpdate()
+                      currentAlignments = editorRef.current.getAlignments()
+                    }            
                     autoCapitalizeSentences(quillRef, autoCapitalize)
                     handleSave({
                       getEditorText,
@@ -906,6 +914,7 @@ export default memo(function Topbar({
                       setButtonLoading,
                       listenCount,
                       editedSegments,
+                      currentAlignments,
                     })
                   }}
                 >

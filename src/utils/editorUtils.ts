@@ -534,6 +534,7 @@ type HandleSaveParams = {
   listenCount: number[]
   editedSegments: Set<number>
   isGeminiReviewed?: boolean
+  currentAlignments: CTMType[]
 }
 
 const handleSave = async (
@@ -545,7 +546,8 @@ const handleSave = async (
     setButtonLoading,
     listenCount,
     editedSegments,
-    isGeminiReviewed = false
+    isGeminiReviewed = false,
+    currentAlignments,
   }: HandleSaveParams,
   showToast = true
 ) => {
@@ -597,7 +599,6 @@ const handleSave = async (
 
     // Save notes and other data
     const tokenRes = await fileCacheTokenAction()
-    
     await axios.post(
       `${FILE_CACHE_URL}/save-transcript`,
       {
@@ -606,6 +607,7 @@ const handleSave = async (
         cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
         orderId: orderDetails.orderId,
         isGeminiReviewed,
+        currentAlignments: currentAlignments || [],
       },
       {
         headers: {
@@ -704,6 +706,7 @@ type HandleSubmitParams = {
   }
   quill: Quill
   finalizerComment: string
+  currentAlignments: CTMType[]
 }
 
 const checkTranscriptForAllowedMeta = (quill: Quill) => {
@@ -744,6 +747,7 @@ const handleSubmit = async ({
   router,
   quill,
   finalizerComment,
+  currentAlignments,
 }: HandleSubmitParams) => {
   if (!orderDetails || !orderDetails.orderId || !step) return
   const toastId = toast.loading(`Submitting Transcription...`)
@@ -768,13 +772,15 @@ const handleSubmit = async ({
         Number(orderDetails.orderId),
         orderDetails.fileId,
         transcript,
-        finalizerComment
+        finalizerComment,
+        currentAlignments,
       )
     } else {
       await submitQCAction({
         fileId: orderDetails.fileId,
         orderId: Number(orderDetails.orderId),
         transcript,
+        currentAlignments,
       })
     }
 
