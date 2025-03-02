@@ -1,6 +1,6 @@
 'use server'
 
-import { OrderStatus } from '@prisma/client'
+import { OrderStatus, OrderType } from '@prisma/client'
 import axios from 'axios'
 import { getServerSession } from 'next-auth'
 
@@ -11,8 +11,13 @@ import prisma from '@/lib/prisma'
 import { submitFinalize } from '@/services/editor-service/submit-finalize-file'
 import submitReview from '@/services/editor-service/submit-review-file'
 
-export async function submitReviewAction(orderId: number, fileId: string, transcript: string, finalizerComment: string) {
-  logger.info('--> submitFinalize')
+export async function submitReviewAction(
+  orderId: number,
+  fileId: string,
+  transcript: string,
+  finalizerComment: string
+) {
+  logger.info('--> submitReviewAction')
 
   try {
     const session = await getServerSession(authOptions)
@@ -21,7 +26,7 @@ export async function submitReviewAction(orderId: number, fileId: string, transc
     if (!fileId) {
       return {
         success: false,
-        error: 'File ID and transcript are required',
+        error: 'File ID is required',
       }
     }
 
@@ -38,19 +43,21 @@ export async function submitReviewAction(orderId: number, fileId: string, transc
       }
     }
 
-    await axios.post(
-      `${FILE_CACHE_URL}/save-transcript`,
-      {
-        fileId: order.fileId,
-        transcript: transcript,
-        userId: transcriberId,
-      },
-      {
-        headers: {
-          'x-api-key': process.env.SCRIBIE_API_KEY,
+    if (order.orderType !== OrderType.FORMATTING && transcript) {
+      await axios.post(
+        `${FILE_CACHE_URL}/save-transcript`,
+        {
+          fileId: order.fileId,
+          transcript: transcript,
+          userId: transcriberId,
         },
-      }
-    )
+        {
+          headers: {
+            'x-api-key': process.env.SCRIBIE_API_KEY,
+          },
+        }
+      )
+    }
 
     if (order.status === OrderStatus.REVIEWER_ASSIGNED) {
       const { success, message } = await submitReview(transcriberId, order)
@@ -62,7 +69,11 @@ export async function submitReviewAction(orderId: number, fileId: string, transc
         }
       }
     } else {
-      const { success, message } = await submitFinalize(transcriberId, order, finalizerComment)
+      const { success, message } = await submitFinalize(
+        transcriberId,
+        order,
+        finalizerComment
+      )
       if (!success) {
         return {
           success: false,
@@ -71,13 +82,13 @@ export async function submitReviewAction(orderId: number, fileId: string, transc
       }
     }
 
-    logger.info('<-- submitFinalize')
+    logger.info('<-- submitReviewAction')
     return {
       success: true,
       message: 'Review submitted',
     }
   } catch (error) {
-    logger.error('Error in submitFinalize:', error)
+    logger.error('Error in submitReviewAction:', error)
     return {
       success: false,
       error: 'Internal Server Error',

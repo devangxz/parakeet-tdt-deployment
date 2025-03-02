@@ -307,7 +307,7 @@ export default function AssignedFilesPage({ changeTab }: Props) {
       header: 'Actions',
       enableHiding: false,
       cell: ({ row }) => (
-        <div className='flex items-center gap-4'>
+        <div className='flex items-center'>
           <Button
             variant='order'
             className='w-[140px] format-button'

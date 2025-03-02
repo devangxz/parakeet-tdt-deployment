@@ -6,7 +6,11 @@ import Editor, { EditorHandle } from './Editor'
 import { TabsContent } from './Tabs'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { EditorSettings } from '@/types/editor'
-import { CTMType, CustomerQuillSelection, EditorData } from '@/utils/editorUtils'
+import {
+  CTMType,
+  CustomerQuillSelection,
+  EditorData,
+} from '@/utils/editorUtils'
 import { DmpDiff } from '@/utils/transcript/diff_match_patch'
 
 interface EditorTabComponentProps {
@@ -80,7 +84,11 @@ export const EditorTabComponent = ({
 )
 
 export const DiffTabComponent = ({ diff }: { diff: DmpDiff[] }) => (
-  <TabsContent forceMount className='data-[state=inactive]:hidden h-full mt-0 overflow-hidden pb-[41px]' value='diff'>
+  <TabsContent
+    forceMount
+    className='data-[state=inactive]:hidden h-full mt-0 overflow-hidden pb-[41px]'
+    value='diff'
+  >
     <div className='h-full overflow-y-auto py-[12px] px-[15px]'>
       <div className='h-full'>
         <Diff diffOutput={diff} />
@@ -94,10 +102,27 @@ export const InfoTabComponent = ({
 }: {
   orderDetails: OrderDetails
 }) => (
-  <TabsContent forceMount className='data-[state=inactive]:hidden h-full mt-0 overflow-hidden pb-[41px]' value='info'>
+  <TabsContent
+    forceMount
+    className='data-[state=inactive]:hidden h-full mt-0 overflow-hidden pb-[41px]'
+    value='info'
+  >
     <div className='h-full py-[12px] px-[15px]'>
-      <div className='h-full'>
-        {orderDetails.instructions || 'No customer instructions.'}
+      <div className='h-full flex flex-col gap-4'>
+        {orderDetails.orderType === 'FORMATTING' &&
+          orderDetails.customFormatOption && (
+            <div className='bg-background rounded-md p-4 shadow-sm border border-customBorder'>
+              Custom Format Option -
+              <span className='font-semibold'>
+                {' '}
+                {orderDetails.customFormatOption
+                  .replace(/([A-Z])/g, ' $1')
+                  .replace(/^./, (str: string) => str.toUpperCase())
+                  .trim()}
+              </span>
+            </div>
+          )}
+        <p>{orderDetails.instructions || 'No customer instructions.'}</p>
       </div>
     </div>
   </TabsContent>

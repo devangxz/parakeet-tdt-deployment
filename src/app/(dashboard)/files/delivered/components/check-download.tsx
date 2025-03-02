@@ -388,16 +388,32 @@ export function CheckAndDownload({
                     </h4>
 
                     <div className='space-y-4'>
-                      {customFormatFilesSignedUrls.map((file) => (
-                        <DownloadFile
-                          key={file.filename}
-                          name={file.filename}
-                          url={file.signedUrl}
-                          fileType={`.${file.extension}`}
-                          isUploading={isUploading}
-                          handleGDriveUpload={handleGDriveUpload}
-                        />
-                      ))}
+                      {customFormatFilesSignedUrls.map((file, index) => {
+                        const sameExtFiles = customFormatFilesSignedUrls.filter(
+                          (f) => f.extension === file.extension
+                        )
+
+                        let displayName = file.filename
+                        if (sameExtFiles.length > 1) {
+                          const fileIndex = sameExtFiles.findIndex(
+                            (f) =>
+                              f.filename === file.filename &&
+                              f.signedUrl === file.signedUrl
+                          )
+                          displayName = `${file.filename}(${fileIndex + 1})`
+                        }
+
+                        return (
+                          <DownloadFile
+                            key={`${file.filename}-${index}`}
+                            name={displayName}
+                            url={file.signedUrl}
+                            fileType={`.${file.extension}`}
+                            isUploading={isUploading}
+                            handleGDriveUpload={handleGDriveUpload}
+                          />
+                        )
+                      })}
                     </div>
                   </div>
                 </div>

@@ -818,11 +818,13 @@ export default memo(function Topbar({
             <>
               {editorMode === 'Manual' && (
                 <>
-                  <DownloadDocxDialog
-                    orderDetails={orderDetails}
-                    downloadableType={downloadableType}
-                    setDownloadableType={setDownloadableType}
-                  />
+                  {!(orderDetails.orderType === 'FORMATTING' && orderDetails.status === 'REVIEWER_ASSIGNED') && (
+                    <DownloadDocxDialog
+                      orderDetails={orderDetails}
+                      downloadableType={downloadableType}
+                      setDownloadableType={setDownloadableType}
+                    />
+                  )}
                   <UploadDocxDialog
                     orderDetails={orderDetails}
                     setButtonLoading={setButtonLoading}
@@ -860,7 +862,7 @@ export default memo(function Topbar({
           )}
 
           <div className='flex'>
-            {['CUSTOMER', 'OM', 'ADMIN'].includes(session?.user?.role ?? '') ? (
+            {['CUSTOMER'].includes(session?.user?.role ?? '') ? (
               <Button
                 disabled={isCheckAndDownloadLoading}
                 onClick={() => handleCheckAndDownload(orderDetails.fileId)}
