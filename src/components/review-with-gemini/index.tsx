@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useMemo, useState, memo } from "react";
 import ReactQuill from "react-quill";
 
 import { computeDiffs, DiffSegmentItem } from "../editor/DiffSegmentItem";
+import { EditorHandle } from "../editor/Editor";
 import { ReviewGeminiOptions } from "../editor/ReviewGeminiOptions";
 import { Stepper } from "../editor/Stepper";
 import { Button } from "../ui/button";
@@ -49,6 +50,7 @@ interface ReviewWithGeminiDialogProps {
   transcript: string;
   ctms: CTMType[];
   updateQuill: (quillRef: React.RefObject<ReactQuill> | undefined, content: string) => void;
+  editorRef?: React.Ref<EditorHandle>;
 }
 
 export default memo(function ReviewTranscriptDialog({
@@ -56,9 +58,10 @@ export default memo(function ReviewTranscriptDialog({
   reviewModalOpen,
   setReviewModalOpen,
   orderDetails,
-  transcript,
+  transcript, 
   ctms,
   updateQuill,
+  editorRef,
 }: ReviewWithGeminiDialogProps) {
   
   const [step, setStep] = useState<'options' | 'processing' | 'review' | 'preview'>('options');
@@ -225,6 +228,12 @@ export default memo(function ReviewTranscriptDialog({
     });
     
     // Ensure the final transcript ends with a newline to prevent clipping.
+    let currentAlignments: CTMType[] = [];
+    if (editorRef && typeof editorRef !== 'function' && editorRef.current) {
+      editorRef.current.triggerAlignmentUpdate();
+      currentAlignments = editorRef.current.getAlignments();
+    };          
+
     await handleSave(
       {
         getEditorText: () => saveTranscript,
@@ -234,7 +243,8 @@ export default memo(function ReviewTranscriptDialog({
         setButtonLoading: () => {},
         listenCount: [],
         editedSegments: new Set(),
-        isGeminiReviewed: true
+        isGeminiReviewed: true,
+        currentAlignments,
       },
       true
     );
