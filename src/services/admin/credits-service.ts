@@ -61,6 +61,7 @@ export async function addFreeCredits({
         amount: amountToAdd,
         status: InvoiceStatus.PAID,
         transactionId,
+        paidBy: userDetails?.userId ?? null,
       },
     })
 

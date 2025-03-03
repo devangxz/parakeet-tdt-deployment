@@ -66,6 +66,7 @@ export const RUSH_PRICE = config.rush_price
 export const AUDIO_TIMECODING_PRICE = config.audio_timecoding_price
 export const ADMIN_EMAILS = config.adminEmails
 export const REVENUE_DASHBOARD_EMAILS = config.revenueDashboardEmails
+export const ONLY_REVENUE_DASHBOARD_EMAILS = config.onlyRevenueDashboardEmails
 
 // Email
 export const EMAIL_IDS =

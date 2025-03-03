@@ -4,6 +4,7 @@ import { ColumnDef } from '@tanstack/react-table'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
+import { DataTableColumnHeader } from './components/column-header'
 import { DataTable } from './components/data-table'
 import { getListenCountAndEditedSegmentAction } from '@/app/actions/admin/get-listen-count-and-edited-segment'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
@@ -163,6 +164,26 @@ export default function ApprovalPage() {
             customerWatch: order.watchList.customer,
           }
         })
+        // Sort orders so that overdue files from yesterday are placed on top
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const yesterday = new Date(today)
+        yesterday.setDate(today.getDate() - 1)
+
+        orders.sort((a, b) => {
+          const aDelivery = new Date(a.deliveryTs)
+          aDelivery.setHours(0, 0, 0, 0)
+          const bDelivery = new Date(b.deliveryTs)
+          bDelivery.setHours(0, 0, 0, 0)
+
+          const aOverdue = aDelivery.getTime() === yesterday.getTime()
+          const bOverdue = bDelivery.getTime() === yesterday.getTime()
+
+          if (aOverdue && !bOverdue) return -1
+          if (!aOverdue && bOverdue) return 1
+          return a.index - b.index
+        })
+
         setApprovalFiles(orders ?? [])
         setError(null)
       } else {
@@ -361,6 +382,12 @@ export default function ApprovalPage() {
           {formatDateTime(row.getValue('deliveryTs'))}
         </div>
       ),
+      filterFn: (row, id, value: [string, string]) => {
+        if (!value || !value[0] || !value[1]) return true
+        const cellDate = new Date(row.getValue(id))
+        const [start, end] = value.map((str) => new Date(str))
+        return cellDate >= start && cellDate <= end
+      },
     },
     {
       accessorKey: 'transcriberWatch',
@@ -371,6 +398,13 @@ export default function ApprovalPage() {
       accessorKey: 'customerWatch',
       header: 'Customer Watch',
       enableHiding: true,
+    },
+    {
+      accessorKey: 'type',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Order Type' />
+      ),
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
       id: 'actions',

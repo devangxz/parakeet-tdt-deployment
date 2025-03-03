@@ -29,7 +29,10 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useToast } from '@/components/ui/use-toast'
-import { REVENUE_DASHBOARD_EMAILS } from '@/constants'
+import {
+  REVENUE_DASHBOARD_EMAILS,
+  ONLY_REVENUE_DASHBOARD_EMAILS,
+} from '@/constants'
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('en-US', {
@@ -61,6 +64,9 @@ export default function RevenueDashboard() {
   }>({ startDate: null, endDate: null })
   const [revenueModalOpen, setRevenueModalOpen] = useState(false)
   const [creditsModalOpen, setCreditsModalOpen] = useState(false)
+  const isOnlyRevenueDashboardEmail = ONLY_REVENUE_DASHBOARD_EMAILS.includes(
+    session?.user?.email ?? ''
+  )
 
   async function loadRevenueData(from: Date, to: Date, timeFrame: TimeFrame) {
     setIsLoading(true)
@@ -258,17 +264,27 @@ export default function RevenueDashboard() {
                       </TableCell>
                       <TableCell>{metric.dayOfWeek}</TableCell>
                       <TableCell>
-                        <button
-                          onClick={() => handleRevenueClick(metric.date, true)}
-                          className='text-primary hover:underline'
-                        >
-                          {formatCurrency(metric.revenue)}
-                        </button>
+                        {isOnlyRevenueDashboardEmail ? (
+                          <span>{formatCurrency(metric.revenue)}</span>
+                        ) : (
+                          <button
+                            onClick={() =>
+                              handleRevenueClick(metric.date, true)
+                            }
+                            className='text-primary hover:underline'
+                          >
+                            {formatCurrency(metric.revenue)}
+                          </button>
+                        )}
                       </TableCell>
                       <TableCell>{metric.orderCount}</TableCell>
                       <TableCell>{metric.newCustomers}</TableCell>
                       <TableCell>
-                        <TableCell>
+                        {isOnlyRevenueDashboardEmail ? (
+                          <span>
+                            {formatCurrency(metric.totalCreditsAdded)}
+                          </span>
+                        ) : (
                           <button
                             onClick={() =>
                               handleRevenueClick(metric.date, false)
@@ -277,7 +293,7 @@ export default function RevenueDashboard() {
                           >
                             {formatCurrency(metric.totalCreditsAdded)}
                           </button>
-                        </TableCell>
+                        )}
                       </TableCell>
                       <TableCell>{metric.hours.qc.toFixed(2)}</TableCell>
                       <TableCell>
