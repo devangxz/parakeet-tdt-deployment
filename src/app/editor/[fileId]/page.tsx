@@ -337,11 +337,9 @@ function EditorPage() {
         }
       },
       saveChanges: async () => {
-        let currentAlignments: CTMType[] = []
         if (editorRef.current) {
           editorRef.current.clearAllHighlights()
           editorRef.current.triggerAlignmentUpdate()
-          currentAlignments = editorRef.current.getAlignments()
         }
         autoCapitalizeSentences(quillRef, autoCapitalize)
         await handleSave({
@@ -352,7 +350,6 @@ function EditorPage() {
           setButtonLoading,
           listenCount,
           editedSegments,
-          currentAlignments,
         })
         updateFormattedTranscript()
       },
@@ -470,11 +467,6 @@ function EditorPage() {
 
   useEffect(() => {
     const interval = setInterval(async () => {
-      let currentAlignments: CTMType[] = []
-      if (editorRef.current) {
-        editorRef.current.triggerAlignmentUpdate()
-        currentAlignments = editorRef.current.getAlignments()
-      }
       await handleSave(
         {
           getEditorText,
@@ -484,7 +476,6 @@ function EditorPage() {
           setButtonLoading,
           listenCount,
           editedSegments,
-          currentAlignments,
         },
         false
       )
@@ -687,7 +678,6 @@ function EditorPage() {
         onAutoCapitalizeChange={setAutoCapitalize}
         transcript={initialEditorData?.transcript || ""}
         ctms={ctms}
-        editorRef={editorRef}
       />
 
       <Header
@@ -988,14 +978,6 @@ function EditorPage() {
                   onClick={() => {
                     if (!quillRef?.current) return
                     const quill = quillRef.current.getEditor()
-
-                    let currentAlignments: CTMType[] = []
-                    if (editorRef.current) {
-                      editorRef.current.clearAllHighlights()
-                      editorRef.current.triggerAlignmentUpdate()
-                      currentAlignments = editorRef.current.getAlignments()
-                    }          
-
                     handleSubmit({
                       orderDetails,
                       step,
@@ -1006,7 +988,6 @@ function EditorPage() {
                       router,
                       quill,
                       finalizerComment,
-                      currentAlignments,
                     })
                     setSubmitting(false)
                     setIsSubmitModalOpen(false)

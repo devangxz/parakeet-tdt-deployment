@@ -5,20 +5,17 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import { submitQCFile } from '@/services/editor-service/submit-qc-file'
-import { CTMType } from '@/types/editor'
 
 interface SubmitQCParams {
   orderId: number
   fileId: string
   transcript: string
-  currentAlignments: CTMType[]
 }
 
 export async function submitQCAction({
   orderId,
   fileId,
   transcript,
-  currentAlignments,
 }: SubmitQCParams) {
   try {
     const session = await getServerSession(authOptions)
@@ -32,7 +29,7 @@ export async function submitQCAction({
       throw new Error('File ID is required')
     }
 
-    await submitQCFile(orderId, transcriberId, transcript, currentAlignments)
+    await submitQCFile(orderId, transcriberId, transcript)
     logger.info(`QC submitted for file ${fileId} by ${transcriberId}`)
 
     return { success: true }
