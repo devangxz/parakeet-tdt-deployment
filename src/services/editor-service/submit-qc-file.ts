@@ -18,7 +18,6 @@ import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
-import { CTMType } from '@/types/editor'
 import { getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 import getCustomerTranscript from '@/utils/getCustomerTranscript'
@@ -107,8 +106,7 @@ async function completeQCJob(order: Order, transcriberId: number) {
 export async function submitQCFile(
   orderId: number,
   transcriberId: number,
-  transcript: string,
-  currentAlignments?: CTMType[]
+  transcript: string
 ) {
   try {
     const assignment = await prisma.jobAssignment.findFirst({
@@ -148,7 +146,6 @@ export async function submitQCFile(
         fileId: order.fileId,
         transcript: transcript,
         userId: transcriberId,
-        currentAlignments: currentAlignments || [],
       },
       {
         headers: {
@@ -168,7 +165,6 @@ export async function submitQCFile(
         fileId: order.fileId,
         transcript: customerTranscript,
         userId: order.userId,
-        currentAlignments: currentAlignments || [],
       },
       {
         headers: {
