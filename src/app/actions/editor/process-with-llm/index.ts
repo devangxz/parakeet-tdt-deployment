@@ -72,7 +72,6 @@ async function makeLLMCall(
   }
   catch(error){
     logger.error(`Error while making a call to LLM ${error}`);
-    console.log(error)
     throw error;
   }
 }
@@ -116,7 +115,6 @@ export const saveProcessWithLLMStats = async (stats: ProcessWithLLMStats) => {
   }
   catch(error){
     logger.error(`Error while saving process with LLM stats ${error}`);
-    console.log(error)
     throw error;
   }
 }
