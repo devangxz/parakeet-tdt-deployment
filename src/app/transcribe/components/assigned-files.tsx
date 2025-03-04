@@ -352,7 +352,7 @@ export default function AssignedFilesPage({ changeTab }: Props) {
                 row.original.jobType === 'REVIEW'
               ) {
                 toast.error(
-                  'LLM formatting is currently processing this file. Please wait for a while before starting the file.'
+                  'Currently processing this file. Please wait for a while before starting the file.'
                 )
               } else {
                 window.open(`/editor/${row.original.fileId}`, '_blank')
