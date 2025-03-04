@@ -1,11 +1,12 @@
 "use client";
 
 import { ReloadIcon } from "@radix-ui/react-icons";
-import React, { useCallback, useEffect, useMemo, useState, memo } from "react";
+import React, { useCallback, useEffect, useState, memo } from "react";
 import ReactQuill from "react-quill";
 
-import { computeDiffs, DiffSegmentItem } from "../editor/DiffSegmentItem";
+import { computeDiffs } from "../editor/DiffSegmentItem";
 import { ReviewGeminiOptions } from "../editor/ReviewGeminiOptions";
+import { ReviewSectionHelper } from "../editor/ReviewSection";
 import { Stepper } from "../editor/Stepper";
 import { Button } from "../ui/button";
 import {
@@ -34,7 +35,6 @@ import {
   rejectAllDiffs,
   GeminiModel,
 } from "@/utils/editorUtils";
-import { persistEditorDataIDB } from "@/utils/indexedDB";
 import { DIFF_EQUAL } from "@/utils/transcript/diff_match_patch";
 
 interface ReviewWithGeminiDialogProps {
@@ -205,7 +205,9 @@ export default memo(function ReviewTranscriptDialog({
       : newTranscript + '\n';
 
     updateQuill(quillRef, saveTranscript);
-    await persistEditorDataIDB(fileId, { transcript: saveTranscript })
+    
+    await new Promise((resolve) => setTimeout(() => resolve(null), 1000)) // sleeping for 1 second to ensure the quill is updated
+
     const duration = processingStartedAt && processingEndedAt 
       ? (processingEndedAt.getTime() - processingStartedAt.getTime()) / 1000
       : 0;
@@ -258,22 +260,6 @@ export default memo(function ReviewTranscriptDialog({
     }
   }, [reviewModalOpen, transcript]);
 
-  const renderedDiffs = useMemo(
-    () =>
-      diffs
-        .map((diff, index) => (
-          <DiffSegmentItem
-            key={index}
-            index={index}
-            diff={diff}
-            onAccept={handleAccept}
-            onReject={handleReject}
-          />
-        ))
-        .filter((element) => element !== null),
-    [diffs, handleAccept, handleReject]
-  );
-
   return (
     <Dialog open={reviewModalOpen} onOpenChange={setReviewModalOpen}>
       <DialogContent className="w-96 sm:w-full lg:max-w-4xl xl:max-w-6xl">
@@ -323,22 +309,16 @@ export default memo(function ReviewTranscriptDialog({
           </div>
         )}
         {step === 'review' && (
-          <>
-            {isError ? (
-              <div className="flex justify-center items-center h-[60vh]">
-                <span>{errorMessage}</span>
-              </div>
-            ) : loading ? (
-              <div className="flex flex-col space-y-4 justify-center items-center h-[60vh] ">
-                <Progress value={progressValue} className="w-1/3 sm:w-1/2 animate-pulse" color="primary" />
-                <span>{progressMessage}</span>
-              </div>
-            ) : (
-              <div className="p-2 px-4 overflow-y-auto h-[60vh] whitespace-pre-wrap">
-                {renderedDiffs}
-              </div>
-            )}
-          </>
+          <ReviewSectionHelper
+            isError={isError}
+            errorMessage={errorMessage}
+            loading={loading}
+            progressValue={progressValue}
+            progressMessage={progressMessage}
+            diffs={diffs}
+            onAccept={handleAccept}
+            onReject={handleReject}
+          />
         )}
         {step === 'preview' && (
           <div className="p-2 px-4 overflow-y-auto h-[60vh] whitespace-pre-wrap">
