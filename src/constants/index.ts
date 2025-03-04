@@ -108,13 +108,13 @@ export const GEMINI_PROMPT_OPTIONS = [
     id: 3,
     title: 'Separate Repeated Words with Hyphens',
     label:
-      'Mark word repetitions with hyphens (Example: "under these -- under these" instead of "under these, under these")',
+      'Add hyphens between repeated words (Example: "under these -- under these" instead of "under these, under these")',
   },
   {
     id: 4,
     title: 'Format Spelled-out Words with Hyphens',
     label:
-      'Use hyphens for spelled words (Example: "W-I-L-S-O-N" instead of "W, I, L, S, O, N")',
+      'Use hyphens for spelled words instead of commas or full stops (Example: "W-I-L-S-O-N" instead of "W, I, L, S, O, N")',
   },
   {
     id: 5,
@@ -144,6 +144,6 @@ export const GEMINI_PROMPT_OPTIONS = [
     id: 9,
     title: 'Strict verbatim',
     label:
-      'Should capture every single utterance, noise and word spoken on an audio file. (Example: "We uh-uh were going to do that")',
+      'Should capture every single utterance, noise and word spoken like ah, umm, like, you know, uh etc. on an audio file. (Example: "We uh-uh were going to do that"). Do not add hyphen for time breaks.',
   },
 ]

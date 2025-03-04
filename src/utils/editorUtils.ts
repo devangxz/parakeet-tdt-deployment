@@ -534,6 +534,7 @@ type HandleSaveParams = {
   listenCount: number[]
   editedSegments: Set<number>
   isGeminiReviewed?: boolean
+  isCF?: boolean
 }
 
 const handleSave = async (
@@ -545,7 +546,8 @@ const handleSave = async (
     setButtonLoading,
     listenCount,
     editedSegments,
-    isGeminiReviewed = false
+    isGeminiReviewed = false,
+    isCF = false
   }: HandleSaveParams,
   showToast = true
 ) => {
@@ -564,8 +566,8 @@ const handleSave = async (
       }
       return
     }
-
     const transcript = fileData.transcript as string
+
     const paragraphs = transcript
       .split('\n')
       .filter((paragraph: string) => paragraph.trim() !== '')
@@ -597,16 +599,22 @@ const handleSave = async (
 
     // Save notes and other data
     const tokenRes = await fileCacheTokenAction()
-    
+    const body: {[key:string]: string | number | boolean} = {
+      fileId: orderDetails.fileId,
+      transcript,
+      cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
+      orderId: orderDetails.orderId,
+      isGeminiReviewed,
+      isCF
+    }
+    if(isCF) {
+      body.transcript = getEditorText()
+      body.userId = Number(orderDetails.userId)
+    }
+
     await axios.post(
       `${FILE_CACHE_URL}/save-transcript`,
-      {
-        fileId: orderDetails.fileId,
-        transcript,
-        cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
-        orderId: orderDetails.orderId,
-        isGeminiReviewed,
-      },
+      body,
       {
         headers: {
           Authorization: `Bearer ${tokenRes.token}`,
@@ -1281,7 +1289,7 @@ const scrollEditorToPos = (quill: Quill, pos: number) => {
   }
 }
 
-function getFormattedContent(text: string): Op[] {
+function  getFormattedContent(text: string): Op[] {
   const formattedContent: Op[] = []
   let lastIndex = 0
 

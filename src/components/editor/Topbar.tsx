@@ -28,7 +28,7 @@ import EditorHeatmapDialog from './EditorHeatmapDialog'
 import EditorSettingsDialog from './EditorSettingsDialog'
 // import FrequentTermsDialog from './FrequentTermsDialog'
 import FormattingOptionsDialog from './FormattingOptionsDialog'
-import ProcessWithLLM from './ProcessWithLLM'
+import ProcessWithLLMDialog from './ProcessWithLLM'
 import ReportDialog from './ReportDialog'
 import ShortcutsReferenceDialog from './ShortcutsReferenceDialog'
 import UploadDocxDialog from './UploadDocxDialog'
@@ -197,7 +197,7 @@ export default memo(function Topbar({
     reportComment: '',
   })
   const [reviewModalOpen, setReviewModalOpen] = useState(false)
-  const [processWithLLMModelOpen, setProcessWithLLMModelOpen] = useState(false)
+  const [processWithLLMModalOpen, setProcessWithLLMModalOpen] = useState(false)
   const [buttonLoading, setButtonLoading] = useState({
     download: false,
     upload: false,
@@ -970,6 +970,9 @@ export default memo(function Topbar({
                 <DropdownMenuItem onClick={() => setReviewModalOpen(true)}>
                   Review with Gemini
                 </DropdownMenuItem>
+                {step == 'CF' &&<DropdownMenuItem onClick={() => setProcessWithLLMModalOpen(true)}>
+                  Process with LLM
+                </DropdownMenuItem>}
                 <DropdownMenuItem onClick={toggleAutoCapitalize}>
                   {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
                 </DropdownMenuItem>
@@ -1334,11 +1337,11 @@ export default memo(function Topbar({
         />
       )}
       {/* process with llm */}
-      {processWithLLMModelOpen && (
-        <ProcessWithLLM
+      { processWithLLMModalOpen && (
+        <ProcessWithLLMDialog
           transcript={quillRef?.current ? quillRef.current.getEditor().getText() : transcript}
-          processWithLLMModalOpen={processWithLLMModelOpen}
-          setprocessWithLLMModalOpen={setProcessWithLLMModelOpen}
+          processWithLLMModalOpen={processWithLLMModalOpen}
+          setprocessWithLLMModalOpen={setProcessWithLLMModalOpen}
           quillRef={quillRef}
           orderDetails={orderDetails}
           updateQuill={updateTranscript}
