@@ -253,6 +253,9 @@ export default memo(function Topbar({
       }
     }
 
+    if(orderDetails.fileId != '' && !orderDetails.LLMDone) {
+      setProcessWithLLMModalOpen(true)
+    }
     setStep(currentStep)
   }, [orderDetails])
 
@@ -971,7 +974,7 @@ export default memo(function Topbar({
                   Review with Gemini
                 </DropdownMenuItem>
                 {step == 'CF' &&<DropdownMenuItem onClick={() => setProcessWithLLMModalOpen(true)}>
-                  Process with LLM
+                  Marking with LLM
                 </DropdownMenuItem>}
                 <DropdownMenuItem onClick={toggleAutoCapitalize}>
                   {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize

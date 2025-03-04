@@ -1,7 +1,7 @@
 "use client"
 import { ReloadIcon } from "@radix-ui/react-icons";
 import { InfoIcon } from "lucide-react";
-import { useCallback, useEffect, useState, memo } from "react";
+import { useCallback, useEffect, useState, memo, useMemo } from "react";
 import ReactQuill from "react-quill";
 
 import { computeDiffs } from "./DiffSegmentItem";
@@ -49,12 +49,12 @@ export default memo(function ProcessWithLLMDialog (
   const [markedTranscript, setMarkedTranscript] = useState('');
   const [instructions, setInstructions] = useState('');
   const [llmTimeTaken, setLLMTimeTaken] = useState(0);
-  const stepToIndex: Record<typeof currentStage, number> = {
+  const stepToIndex = useMemo(() => ({
     Instructions: 0,
     Processing: 1,
     Review: 2,
     Preview: 3
-  }
+  }), []);
 
   const activeStepIndex = stepToIndex[currentStage];
 
@@ -90,7 +90,7 @@ export default memo(function ProcessWithLLMDialog (
     finally{
       setIsLoading(false);
     }
-  },[transcript, orderDetails.fileId])
+  },[transcript, orderDetails.fileId, instructions])
 
   const handleAccept = useCallback((index:number) => {
     setDiffs((prevDiff) => {
@@ -125,7 +125,7 @@ export default memo(function ProcessWithLLMDialog (
     setCurrentStage('Preview');
   }, [diffs]);
 
-  const handleSaveButton = async() => {
+  const handleSaveButton = useCallback(async() => {
     updateQuill(quillRef, markedTranscript);
     setprocessWithLLMModalOpen(false);
     await new Promise((resolve) => setTimeout(() => resolve(null), 1000)) // sleeping for 1 second to ensure the quill is updated
@@ -150,7 +150,7 @@ export default memo(function ProcessWithLLMDialog (
       },
       true
     )
-  }
+  }, [markedTranscript, orderDetails, instructions, llmTimeTaken])
 
   useEffect(() => {
     if(processWithLLMModalOpen) {
@@ -206,7 +206,7 @@ export default memo(function ProcessWithLLMDialog (
                   </TooltipProvider>
                 </div>
                 <Textarea 
-                  className="w-full max-h-[40vh] overflow-y-auto" 
+                  className="w-full min-h-[40vh] overflow-y-auto resize-none" 
                   value={userPrompt}
                   readOnly
                 />
