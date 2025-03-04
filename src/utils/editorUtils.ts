@@ -535,6 +535,7 @@ type HandleSaveParams = {
   editedSegments: Set<number>
   isGeminiReviewed?: boolean
   isCF?: boolean
+  currentAlignments: CTMType[]
 }
 
 const handleSave = async (
@@ -547,7 +548,8 @@ const handleSave = async (
     listenCount,
     editedSegments,
     isGeminiReviewed = false,
-    isCF = false
+    isCF = false,
+    currentAlignments,
   }: HandleSaveParams,
   showToast = true
 ) => {
@@ -599,13 +601,14 @@ const handleSave = async (
 
     // Save notes and other data
     const tokenRes = await fileCacheTokenAction()
-    const body: {[key:string]: string | number | boolean} = {
+    const body: {[key:string]: string | number | boolean | CTMType[]} = {
       fileId: orderDetails.fileId,
       transcript,
       cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
       orderId: orderDetails.orderId,
       isGeminiReviewed,
-      isCF
+      isCF,
+      currentAlignments: currentAlignments || [],
     }
     if(isCF) {
       body.transcript = getEditorText()
@@ -712,6 +715,7 @@ type HandleSubmitParams = {
   }
   quill: Quill
   finalizerComment: string
+  currentAlignments: CTMType[]
 }
 
 const checkTranscriptForAllowedMeta = (quill: Quill) => {
@@ -752,6 +756,7 @@ const handleSubmit = async ({
   router,
   quill,
   finalizerComment,
+  currentAlignments,
 }: HandleSubmitParams) => {
   if (!orderDetails || !orderDetails.orderId || !step) return
   const toastId = toast.loading(`Submitting Transcription...`)
@@ -776,13 +781,15 @@ const handleSubmit = async ({
         Number(orderDetails.orderId),
         orderDetails.fileId,
         transcript,
-        finalizerComment
+        finalizerComment,
+        currentAlignments,
       )
     } else {
       await submitQCAction({
         fileId: orderDetails.fileId,
         orderId: Number(orderDetails.orderId),
         transcript,
+        currentAlignments,
       })
     }
 
