@@ -146,7 +146,8 @@ export default memo(function ProcessWithLLMDialog (
         listenCount: [],
         editedSegments: new Set(),
         getEditorText: () => markedTranscript,
-        isCF: true
+        isCF: true,
+        currentAlignments: [],
       },
       true
     )
