@@ -4,8 +4,7 @@ import { ReloadIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState, memo } from "react";
 import ReactQuill from "react-quill";
 
-import { computeDiffs } from "../editor/DiffSegmentItem";
-import { EditorHandle } from "../editor/Editor";
+import { computeDiffs, DiffSegmentItem } from "../editor/DiffSegmentItem";
 import { ReviewGeminiOptions } from "../editor/ReviewGeminiOptions";
 import { ReviewSectionHelper } from "../editor/ReviewSection";
 import { Stepper } from "../editor/Stepper";
@@ -50,7 +49,6 @@ interface ReviewWithGeminiDialogProps {
   transcript: string;
   ctms: CTMType[];
   updateQuill: (quillRef: React.RefObject<ReactQuill> | undefined, content: string) => void;
-  editorRef?: React.Ref<EditorHandle>;
 }
 
 export default memo(function ReviewTranscriptDialog({
@@ -58,10 +56,9 @@ export default memo(function ReviewTranscriptDialog({
   reviewModalOpen,
   setReviewModalOpen,
   orderDetails,
-  transcript, 
+  transcript,
   ctms,
   updateQuill,
-  editorRef,
 }: ReviewWithGeminiDialogProps) {
   
   const [step, setStep] = useState<'options' | 'processing' | 'review' | 'preview'>('options');
@@ -230,12 +227,6 @@ export default memo(function ReviewTranscriptDialog({
     });
     
     // Ensure the final transcript ends with a newline to prevent clipping.
-    let currentAlignments: CTMType[] = [];
-    if (editorRef && typeof editorRef !== 'function' && editorRef.current) {
-      editorRef.current.triggerAlignmentUpdate();
-      currentAlignments = editorRef.current.getAlignments();
-    };          
-
     await handleSave(
       {
         getEditorText: () => saveTranscript,
@@ -245,8 +236,7 @@ export default memo(function ReviewTranscriptDialog({
         setButtonLoading: () => {},
         listenCount: [],
         editedSegments: new Set(),
-        isGeminiReviewed: true,
-        currentAlignments,
+        isGeminiReviewed: true
       },
       true
     );

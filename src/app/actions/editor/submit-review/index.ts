@@ -10,13 +10,12 @@ import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { submitFinalize } from '@/services/editor-service/submit-finalize-file'
 import submitReview from '@/services/editor-service/submit-review-file'
-import { CTMType } from '@/types/editor'
+
 export async function submitReviewAction(
   orderId: number,
   fileId: string,
   transcript: string,
-  finalizerComment: string,
-  currentAlignments: CTMType[]
+  finalizerComment: string
 ) {
   logger.info('--> submitFinalize')
 
@@ -50,7 +49,6 @@ export async function submitReviewAction(
         fileId: order.fileId,
         transcript: transcript,
         userId: transcriberId,
-        currentAlignments: currentAlignments || [],
       },
       {
         headers: {

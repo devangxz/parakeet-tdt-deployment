@@ -67,7 +67,6 @@ export interface EditorHandle {
   triggerAlignmentUpdate: () => void
   clearAllHighlights: () => void
   scrollToCurrentWord: () => void
-  getAlignments: () => CTMType[]
 }
 
 // Wrap the component in forwardRef so the parent can call exposed methods
@@ -980,7 +979,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
         editorEl.scrollTo({ top: targetScrollTop, behavior: 'smooth' })
       }
     },
-    getAlignments: () => alignments,
   }))
 
   return (
