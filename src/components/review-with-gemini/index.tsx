@@ -4,7 +4,7 @@ import { ReloadIcon } from "@radix-ui/react-icons";
 import React, { useCallback, useEffect, useState, memo } from "react";
 import ReactQuill from "react-quill";
 
-import { computeDiffs, DiffSegmentItem } from "../editor/DiffSegmentItem";
+import { computeDiffs } from "../editor/DiffSegmentItem";
 import { ReviewGeminiOptions } from "../editor/ReviewGeminiOptions";
 import { ReviewSectionHelper } from "../editor/ReviewSection";
 import { Stepper } from "../editor/Stepper";
