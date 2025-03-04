@@ -42,7 +42,7 @@ export default memo(function ProcessWithLLMDialog (
   const [isLoading, setIsLoading] = useState(false)
   const [isError, setIsError] = useState(false)
   const [errorMessage, setErrorMessage] = useState('');
-  const [currentStage,setCurrentStage] = useState<'Instructions' | 'Processing' | 'Review' | 'Preview'>('Instructions');
+  const [currentStage,setCurrentStage] = useState<'Instructions' | 'Marking' | 'Review' | 'Preview'>('Instructions');
   const [progressValue, setProgressValue] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
   const [diffs, setDiffs] = useState<DiffSegment[]>([]);
@@ -51,7 +51,7 @@ export default memo(function ProcessWithLLMDialog (
   const [llmTimeTaken, setLLMTimeTaken] = useState(0);
   const stepToIndex = useMemo(() => ({
     Instructions: 0,
-    Processing: 1,
+    Marking: 1,
     Review: 2,
     Preview: 3
   }), []);
@@ -166,7 +166,7 @@ export default memo(function ProcessWithLLMDialog (
   },[processWithLLMModalOpen, transcript])
 
   const handleNextButton = useCallback(async () => {
-      setCurrentStage('Processing');
+      setCurrentStage('Marking');
       await handleProcessing();
   },[handleProcessing])
 
@@ -174,18 +174,18 @@ export default memo(function ProcessWithLLMDialog (
     <Dialog open={processWithLLMModalOpen} onOpenChange={setprocessWithLLMModalOpen}>
       <DialogContent className="w-96 sm:w-full lg:max-w-5xl xl:max-w-6xl">
         <DialogHeader>
-          <DialogTitle>Process with LLM</DialogTitle>
+          <DialogTitle>Marking with LLM</DialogTitle>
           <DialogDescription>
             {
               currentStage === 'Instructions' ? 'Enter instructions for the LLM' :
-              currentStage === 'Processing' ? 'Processing transcript with LLM...' :
+              currentStage === 'Marking' ? 'Marking transcript with LLM...' :
               currentStage === 'Review' ? 'Hover over the text to accept and reject changes' :
-              'Previewing transcript before saving'
+              'Preview transcript before saving'
             }
           </DialogDescription>
         </DialogHeader>
         <div className="px-4 pt-2">
-          <Stepper steps={['Instructions', 'Processing', 'Review', 'Preview']} activeStep={activeStepIndex} />
+          <Stepper steps={['Instructions', 'Marking', 'Review', 'Preview']} activeStep={activeStepIndex} />
         </div>
 
           { currentStage === 'Instructions' && (
@@ -227,7 +227,7 @@ export default memo(function ProcessWithLLMDialog (
             </div>)
           )}
 
-          { currentStage === 'Processing' && (
+          { currentStage === 'Marking' && (
             <div className="flex flex-col space-y-2 justify-center items-center h-[60vh]">
               <Progress value={progressValue} className="w-1/3 sm:w-1/2 animate-pulse" color="primary" />
               <span>{progressMessage}</span>
@@ -264,7 +264,7 @@ export default memo(function ProcessWithLLMDialog (
               </Button>
             </>
           )}
-          {currentStage === 'Processing' && (
+          {currentStage === 'Marking' && (
               <Button variant="outline" onClick={() => setprocessWithLLMModalOpen(false)}>
                 Cancel
               </Button>

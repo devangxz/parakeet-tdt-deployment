@@ -253,7 +253,8 @@ export default memo(function Topbar({
       }
     }
 
-    if(orderDetails.fileId != '' && !orderDetails.LLMDone) {
+    if(orderDetails.fileId != '' && !orderDetails.LLMDone
+      && currentStep === 'CF') {
       setProcessWithLLMModalOpen(true)
     }
     setStep(currentStep)
