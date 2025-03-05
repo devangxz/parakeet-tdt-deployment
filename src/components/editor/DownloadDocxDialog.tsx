@@ -72,6 +72,7 @@ const DownloadDocxDialog = ({
       a.click()
       a.remove()
       toast.dismiss(toastId)
+      window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
       toast.dismiss(toastId)
       if (error instanceof Error) {
