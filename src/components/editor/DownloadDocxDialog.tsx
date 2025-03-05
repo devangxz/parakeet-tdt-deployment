@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
 import { Button } from '../ui/button'
 import {
@@ -29,6 +30,8 @@ const DownloadDocxDialog = ({
 }: DownloadDocxDialogProps) => {
   const [docxUrl, setDocxUrl] = useState('')
   const [authToken, setAuthToken] = useState<string | undefined>('')
+  const markingDocxUrl = useMemo(() => `${FILE_CACHE_URL}/get-cf-docx/${orderDetails.fileId}?orgName=${orderDetails.orgName}&templateName=${orderDetails.templateName}&type=marking&authToken=${authToken}`, [orderDetails.fileId, orderDetails.orgName, orderDetails.templateName, authToken])
+  const withoutMarkingUrl = useMemo(() => `${FILE_CACHE_URL}/get-qc-txt/${orderDetails.fileId}?orgName=${orderDetails.orgName}&authToken=${authToken}`, [orderDetails.fileId, orderDetails.orgName, authToken])
 
   const getDocxUrl = async () => {
     const response = await downloadBlankDocxAction(
@@ -49,6 +52,36 @@ const DownloadDocxDialog = ({
       getDocxUrl()
     }
   }, [])
+
+  const handleDownloadMarkingDocx = async (markingType: string) => {
+    const toastId = toast.loading('Downloading Docx file')
+    try {
+      const url = markingType === 'marking' ? markingDocxUrl : withoutMarkingUrl
+      const response = await fetch(url)
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error)
+      }
+      const fileId = orderDetails.fileId;
+      const blob = await response.blob()
+      const downloadUrl = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = downloadUrl
+      a.download = markingType === 'marking' ? `${fileId}.docx` : `${fileId}.txt` // Set the desired file name
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      toast.dismiss(toastId)
+    } catch (error) {
+      toast.dismiss(toastId)
+      if (error instanceof Error) {
+        toast.error(`Error: ${error.message}`)
+      } else {
+        toast.error(`Something went wrong`)
+        throw error
+      }
+    }
+  }
 
   const getAuthToken = async () => {
     const tokenRes = await fileCacheTokenAction()
@@ -81,7 +114,6 @@ const DownloadDocxDialog = ({
             >
               <div className='flex items-center space-x-2'>
                 <RadioGroupItem
-                  disabled={!orderDetails.LLMDone}
                   value='marking'
                   id='marking'
                 />
@@ -109,23 +141,13 @@ const DownloadDocxDialog = ({
         <DialogClose asChild>
           <>
             {downloadableType === 'no-marking' && (
-              <Button asChild>
-                <a
-                  target='_blank'
-                  href={`${FILE_CACHE_URL}/get-qc-txt/${orderDetails.fileId}?orgName=${orderDetails.orgName}&authToken=${authToken}`}
-                >
+              <Button onClick={() => handleDownloadMarkingDocx(downloadableType)}>
                   Download File
-                </a>
               </Button>
             )}
             {downloadableType === 'marking' && (
-              <Button asChild>
-                <a
-                  target='_blank'
-                  href={`${FILE_CACHE_URL}/get-cf-docx/${orderDetails.fileId}?orgName=${orderDetails.orgName}&templateName=${orderDetails.templateName}&type=marking&authToken=${authToken}`}
-                >
-                  Download File
-                </a>
+              <Button onClick={() => handleDownloadMarkingDocx(downloadableType)}>
+                Download File
               </Button>
             )}
 
