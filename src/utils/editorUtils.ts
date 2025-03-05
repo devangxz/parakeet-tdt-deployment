@@ -17,6 +17,7 @@ import { setPlayStatsAction } from '@/app/actions/editor/set-play-stats'
 import { submitQCAction } from '@/app/actions/editor/submit-qc'
 import { submitReviewAction } from '@/app/actions/editor/submit-review'
 import { uploadDocxAction } from '@/app/actions/editor/upload-docx'
+import { uploadSubtitlesAction } from '@/app/actions/editor/upload-subtitles'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { OrderDetails, UploadFilesType } from '@/app/editor/[fileId]/page'
 import {
@@ -26,7 +27,7 @@ import {
   MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
   COMMON_ABBREVIATIONS,
 } from '@/constants'
-import { CTMType, UndoRedoItem } from '@/types/editor'
+import { AlignmentType, CTMType, UndoRedoItem } from '@/types/editor'
 import {
   getEditorDataIDB,
   persistEditorDataIDB,
@@ -449,7 +450,7 @@ const fetchFileDetails = async ({
     setCfd(orderRes.orderDetails.cfd)
     const cfStatus = [
       'FORMATTED',
-      'REVIEWER_ASSIGNED', 
+      'REVIEWER_ASSIGNED',
       'REVIEW_COMPLETED',
       'FINALIZER_ASSIGNED',
       'FINALIZER_COMPLETED',
@@ -525,6 +526,109 @@ const fetchFileDetails = async ({
   }
 }
 
+function getSRTVTT(alignments: AlignmentType[]) {
+  try {
+    if (!alignments?.length) {
+      return null
+    }
+
+    let srt = ''
+    let vtt = 'WEBVTT\r\n\r\n'
+    let line: string[] = []
+    let paraCount = 0
+
+    for (let i = 0; i < alignments.length; i++) {
+      const current = alignments[i]
+      const word = current.word
+      const currentCase = current.case ?? 'success'
+      const nextAlignment =
+        i + 1 < alignments.length ? alignments[i + 1] : undefined
+
+      line.push(word)
+
+      if (!nextAlignment && line.length > 0) {
+        const startTs = alignments[i - line.length + 1].start
+        const endTs = current.end
+        const srtTimestamp = `00:${secondsToTs(startTs).replace(
+          '.',
+          ','
+        )} --> 00:${secondsToTs(endTs).replace('.', ',')}`
+        const vttTimestamp = `00:${secondsToTs(startTs)} --> 00:${secondsToTs(
+          endTs
+        )}`
+
+        paraCount++
+        srt += `${paraCount}\r\n${srtTimestamp}\r\n${line
+          .join(' ')
+          .trim()}\r\n\r\n`
+        vtt += `${vttTimestamp}\r\n${line.join(' ').trim()}\r\n\r\n`
+        break
+      }
+
+      let forceBreak = false
+      forceBreak =
+        line.length > 10 &&
+        !/\w/.test(word[word.length - 1]) &&
+        currentCase === 'success'
+
+      const shouldBreakOnGap =
+        nextAlignment !== undefined &&
+        line.length > 7 &&
+        currentCase === 'success' &&
+        (nextAlignment.case ?? 'success') === 'success' &&
+        nextAlignment.start - current.end > 0.5
+
+      forceBreak = forceBreak || shouldBreakOnGap
+      forceBreak = forceBreak || (line.length > 12 && currentCase === 'success')
+      forceBreak = forceBreak || line.join(' ').length > 70
+
+      if (forceBreak) {
+        const startTs = alignments[i - line.length + 1].start
+        const endTs = current.end
+        const srtTimestamp = `00:${secondsToTs(startTs).replace(
+          '.',
+          ','
+        )} --> 00:${secondsToTs(endTs).replace('.', ',')}`
+        const vttTimestamp = `00:${secondsToTs(startTs)} --> 00:${secondsToTs(
+          endTs
+        )}`
+
+        paraCount++
+        srt += `${paraCount}\r\n${srtTimestamp}\r\n${line
+          .join(' ')
+          .trim()}\r\n\r\n`
+        vtt += `${vttTimestamp}\r\n${line.join(' ').trim()}\r\n\r\n`
+        line = []
+      }
+    }
+
+    if (line.length > 0) {
+      const startIndex = alignments.length - line.length
+      const endIndex = alignments.length - 1
+      const startTs = alignments[startIndex].start
+      const endTs = alignments[endIndex].end
+      const srtTimestamp = `00:${secondsToTs(startTs).replace(
+        '.',
+        ','
+      )} --> 00:${secondsToTs(endTs).replace('.', ',')}`
+      const vttTimestamp = `00:${secondsToTs(startTs)} --> 00:${secondsToTs(
+        endTs
+      )}`
+
+      paraCount++
+      srt += `${paraCount}\r\n${srtTimestamp}\r\n${line.join(' ').trim()}\r\n`
+      vtt += `${vttTimestamp}\r\n${line.join(' ').trim()}\r\n`
+    }
+
+    return {
+      srt,
+      vtt,
+    }
+  } catch (error) {
+    return null
+  }
+}
+
 type HandleSaveParams = {
   getEditorText: () => string
   orderDetails: OrderDetails
@@ -534,7 +638,8 @@ type HandleSaveParams = {
   listenCount: number[]
   editedSegments: Set<number>
   isGeminiReviewed?: boolean
-  currentAlignments: CTMType[]
+  role: string
+  currentAlignments?: CTMType[]
 }
 
 const handleSave = async (
@@ -547,6 +652,7 @@ const handleSave = async (
     listenCount,
     editedSegments,
     isGeminiReviewed = false,
+    role,
     currentAlignments,
   }: HandleSaveParams,
   showToast = true
@@ -572,33 +678,53 @@ const handleSave = async (
       .split('\n')
       .filter((paragraph: string) => paragraph.trim() !== '')
 
-    // Helper function to detect meta-only paragraphs
-    const isMetaOnlyParagraph = (text: string) => {
-      const trimmed = text.trim()
-      return /^\[.*\]$/.test(trimmed)
+    if (role !== 'CUSTOMER') {
+      // Helper function to detect meta-only paragraphs
+      const isMetaOnlyParagraph = (text: string) => {
+        const trimmed = text.trim()
+        return /^\[.*\]$/.test(trimmed)
+      }
+
+      const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/
+
+      for (const paragraph of paragraphs) {
+        // Skip validation for meta-only paragraphs
+        if (isMetaOnlyParagraph(paragraph)) continue
+
+        if (
+          !paragraphRegex.test(paragraph) &&
+          orderDetails.orderType !== 'TRANSCRIPTION_FORMATTING'
+        ) {
+          if (showToast) {
+            if (toastId) toast.dismiss(toastId)
+            toast.error(
+              'Invalid paragraph format detected. Each paragraph must start with a timestamp and speaker identification.'
+            )
+          }
+          return
+        }
+      }
     }
 
-    const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/
-    for (const paragraph of paragraphs) {
-      // Skip validation for meta-only paragraphs
-      if (isMetaOnlyParagraph(paragraph)) continue
+    if (
+      currentAlignments &&
+      Array.isArray(currentAlignments) &&
+      currentAlignments.length > 0 &&
+      role === 'CUSTOMER'
+    ) {
+      const filteredAlignments = currentAlignments.filter(
+        (alignment) => 'type' in alignment && alignment.type !== 'meta'
+      )
 
-      if (
-        !paragraphRegex.test(paragraph) &&
-        orderDetails.orderType !== 'TRANSCRIPTION_FORMATTING'
-      ) {
-        if (showToast) {
-          if (toastId) toast.dismiss(toastId)
-          toast.error(
-            'Invalid paragraph format detected. Each paragraph must start with a timestamp and speaker identification.'
-          )
-        }
-        return
+      const subtitles = getSRTVTT(filteredAlignments as AlignmentType[])
+      if (subtitles) {
+        await uploadSubtitlesAction(orderDetails.fileId, subtitles)
       }
     }
 
     // Save notes and other data
     const tokenRes = await fileCacheTokenAction()
+
     await axios.post(
       `${FILE_CACHE_URL}/save-transcript`,
       {
@@ -607,7 +733,6 @@ const handleSave = async (
         cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
         orderId: orderDetails.orderId,
         isGeminiReviewed,
-        currentAlignments: currentAlignments || [],
       },
       {
         headers: {
@@ -772,15 +897,28 @@ const handleSubmit = async ({
         Number(orderDetails.orderId),
         orderDetails.fileId,
         transcript,
-        finalizerComment,
-        currentAlignments,
+        finalizerComment
       )
     } else {
+      if (
+        currentAlignments &&
+        Array.isArray(currentAlignments) &&
+        currentAlignments.length > 0
+      ) {
+        const filteredAlignments = currentAlignments.filter(
+          (alignment) => 'type' in alignment && alignment.type !== 'meta'
+        )
+  
+        const subtitles = getSRTVTT(filteredAlignments as AlignmentType[])
+        if (subtitles) {
+          await uploadSubtitlesAction(orderDetails.fileId, subtitles)
+        }
+      }
+
       await submitQCAction({
         fileId: orderDetails.fileId,
         orderId: Number(orderDetails.orderId),
         transcript,
-        currentAlignments,
       })
     }
 

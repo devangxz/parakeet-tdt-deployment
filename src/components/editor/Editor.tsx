@@ -732,6 +732,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     const currentText = quill.getText()
     if (!currentText) return
 
+    setAlignmentWorkerRunning(true)
     alignmentWorker.current?.postMessage({
       newText: currentText,
       currentAlignments: newAlignments,

@@ -337,11 +337,9 @@ function EditorPage() {
         }
       },
       saveChanges: async () => {
-        let currentAlignments: CTMType[] = []
         if (editorRef.current) {
           editorRef.current.clearAllHighlights()
           editorRef.current.triggerAlignmentUpdate()
-          currentAlignments = editorRef.current.getAlignments()
         }
         autoCapitalizeSentences(quillRef, autoCapitalize)
         await handleSave({
@@ -352,7 +350,7 @@ function EditorPage() {
           setButtonLoading,
           listenCount,
           editedSegments,
-          currentAlignments,
+          role: session?.user?.role || '',
         })
         updateFormattedTranscript()
       },
@@ -470,11 +468,6 @@ function EditorPage() {
 
   useEffect(() => {
     const interval = setInterval(async () => {
-      let currentAlignments: CTMType[] = []
-      if (editorRef.current) {
-        editorRef.current.triggerAlignmentUpdate()
-        currentAlignments = editorRef.current.getAlignments()
-      }
       await handleSave(
         {
           getEditorText,
@@ -484,7 +477,7 @@ function EditorPage() {
           setButtonLoading,
           listenCount,
           editedSegments,
-          currentAlignments,
+          role: session?.user?.role || '',
         },
         false
       )
@@ -990,11 +983,10 @@ function EditorPage() {
                     const quill = quillRef.current.getEditor()
 
                     let currentAlignments: CTMType[] = []
-                    if (editorRef.current) {
-                      editorRef.current.clearAllHighlights()
+                    if (editorRef.current && step === 'QC') {
                       editorRef.current.triggerAlignmentUpdate()
                       currentAlignments = editorRef.current.getAlignments()
-                    }          
+                    }         
 
                     handleSubmit({
                       orderDetails,

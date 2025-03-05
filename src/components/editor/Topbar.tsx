@@ -749,6 +749,24 @@ export default memo(function Topbar({
   const handleCheckAndDownload = async (fileId: string) => {
     setIsCheckAndDownloadLoading(true)
     try {
+      let currentAlignments: CTMType[] = []
+      if (typeof editorRef === 'object' && editorRef !== null && editorRef.current) {
+        editorRef.current.triggerAlignmentUpdate()
+        currentAlignments = editorRef.current.getAlignments()
+      }         
+
+      await handleSave({
+        getEditorText,
+        orderDetails,
+        notes,
+        cfd,
+        setButtonLoading,
+        listenCount,
+        editedSegments,
+        role: session?.user?.role || '',
+        currentAlignments,
+      }, false)
+
       const txtRes = await getFileTxtSignedUrl(fileId)
       const docxRes = await getFileDocxSignedUrl(
         fileId,
@@ -900,11 +918,6 @@ export default memo(function Topbar({
               <DropdownMenuContent align='end' className='w-30'>
                 <DropdownMenuItem
                   onClick={() => {
-                    let currentAlignments: CTMType[] = []
-                    if (editorRef && typeof editorRef !== 'function' && editorRef.current) {
-                      editorRef.current.triggerAlignmentUpdate()
-                      currentAlignments = editorRef.current.getAlignments()
-                    }            
                     autoCapitalizeSentences(quillRef, autoCapitalize)
                     handleSave({
                       getEditorText,
@@ -914,7 +927,7 @@ export default memo(function Topbar({
                       setButtonLoading,
                       listenCount,
                       editedSegments,
-                      currentAlignments,
+                      role: session?.user?.role || '',
                     })
                   }}
                 >
@@ -1337,6 +1350,7 @@ export default memo(function Topbar({
           transcript={quillRef?.current ? quillRef.current.getEditor().getText() : transcript}
           ctms={ctms}
           updateQuill={updateTranscript}
+          role={session?.user?.role || ''}
         />
       )}
       {/* <FrequentTermsDialog
