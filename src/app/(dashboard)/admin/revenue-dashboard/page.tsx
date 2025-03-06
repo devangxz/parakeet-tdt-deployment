@@ -10,7 +10,7 @@ import {
   subMonths,
   subWeeks,
 } from 'date-fns'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Download } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { DateRange } from 'react-day-picker'
@@ -33,6 +33,7 @@ import {
   REVENUE_DASHBOARD_EMAILS,
   ONLY_REVENUE_DASHBOARD_EMAILS,
 } from '@/constants'
+import { exportToExcel } from '@/lib/excel-export'
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat('en-US', {
@@ -167,6 +168,31 @@ export default function RevenueDashboard() {
     }
   }
 
+  function handleDownloadExcel() {
+    const exportData = metrics.map((metric) => ({
+      Date: format(new Date(metric.date), 'PP'),
+      'Day of Week': metric.dayOfWeek,
+      Revenue: metric.revenue,
+      Orders: metric.orderCount,
+      'New Customers': metric.newCustomers,
+      'Credits Added': metric.totalCreditsAdded,
+      'QC Hours': metric.hours.qc,
+      'CF Hours': metric.hours.review + metric.hours.cf,
+      'ASR Cost': metric.costs.asr,
+      'QC Cost': metric.costs.qc,
+      'Review Cost': metric.costs.cfReview,
+      'CF Cost': metric.costs.cf,
+      'File Bonus': metric.costs.fileBonus,
+      'Daily Bonus': metric.bonus.daily,
+      'Other Bonus': metric.bonus.other,
+      'Total Cost': metric.totalCost,
+      Margin: metric.margin,
+      'Margin %': metric.marginPercentage,
+    }))
+
+    exportToExcel(exportData, `revenue-dashboard`)
+  }
+
   return (
     <>
       {session?.user?.role !== 'ADMIN' ||
@@ -207,18 +233,29 @@ export default function RevenueDashboard() {
                 Monthly
               </Button>
             </div>
-            <DateRangePicker
-              value={dateRange}
-              onChange={(value) => {
-                setDateRange(value ?? { from: new Date(), to: new Date() })
-                loadRevenueData(
-                  value?.from ?? new Date(),
-                  value?.to ?? new Date(),
-                  'daily'
-                )
-              }}
-              onUpdate={() => {}}
-            />
+            <div className='flex gap-2 items-center'>
+              <Button
+                variant='order'
+                onClick={handleDownloadExcel}
+                disabled={isLoading || metrics.length === 0}
+                className='not-rounded'
+              >
+                <Download className='h-4 w-4 mr-2' />
+                Download Excel
+              </Button>
+              <DateRangePicker
+                value={dateRange}
+                onChange={(value) => {
+                  setDateRange(value ?? { from: new Date(), to: new Date() })
+                  loadRevenueData(
+                    value?.from ?? new Date(),
+                    value?.to ?? new Date(),
+                    'daily'
+                  )
+                }}
+                onUpdate={() => {}}
+              />
+            </div>
           </div>
 
           <div className='rounded-lg border'>
@@ -237,6 +274,7 @@ export default function RevenueDashboard() {
                   <TableHead className='text-right'>QC Cost</TableHead>
                   <TableHead className='text-right'>Review Cost</TableHead>
                   <TableHead className='text-right'>CF Cost</TableHead>
+                  <TableHead className='text-right'>File Bonus</TableHead>
                   <TableHead className='text-right'>Daily Bonus</TableHead>
                   <TableHead className='text-right'>Other Bonus</TableHead>
                   <TableHead className='text-right'>Total Cost</TableHead>
@@ -311,7 +349,9 @@ export default function RevenueDashboard() {
                       <TableCell className='text-right'>
                         {formatCurrency(metric.costs.cf)}
                       </TableCell>
-
+                      <TableCell className='text-right'>
+                        {formatCurrency(metric.costs.fileBonus)}
+                      </TableCell>
                       <TableCell className='text-right'>
                         {formatCurrency(metric.bonus.daily)}
                       </TableCell>
