@@ -15,7 +15,7 @@ export async function submitReviewAction(
   orderId: number,
   fileId: string,
   transcript: string,
-  finalizerComment: string,
+  finalizerComment: string
 ) {
   logger.info('--> submitFinalize')
 
