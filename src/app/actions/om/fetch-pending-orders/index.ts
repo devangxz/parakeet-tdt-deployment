@@ -5,6 +5,7 @@ import { OrderStatus } from '@prisma/client'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import calculateFileCost from '@/utils/calculateFileCost'
+import getOrderType from '@/utils/getOrderType'
 import getOrgName from '@/utils/getOrgName'
 
 const getSpecialInstructions = async (userId: number) => {
@@ -44,26 +45,27 @@ export async function fetchPendingOrders() {
         const fileCost = await calculateFileCost(order)
         const orgName = await getOrgName(order.userId)
         const specialInstructions = await getSpecialInstructions(order.userId)
-        return { ...order, fileCost, orgName, specialInstructions }
+        const orderType = await getOrderType(order.fileId, order.orderType)
+        return { ...order, fileCost, orgName, specialInstructions, orderType }
       })
     )
 
-    // Fetch cancellations for each order's file and add to ordersWithCost 
+    // Fetch cancellations for each order's file and add to ordersWithCost
     const ordersWithCostAndCancellations = await Promise.all(
       ordersWithCost.map(async (order) => {
         const cancellations = await prisma.cancellations.findMany({
           where: {
-            fileId: order.fileId
+            fileId: order.fileId,
           },
           include: {
             user: {
               select: {
                 firstname: true,
                 lastname: true,
-                email: true
-              }
-            }
-          }
+                email: true,
+              },
+            },
+          },
         })
         return { ...order, cancellations }
       })

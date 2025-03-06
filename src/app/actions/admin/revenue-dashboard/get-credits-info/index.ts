@@ -12,6 +12,7 @@ interface CreditInfo {
   amount: number
   date: string
   type: string
+  paidBy: string
 }
 
 interface GetCreditsError extends Error {
@@ -59,6 +60,18 @@ export async function getCreditsInfo(
         const creditsInfo: CreditInfo[] = await Promise.all(
           credits.map(async (credit) => {
             let customerEmail = credit.user.email
+            let paidBy = '-'
+            if (credit.type === 'FREE_CREDITS') {
+              if (credit.paidBy) {
+                const userEmail = await prisma.user.findUnique({
+                  where: {
+                    id: credit.paidBy,
+                  },
+                })
+                paidBy = userEmail?.email ?? '-'
+              }
+            }
+
             if (credit.user.role === 'INTERNAL_TEAM_USER') {
               const adminDetails = await getTeamAdminUserDetails(credit.user.id)
               customerEmail = adminDetails
@@ -72,6 +85,7 @@ export async function getCreditsInfo(
               amount: credit.amount,
               date: format(credit.createdAt, 'yyyy-MM-dd'),
               type: credit.type,
+              paidBy,
             }
           })
         )

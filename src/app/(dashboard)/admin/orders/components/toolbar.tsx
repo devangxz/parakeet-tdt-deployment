@@ -4,6 +4,7 @@ import { Cross2Icon } from '@radix-ui/react-icons'
 import { Table } from '@tanstack/react-table'
 import * as React from 'react'
 
+import { DateFilter } from './date-filter'
 import { DataTableFacetedFilter } from './filter'
 import { DataTableViewOptions } from './view-options'
 import { Button } from '@/components/ui/button'
@@ -15,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+
 interface DataTableToolbarProps<TData> {
   table: Table<TData>
 }
@@ -50,6 +52,7 @@ export function DataTableToolbar<TData>({
           }
           className='h-8 w-[150px] lg:w-[250px]'
         />
+
         {table.getColumn('orgName') && (
           <DataTableFacetedFilter
             column={table.getColumn('orgName')}
@@ -103,6 +106,24 @@ export function DataTableToolbar<TData>({
               {
                 value: 'SUBMITTED_FOR_SCREENING',
                 label: 'Submitted for Screening',
+              },
+            ]}
+          />
+        )}
+        {table.getColumn('deliveryTs') && (
+          <DateFilter column={table.getColumn('deliveryTs')} />
+        )}
+        {table.getColumn('type') && (
+          <DataTableFacetedFilter
+            column={table.getColumn('type')}
+            title='Order Type'
+            options={[
+              { value: 'RUSH', label: 'Rush' },
+              { value: 'TRANSCRIPTION', label: 'Transcription' },
+              { value: 'CF', label: 'CF' },
+              {
+                value: 'FORMATTING',
+                label: 'Formatting',
               },
             ]}
           />

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
+import { ONLY_REVENUE_DASHBOARD_EMAILS } from './constants'
 import { getRedirectPathByRole } from '@/utils/roleRedirect'
 
 import type { NextRequest } from 'next/server'
@@ -27,7 +28,17 @@ export async function middleware(req: NextRequest) {
   }
 
   if (url.startsWith('/admin')) {
-    if (!isAdmin && !isOm) {
+    if (
+      isAdmin &&
+      token.email &&
+      ONLY_REVENUE_DASHBOARD_EMAILS.includes(token.email)
+    ) {
+      if (!url.startsWith('/admin/revenue-dashboard')) {
+        return NextResponse.redirect(
+          new URL('/admin/revenue-dashboard', req.url)
+        )
+      }
+    } else if (!isAdmin && !isOm) {
       const redirectUrl = getRedirectPathByRole(token.role as string)
       return NextResponse.redirect(new URL(redirectUrl, req.url))
     }

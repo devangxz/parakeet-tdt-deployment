@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 export default function Header() {
   const router = useRouter()
   return (
-    <div className='sticky top-0 z-50 bg-background border-b-2 border-customBorder'>
+    <div className='sticky top-0 z-10 bg-background border-b-2 border-customBorder'>
       <div className='flex justify-between items-center px-2 lg:px-4 py-4'>
         <div className='flex items-center justify-center gap-5'>
           <Link href='/'>
@@ -28,7 +28,9 @@ export default function Header() {
               </span>
             </div>
           </Link>
-          <span className='text-muted-foreground font-medium text-lg'>Transcriber</span>
+          <span className='text-muted-foreground font-medium text-lg'>
+            Transcriber
+          </span>
         </div>
         <div className='flex items-center gap-x-4'>
           <Button

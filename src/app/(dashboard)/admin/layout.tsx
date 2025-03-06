@@ -9,6 +9,7 @@ import {
   Wrench,
   CircleDollarSign,
   Building2,
+  Loader2,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import React from 'react'
@@ -16,6 +17,7 @@ import React from 'react'
 import AuthenticatedFooter from '@/components/authenticated-footer'
 import PaymentsNavbar from '@/components/navbar/payments'
 import Sidebar from '@/components/Sidebar'
+import { ONLY_REVENUE_DASHBOARD_EMAILS } from '@/constants'
 import { SidebarItemType } from '@/types/sidebar'
 
 export default function FilesLayout({
@@ -88,17 +90,41 @@ export default function FilesLayout({
 
   const displayedSidebarItems =
     session?.user?.role === 'OM' ? sidebarItems : fullSidebarItems
+
+  const isOnlyRevenueDashboardEmail = ONLY_REVENUE_DASHBOARD_EMAILS.includes(
+    session?.user?.email ?? ''
+  )
+
+  const onlyRevenueDashboardItems = [
+    {
+      href: '/admin/revenue-dashboard',
+      name: 'Revenue Dashboard',
+      icon: CircleDollarSign,
+      isActive: false,
+    },
+  ]
+
   return (
     <>
       <PaymentsNavbar />
       <div className='grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]'>
         <div className='hidden border-r-2 border-customBorder md:block'>
           <div className='flex h-full max-h-screen flex-col gap-2'>
-            <Sidebar
-              sidebarItems={displayedSidebarItems}
-              showTeams={false}
-              heading='Dashboards'
-            />
+            {session ? (
+              <Sidebar
+                sidebarItems={
+                  isOnlyRevenueDashboardEmail
+                    ? onlyRevenueDashboardItems
+                    : displayedSidebarItems
+                }
+                showTeams={false}
+                heading='Dashboards'
+              />
+            ) : (
+              <div className='flex h-full items-center justify-center'>
+                <Loader2 className='animate-spin text-gray-500' size={24} />
+              </div>
+            )}
           </div>
         </div>
         <div className='flex flex-col overflow-y-auto'>{children}</div>
