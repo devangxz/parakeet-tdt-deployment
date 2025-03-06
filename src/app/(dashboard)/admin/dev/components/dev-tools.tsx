@@ -33,9 +33,9 @@ import { Textarea } from '@/components/ui/textarea'
 
 type FormData = {
   [key in
-  | 'fd_create_templateid'
-  | 'fd_update_templateid'
-  | 'fd_delete_templateid']: string
+    | 'fd_create_templateid'
+    | 'fd_update_templateid'
+    | 'fd_delete_templateid']: string
 }
 
 // New component for template management
@@ -186,7 +186,7 @@ function RISandCFDManagement() {
       if (result.success) {
         setFormData((prevData) => ({
           ...prevData,
-          fd_ris_Details: result.risData,
+          fd_ris_Details: result.risData ?? {},
         }))
         toast.success('Successfully retrieved RIS data.')
       } else {
@@ -619,7 +619,9 @@ export default function DevTools() {
                     <SelectItem value='asr'>ASR</SelectItem>
                     <SelectItem value='qc'>QC</SelectItem>
                     <SelectItem value='rev_docx'>Review Docx</SelectItem>
-                    <SelectItem value='finalizer_docx'>Finalizer Docx</SelectItem>
+                    <SelectItem value='finalizer_docx'>
+                      Finalizer Docx
+                    </SelectItem>
                     <SelectItem value='ris'>RIS</SelectItem>
                     <SelectItem value='ctms'>CTMS</SelectItem>
                     <SelectItem value='mp3'>MP3</SelectItem>

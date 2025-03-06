@@ -1,7 +1,7 @@
 'use client'
 
 import { subDays } from 'date-fns'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Download } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { DateRange } from 'react-day-picker'
@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/table'
 import { useToast } from '@/components/ui/use-toast'
 import { REVENUE_DASHBOARD_EMAILS } from '@/constants'
+import { exportToExcel } from '@/lib/excel-export'
 
 type Organization = 'REMOTELEGAL' | 'ACR'
 
@@ -51,6 +52,7 @@ interface OrderData {
     qc: number
     cf: number
     cfReview: number
+    fileBonus: number
   }
   totalCost: number
   margin: number
@@ -126,6 +128,33 @@ export default function RevenueDashboard() {
     }
   }
 
+  function handleDownloadExcel() {
+    const exportData = metrics.map((order) => ({
+      'Customer Email': order.customerEmail,
+      'File ID': order.fileId,
+      'File Name': order.fileName,
+      'Order Date': order.orderDate,
+      'Delivery Date': order.deliveryDate || '',
+      Status: order.status,
+      'Duration (hours)': (order.duration / 3600).toFixed(2),
+      PWER: order.pwer,
+      QC: order.workers.qc.join(', '),
+      'CF Review': order.workers.review.join(', '),
+      'CF Finalize': order.workers.cf.join(', '),
+      'ASR Cost': order.costs.asr,
+      'QC Cost': order.costs.qc,
+      'Review Cost': order.costs.cfReview,
+      'CF Cost': order.costs.cf,
+      'File Bonus': order.costs.fileBonus,
+      Amount: order.amount,
+      'Total Cost': order.totalCost,
+      Margin: order.margin,
+      'Margin %': order.marginPercentage,
+    }))
+
+    exportToExcel(exportData, `${selectedOrg.toLowerCase()}-revenue`)
+  }
+
   return (
     <>
       {session?.user?.role !== 'ADMIN' ||
@@ -156,6 +185,16 @@ export default function RevenueDashboard() {
                   <SelectItem value='ACR'>ACR</SelectItem>
                 </SelectContent>
               </Select>
+              <Button
+                variant='order'
+                size='lg'
+                onClick={handleDownloadExcel}
+                disabled={isLoading || metrics.length === 0}
+                className='not-rounded'
+              >
+                <Download className='h-4 w-4 mr-2' />
+                Download Excel
+              </Button>
             </div>
             <DateRangePicker
               value={dateRange}
@@ -190,6 +229,7 @@ export default function RevenueDashboard() {
                   <TableHead>QC Cost</TableHead>
                   <TableHead>Review Cost</TableHead>
                   <TableHead>CF Cost</TableHead>
+                  <TableHead>File Bonus</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Total Cost</TableHead>
                   <TableHead>Margin</TableHead>
@@ -250,6 +290,7 @@ export default function RevenueDashboard() {
                       <TableCell>${order.costs.qc.toFixed(2)}</TableCell>
                       <TableCell>${order.costs.cfReview.toFixed(2)}</TableCell>
                       <TableCell>${order.costs.cf.toFixed(2)}</TableCell>
+                      <TableCell>${order.costs.fileBonus.toFixed(2)}</TableCell>
                       <TableCell>${order.amount.toFixed(2)}</TableCell>
                       <TableCell>${order.totalCost.toFixed(2)}</TableCell>
                       <TableCell>${order.margin.toFixed(2)}</TableCell>

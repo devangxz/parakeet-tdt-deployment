@@ -111,8 +111,17 @@
     "TO": ["$$USER_EMAIL_ID$$"],
     "CC": ["$$SUPPORT_EMAIL_ID$$"],
     "BCC": [],
-    "SUBJECT": "Scribie.ai Finalizer File Assigned",
+    "SUBJECT": "Scribie.ai Reviewer File Assigned",
     "HTML": "REVIEWER_ASSIGNMENT.html",
+    "TEXT": ""
+  },
+  "FINALIZER_ASSIGNMENT": {
+    "FROM": "$$SUPPORT_EMAIL_ID$$",
+    "TO": ["$$USER_EMAIL_ID$$"],
+    "CC": ["$$SUPPORT_EMAIL_ID$$"],
+    "BCC": [],
+    "SUBJECT": "Scribie.ai Finalizer File Assigned",
+    "HTML": "FINALIZER_ASSIGNMENT.html",
     "TEXT": ""
   },
   "QC_JOB_TIMEOUT": {

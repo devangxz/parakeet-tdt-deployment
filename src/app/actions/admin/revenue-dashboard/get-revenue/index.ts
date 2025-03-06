@@ -28,6 +28,7 @@ interface RevenueMetrics {
     qc: number
     cf: number
     cfReview: number
+    fileBonus: number
   }
   bonus: {
     daily: number
@@ -75,6 +76,7 @@ function aggregateMetrics(
       lastGroup.costs.qc += curr.costs.qc
       lastGroup.costs.cf += curr.costs.cf
       lastGroup.costs.cfReview += curr.costs.cfReview
+      lastGroup.costs.fileBonus += curr.costs.fileBonus
       lastGroup.bonus.daily += curr.bonus.daily
       lastGroup.bonus.other += curr.bonus.other
       lastGroup.totalCost += curr.totalCost
@@ -234,6 +236,22 @@ export async function getRevenue(
           )
           const asrCost = (totalDuration / 3600) * 0.37
 
+          const bonusOrders = orders.filter(
+            (order) =>
+              format(order.orderTs, 'yyyy-MM-dd') === dateStr &&
+              order.rateBonus !== 0
+          )
+          const totalBonusDuration = bonusOrders.reduce(
+            (acc, order) => acc + (order.File?.duration || 0),
+            0
+          )
+          const totalBonusHours = totalBonusDuration / 3600
+          const combinedOrderBonus = bonusOrders.reduce(
+            (acc, order) => acc + (order.rateBonus || 0),
+            0
+          )
+          const fileBonus = totalBonusHours * combinedOrderBonus
+
           const qcAssignments = dayAssignments.filter(
             (assignment) => assignment.type === 'QC'
           )
@@ -306,7 +324,13 @@ export async function getRevenue(
             .reduce((acc, invoice) => acc + invoice.amount, 0)
 
           const totalCost =
-            asrCost + qcCost + reviewCost + cfCost + dailyBonus + otherBonus
+            asrCost +
+            qcCost +
+            reviewCost +
+            cfCost +
+            dailyBonus +
+            otherBonus +
+            fileBonus
 
           const margin = revenue - totalCost
           const marginPercentage = revenue > 0 ? (margin / revenue) * 100 : 0
@@ -323,6 +347,7 @@ export async function getRevenue(
               asr: asrCost,
               qc: qcCost,
               cfReview: reviewCost,
+              fileBonus: fileBonus,
               cf: cfCost,
             },
             bonus: {

@@ -27,6 +27,7 @@ interface OrderMetrics {
     qc: number
     cf: number
     cfReview: number
+    fileBonus: number
   }
   totalCost: number
   margin: number
@@ -122,6 +123,7 @@ export async function getOrgRevenue(
           orders.map(async (order) => {
             const duration = order.File?.duration || 0
             const asrCost = (duration / 3600) * 0.37
+            const fileBonus = order.rateBonus * (duration / 3600)
 
             // Get customer email
             let customerEmail = order.user.email
@@ -164,7 +166,7 @@ export async function getOrgRevenue(
             ).reduce((acc, ja) => acc + (ja.earnings || 0), 0)
 
             const amount = order.File?.InvoiceFile?.[0]?.price || 0
-            const totalCost = asrCost + qcCost + reviewCost + cfCost
+            const totalCost = asrCost + qcCost + reviewCost + cfCost + fileBonus
             const margin = amount - totalCost
             const marginPercentage = amount > 0 ? (margin / amount) * 100 : 0
 
@@ -187,6 +189,7 @@ export async function getOrgRevenue(
                 qc: qcCost,
                 cfReview: reviewCost,
                 cf: cfCost,
+                fileBonus,
               },
               totalCost,
               margin,

@@ -48,16 +48,23 @@ export default function AuthenticatedFooter() {
         <Button
           variant='link'
           className='text-muted-foreground hover:text-primary hover:border-primary font-normal p-0 h-fit'
-          onClick={() => router.push('/contact')}
+          onClick={() => router.push('/faq')}
         >
-          Contact
+          FAQs
         </Button>
         <Button
           variant='link'
           className='text-muted-foreground hover:text-primary hover:border-primary font-normal p-0 h-fit'
-          onClick={() => router.push('/faq')}
+          onClick={() => router.push('/customer-guide')}
         >
-          FAQs
+          Guide
+        </Button>
+        <Button
+          variant='link'
+          className='text-muted-foreground hover:text-primary hover:border-primary font-normal p-0 h-fit'
+          onClick={() => router.push('/contact')}
+        >
+          Contact Support
         </Button>
       </div>
       <div className='hidden lg:flex items-center gap-x-8 font-semibold'>

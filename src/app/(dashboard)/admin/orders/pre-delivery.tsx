@@ -4,6 +4,7 @@ import { ColumnDef } from '@tanstack/react-table'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
+import { DataTableColumnHeader } from './components/column-header'
 import { DataTable } from './components/data-table'
 import { getListenCountAndEditedSegmentAction } from '@/app/actions/admin/get-listen-count-and-edited-segment'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
@@ -45,7 +46,7 @@ interface File {
   qc: string
   deliveryTs: string
   hd: boolean
-  orderType: string
+  type: string
   fileCost: FileCost
   rateBonus: number
   waveformUrl?: string
@@ -155,11 +156,31 @@ export default function PreDeliveryPage() {
             qc: qcNames || '-',
             deliveryTs: order.deliveryTs.toISOString(),
             hd: order.highDifficulty ?? false,
-            orderType: order.orderType,
+            type: order.orderType,
             fileCost: order.fileCost,
             rateBonus: order.rateBonus,
           }
         })
+        // Sort orders so that overdue files from yesterday are placed on top
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const yesterday = new Date(today)
+        yesterday.setDate(today.getDate() - 1)
+
+        orders.sort((a, b) => {
+          const aDelivery = new Date(a.deliveryTs)
+          aDelivery.setHours(0, 0, 0, 0)
+          const bDelivery = new Date(b.deliveryTs)
+          bDelivery.setHours(0, 0, 0, 0)
+
+          const aOverdue = aDelivery.getTime() === yesterday.getTime()
+          const bOverdue = bDelivery.getTime() === yesterday.getTime()
+
+          if (aOverdue && !bOverdue) return -1
+          if (!aOverdue && bOverdue) return 1
+          return a.index - b.index
+        })
+
         setPreDelieryFiles(orders ?? [])
         setError(null)
       } else {
@@ -307,7 +328,7 @@ export default function PreDeliveryPage() {
           style={{ minWidth: '250px', maxWidth: '250px' }}
         >
           {formatDuration(row.getValue('duration'))}
-          {row.original.orderType === 'FORMATTING' ? (
+          {row.original.type === 'FORMATTING' ? (
             <>
               <p>
                 Formatting cost: <br /> $
@@ -326,7 +347,7 @@ export default function PreDeliveryPage() {
                 {row.original.fileCost.transcriptionRate}/ah + $
                 {row.original.rateBonus}/ah)
               </p>
-              {row.original.orderType === 'TRANSCRIPTION_FORMATTING' && (
+              {row.original.type === 'TRANSCRIPTION_FORMATTING' && (
                 <p className='mt-1'>
                   Review cost: <br /> ${row.original.fileCost.customFormatCost}
                   ($
@@ -361,6 +382,19 @@ export default function PreDeliveryPage() {
           {formatDateTime(row.getValue('deliveryTs'))}
         </div>
       ),
+      filterFn: (row, id, value: [string, string]) => {
+        if (!value || !value[0] || !value[1]) return true
+        const cellDate = new Date(row.getValue(id))
+        const [start, end] = value.map((str) => new Date(str))
+        return cellDate >= start && cellDate <= end
+      },
+    },
+    {
+      accessorKey: 'type',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Order Type' />
+      ),
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
       id: 'actions',
@@ -415,8 +449,8 @@ export default function PreDeliveryPage() {
               >
                 Re-assign Editor
               </DropdownMenuItem>
-              {(row.original.orderType === 'TRANSCRIPTION_FORMATTING' ||
-                row.original.orderType === 'FORMATTING') && (
+              {(row.original.type === 'TRANSCRIPTION_FORMATTING' ||
+                row.original.type === 'FORMATTING') && (
                 <DropdownMenuItem
                   className=''
                   onClick={() => {

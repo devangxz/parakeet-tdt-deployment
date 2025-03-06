@@ -1,5 +1,6 @@
 import { InputFileType, OrderStatus, JobType, AssignMode } from '@prisma/client'
 
+import calculateAssignmentAmount from './get-amount'
 import { updateOrderAndCreateJobAssignment } from './update-order'
 import logger from '@/lib/logger'
 import { sendTemplateMail } from '@/lib/ses'
@@ -22,11 +23,18 @@ const assignFileToFinalizer = async (
       assignMode
     )
 
+    const { cost, rate } = await calculateAssignmentAmount(
+      orderId,
+      transcriberId,
+      OrderStatus.FINALIZER_ASSIGNED
+    )
+
     const templateData = {
       fileId,
+      amount: `$${cost} (${rate}/ah)`,
     }
 
-    await sendTemplateMail('REVIEWER_ASSIGNMENT', transcriberId, templateData)
+    await sendTemplateMail('FINALIZER_ASSIGNMENT', transcriberId, templateData)
 
     logger.info(`--> assignFileToFinalizer ${orderId} ${transcriberId}`)
     return true

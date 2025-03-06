@@ -1,5 +1,6 @@
 import { OrderStatus, JobType, InputFileType, AssignMode } from '@prisma/client'
 
+import calculateAssignmentAmount from './get-amount'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { sendTemplateMail } from '@/lib/ses'
@@ -36,8 +37,15 @@ const assignFileToReviewer = async (
       })
     })
 
+    const { cost, rate } = await calculateAssignmentAmount(
+      orderId,
+      transcriberId,
+      OrderStatus.REVIEWER_ASSIGNED
+    )
+
     const templateData = {
       fileId,
+      amount: `$${cost} (${rate}/ah)`,
     }
 
     await sendTemplateMail('REVIEWER_ASSIGNMENT', transcriberId, templateData)

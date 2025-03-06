@@ -160,6 +160,27 @@ export default function OrdersPage() {
             cancellations: order.cancellations,
           }
         })
+
+        // Sort orders so that overdue files from yesterday are placed on top
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const yesterday = new Date(today)
+        yesterday.setDate(today.getDate() - 1)
+
+        orders.sort((a, b) => {
+          const aDelivery = new Date(a.deliveryTs)
+          aDelivery.setHours(0, 0, 0, 0)
+          const bDelivery = new Date(b.deliveryTs)
+          bDelivery.setHours(0, 0, 0, 0)
+
+          const aOverdue = aDelivery.getTime() === yesterday.getTime()
+          const bOverdue = bDelivery.getTime() === yesterday.getTime()
+
+          if (aOverdue && !bOverdue) return -1
+          if (!aOverdue && bOverdue) return 1
+          return a.index - b.index
+        })
+
         setPendingOrders(orders ?? [])
         setError(null)
       } else {
@@ -421,6 +442,12 @@ export default function OrdersPage() {
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title='Delivery Date' />
       ),
+      filterFn: (row, id, value: [string, string]) => {
+        if (!value || !value[0] || !value[1]) return true
+        const cellDate = new Date(row.getValue(id))
+        const [start, end] = value.map((str) => new Date(str))
+        return cellDate >= start && cellDate <= end
+      },
       cell: ({ row }) => (
         <div className='flex gap-3 items-center'>
           <Tooltip>
@@ -465,6 +492,13 @@ export default function OrdersPage() {
           </Tooltip>
         </div>
       ),
+    },
+    {
+      accessorKey: 'type',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Order Type' />
+      ),
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
   ]
 

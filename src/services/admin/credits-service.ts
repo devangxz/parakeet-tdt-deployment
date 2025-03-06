@@ -49,6 +49,10 @@ export async function addFreeCredits({
     return { success: false, s: 'Invalid amountToAdd' }
   }
 
+  const adminUser = userDetails?.email
+    ? await prisma.user.findUnique({ where: { email: userDetails.email } })
+    : null
+
   try {
     const invoiceId = generateInvoiceId('CGFC')
     const transactionId = generateUniqueTransactionId()
@@ -61,6 +65,7 @@ export async function addFreeCredits({
         amount: amountToAdd,
         status: InvoiceStatus.PAID,
         transactionId,
+        paidBy: adminUser?.id ?? null,
       },
     })
 
