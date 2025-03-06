@@ -38,7 +38,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { RenderPDFDocument } from '@/components/utils'
 import { AUTOSAVE_INTERVAL } from '@/constants'
 import usePreventMultipleTabs from '@/hooks/usePreventMultipleTabs'
-import { EditorSettings } from '@/types/editor'
+import { AlignmentType, EditorSettings } from '@/types/editor'
 import {
   ShortcutControls,
   useShortcuts,
@@ -982,7 +982,7 @@ function EditorPage() {
                     if (!quillRef?.current) return
                     const quill = quillRef.current.getEditor()
 
-                    let currentAlignments: CTMType[] = []
+                    let currentAlignments: AlignmentType[] = []
                     if (editorRef.current && step === 'QC') {
                       editorRef.current.triggerAlignmentUpdate()
                       currentAlignments = editorRef.current.getAlignments()

@@ -640,7 +640,7 @@ type HandleSaveParams = {
   isGeminiReviewed?: boolean
   isCF?: boolean
   role: string
-  currentAlignments?: CTMType[]
+  currentAlignments?: AlignmentType[]
 }
 
 const handleSave = async (
@@ -718,7 +718,7 @@ const handleSave = async (
         (alignment) => 'type' in alignment && alignment.type !== 'meta'
       )
 
-      const subtitles = getSRTVTT(filteredAlignments as AlignmentType[])
+      const subtitles = getSRTVTT(filteredAlignments)
       if (subtitles) {
         await uploadSubtitlesAction(orderDetails.fileId, subtitles)
       }
@@ -823,25 +823,6 @@ function autoCapitalizeSentences(
   }
 }
 
-type HandleSubmitParams = {
-  orderDetails: OrderDetails
-  step: string
-  editorMode: string
-  fileToUpload: {
-    renamedFile: File | null
-    originalFile: File | null
-    isUploaded?: boolean
-  }
-  setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
-  getPlayedPercentage: () => number
-  router: {
-    push: (path: string) => void
-  }
-  quill: Quill
-  finalizerComment: string
-  currentAlignments: CTMType[]
-}
-
 const checkTranscriptForAllowedMeta = (quill: Quill) => {
   if (!quill) return null
 
@@ -868,6 +849,25 @@ const checkTranscriptForAllowedMeta = (quill: Quill) => {
   if (error?.message) {
     throw new Error(error.message)
   }
+}
+
+type HandleSubmitParams = {
+  orderDetails: OrderDetails
+  step: string
+  editorMode: string
+  fileToUpload: {
+    renamedFile: File | null
+    originalFile: File | null
+    isUploaded?: boolean
+  }
+  setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
+  getPlayedPercentage: () => number
+  router: {
+    push: (path: string) => void
+  }
+  quill: Quill
+  finalizerComment: string
+  currentAlignments: AlignmentType[]
 }
 
 const handleSubmit = async ({
@@ -917,7 +917,7 @@ const handleSubmit = async ({
           (alignment) => 'type' in alignment && alignment.type !== 'meta'
         )
   
-        const subtitles = getSRTVTT(filteredAlignments as AlignmentType[])
+        const subtitles = getSRTVTT(filteredAlignments)
         if (subtitles) {
           await uploadSubtitlesAction(orderDetails.fileId, subtitles)
         }

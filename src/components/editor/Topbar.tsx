@@ -73,7 +73,7 @@ import Profile from '@/components/navbar/profile'
 import { ThemeSwitcher } from '@/components/theme-switcher'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { FILE_CACHE_URL, COMMON_ABBREVIATIONS } from '@/constants'
-import { EditorSettings } from '@/types/editor'
+import { AlignmentType, EditorSettings } from '@/types/editor'
 import DefaultShortcuts, {
   getAllShortcuts,
   setShortcut,
@@ -755,7 +755,7 @@ export default memo(function Topbar({
   const handleCheckAndDownload = async (fileId: string) => {
     setIsCheckAndDownloadLoading(true)
     try {
-      let currentAlignments: CTMType[] = []
+      let currentAlignments: AlignmentType[] = []
       if (typeof editorRef === 'object' && editorRef !== null && editorRef.current) {
         editorRef.current.triggerAlignmentUpdate()
         currentAlignments = editorRef.current.getAlignments()
