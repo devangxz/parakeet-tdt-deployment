@@ -628,6 +628,7 @@ function getSRTVTT(alignments: AlignmentType[]) {
     let vtt = 'WEBVTT\r\n\r\n'
     let line: string[] = []
     let paraCount = 0
+    let lastLineProcessed = false
 
     for (let i = 0; i < alignments.length; i++) {
       const current = alignments[i]
@@ -654,6 +655,7 @@ function getSRTVTT(alignments: AlignmentType[]) {
           .join(' ')
           .trim()}\r\n\r\n`
         vtt += `${vttTimestamp}\r\n${line.join(' ').trim()}\r\n\r\n`
+        lastLineProcessed = true
         break
       }
 
@@ -694,7 +696,7 @@ function getSRTVTT(alignments: AlignmentType[]) {
       }
     }
 
-    if (line.length > 0) {
+    if (line.length > 0 && !lastLineProcessed) {
       const startIndex = alignments.length - line.length
       const endIndex = alignments.length - 1
       const startTs = alignments[startIndex].start

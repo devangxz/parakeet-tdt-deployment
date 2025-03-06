@@ -234,8 +234,8 @@ export function CheckAndDownload({
 
   const fetchSubtitleUrls = async () => {
     try {
-      const srtResponse = await getSignedUrlAction(`${id}.srt`, 3600)
-      const vttResponse = await getSignedUrlAction(`${id}.vtt`, 3600)
+      const srtResponse = await getSignedUrlAction(`${id}.srt`, 3600, `${filename}.srt`)
+      const vttResponse = await getSignedUrlAction(`${id}.vtt`, 3600, `${filename}.vtt`)
 
       setSubtitleUrls({
         srtUrl:
@@ -331,7 +331,7 @@ export function CheckAndDownload({
                     </p>
                   </div>
                   <Button
-                    onClick={() =>
+                    onClick={() => {
                       window.open(
                         `/editor/${id}`,
                         '_blank',
@@ -341,7 +341,8 @@ export function CheckAndDownload({
                           window.screen.height +
                           ',left=0,top=0'
                       )
-                    }
+                      setToggleCheckAndDownload(false)
+                    }}
                   >
                     Open Editor
                   </Button>
@@ -389,13 +390,19 @@ export function CheckAndDownload({
                     </div>
 
                     <span
-                      className="w-fit flex items-center mt-4 text-sm text-muted-foreground hover:text-primary cursor-pointer" 
+                      className='w-fit flex items-center mt-4 text-sm text-muted-foreground hover:text-primary cursor-pointer'
                       onClick={() => setShowMoreFormats(!showMoreFormats)}
                     >
                       {showMoreFormats ? (
-                        <>Hide additional formats <ChevronUp className="ml-1 h-4 w-4" /></>
+                        <>
+                          Hide additional formats{' '}
+                          <ChevronUp className='ml-1 h-4 w-4' />
+                        </>
                       ) : (
-                        <>Show more formats <ChevronDown className="ml-1 h-4 w-4" /></>
+                        <>
+                          Show more formats{' '}
+                          <ChevronDown className='ml-1 h-4 w-4' />
+                        </>
                       )}
                     </span>
                   </div>
@@ -516,13 +523,19 @@ export function CheckAndDownload({
                     </div>
 
                     <span
-                      className="w-fit flex items-center mt-4 text-sm text-muted-foreground hover:text-primary cursor-pointer" 
+                      className='w-fit flex items-center mt-4 text-sm text-muted-foreground hover:text-primary cursor-pointer'
                       onClick={() => setShowMoreFormats(!showMoreFormats)}
                     >
                       {showMoreFormats ? (
-                        <>Hide additional formats <ChevronUp className="ml-1 h-4 w-4" /></>
+                        <>
+                          Hide additional formats{' '}
+                          <ChevronUp className='ml-1 h-4 w-4' />
+                        </>
                       ) : (
-                        <>Show more formats <ChevronDown className="ml-1 h-4 w-4" /></>
+                        <>
+                          Show more formats{' '}
+                          <ChevronDown className='ml-1 h-4 w-4' />
+                        </>
                       )}
                     </span>
                   </div>
