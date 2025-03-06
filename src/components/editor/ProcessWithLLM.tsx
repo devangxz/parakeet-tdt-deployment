@@ -125,7 +125,7 @@ export default memo(function ProcessWithLLMDialog (
     setCurrentStage('Preview');
   }, [diffs]);
 
-  const handleSaveButton = useCallback(async() => {
+  const handleSaveButton = async() => {
     updateQuill(quillRef, markedTranscript);
     setprocessWithLLMModalOpen(false);
     await new Promise((resolve) => setTimeout(() => resolve(null), 1000)) // sleeping for 1 second to ensure the quill is updated
@@ -150,7 +150,7 @@ export default memo(function ProcessWithLLMDialog (
       },
       true
     )
-  }, [markedTranscript, orderDetails, instructions, llmTimeTaken])
+  }
 
   useEffect(() => {
     if(processWithLLMModalOpen) {

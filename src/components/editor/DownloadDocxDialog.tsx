@@ -21,14 +21,18 @@ type DownloadDocxDialogProps = {
   orderDetails: OrderDetails
   downloadableType: string
   setDownloadableType: React.Dispatch<React.SetStateAction<string>>
+  verifyTranscriptForDownload: () => {hasMarkedSections: boolean, hasTimestamps: boolean}
 }
 
 const DownloadDocxDialog = ({
   orderDetails,
   downloadableType,
   setDownloadableType,
+  verifyTranscriptForDownload
 }: DownloadDocxDialogProps) => {
   const [docxUrl, setDocxUrl] = useState('')
+  const [confirmationDialogMessage, setConfirmationDialogMessage] = useState('')
+  const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState(false)
   const [authToken, setAuthToken] = useState<string | undefined>('')
   const markingDocxUrl = useMemo(() => `${FILE_CACHE_URL}/get-cf-docx/${orderDetails.fileId}?orgName=${orderDetails.orgName}&templateName=${orderDetails.templateName}&type=marking&authToken=${authToken}`, [orderDetails.fileId, orderDetails.orgName, orderDetails.templateName, authToken])
   const withoutMarkingUrl = useMemo(() => `${FILE_CACHE_URL}/get-qc-txt/${orderDetails.fileId}?orgName=${orderDetails.orgName}&authToken=${authToken}`, [orderDetails.fileId, orderDetails.orgName, authToken])
@@ -53,8 +57,22 @@ const DownloadDocxDialog = ({
     }
   }, [])
 
-  const handleDownloadMarkingDocx = async (markingType: string) => {
-    const toastId = toast.loading('Downloading Docx file')
+  const handleDownloadMarkingDocx = (downloadableType: string) => {
+    if (downloadableType === 'marking') {
+      const { hasMarkedSections, hasTimestamps } = verifyTranscriptForDownload()
+      
+      if (!hasMarkedSections || hasTimestamps) {
+        setConfirmationDialogMessage(`The transcript is missing marked sections or contains timestamps. Do you still want to continue?`)
+        setIsConfirmationDialogOpen(true)
+        return
+      }
+    }
+    // If no confirmation needed or not marking type, download directly
+    downloadFile(downloadableType)
+  }
+
+  const downloadFile = async (markingType: string) => {
+    const toastId = toast.loading('Downloading file')
     try {
       const url = markingType === 'marking' ? markingDocxUrl : withoutMarkingUrl
       const response = await fetch(url)
@@ -62,23 +80,25 @@ const DownloadDocxDialog = ({
         const error = await response.json()
         throw new Error(error.error)
       }
-      const fileId = orderDetails.fileId;
+      const fileId = orderDetails.fileId
       const blob = await response.blob()
       const downloadUrl = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = downloadUrl
-      a.download = markingType === 'marking' ? `${fileId}.docx` : `${fileId}.txt` // Set the desired file name
+      a.download = markingType === 'marking' ? `${fileId}.docx` : `${fileId}.txt`
       document.body.appendChild(a)
       a.click()
       a.remove()
+      window.URL.revokeObjectURL(downloadUrl)
+      // Close the dialog after successful download
       toast.dismiss(toastId)
-      window.URL.revokeObjectURL(downloadUrl);
+      toast.success('File downloaded successfully')
     } catch (error) {
       toast.dismiss(toastId)
       if (error instanceof Error) {
         toast.error(`Error: ${error.message}`)
       } else {
-        toast.error(`Something went wrong`)
+        toast.error('Something went wrong')
         throw error
       }
     }
@@ -90,79 +110,99 @@ const DownloadDocxDialog = ({
   }
 
   return (
-    <Dialog onOpenChange={(open) => {
-      if (open) {
-        getAuthToken()
-      }
-    }}>
-      <DialogTrigger>
-        <Button
-          className='flex items-center border-primary border-2 justify-center px-2 py-1 text-sm font-medium text-primary rounded-[32px] cursor-pointer transition-all duration-200 hover:opacity-90'
-          onClick={() => getDocxUrl()}
-          variant='outline'
-        >
-          Download File
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Choose transcript type to download</DialogTitle>
-          <div className='pt-5'>
-            <RadioGroup
-              value={downloadableType}
-              onValueChange={setDownloadableType}
-              className={`flex ${docxUrl ? 'gap-2' : 'gap-10'}`}
-            >
-              <div className='flex items-center space-x-2'>
-                <RadioGroupItem
-                  value='marking'
-                  id='marking'
-                />
-                <Label htmlFor='marking'>With Markings</Label>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <RadioGroupItem value='no-marking' id='no-marking' />
-                <Label htmlFor='no-marking'>Without Markings</Label>
-              </div>
+    <>
+      <Dialog onOpenChange={(open) => {
+        if (open) {
+          getAuthToken()
+        }
+      }}>
+        <DialogTrigger>
+          <Button
+            className='flex items-center border-primary border-2 justify-center px-2 py-1 text-sm font-medium text-primary rounded-[32px] cursor-pointer transition-all duration-200 hover:opacity-90'
+            onClick={() => getDocxUrl()}
+            variant='outline'
+          >
+            Download File
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Choose transcript type to download</DialogTitle>
+            <div className='pt-5'>
+              <RadioGroup
+                value={downloadableType}
+                onValueChange={setDownloadableType}
+                className={`flex ${docxUrl ? 'gap-2' : 'gap-10'}`}
+              >
+                <div className='flex items-center space-x-2'>
+                  <RadioGroupItem
+                    value='marking'
+                    id='marking'
+                  />
+                  <Label htmlFor='marking'>With Markings</Label>
+                </div>
+                <div className='flex items-center space-x-2'>
+                  <RadioGroupItem value='no-marking' id='no-marking' />
+                  <Label htmlFor='no-marking'>Without Markings</Label>
+                </div>
 
-              {(orderDetails.status === 'FINALIZER_ASSIGNED' ||
-                orderDetails.status === 'PRE_DELIVERED') && (
-                  <div className='flex items-center space-x-2'>
-                    <RadioGroupItem
-                      disabled={!docxUrl}
-                      value='cf-rev-submit'
-                      id='cf-rev-submit'
-                    />
-                    <Label htmlFor='cf-rev-submit'>CF File</Label>
-                  </div>
-                )}
-            </RadioGroup>
-          </div>
-        </DialogHeader>
-        <DialogClose asChild>
-          <>
-            {downloadableType === 'no-marking' && (
-              <Button onClick={() => handleDownloadMarkingDocx(downloadableType)}>
+                {(orderDetails.status === 'FINALIZER_ASSIGNED' ||
+                  orderDetails.status === 'PRE_DELIVERED') && (
+                    <div className='flex items-center space-x-2'>
+                      <RadioGroupItem
+                        disabled={!docxUrl}
+                        value='cf-rev-submit'
+                        id='cf-rev-submit'
+                      />
+                      <Label htmlFor='cf-rev-submit'>CF File</Label>
+                    </div>
+                  )}
+              </RadioGroup>
+            </div>
+          </DialogHeader>
+          <DialogClose asChild>
+            <>
+              {downloadableType === 'no-marking' && (
+                <Button onClick={() => handleDownloadMarkingDocx(downloadableType)}>
+                    Download File
+                </Button>
+              )}
+              {downloadableType === 'marking' && (
+                <Button onClick={() => handleDownloadMarkingDocx(downloadableType)}>
                   Download File
-              </Button>
-            )}
-            {downloadableType === 'marking' && (
-              <Button onClick={() => handleDownloadMarkingDocx(downloadableType)}>
-                Download File
-              </Button>
-            )}
+                </Button>
+              )}
 
-            {downloadableType === 'cf-rev-submit' && (
-              <Button asChild>
-                <a href={docxUrl} target='_blank'>
-                  Download File
-                </a>
-              </Button>
-            )}
-          </>
-        </DialogClose>
-      </DialogContent>
-    </Dialog>
+              {downloadableType === 'cf-rev-submit' && (
+                <Button asChild>
+                  <a href={docxUrl} target='_blank'>
+                    Download File
+                  </a>
+                </Button>
+              )}
+            </>
+          </DialogClose>
+        </DialogContent>
+      </Dialog>
+
+      {isConfirmationDialogOpen && 
+        <Dialog open={isConfirmationDialogOpen} onOpenChange={setIsConfirmationDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmation</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-gray-500">  {confirmationDialogMessage} </p>
+            <div className='flex justify-end space-x-2'>
+              <Button variant='outline' onClick={() => setIsConfirmationDialogOpen(false)}>Cancel</Button>
+              <Button onClick={() => {
+                setIsConfirmationDialogOpen(false);
+                downloadFile('marking')
+              }}>Continue</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      } 
+    </>
   )
 }
 
