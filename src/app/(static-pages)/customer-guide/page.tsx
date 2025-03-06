@@ -209,7 +209,7 @@ const content = [
           </p>{' '}
           <br />
           <p className='text-slate-500'>
-            <a href='/help/customer-guide' className='text-blue-500 underline'>
+            <a href='/customer-guide' className='text-blue-500 underline'>
               Additional charges
             </a>{' '}
             may apply for files with non-American accents, poor audio quality,
@@ -296,7 +296,7 @@ const content = [
           Once the transcript has been delivered, we do not offer refunds.
           However, we provide{' '}
           <a
-            href='/help/customer-guide#re-reviews'
+            href='/customer-guide#re-reviews'
             className='text-blue-500 underline'
           >
             free re-reviews
