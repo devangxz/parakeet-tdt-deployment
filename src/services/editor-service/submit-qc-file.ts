@@ -13,7 +13,6 @@ import axios from 'axios'
 
 import preDeliverIfConfigured from '../file-service/pre-deliver-if-configured'
 import assignFileToReviewer from '../transcribe-service/assign-file-to-review'
-import { WORKER_QUEUE_NAMES, workerQueueService } from '../worker-service'
 import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
@@ -215,16 +214,19 @@ export async function submitQCFile(
     }
 
     await completeQCJob(order, transcriberId)
-    const orgName = await getOrgName(order.userId)
 
     if (order.orderType === OrderType.TRANSCRIPTION_FORMATTING) {
-      if (orgName.toLowerCase() === 'remotelegal') {
-        await workerQueueService.createJob(WORKER_QUEUE_NAMES.LLM_MARKING, {
-          orderId: order.id,
-          fileId: order.fileId,
-        })
-      }
-    } else {
+      logger.info(`--> order Status updated: REVIEWER_ASSIGNED`)
+      await prisma.order.update({
+        where: {
+            id: order.id,
+        },
+        data: {
+            status: OrderStatus.REVIEWER_ASSIGNED
+        }
+      })
+    }
+    else{
       if ((await preDeliverIfConfigured(order, transcriberId)) === false) {
         // await deliver(order, transcriberId)
         await prisma.order.update({

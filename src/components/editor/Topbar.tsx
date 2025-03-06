@@ -28,6 +28,7 @@ import EditorHeatmapDialog from './EditorHeatmapDialog'
 import EditorSettingsDialog from './EditorSettingsDialog'
 // import FrequentTermsDialog from './FrequentTermsDialog'
 import FormattingOptionsDialog from './FormattingOptionsDialog'
+import ProcessWithLLMDialog from './ProcessWithLLM'
 import ReportDialog from './ReportDialog'
 import ShortcutsReferenceDialog from './ShortcutsReferenceDialog'
 import UploadDocxDialog from './UploadDocxDialog'
@@ -196,6 +197,7 @@ export default memo(function Topbar({
     reportComment: '',
   })
   const [reviewModalOpen, setReviewModalOpen] = useState(false)
+  const [processWithLLMModalOpen, setProcessWithLLMModalOpen] = useState(false)
   const [buttonLoading, setButtonLoading] = useState({
     download: false,
     upload: false,
@@ -251,6 +253,10 @@ export default memo(function Topbar({
       }
     }
 
+    if(orderDetails.fileId != '' && !orderDetails.LLMDone
+      && currentStep === 'CF') {
+      setProcessWithLLMModalOpen(true)
+    }
     setStep(currentStep)
   }, [orderDetails])
 
@@ -679,6 +685,25 @@ export default memo(function Topbar({
     }
   }
 
+  const verifyTranscriptForDownload = useCallback(() => {
+    const editorContentTranscript = quillRef?.current?.getEditor().getText() || transcript
+    const paragraphs = editorContentTranscript.split('\n\n');
+    // Keywords to check
+    // check timestamps
+    const requiredSections = ['PROCEEDINGS', 'EXAMINATION'];
+    // Ensure all required sections are present in separate paragraphs
+    const hasMarkedSections = requiredSections.every(section =>
+      paragraphs.some(para => {
+        return para.trim().toUpperCase().includes(`[--${section}--]`) // Check for [--SECTION--] format
+      }
+    ));
+
+    const timestampPattern = /\b\d{1,2}:\d{2}:\d{2}(?:\.\d+)?\b/; // Matches [HH:MM:SS]
+    const hasTimestamps = transcript.match(timestampPattern) !== null;
+    // Return whether both conditions are met
+    return {hasMarkedSections, hasTimestamps};
+  }, [quillRef, transcript])
+
   useEffect(() => {
     if (submitting && orderDetails.status === 'QC_ASSIGNED') {
       toggleSpeakerName()
@@ -822,6 +847,7 @@ export default memo(function Topbar({
                     orderDetails={orderDetails}
                     downloadableType={downloadableType}
                     setDownloadableType={setDownloadableType}
+                    verifyTranscriptForDownload={verifyTranscriptForDownload}
                   />
                   <UploadDocxDialog
                     orderDetails={orderDetails}
@@ -968,6 +994,9 @@ export default memo(function Topbar({
                 <DropdownMenuItem onClick={() => setReviewModalOpen(true)}>
                   Review with Gemini
                 </DropdownMenuItem>
+                {step == 'CF' &&<DropdownMenuItem onClick={() => setProcessWithLLMModalOpen(true)}>
+                  Marking with LLM
+                </DropdownMenuItem>}
                 <DropdownMenuItem onClick={toggleAutoCapitalize}>
                   {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
                 </DropdownMenuItem>
@@ -1317,6 +1346,7 @@ export default memo(function Topbar({
           setButtonLoading={setButtonLoading}
         />
       )}
+      {/* review with gemini */}
       {reviewModalOpen && (
         <ReviewTranscriptDialog
           quillRef={quillRef}
@@ -1327,6 +1357,17 @@ export default memo(function Topbar({
           buttonLoading={buttonLoading}
           transcript={quillRef?.current ? quillRef.current.getEditor().getText() : transcript}
           ctms={ctms}
+          updateQuill={updateTranscript}
+        />
+      )}
+      {/* process with llm */}
+      { processWithLLMModalOpen && (
+        <ProcessWithLLMDialog
+          transcript={quillRef?.current ? quillRef.current.getEditor().getText() : transcript}
+          processWithLLMModalOpen={processWithLLMModalOpen}
+          setprocessWithLLMModalOpen={setProcessWithLLMModalOpen}
+          quillRef={quillRef}
+          orderDetails={orderDetails}
           updateQuill={updateTranscript}
         />
       )}
