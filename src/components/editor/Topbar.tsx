@@ -1372,6 +1372,7 @@ export default memo(function Topbar({
           quillRef={quillRef}
           orderDetails={orderDetails}
           updateQuill={updateTranscript}
+          role={session?.user?.role || ''}
         />
       )}
       {/* <FrequentTermsDialog
