@@ -5,6 +5,7 @@ import { OrderStatus } from '@prisma/client'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import calculateFileCost from '@/utils/calculateFileCost'
+import getOrderType from '@/utils/getOrderType'
 
 export async function fetchPreDeliveryOrders() {
   try {
@@ -25,7 +26,8 @@ export async function fetchPreDeliveryOrders() {
     const ordersWithCost = await Promise.all(
       orders.map(async (order) => {
         const fileCost = await calculateFileCost(order)
-        return { ...order, fileCost }
+        const orderType = await getOrderType(order.fileId, order.orderType)
+        return { ...order, fileCost, orderType }
       })
     )
 

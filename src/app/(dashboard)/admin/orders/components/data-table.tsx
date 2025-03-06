@@ -52,6 +52,7 @@ export function DataTable<TData, TValue>({
       orgName: false,
       customerWatch: false,
       transcriberWatch: false,
+      type: false,
     })
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -126,7 +127,9 @@ export function DataTable<TData, TValue>({
                   <TableRow
                     data-state={row.getIsSelected() && 'selected'}
                     className={`${
-                      isDeliveryDatePast(row.getValue('deliveryTs'))
+                      row.getValue('type') === 'RUSH'
+                        ? 'bg-yellow-200 dark:bg-yellow-800'
+                        : isDeliveryDatePast(row.getValue('deliveryTs'))
                         ? 'bg-red-200 dark:bg-red-800'
                         : ''
                     }`}

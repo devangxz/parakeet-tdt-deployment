@@ -24,10 +24,12 @@ import { toast } from 'sonner'
 
 import ConfigureShortcutsDialog from './ConfigureShortcutsDialog'
 import DownloadDocxDialog from './DownloadDocxDialog'
+import { EditorHandle } from './Editor'
 import EditorHeatmapDialog from './EditorHeatmapDialog'
 import EditorSettingsDialog from './EditorSettingsDialog'
 // import FrequentTermsDialog from './FrequentTermsDialog'
 import FormattingOptionsDialog from './FormattingOptionsDialog'
+import ProcessWithLLMDialog from './ProcessWithLLM'
 import ReportDialog from './ReportDialog'
 import ShortcutsReferenceDialog from './ShortcutsReferenceDialog'
 import UploadDocxDialog from './UploadDocxDialog'
@@ -71,7 +73,7 @@ import Profile from '@/components/navbar/profile'
 import { ThemeSwitcher } from '@/components/theme-switcher'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { FILE_CACHE_URL, COMMON_ABBREVIATIONS } from '@/constants'
-import { EditorSettings } from '@/types/editor'
+import { AlignmentType, EditorSettings } from '@/types/editor'
 import DefaultShortcuts, {
   getAllShortcuts,
   setShortcut,
@@ -125,6 +127,7 @@ interface TopbarProps {
   onAutoCapitalizeChange: (value: boolean) => void
   transcript: string
   ctms: CTMType[]
+  editorRef: React.Ref<EditorHandle>
 }
 
 export default memo(function Topbar({
@@ -151,6 +154,7 @@ export default memo(function Topbar({
   onAutoCapitalizeChange,
   transcript,
   ctms,
+  editorRef,
 }: TopbarProps) {
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
@@ -196,6 +200,7 @@ export default memo(function Topbar({
     reportComment: '',
   })
   const [reviewModalOpen, setReviewModalOpen] = useState(false)
+  const [processWithLLMModalOpen, setProcessWithLLMModalOpen] = useState(false)
   const [buttonLoading, setButtonLoading] = useState({
     download: false,
     upload: false,
@@ -251,6 +256,10 @@ export default memo(function Topbar({
       }
     }
 
+    if(orderDetails.fileId != '' && !orderDetails.LLMDone
+      && currentStep === 'CF') {
+      setProcessWithLLMModalOpen(true)
+    }
     setStep(currentStep)
   }, [orderDetails])
 
@@ -679,6 +688,24 @@ export default memo(function Topbar({
     }
   }
 
+  const verifyTranscriptForDownload = useCallback(() => {
+    const editorContentTranscript = quillRef?.current?.getEditor().getText() || transcript
+    const paragraphs = editorContentTranscript.split('\n\n');
+    // Keywords to check
+    // check timestamps
+    const requiredSections = ['PROCEEDINGS', 'EXAMINATION'];
+    // Ensure all required sections are present in separate paragraphs
+    const hasMarkedSections = requiredSections.every(section =>
+      paragraphs.some(para => 
+         para.trim().toUpperCase().includes(`[--${section}--]`) // Check for [--SECTION--] format      
+    ));
+
+    const timestampPattern = /\b\d{1,2}:\d{2}:\d{2}(?:\.\d+)?\b/; // Matches [HH:MM:SS]
+    const hasTimestamps = transcript.match(timestampPattern) !== null;
+    // Return whether both conditions are met
+    return {hasMarkedSections, hasTimestamps};
+  }, [quillRef, transcript])
+
   useEffect(() => {
     if (submitting && orderDetails.status === 'QC_ASSIGNED') {
       toggleSpeakerName()
@@ -746,6 +773,24 @@ export default memo(function Topbar({
   const handleCheckAndDownload = async (fileId: string) => {
     setIsCheckAndDownloadLoading(true)
     try {
+      let currentAlignments: AlignmentType[] = []
+      if (typeof editorRef === 'object' && editorRef !== null && editorRef.current) {
+        editorRef.current.triggerAlignmentUpdate()
+        currentAlignments = editorRef.current.getAlignments()
+      }         
+
+      await handleSave({
+        getEditorText,
+        orderDetails,
+        notes,
+        cfd,
+        setButtonLoading,
+        listenCount,
+        editedSegments,
+        role: session?.user?.role || '',
+        currentAlignments,
+      }, false)
+
       const txtRes = await getFileTxtSignedUrl(fileId)
       const docxRes = await getFileDocxSignedUrl(
         fileId,
@@ -818,11 +863,15 @@ export default memo(function Topbar({
             <>
               {editorMode === 'Manual' && (
                 <>
-                  {!(orderDetails.orderType === 'FORMATTING' && orderDetails.status === 'REVIEWER_ASSIGNED') && (
+                  {!(
+                    orderDetails.orderType === 'FORMATTING' &&
+                    orderDetails.status === 'REVIEWER_ASSIGNED'
+                  ) && (
                     <DownloadDocxDialog
                       orderDetails={orderDetails}
                       downloadableType={downloadableType}
                       setDownloadableType={setDownloadableType}
+                      verifyTranscriptForDownload={verifyTranscriptForDownload}
                     />
                   )}
                   <UploadDocxDialog
@@ -908,6 +957,7 @@ export default memo(function Topbar({
                       setButtonLoading,
                       listenCount,
                       editedSegments,
+                      role: session?.user?.role || '',
                     })
                   }}
                 >
@@ -970,6 +1020,13 @@ export default memo(function Topbar({
                 <DropdownMenuItem onClick={() => setReviewModalOpen(true)}>
                   Review with Gemini
                 </DropdownMenuItem>
+                {step == 'CF' && (
+                  <DropdownMenuItem
+                    onClick={() => setProcessWithLLMModalOpen(true)}
+                  >
+                    Marking with LLM
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={toggleAutoCapitalize}>
                   {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
                 </DropdownMenuItem>
@@ -1319,6 +1376,7 @@ export default memo(function Topbar({
           setButtonLoading={setButtonLoading}
         />
       )}
+      {/* review with gemini */}
       {reviewModalOpen && (
         <ReviewTranscriptDialog
           quillRef={quillRef}
@@ -1327,9 +1385,30 @@ export default memo(function Topbar({
           orderDetails={orderDetails}
           setButtonLoading={setButtonLoading}
           buttonLoading={buttonLoading}
-          transcript={quillRef?.current ? quillRef.current.getEditor().getText() : transcript}
+          transcript={
+            quillRef?.current
+              ? quillRef.current.getEditor().getText()
+              : transcript
+          }
           ctms={ctms}
           updateQuill={updateTranscript}
+          role={session?.user?.role || ''}
+        />
+      )}
+      {/* process with llm */}
+      {processWithLLMModalOpen && (
+        <ProcessWithLLMDialog
+          transcript={
+            quillRef?.current
+              ? quillRef.current.getEditor().getText()
+              : transcript
+          }
+          processWithLLMModalOpen={processWithLLMModalOpen}
+          setprocessWithLLMModalOpen={setProcessWithLLMModalOpen}
+          quillRef={quillRef}
+          orderDetails={orderDetails}
+          updateQuill={updateTranscript}
+          role={session?.user?.role || ''}
         />
       )}
       {/* <FrequentTermsDialog

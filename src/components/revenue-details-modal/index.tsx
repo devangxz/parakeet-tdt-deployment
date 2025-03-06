@@ -1,14 +1,16 @@
 'use client'
 
 import { format } from 'date-fns'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Download } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { getOrgRevenue } from '@/app/actions/admin/revenue-dashboard/get-org-revenue'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -20,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { exportToExcel } from '@/lib/excel-export'
 import formatDuration from '@/utils/formatDuration'
 
 interface RevenueDetailsModalProps {
@@ -49,6 +52,7 @@ interface OrderData {
     qc: number
     cf: number
     cfReview: number
+    fileBonus: number
   }
   totalCost: number
   margin: number
@@ -83,14 +87,49 @@ export function RevenueDetailsModal({
     }
   }, [isOpen, startDate, endDate])
 
+  function handleDownloadExcel() {
+    const exportData = orders.map((order) => ({
+      'Customer Email': order.customerEmail,
+      'File ID': order.fileId,
+      'File Name': order.fileName,
+      'Order Date': order.orderDate,
+      'Delivery Date': order.deliveryDate || '',
+      Status: order.status,
+      Duration: formatDuration(order.duration),
+      PWER: order.pwer,
+      QC: order.workers.qc.join(', '),
+      'CF Review': order.workers.review.join(', '),
+      'CF Finalize': order.workers.cf.join(', '),
+      'ASR Cost': order.costs.asr,
+      'QC Cost': order.costs.qc,
+      'Review Cost': order.costs.cfReview,
+      'CF Cost': order.costs.cf,
+      'File Bonus': order.costs.fileBonus,
+      Amount: order.amount,
+      'Total Cost': order.totalCost,
+      Margin: order.margin,
+      'Margin %': order.marginPercentage,
+    }))
+
+    exportToExcel(
+      exportData,
+      `revenue-details-${format(startDate, 'yyyy-MM-dd')}-to-${format(
+        endDate,
+        'yyyy-MM-dd'
+      )}`
+    )
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className='max-w-7xl'>
         <DialogHeader>
-          <DialogTitle>
-            Revenue Details ({format(startDate, 'MMM dd, yyyy')} -{' '}
-            {format(endDate, 'MMM dd, yyyy')})
-          </DialogTitle>
+          <div className='flex flex-col gap-2'>
+            <DialogTitle>
+              Revenue Details ({format(startDate, 'MMM dd, yyyy')} -{' '}
+              {format(endDate, 'MMM dd, yyyy')})
+            </DialogTitle>
+          </div>
         </DialogHeader>
 
         {isLoading ? (
@@ -122,6 +161,7 @@ export function RevenueDetailsModal({
                   <TableHead>QC Cost</TableHead>
                   <TableHead>Review Cost</TableHead>
                   <TableHead>CF Cost</TableHead>
+                  <TableHead>File Bonus</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Total Cost</TableHead>
                   <TableHead>Margin</TableHead>
@@ -167,6 +207,7 @@ export function RevenueDetailsModal({
                     <TableCell>${order.costs.qc.toFixed(2)}</TableCell>
                     <TableCell>${order.costs.cfReview.toFixed(2)}</TableCell>
                     <TableCell>${order.costs.cf.toFixed(2)}</TableCell>
+                    <TableCell>${order.costs.fileBonus.toFixed(2)}</TableCell>
                     <TableCell>${order.amount.toFixed(2)}</TableCell>
                     <TableCell>${order.totalCost.toFixed(2)}</TableCell>
                     <TableCell>${order.margin.toFixed(2)}</TableCell>
@@ -177,6 +218,16 @@ export function RevenueDetailsModal({
             </Table>
           </div>
         )}
+        <DialogFooter>
+          <Button
+            variant='order'
+            className='not-rounded'
+            onClick={handleDownloadExcel}
+          >
+            <Download className='h-4 w-4 mr-2' />
+            Download Excel
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

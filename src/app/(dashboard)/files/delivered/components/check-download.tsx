@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { StarFilledIcon, StarIcon } from '@radix-ui/react-icons'
 import { useGoogleLogin } from '@react-oauth/google'
-import { FileText } from 'lucide-react'
+import { ChevronDown, ChevronUp, FileText } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -10,6 +10,7 @@ import { z } from 'zod'
 import { Tip } from '../../all-files/AllFiles'
 import { orderController } from '../controllers'
 import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
+import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import {
   getOrderComments,
   updateOrderComments,
@@ -125,11 +126,11 @@ export function CheckAndDownload({
 }: CheckAndDownloadProps) {
   const storedrating = Number(localStorage.getItem('rating'))
   const [hover, setHover] = useState<null | number>(null)
-  const [showSubtitle, setShowSubtitle] = useState<boolean>(false)
   const [rating, setRating] = useState<null | number>(storedrating || null)
   const [isUploading, setIsUploading] = useState(false)
   const [authToken, setAuthToken] = useState<string | undefined>('')
   const ratingMessages = ['Poor', 'Bad', 'Okay', 'Good', 'Excellent']
+  const [showMoreFormats, setShowMoreFormats] = useState(false)
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -161,6 +162,10 @@ export function CheckAndDownload({
 
   const [currentFileUrl, setCurrentFileUrl] = useState<string>('')
   const [currentFileName, setCurrentFileName] = useState<string>('')
+  const [subtitleUrls, setSubtitleUrls] = useState({
+    srtUrl: '',
+    vttUrl: '',
+  })
 
   const login = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -227,12 +232,31 @@ export function CheckAndDownload({
     )
   }
 
-  const subTitile = {
-    name: `${filename}`,
-    getSubtitleFile: async () => {
-      setShowSubtitle(!showSubtitle)
-    },
+  const fetchSubtitleUrls = async () => {
+    try {
+      const srtResponse = await getSignedUrlAction(`${id}.srt`, 3600)
+      const vttResponse = await getSignedUrlAction(`${id}.vtt`, 3600)
+
+      setSubtitleUrls({
+        srtUrl:
+          srtResponse.success && srtResponse.signedUrl
+            ? srtResponse.signedUrl
+            : '',
+        vttUrl:
+          vttResponse.success && vttResponse.signedUrl
+            ? vttResponse.signedUrl
+            : '',
+      })
+    } catch (error) {
+      toast.error('Failed to fetch subtitle files')
+    }
   }
+
+  useEffect(() => {
+    if (orderType === 'TRANSCRIPTION') {
+      fetchSubtitleUrls()
+    }
+  }, [orderType, id])
 
   useEffect(() => {
     async function fetchRating() {
@@ -328,33 +352,11 @@ export function CheckAndDownload({
             <div className='border-b p-4'>
               <div className='flex items-start justify-between mb-4'>
                 <h3 className='text-lg font-semibold'>Download Files</h3>
-                {orderType == 'TRANSCRIPTION' && (
-                  <Button
-                    onClick={() => {
-                      subTitile?.getSubtitleFile()
-                      if (!showSubtitle) {
-                        const timeoutId = setTimeout(() => {
-                          const subtitlesSection =
-                            document.getElementById('subtitles-section')
-                          if (subtitlesSection) {
-                            subtitlesSection.scrollIntoView({
-                              behavior: 'smooth',
-                              block: 'start',
-                            })
-                          }
-                        }, 100)
-                        return () => clearTimeout(timeoutId)
-                      }
-                    }}
-                  >
-                    {!showSubtitle ? 'Show Subtitles' : 'Hide Subtitles'}
-                  </Button>
-                )}
               </div>
 
               {orderType == 'TRANSCRIPTION_FORMATTING' && (
                 <div className='space-y-6'>
-                  <div className='pb-4'>
+                  <div>
                     <h4 className='text-base font-medium text-muted-foreground mb-4'>
                       Custom Formatting Files
                     </h4>
@@ -368,21 +370,41 @@ export function CheckAndDownload({
                         handleGDriveUpload={handleGDriveUpload}
                       />
 
-                      <DownloadFile
-                        name={`${filename}_cf`}
-                        url={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`}
-                        fileType='.pdf'
-                        isUploading={isUploading}
-                        handleGDriveUpload={handleGDriveUpload}
-                      />
+                      <div
+                        className='overflow-hidden transition-all duration-300 ease-in-out'
+                        style={{
+                          maxHeight: showMoreFormats ? '1000px' : '0',
+                          opacity: showMoreFormats ? 1 : 0,
+                          marginTop: showMoreFormats ? '16px' : '0',
+                        }}
+                      >
+                        <DownloadFile
+                          name={`${filename}_cf`}
+                          url={`${FILE_CACHE_URL}/get-cf-pdf/${id}?authToken=${authToken}`}
+                          fileType='.pdf'
+                          isUploading={isUploading}
+                          handleGDriveUpload={handleGDriveUpload}
+                        />
+                      </div>
                     </div>
+
+                    <span
+                      className="w-fit flex items-center mt-4 text-sm text-muted-foreground hover:text-primary cursor-pointer" 
+                      onClick={() => setShowMoreFormats(!showMoreFormats)}
+                    >
+                      {showMoreFormats ? (
+                        <>Hide additional formats <ChevronUp className="ml-1 h-4 w-4" /></>
+                      ) : (
+                        <>Show more formats <ChevronDown className="ml-1 h-4 w-4" /></>
+                      )}
+                    </span>
                   </div>
                 </div>
               )}
 
               {orderType == 'FORMATTING' && (
                 <div className='space-y-6'>
-                  <div className='pb-4'>
+                  <div>
                     <h4 className='text-base font-medium text-muted-foreground mb-4'>
                       Custom Formatting Files
                     </h4>
@@ -421,7 +443,7 @@ export function CheckAndDownload({
 
               {orderType == 'TRANSCRIPTION' && (
                 <div className='space-y-6'>
-                  <div className='pb-4'>
+                  <div>
                     <h4 className='text-base font-medium text-muted-foreground mb-4'>
                       Transcription Files
                     </h4>
@@ -435,50 +457,74 @@ export function CheckAndDownload({
                         handleGDriveUpload={handleGDriveUpload}
                       />
 
-                      <DownloadFile
-                        name={filename}
-                        url={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${authToken}`}
-                        fileType='.pdf'
-                        isUploading={isUploading}
-                        handleGDriveUpload={handleGDriveUpload}
-                      />
+                      <div
+                        className='overflow-hidden transition-all duration-300 ease-in-out'
+                        style={{
+                          maxHeight: showMoreFormats ? '1000px' : '0',
+                          opacity: showMoreFormats ? 1 : 0,
+                          marginTop: showMoreFormats ? '16px' : '0',
+                        }}
+                      >
+                        <div className='space-y-4'>
+                          <DownloadFile
+                            name={filename}
+                            url={`${FILE_CACHE_URL}/get-tr-pdf/${id}?authToken=${authToken}`}
+                            fileType='.pdf'
+                            isUploading={isUploading}
+                            handleGDriveUpload={handleGDriveUpload}
+                          />
 
-                      <DownloadFile
-                        name={filename}
-                        url={txtSignedUrl}
-                        fileType='.txt'
-                        isUploading={isUploading}
-                        handleGDriveUpload={handleGDriveUpload}
-                      />
+                          <DownloadFile
+                            name={filename}
+                            url={txtSignedUrl}
+                            fileType='.txt'
+                            isUploading={isUploading}
+                            handleGDriveUpload={handleGDriveUpload}
+                          />
+
+                          {subtitleUrls.srtUrl || subtitleUrls.vttUrl ? (
+                            <div className='pt-2'>
+                              <h4 className='text-base font-medium text-muted-foreground mb-4'>
+                                Subtitle Files
+                              </h4>
+
+                              <div className='space-y-4'>
+                                {subtitleUrls.srtUrl ? (
+                                  <DownloadFile
+                                    name={filename}
+                                    url={subtitleUrls.srtUrl}
+                                    fileType='.srt'
+                                    isUploading={isUploading}
+                                    handleGDriveUpload={handleGDriveUpload}
+                                  />
+                                ) : null}
+
+                                {subtitleUrls.vttUrl ? (
+                                  <DownloadFile
+                                    name={filename}
+                                    url={subtitleUrls.vttUrl}
+                                    fileType='.vtt'
+                                    isUploading={isUploading}
+                                    handleGDriveUpload={handleGDriveUpload}
+                                  />
+                                ) : null}
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              )}
 
-              {showSubtitle && orderType == 'TRANSCRIPTION' && (
-                <div id='subtitles-section' className='space-y-6'>
-                  <div className='pb-4'>
-                    <h4 className='text-base font-medium text-muted-foreground mb-4'>
-                      Subtitle Files
-                    </h4>
-
-                    <div className='space-y-4'>
-                      <DownloadFile
-                        name={filename}
-                        url={`${FILE_CACHE_URL}/get-subtitles/${id}?authToken=${authToken}&ext=srt`}
-                        fileType='.srt'
-                        isUploading={isUploading}
-                        handleGDriveUpload={handleGDriveUpload}
-                      />
-
-                      <DownloadFile
-                        name={filename}
-                        url={`${FILE_CACHE_URL}/get-subtitles/${id}?authToken=${authToken}&ext=vtt`}
-                        fileType='.vtt'
-                        isUploading={isUploading}
-                        handleGDriveUpload={handleGDriveUpload}
-                      />
-                    </div>
+                    <span
+                      className="w-fit flex items-center mt-4 text-sm text-muted-foreground hover:text-primary cursor-pointer" 
+                      onClick={() => setShowMoreFormats(!showMoreFormats)}
+                    >
+                      {showMoreFormats ? (
+                        <>Hide additional formats <ChevronUp className="ml-1 h-4 w-4" /></>
+                      ) : (
+                        <>Show more formats <ChevronDown className="ml-1 h-4 w-4" /></>
+                      )}
+                    </span>
                   </div>
                 </div>
               )}

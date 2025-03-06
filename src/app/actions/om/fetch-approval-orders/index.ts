@@ -5,6 +5,7 @@ import { OrderStatus } from '@prisma/client'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import calculateFileCost from '@/utils/calculateFileCost'
+import getOrderType from '@/utils/getOrderType'
 
 const getUserWatchList = async (customerId: number, transcriberId: number) => {
   const customer = await prisma.customer.findUnique({
@@ -38,6 +39,7 @@ export async function fetchApprovalOrders() {
     const ordersWithCost = await Promise.all(
       orders.map(async (order) => {
         const fileCost = await calculateFileCost(order)
+        const orderType = await getOrderType(order.fileId, order.orderType)
         const transcriberId = order.Assignment.find(
           (a) => a.status === 'SUBMITTED_FOR_APPROVAL' && a.type === 'QC'
         )?.user.id
@@ -45,7 +47,7 @@ export async function fetchApprovalOrders() {
           order.userId,
           transcriberId ?? 0
         )
-        return { ...order, fileCost, watchList }
+        return { ...order, fileCost, watchList, orderType }
       })
     )
 

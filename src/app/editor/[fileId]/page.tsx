@@ -38,7 +38,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { RenderPDFDocument } from '@/components/utils'
 import { AUTOSAVE_INTERVAL } from '@/constants'
 import usePreventMultipleTabs from '@/hooks/usePreventMultipleTabs'
-import { EditorSettings } from '@/types/editor'
+import { AlignmentType, EditorSettings } from '@/types/editor'
 import {
   ShortcutControls,
   useShortcuts,
@@ -352,6 +352,7 @@ function EditorPage() {
           setButtonLoading,
           listenCount,
           editedSegments,
+          role: session?.user?.role || '',
         })
         updateFormattedTranscript()
       },
@@ -478,6 +479,7 @@ function EditorPage() {
           setButtonLoading,
           listenCount,
           editedSegments,
+          role: session?.user?.role || '',
         },
         false
       )
@@ -680,6 +682,7 @@ function EditorPage() {
         onAutoCapitalizeChange={setAutoCapitalize}
         transcript={initialEditorData?.transcript || ''}
         ctms={ctms}
+        editorRef={editorRef}
       />
 
       <Header
@@ -1012,6 +1015,13 @@ function EditorPage() {
                     } else {
                       if (!quillRef?.current) return
                       const quill = quillRef.current.getEditor()
+
+                      let currentAlignments: AlignmentType[] = []
+                      if (editorRef.current && step === 'QC') {
+                        editorRef.current.triggerAlignmentUpdate()
+                        currentAlignments = editorRef.current.getAlignments()
+                      }
+
                       handleSubmit({
                         orderDetails,
                         step,
@@ -1022,10 +1032,11 @@ function EditorPage() {
                         router,
                         quill,
                         finalizerComment,
+                        currentAlignments,
                       })
+                      setSubmitting(false)
+                      setIsSubmitModalOpen(false)
                     }
-                    setSubmitting(false)
-                    setIsSubmitModalOpen(false)
                   }}
                   disabled={buttonLoading.submit}
                 >

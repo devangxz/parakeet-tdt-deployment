@@ -1,8 +1,10 @@
 import { InputFileType, OrderStatus, JobType, AssignMode } from '@prisma/client'
 
+import calculateAssignmentAmount from './get-amount'
 import { updateOrderAndCreateJobAssignment } from './update-order'
 import logger from '@/lib/logger'
 import { sendTemplateMail } from '@/lib/ses'
+
 const assignFileToQC = async (
   orderId: number,
   orderStatus: OrderStatus,
@@ -23,8 +25,15 @@ const assignFileToQC = async (
       assignMode
     )
 
+    const { cost, rate } = await calculateAssignmentAmount(
+      orderId,
+      transcriberId,
+      orderStatus
+    )
+
     const templateData = {
       fileId,
+      amount: `$${cost} (${rate}/ah)`,
     }
 
     await sendTemplateMail('QC_ASSIGNMENT', transcriberId, templateData)
