@@ -49,6 +49,7 @@ interface ReviewWithGeminiDialogProps {
   transcript: string;
   ctms: CTMType[];
   updateQuill: (quillRef: React.RefObject<ReactQuill> | undefined, content: string) => void;
+  role: string;
 }
 
 export default memo(function ReviewTranscriptDialog({
@@ -59,6 +60,7 @@ export default memo(function ReviewTranscriptDialog({
   transcript,
   ctms,
   updateQuill,
+  role,
 }: ReviewWithGeminiDialogProps) {
   
   const [step, setStep] = useState<'options' | 'processing' | 'review' | 'preview'>('options');
@@ -236,7 +238,8 @@ export default memo(function ReviewTranscriptDialog({
         setButtonLoading: () => {},
         listenCount: [],
         editedSegments: new Set(),
-        isGeminiReviewed: true
+        isGeminiReviewed: true,
+        role,
       },
       true
     );

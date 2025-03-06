@@ -24,6 +24,7 @@ import { toast } from 'sonner'
 
 import ConfigureShortcutsDialog from './ConfigureShortcutsDialog'
 import DownloadDocxDialog from './DownloadDocxDialog'
+import { EditorHandle } from './Editor'
 import EditorHeatmapDialog from './EditorHeatmapDialog'
 import EditorSettingsDialog from './EditorSettingsDialog'
 // import FrequentTermsDialog from './FrequentTermsDialog'
@@ -72,7 +73,7 @@ import Profile from '@/components/navbar/profile'
 import { ThemeSwitcher } from '@/components/theme-switcher'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { FILE_CACHE_URL, COMMON_ABBREVIATIONS } from '@/constants'
-import { EditorSettings } from '@/types/editor'
+import { AlignmentType, EditorSettings } from '@/types/editor'
 import DefaultShortcuts, {
   getAllShortcuts,
   setShortcut,
@@ -126,6 +127,7 @@ interface TopbarProps {
   onAutoCapitalizeChange: (value: boolean) => void
   transcript: string
   ctms: CTMType[]
+  editorRef: React.Ref<EditorHandle>
 }
 
 export default memo(function Topbar({
@@ -152,6 +154,7 @@ export default memo(function Topbar({
   onAutoCapitalizeChange,
   transcript,
   ctms,
+  editorRef,
 }: TopbarProps) {
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
@@ -771,6 +774,24 @@ export default memo(function Topbar({
   const handleCheckAndDownload = async (fileId: string) => {
     setIsCheckAndDownloadLoading(true)
     try {
+      let currentAlignments: AlignmentType[] = []
+      if (typeof editorRef === 'object' && editorRef !== null && editorRef.current) {
+        editorRef.current.triggerAlignmentUpdate()
+        currentAlignments = editorRef.current.getAlignments()
+      }         
+
+      await handleSave({
+        getEditorText,
+        orderDetails,
+        notes,
+        cfd,
+        setButtonLoading,
+        listenCount,
+        editedSegments,
+        role: session?.user?.role || '',
+        currentAlignments,
+      }, false)
+
       const txtRes = await getFileTxtSignedUrl(fileId)
       const docxRes = await getFileDocxSignedUrl(
         fileId,
@@ -932,6 +953,7 @@ export default memo(function Topbar({
                       setButtonLoading,
                       listenCount,
                       editedSegments,
+                      role: session?.user?.role || '',
                     })
                   }}
                 >
@@ -1358,6 +1380,7 @@ export default memo(function Topbar({
           transcript={quillRef?.current ? quillRef.current.getEditor().getText() : transcript}
           ctms={ctms}
           updateQuill={updateTranscript}
+          role={session?.user?.role || ''}
         />
       )}
       {/* process with llm */}
@@ -1369,6 +1392,7 @@ export default memo(function Topbar({
           quillRef={quillRef}
           orderDetails={orderDetails}
           updateQuill={updateTranscript}
+          role={session?.user?.role || ''}
         />
       )}
       {/* <FrequentTermsDialog

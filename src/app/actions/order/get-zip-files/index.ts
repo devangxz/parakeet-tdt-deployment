@@ -2,6 +2,7 @@
 
 import { FileTag, OrderType } from '@prisma/client'
 
+import { getSignedUrlAction } from '../../get-signed-url'
 import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
@@ -142,18 +143,24 @@ export async function getZipFilesAction(ids: (string | number)[], selectedTypes:
                     }
                     if (selectedTypes.includes('srt')) {
                         if (order.orderType === OrderType.TRANSCRIPTION) {
-                            files.push({
-                                url: `${FILE_CACHE_URL}/get-subtitles/${order.fileId}?authToken=${authToken}&ext=srt`,
-                                name: `${path}.srt`
-                            })
+                            const srtResponse = await getSignedUrlAction(`${order.fileId}.srt`, 3600);
+                            if (srtResponse.success && srtResponse.signedUrl) {
+                                files.push({
+                                    url: srtResponse.signedUrl,
+                                    name: `${path}.srt`
+                                })
+                            }
                         }
                     }
                     if (selectedTypes.includes('vtt')) {
                         if (order.orderType === OrderType.TRANSCRIPTION) {
-                            files.push({
-                                url: `${FILE_CACHE_URL}/get-subtitles/${order.fileId}?authToken=${authToken}&ext=vtt`,
-                                name: `${path}.vtt`
-                            })
+                            const vttResponse = await getSignedUrlAction(`${order.fileId}.vtt`, 3600);
+                            if (vttResponse.success && vttResponse.signedUrl) {
+                                files.push({
+                                    url: vttResponse.signedUrl,
+                                    name: `${path}.vtt`
+                                })
+                            }
                         }
                     }
                     if (selectedTypes.includes('plain-text')) {
