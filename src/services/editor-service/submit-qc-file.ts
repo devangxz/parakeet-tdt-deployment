@@ -138,6 +138,8 @@ export async function submitQCFile(
       }
     }
 
+    logger.info(`--> submitQCFile ${orderId} for transcriber ${transcriberId} and order type ${order.orderType}`)
+    
     await axios.post(
       `${FILE_CACHE_URL}/save-transcript`,
       {
@@ -213,9 +215,9 @@ export async function submitQCFile(
     }
 
     await completeQCJob(order, transcriberId)
+    logger.info(`order ${order.id} Status updated: QC_COMPLETED for Order Type: ${order.orderType}`)
 
     if (order.orderType === OrderType.TRANSCRIPTION_FORMATTING) {
-      logger.info(`--> order Status updated: REVIEWER_ASSIGNED`)
       await prisma.order.update({
         where: {
           id: order.id,
@@ -224,6 +226,7 @@ export async function submitQCFile(
           status: OrderStatus.REVIEWER_ASSIGNED,
         },
       })
+      logger.info(`order ${order.id} Status updated: REVIEWER_ASSIGNED for Order Type: ${order.orderType}`)
     } else {
       // await deliver(order, transcriberId)
       await prisma.order.update({
