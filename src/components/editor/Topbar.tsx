@@ -187,13 +187,13 @@ export default memo(function Topbar({
     cfDocxSignedUrl: '',
   })
   const [customFormatFilesSignedUrls, setCustomFormatFilesSignedUrls] =
-  useState<
-    {
-      signedUrl: string
-      filename: string
-      extension: string
-    }[]
-  >([])
+    useState<
+      {
+        signedUrl: string
+        filename: string
+        extension: string
+      }[]
+    >([])
   const [reportModalOpen, setReportModalOpen] = useState(false)
   const [reportDetails, setReportDetails] = useState({
     reportOption: '',
@@ -256,8 +256,12 @@ export default memo(function Topbar({
       }
     }
 
-    if(orderDetails.fileId != '' && !orderDetails.LLMDone
-      && currentStep === 'CF') {
+    if (
+      orderDetails.fileId != '' &&
+      !orderDetails.LLMDone &&
+      currentStep === 'CF' &&
+      orderDetails.orderType === 'TRANSCRIPTION_FORMATTING'
+    ) {
       setProcessWithLLMModalOpen(true)
     }
     setStep(currentStep)
@@ -774,22 +778,29 @@ export default memo(function Topbar({
     setIsCheckAndDownloadLoading(true)
     try {
       let currentAlignments: AlignmentType[] = []
-      if (typeof editorRef === 'object' && editorRef !== null && editorRef.current) {
+      if (
+        typeof editorRef === 'object' &&
+        editorRef !== null &&
+        editorRef.current
+      ) {
         editorRef.current.triggerAlignmentUpdate()
         currentAlignments = editorRef.current.getAlignments()
-      }         
+      }
 
-      await handleSave({
-        getEditorText,
-        orderDetails,
-        notes,
-        cfd,
-        setButtonLoading,
-        listenCount,
-        editedSegments,
-        role: session?.user?.role || '',
-        currentAlignments,
-      }, false)
+      await handleSave(
+        {
+          getEditorText,
+          orderDetails,
+          notes,
+          cfd,
+          setButtonLoading,
+          listenCount,
+          editedSegments,
+          role: session?.user?.role || '',
+          currentAlignments,
+        },
+        false
+      )
 
       const txtRes = await getFileTxtSignedUrl(fileId)
       const docxRes = await getFileDocxSignedUrl(
@@ -1020,7 +1031,7 @@ export default memo(function Topbar({
                 <DropdownMenuItem onClick={() => setReviewModalOpen(true)}>
                   Review with Gemini
                 </DropdownMenuItem>
-                {step == 'CF' && (
+                {orderDetails.orderType === 'TRANSCRIPTION_FORMATTING' && (
                   <DropdownMenuItem
                     onClick={() => setProcessWithLLMModalOpen(true)}
                   >

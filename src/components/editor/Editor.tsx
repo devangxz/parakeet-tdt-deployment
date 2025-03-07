@@ -1002,8 +1002,8 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
         <div
           className='fixed z-50 w-fit bg-white rounded-md shadow-lg border border-customBorder backdrop-blur-sm bg-opacity-95'
           style={{
-            left: menuPosition.x,
-            top: menuPosition.y,
+            left: `${Math.min(menuPosition.x, window.innerWidth - 200)}px`,
+            top: `${Math.min(menuPosition.y, window.innerHeight - 150)}px`,
           }}
         >
           <button

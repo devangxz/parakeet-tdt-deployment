@@ -949,25 +949,27 @@ function EditorPage() {
             }
           }}
         >
-          <DialogContent className='max-w-4xl'>
+          <DialogContent className={orderDetails.orderType !== 'FORMATTING' ? 'max-w-4xl' : ''}>
             <DialogHeader>
               <DialogTitle>Submit</DialogTitle>
               <DialogDescription>
-                Please confirm that you want to submit the transcript
+                Please confirm that you want to submit the file
               </DialogDescription>
 
-              <div className='py-4'>
-                <p className='text-sm text-muted-foreground/80 mb-2'>
-                  Audio Playback Coverage:{' '}
-                  <span className='font-medium'>{getPlayedPercentage()}%</span>
-                </p>
-                <WaveformHeatmap
-                  waveformUrl={waveformUrl}
-                  listenCount={listenCount}
-                  editedSegments={editedSegments}
-                  duration={audioDuration}
-                />
-              </div>
+              {orderDetails.orderType !== 'FORMATTING' && (
+                <div className='pt-4'>
+                  <p className='text-sm text-muted-foreground/80 mb-2'>
+                    Audio Playback Coverage:{' '}
+                    <span className='font-medium'>{getPlayedPercentage()}%</span>
+                  </p>
+                  <WaveformHeatmap
+                    waveformUrl={waveformUrl}
+                    listenCount={listenCount}
+                    editedSegments={editedSegments}
+                    duration={audioDuration}
+                  />
+                </div>
+              )}
 
               {orderDetails.status === 'FINALIZER_ASSIGNED' && (
                 <div className='mt-4'>
@@ -989,7 +991,7 @@ function EditorPage() {
                 </div>
               )}
 
-              <div className='flex justify-end gap-2 mt-4'>
+              <div className='flex justify-end gap-2 pt-4'>
                 <Button
                   variant='outline'
                   onClick={() => {

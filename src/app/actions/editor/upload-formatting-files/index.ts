@@ -28,11 +28,6 @@ type S3UploadResult = {
   [key: string]: unknown
 }
 
-type S3Result = UploadDetails & {
-  s3VersionId: string
-  promise?: Promise<S3UploadResult>
-}
-
 type FileVersionToUpdate = {
   id: number
   oldS3VersionId?: string
@@ -231,54 +226,6 @@ export async function uploadFormattingFilesAction(formData: FormData) {
             logger.error(
               `Error deleting old version ${version.oldS3VersionId}: ${error}`
             )
-          }
-        }
-      }
-
-      if (tag === FileTag.CF_OM_DELIVERED) {
-        const extensionToResults = new Map<string, S3Result[]>()
-
-        for (const result of s3Results) {
-          if (!extensionToResults.has(result.extension)) {
-            extensionToResults.set(result.extension, [])
-          }
-          extensionToResults.get(result.extension)?.push(result)
-        }
-
-        for (const [extension, results] of Array.from(
-          extensionToResults.entries()
-        )) {
-          const deliveredVersions = await tx.fileVersion.findMany({
-            where: {
-              fileId,
-              tag: FileTag.CF_CUSTOMER_DELIVERED,
-              userId: order.userId,
-              extension,
-            },
-            orderBy: {
-              createdAt: 'asc',
-            },
-          })
-
-          for (let i = 0; i < results.length; i++) {
-            const result = results[i]
-
-            if (i < deliveredVersions.length) {
-              await tx.fileVersion.update({
-                where: { id: deliveredVersions[i].id },
-                data: { s3VersionId: result.s3VersionId },
-              })
-            } else {
-              await tx.fileVersion.create({
-                data: {
-                  userId: order.userId,
-                  fileId,
-                  tag: FileTag.CF_CUSTOMER_DELIVERED,
-                  s3VersionId: result.s3VersionId,
-                  extension,
-                },
-              })
-            }
           }
         }
       }
