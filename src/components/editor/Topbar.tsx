@@ -687,6 +687,7 @@ export default memo(function Topbar({
 
   const verifyTranscriptForDownload = useCallback(() => {
     const editorContentTranscript = quillRef?.current?.getEditor().getText() || transcript
+    console.log('editorContentTranscript', editorContentTranscript)
     const paragraphs = editorContentTranscript.split('\n\n');
     // Keywords to check
     // check timestamps

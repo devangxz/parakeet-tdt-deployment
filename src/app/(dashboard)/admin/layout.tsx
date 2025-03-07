@@ -16,6 +16,7 @@ import React from 'react'
 import AuthenticatedFooter from '@/components/authenticated-footer'
 import PaymentsNavbar from '@/components/navbar/payments'
 import Sidebar from '@/components/Sidebar'
+import { cn } from '@/lib/utils'
 import { SidebarItemType } from '@/types/sidebar'
 
 export default function FilesLayout({
@@ -24,7 +25,7 @@ export default function FilesLayout({
   children: React.ReactNode
 }) {
   const { data: session } = useSession()
-
+  const [isCollapsed, setIsCollapsed] = React.useState(true)
   const sidebarItems: SidebarItemType[] = [
     {
       href: '/admin/dashboard',
@@ -91,13 +92,15 @@ export default function FilesLayout({
   return (
     <>
       <PaymentsNavbar />
-      <div className='grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]'>
+      <div className={cn('grid min-h-screen w-full', isCollapsed ? 'md:grid-cols-[60px_1fr]' : 'md:grid-cols-[220px_1fr]',
+         isCollapsed ? 'lg:grid-cols-[90px_1fr]' : 'lg:grid-cols-[280px_1fr]')}>
         <div className='hidden border-r-2 border-customBorder md:block'>
-          <div className='flex h-full max-h-screen flex-col gap-2'>
+          <div className='flex h-full max-h-screen flex-col gap-2' onClick={() => setIsCollapsed(!isCollapsed)}>
             <Sidebar
               sidebarItems={displayedSidebarItems}
               showTeams={false}
               heading='Dashboards'
+              isCollapsed={isCollapsed}
             />
           </div>
         </div>
