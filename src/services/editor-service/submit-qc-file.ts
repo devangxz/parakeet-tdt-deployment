@@ -11,7 +11,6 @@ import {
 } from '@prisma/client'
 import axios from 'axios'
 
-import preDeliverIfConfigured from '../file-service/pre-deliver-if-configured'
 import assignFileToReviewer from '../transcribe-service/assign-file-to-review'
 import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
@@ -219,30 +218,27 @@ export async function submitQCFile(
       logger.info(`--> order Status updated: REVIEWER_ASSIGNED`)
       await prisma.order.update({
         where: {
-            id: order.id,
+          id: order.id,
         },
         data: {
-            status: OrderStatus.REVIEWER_ASSIGNED
-        }
+          status: OrderStatus.REVIEWER_ASSIGNED,
+        },
       })
-    }
-    else{
-      if ((await preDeliverIfConfigured(order, transcriberId)) === false) {
-        // await deliver(order, transcriberId)
-        await prisma.order.update({
-          where: { id: order.id },
-          data: { status: OrderStatus.SUBMITTED_FOR_APPROVAL },
-        })
-        await prisma.jobAssignment.updateMany({
-          where: {
-            orderId: order.id,
-            transcriberId: transcriberId,
-            type: JobType.QC,
-            status: JobStatus.ACCEPTED,
-          },
-          data: { status: JobStatus.SUBMITTED_FOR_APPROVAL },
-        })
-      }
+    } else {
+      // await deliver(order, transcriberId)
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { status: OrderStatus.SUBMITTED_FOR_APPROVAL },
+      })
+      await prisma.jobAssignment.updateMany({
+        where: {
+          orderId: order.id,
+          transcriberId: transcriberId,
+          type: JobType.QC,
+          status: JobStatus.COMPLETED,
+        },
+        data: { status: JobStatus.SUBMITTED_FOR_APPROVAL },
+      })
     }
   } catch (error) {
     logger.error(`Failed to submit order ${orderId}: ${error}`)

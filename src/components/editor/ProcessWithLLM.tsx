@@ -28,6 +28,7 @@ interface ProcessWithLLMProps {
   orderDetails: OrderDetails;
   quillRef: React.RefObject<ReactQuill> | undefined;
   updateQuill: (quillRef: React.RefObject<ReactQuill> | undefined, content: string) => void;
+  role: string;
 }
 
 export default memo(function ProcessWithLLMDialog (
@@ -36,7 +37,8 @@ export default memo(function ProcessWithLLMDialog (
     setprocessWithLLMModalOpen,
     orderDetails,
     quillRef,
-    updateQuill  
+    updateQuill,
+    role
   }: ProcessWithLLMProps) {
  
   const [isLoading, setIsLoading] = useState(false)
@@ -146,7 +148,8 @@ export default memo(function ProcessWithLLMDialog (
         listenCount: [],
         editedSegments: new Set(),
         getEditorText: () => markedTranscript,
-        isCF: true
+        isCF: true,
+        role
       },
       true
     )
