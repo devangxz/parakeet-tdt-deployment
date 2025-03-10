@@ -17,6 +17,7 @@ import { setPlayStatsAction } from '@/app/actions/editor/set-play-stats'
 import { submitQCAction } from '@/app/actions/editor/submit-qc'
 import { submitReviewAction } from '@/app/actions/editor/submit-review'
 import { uploadDocxAction } from '@/app/actions/editor/upload-docx'
+import { uploadFormattingFilesAction } from '@/app/actions/editor/upload-formatting-files'
 import { uploadSubtitlesAction } from '@/app/actions/editor/upload-subtitles'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { OrderDetails, UploadFilesType } from '@/app/editor/[fileId]/page'
@@ -244,7 +245,6 @@ const uploadFile = async (
   if (!session?.user?.token) {
     return
   }
-  const toastId = toast.loading('Uploading File...')
   setButtonLoading((prevButtonLoading) => ({
     ...prevButtonLoading,
     upload: true,
@@ -255,9 +255,7 @@ const uploadFile = async (
   try {
     const response = await uploadDocxAction(formData, fileId)
 
-    toast.dismiss(toastId)
     if (response.success) {
-      toast.success('File uploaded successfully')
       setFileToUpload({
         renamedFile: null,
         originalFile: null,
@@ -267,13 +265,90 @@ const uploadFile = async (
       throw new Error(response.message)
     }
   } catch (uploadError) {
-    toast.dismiss(toastId)
-    toast.error('Failed to upload file')
     setFileToUpload({
       renamedFile: null,
       originalFile: null,
       isUploaded: false,
     })
+  } finally {
+    setButtonLoading((prevButtonLoading) => ({
+      ...prevButtonLoading,
+      upload: false,
+    }))
+  }
+}
+
+const uploadFormattingFiles = async (
+  uploadedFiles: File[],
+  setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
+  session: Session | null,
+  setFileToUpload: React.Dispatch<
+    React.SetStateAction<{
+      renamedFile: File | null
+      originalFile: File | null
+      isUploaded?: boolean
+    }>
+  >,
+  fileId: string
+) => {
+  if (!uploadedFiles.length) {
+    return toast.error('Please select files to upload.')
+  }
+
+  if (!session?.user?.token) {
+    return
+  }
+
+  setButtonLoading((prevButtonLoading) => ({
+    ...prevButtonLoading,
+    upload: true,
+  }))
+
+  try {
+    const formData = new FormData()
+
+    uploadedFiles.forEach((file, index) => {
+      formData.append(`file-${index}`, file)
+
+      const fileParts = file.name.split('.')
+      const fileExtension =
+        fileParts.length > 1
+          ? fileParts[fileParts.length - 1].toLowerCase()
+          : 'docx'
+
+      formData.append(`extension-${index}`, fileExtension)
+    })
+
+    formData.append('fileCount', uploadedFiles.length.toString())
+    formData.append('fileId', fileId)
+
+    const response = await uploadFormattingFilesAction(formData)
+
+    if (response.success) {
+      toast.success('All files uploaded successfully')
+      setFileToUpload({
+        renamedFile: null,
+        originalFile: null,
+        isUploaded: true,
+      })
+      return true
+    } else {
+      toast.error(response.message || 'Failed to upload files')
+      setFileToUpload({
+        renamedFile: null,
+        originalFile: null,
+        isUploaded: false,
+      })
+      return false
+    }
+  } catch (error) {
+    toast.error('Failed to upload files')
+    setFileToUpload({
+      renamedFile: null,
+      originalFile: null,
+      isUploaded: false,
+    })
+    return false
   } finally {
     setButtonLoading((prevButtonLoading) => ({
       ...prevButtonLoading,
@@ -440,12 +515,24 @@ const fetchFileDetails = async ({
       throw new Error('Order details not found')
     }
 
-    const orderDetailsFormatted = {
-      ...orderRes.orderDetails,
+    const orderDetailsFormatted: OrderDetails = {
       orderId: orderRes.orderDetails.orderId.toString(),
       userId: orderRes.orderDetails.userId.toString(),
       duration: orderRes.orderDetails.duration || '',
+      fileId: orderRes.orderDetails.fileId,
+      orderType: orderRes.orderDetails.orderType,
+      filename: orderRes.orderDetails.filename,
+      templateName: orderRes.orderDetails.templateName,
+      orgName: orderRes.orderDetails.orgName,
+      cfd: orderRes.orderDetails.cfd,
+      status: orderRes.orderDetails.status,
+      instructions: orderRes.orderDetails.instructions,
+      remainingTime: orderRes.orderDetails.remainingTime,
+      LLMDone: orderRes.orderDetails.LLMDone,
+      customFormatOption: orderRes.orderDetails.customFormatOption || undefined,
+      outputFormat: orderRes.orderDetails.outputFormat || undefined
     }
+
     setOrderDetails(orderDetailsFormatted)
     setCfd(orderRes.orderDetails.cfd)
     const cfStatus = [
@@ -461,13 +548,18 @@ const fetchFileDetails = async ({
     }
 
     if (orderRes.orderDetails.status === 'PRE_DELIVERED') {
-      if (orderRes.orderDetails.orderType === 'TRANSCRIPTION_FORMATTING') {
+      if (orderRes.orderDetails.orderType === 'TRANSCRIPTION_FORMATTING' || orderRes.orderDetails.orderType === 'FORMATTING') {
         step = 'CF'
       } else {
         step = 'QC'
       }
     }
     setStep(step)
+
+    if (orderRes.orderDetails.orderType === 'FORMATTING') {
+      return { orderDetails: orderDetailsFormatted, initialEditorData: {} }
+    }
+
     const transcriptRes = await axios.get(
       `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.orderDetails.fileId}&step=${step}&orderId=${orderRes.orderDetails.orderId}`, //step will be used later when cf editor is implemented
       {
@@ -867,9 +959,9 @@ type HandleSubmitParams = {
   router: {
     push: (path: string) => void
   }
-  quill: Quill
+  quill?: Quill
   finalizerComment: string
-  currentAlignments: AlignmentType[]
+  currentAlignments?: AlignmentType[]
 }
 
 const handleSubmit = async ({
@@ -885,20 +977,27 @@ const handleSubmit = async ({
   currentAlignments,
 }: HandleSubmitParams) => {
   if (!orderDetails || !orderDetails.orderId || !step) return
-  const toastId = toast.loading(`Submitting Transcription...`)
-  const transcript = quill.getText() || ''
+
+  const submissionType =
+    orderDetails.orderType === 'FORMATTING' ? 'file(s)' : 'transcription'
+  const toastId = toast.loading(`Submitting ${submissionType}...`)
+  const transcript = quill?.getText() || ''
 
   try {
-    if (orderDetails.status === 'QC_ASSIGNED') {
-      checkTranscriptForAllowedMeta(quill)
-    }
     setButtonLoading((prevButtonLoading) => ({
       ...prevButtonLoading,
       submit: true,
     }))
-    const playedPercentage = getPlayedPercentage()
-    if (playedPercentage < MINIMUM_AUDIO_PLAYBACK_PERCENTAGE) {
-      throw new Error(`MAPPNM`) //Stands for "Minimum Audio Playback Percentage Not Met"
+
+    if (orderDetails.orderType !== 'FORMATTING') {
+      if (orderDetails.status === 'QC_ASSIGNED') {
+        if (!quill) return
+        checkTranscriptForAllowedMeta(quill)
+      }
+      const playedPercentage = getPlayedPercentage()
+      if (playedPercentage < MINIMUM_AUDIO_PLAYBACK_PERCENTAGE) {
+        throw new Error(`MAPPNM`) //Stands for "Minimum Audio Playback Percentage Not Met"
+      }
     }
 
     if (step === 'CF') {
@@ -932,12 +1031,16 @@ const handleSubmit = async ({
       })
     }
 
-    // TODO: remove this after March 1st
-    localStorage.removeItem('editorData')
-    await deleteEditorDataIDB(orderDetails.fileId)
+    if (orderDetails.orderType !== 'FORMATTING') {
+      // TODO: remove this after March 1st
+      localStorage.removeItem('editorData')
+      await deleteEditorDataIDB(orderDetails.fileId)
+    }
 
     toast.dismiss(toastId)
-    const successToastId = toast.success(`Transcription submitted successfully`)
+    const successToastId = toast.success(
+      `${submissionType} submitted successfully`
+    )
     toast.dismiss(successToastId)
     router.push(`/transcribe/${step === 'QC' ? 'qc' : 'legal-cf-reviewer'}`)
   } catch (error) {
@@ -1740,6 +1843,7 @@ export {
   handleTextFilesUpload,
   uploadTextFile,
   uploadFile,
+  uploadFormattingFiles,
   handleFilesUpload,
   regenDocx,
   reportHandler,
