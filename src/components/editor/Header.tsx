@@ -145,6 +145,7 @@ interface HeaderProps {
   setFontSize: (size: number) => void
   editorSettings: EditorSettings
   editorRef?: React.RefObject<EditorHandle>
+  step: string
 }
 
 export default memo(function Header({
@@ -159,6 +160,7 @@ export default memo(function Header({
   setFontSize,
   editorSettings,
   editorRef,
+  step,
 }: HeaderProps) {
   const [currentValue, setCurrentValue] = useState(0)
   const [currentTime, setCurrentTime] = useState('00:00')
@@ -170,8 +172,6 @@ export default memo(function Header({
     length: number
   } | null>(null)
   const [adjustTimestampsBy, setAdjustTimestampsBy] = useState('0')
-  const [step, setStep] = useState<string>('')
-  const [cfd, setCfd] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
   const [speed, setSpeed] = useState(editorSettings.playbackSpeed)
   const [volumePercentage, setVolumePercentage] = useState(
@@ -203,35 +203,6 @@ export default memo(function Header({
       setSelection(null)
     }
   }
-
-  useEffect(() => {
-    if (cfd && step) return
-    setCfd(orderDetails.cfd)
-    const cfStatus = [
-      'FORMATTED',
-      'REVIEWER_ASSIGNED',
-      'REVIEW_COMPLETED',
-      'FINALIZER_ASSIGNED',
-      'FINALIZER_COMPLETED',
-    ]
-    let currentStep = 'QC'
-    if (cfStatus.includes(orderDetails.status)) {
-      currentStep = 'CF'
-    }
-
-    if (orderDetails.status === 'PRE_DELIVERED') {
-      if (
-        orderDetails.orderType === 'TRANSCRIPTION_FORMATTING' ||
-        orderDetails.orderType === 'FORMATTING'
-      ) {
-        currentStep = 'CF'
-      } else {
-        currentStep = 'QC'
-      }
-    }
-
-    setStep(currentStep)
-  }, [orderDetails])
 
   const playNextBlankInstance = useCallback(() => {
     const quill = quillRef?.current?.getEditor()
@@ -794,6 +765,7 @@ export default memo(function Header({
                     insertInterpreterSwearInLine={insertInterpreterSwearInLine}
                     highlightWordsEnabled={highlightWordsEnabled}
                     setHighlightWordsEnabled={setHighlightWordsEnabled}
+                    step={step}
                   />
                 </div>
               </TooltipProvider>
