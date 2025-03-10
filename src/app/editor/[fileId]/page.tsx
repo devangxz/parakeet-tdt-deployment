@@ -683,6 +683,8 @@ function EditorPage() {
         transcript={initialEditorData?.transcript || ''}
         ctms={ctms}
         editorRef={editorRef}
+        step={step}
+        cfd={cfd}
       />
 
       <Header
@@ -697,6 +699,7 @@ function EditorPage() {
         setFontSize={setFontSize}
         editorSettings={editorSettings}
         editorRef={editorRef}
+        step={step}
       />
 
       <div className='flex h-full overflow-hidden'>
@@ -972,7 +975,7 @@ function EditorPage() {
               )}
 
               {orderDetails.status === 'FINALIZER_ASSIGNED' && (
-                <div className='mt-4'>
+                <div className='pt-4'>
                   <Label
                     htmlFor='finalizer-comment'
                     className='text-sm text-gray-500'
