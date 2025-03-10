@@ -245,6 +245,7 @@ const uploadFile = async (
   if (!session?.user?.token) {
     return
   }
+
   setButtonLoading((prevButtonLoading) => ({
     ...prevButtonLoading,
     upload: true,
@@ -256,6 +257,7 @@ const uploadFile = async (
     const response = await uploadDocxAction(formData, fileId)
 
     if (response.success) {
+      toast.success('File uploaded successfully')      
       setFileToUpload({
         renamedFile: null,
         originalFile: null,
@@ -265,6 +267,7 @@ const uploadFile = async (
       throw new Error(response.message)
     }
   } catch (uploadError) {
+    toast.error('Failed to upload file')
     setFileToUpload({
       renamedFile: null,
       originalFile: null,
