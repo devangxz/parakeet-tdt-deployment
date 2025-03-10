@@ -167,3 +167,57 @@ export async function updatePreDelivery({
     return { success: false, s: 'Failed to update pre delivery status' }
   }
 }
+
+export async function updateGeneralFinalizer({
+  userEmail,
+  flag,
+}: UpdateVerifierParams) {
+  if (!isValidEmail(userEmail)) {
+    logger.error(`Invalid email: ${userEmail}`)
+    return { success: false, s: 'Invalid email' }
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      email: userEmail,
+    },
+  })
+
+  if (!user) {
+    logger.error(`User not found with email ${userEmail}`)
+    return { success: false, s: 'User not found' }
+  }
+
+  if (user.role !== Role.QC && user.role !== Role.REVIEWER) {
+    logger.error(`User is not a QC: ${userEmail}`)
+    return { success: false, s: 'User is not a QC' }
+  }
+
+  try {
+    await prisma.verifier.upsert({
+      where: { userId: user.id },
+      update: { generalFinalizerEnabled: flag },
+      create: {
+        userId: user.id,
+        generalFinalizerEnabled: flag,
+      },
+    })
+
+    logger.info(
+      `successfully ${flag ? 'enabled' : 'disabled'} general finalizer for ${
+        user.email
+      }`
+    )
+
+    return {
+      success: true,
+      s: `Successfully ${flag ? 'enabled' : 'disabled'} general finalizer`,
+    }
+  } catch (error) {
+    logger.error('Error updating general finalizer:', error)
+    return {
+      success: false,
+      s: 'Failed to update general finalizer status',
+    }
+  }
+}

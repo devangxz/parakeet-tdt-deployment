@@ -48,6 +48,7 @@ export default function AccountAccess() {
             referralCode: data?.referralCode,
             legalEnabled: data?.legalEnabled,
             reviewEnabled: data?.reviewEnabled,
+            generalFinalizerEnabled: data?.generalFinalizerEnabled,
             adminAccess: true,
             readonly: true,
             internalTeamUserId: data?.internalTeamUserId,

@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 
 import { DataTableColumnHeader } from './components/column-header'
 import { DataTable } from './components/data-table'
+import QCLink from './components/qc-link'
 import { getListenCountAndEditedSegmentAction } from '@/app/actions/admin/get-listen-count-and-edited-segment'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { fetchPreDeliveryOrders } from '@/app/actions/om/fetch-pre-delivery-orders'
@@ -33,6 +34,12 @@ import { FileCost } from '@/types/files'
 import formatDateTime from '@/utils/formatDateTime'
 import formatDuration from '@/utils/formatDuration'
 
+interface QCUser {
+  id: string
+  name: string
+  email: string
+}
+
 interface File {
   index: number
   orderId: number
@@ -43,7 +50,7 @@ interface File {
   status: string
   priority: number
   duration: number
-  qc: string
+  qc: QCUser[]
   deliveryTs: string
   hd: boolean
   type: string
@@ -131,14 +138,16 @@ export default function PreDeliveryPage() {
 
       if (response.success && response.details) {
         const orders = response.details.map((order, index) => {
-          const qcNames = order.Assignment.filter(
+          const qcUsers: QCUser[] = order.Assignment.filter(
             (a) =>
               a.status === 'ACCEPTED' ||
               a.status === 'COMPLETED' ||
               a.status === 'SUBMITTED_FOR_APPROVAL'
-          )
-            .map((a) => `${a.user.firstname} ${a.user.lastname}`)
-            .join(', ')
+          ).map((a) => ({
+            id: a.user.id.toString(),
+            name: `${a.user.firstname} ${a.user.lastname}`,
+            email: a.user.email,
+          }))
 
           fetchWaveformUrl(order.fileId)
           fetchEditorData(order.fileId)
@@ -153,7 +162,7 @@ export default function PreDeliveryPage() {
             status: order.status,
             priority: order.priority,
             duration: order.File?.duration ?? 0,
-            qc: qcNames || '-',
+            qc: qcUsers,
             deliveryTs: order.deliveryTs.toISOString(),
             hd: order.highDifficulty ?? false,
             type: order.orderType,
@@ -370,9 +379,19 @@ export default function PreDeliveryPage() {
     {
       accessorKey: 'qc',
       header: 'Editor',
-      cell: ({ row }) => (
-        <div className='font-medium'>{row.getValue('qc')}</div>
-      ),
+      cell: ({ row }) => {
+        const qcUsers = row.original.qc
+        if (!qcUsers || qcUsers.length === 0) {
+          return <div className='font-medium'>-</div>
+        }
+        return (
+          <div className='font-medium flex flex-wrap gap-2'>
+            {qcUsers.map((user) => (
+              <QCLink key={user.id} user={user} />
+            ))}
+          </div>
+        )
+      },
     },
     {
       accessorKey: 'deliveryTs',

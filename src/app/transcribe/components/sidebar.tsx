@@ -94,7 +94,7 @@ export function SidebarNav() {
     }
   })
 
-  if (session?.user?.legalEnabled && session?.user?.reviewEnabled) {
+  if (session?.user?.generalFinalizerEnabled) {
     sidebarItems.push({
       href: '/transcribe/general-cf-reviewer',
       name: 'GT-Finalizer',

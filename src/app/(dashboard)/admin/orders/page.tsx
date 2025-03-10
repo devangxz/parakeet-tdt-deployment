@@ -41,6 +41,14 @@ import { HIGH_PWER, LOW_PWER } from '@/constants'
 import { FileCost } from '@/types/files'
 import formatDateTime from '@/utils/formatDateTime'
 import formatDuration from '@/utils/formatDuration'
+// eslint-disable-next-line import/order
+import QCLink from './components/qc-link'
+
+interface QCDetail {
+  name: string
+  email: string
+  id: string
+}
 
 interface File {
   index: number
@@ -52,7 +60,7 @@ interface File {
   status: string
   priority: number
   duration: number
-  qc: string
+  qc: QCDetail[]
   deliveryTs: string
   hd: boolean
   fileCost: FileCost
@@ -130,14 +138,16 @@ export default function OrdersPage() {
 
       if (response.success && response.details) {
         const orders = response.details.map((order, index) => {
-          const qcNames = order.Assignment.filter(
+          const qcAssignments = order.Assignment.filter(
             (a) =>
               a.status === 'ACCEPTED' ||
               a.status === 'COMPLETED' ||
               a.status === 'SUBMITTED_FOR_APPROVAL'
-          )
-            .map((a) => `${a.user.firstname} ${a.user.lastname}`)
-            .join(', ')
+          ).map((a) => ({
+            name: `${a.user.firstname} ${a.user.lastname}`,
+            email: a.user.email,
+            id: a.user.id.toString(),
+          }))
 
           return {
             index: index + 1,
@@ -149,7 +159,7 @@ export default function OrdersPage() {
             status: order.status,
             priority: order.priority,
             duration: order.File?.duration ?? 0,
-            qc: qcNames || '-',
+            qc: qcAssignments,
             deliveryTs: order.deliveryTs.toISOString(),
             hd: order.highDifficulty ?? false,
             fileCost: order.fileCost,
@@ -433,9 +443,24 @@ export default function OrdersPage() {
     {
       accessorKey: 'qc',
       header: 'Editor',
-      cell: ({ row }) => (
-        <div className='font-medium'>{row.getValue('qc')}</div>
-      ),
+      cell: ({ row }) => {
+        const qcArray = row.original.qc
+        if (!Array.isArray(qcArray) || qcArray.length === 0) {
+          return <div className='font-medium'>-</div>
+        }
+        return (
+          <div className='font-medium flex flex-wrap gap-2'>
+            {qcArray.map(
+              (
+                qc: { name: string; email: string; id: string },
+                index: number
+              ) => (
+                <QCLink user={qc} key={index} />
+              )
+            )}
+          </div>
+        )
+      },
     },
     {
       accessorKey: 'deliveryTs',

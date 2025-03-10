@@ -20,6 +20,7 @@ declare module 'next-auth' {
     readonly: boolean
     legalEnabled: boolean
     reviewEnabled: boolean
+    generalFinalizerEnabled: boolean
   }
   interface Session {
     user?: User

@@ -1,0 +1,122 @@
+'use client'
+import { ReloadIcon } from '@radix-ui/react-icons'
+import { useState } from 'react'
+import { toast } from 'sonner'
+
+import { enableGeneralFinalizer } from '@/app/actions/admin/enable-general-finalizer'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import isValidEmail from '@/utils/isValidEmail'
+
+export default function EnableGeneralFinalizer() {
+  const [loading, setLoading] = useState(false)
+  const [loadingDisable, setLoadingDisable] = useState(false)
+  const [email, setEmail] = useState('')
+
+  const handleEnableClick = async () => {
+    if (!email) return toast.error('Please enter a valid email address')
+    if (!isValidEmail(email)) {
+      toast.error('Please enter a valid email address.')
+      return
+    }
+    try {
+      setLoading(true)
+      const response = await enableGeneralFinalizer(email.toLowerCase(), true)
+
+      if (response.success) {
+        toast.success('Successfully enabled general finalizer.')
+      } else {
+        toast.error(response.s || 'Failed to enable general finalizer')
+      }
+    } catch (error) {
+      toast.error('Failed to enable custom formatting review')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDisableClick = async () => {
+    if (!email) return toast.error('Please enter a valid email address')
+    if (!isValidEmail(email)) {
+      toast.error('Please enter a valid email address.')
+      return
+    }
+
+    try {
+      setLoadingDisable(true)
+      const response = await enableGeneralFinalizer(email.toLowerCase(), false)
+
+      if (response.success) {
+        toast.success('Successfully disabled custom formatting review.')
+      } else {
+        toast.error(response.s || 'Failed to disable custom formatting review')
+      }
+    } catch (error) {
+      toast.error('Failed to disable custom formatting review')
+    } finally {
+      setLoadingDisable(false)
+    }
+  }
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Enable General Finalizer</CardTitle>
+          <CardDescription>
+            Please enter the user email address to enable general finalizer.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className='grid gap-6'>
+            <div className='grid gap-3'>
+              <Label htmlFor='custom-email'>Email</Label>
+              <Input
+                id='custom-email'
+                type='email'
+                className='w-full'
+                placeholder='test@email.com'
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {loading ? (
+            <Button disabled className='mt-5'>
+              Please wait
+              <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+            </Button>
+          ) : (
+            <Button className='mt-5 mr-3' onClick={handleEnableClick}>
+              Enable
+            </Button>
+          )}
+
+          {loadingDisable ? (
+            <Button disabled className='mt-5'>
+              Please wait
+              <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+            </Button>
+          ) : (
+            <Button
+              className='mt-5'
+              variant='destructive'
+              onClick={handleDisableClick}
+            >
+              Disable
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    </>
+  )
+}

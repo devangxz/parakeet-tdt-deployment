@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 
@@ -171,7 +172,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
   const [loadingCoupon, setLoadingCoupon] = useState<boolean>(false)
   const [billBreakdownOpen, setBillBreakdownOpen] = useState<boolean>(false)
   const [bills, setBills] = useState<
-    { name: string; amount: number; duration: number }[]
+    { name: string; amount: number; duration: number; fileId: string }[]
   >([])
   const [templateCollapsible, setTemplatesCollapsible] =
     useState<boolean>(false)
@@ -248,17 +249,29 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
         )
         const bills = response.responseData.files.map(
           (file: {
-            File: { filename: string; duration: number }
+            File: { filename: string; duration: number; fileId: string }
             price: number
           }) => ({
             name: file.File.filename,
             amount: file.price,
             duration: file.File.duration,
+            fileId: file.File.fileId,
           })
         )
         setBills(bills)
         setTemplates(templateData)
         setClientToken(tokenResponse?.clientToken ?? null)
+
+        const gtag = (window as any).gtag
+        if (typeof gtag === 'function') {
+          gtag('event', 'initiate_order', {
+            customer_id: session?.user?.userId ?? 'public',
+            file_ids: response.responseData.files.map(
+              (file: { File: { fileId: string } }) => file.File.fileId
+            ),
+          })
+        }
+
         setIsLoading(false)
       } catch (err) {
         console.error('Failed to fetch pending files:', err)
@@ -313,6 +326,28 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
       }
     } catch (error) {
       toast.error(`Failed to update order option`)
+    }
+  }
+
+  const gtagPurchaseEvent = (amount: number, invoiceId: string) => {
+    const gtag = (window as any).gtag
+    if (typeof gtag === 'function') {
+      gtag('event', 'purchase', {
+        transaction_id: invoiceId,
+        value: amount,
+        tax: 10,
+        shipping: 10,
+        currency: 'USD',
+        new_customer: false,
+        coupon: 'No',
+        items: bills.map((bill, index) => ({
+          item_name: bill.name,
+          item_id: bill.fileId,
+          index: index,
+          price: bill.amount,
+          quantity: 1,
+        })),
+      })
     }
   }
 
@@ -429,6 +464,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
           cc_last4: response.cc_last4 ?? '',
           amount: response.invoice?.amount ?? 0,
         }))
+        gtagPurchaseEvent(response.invoice?.amount ?? 0, invoiceId)
         setPaymentSuccess(true)
       } else {
         toast.error(`Payment failed: ${response.message}`)
@@ -488,6 +524,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
           cc_last4: data.cc_last4 ?? '',
           amount: data.invoice?.amount ?? 0,
         }))
+        gtagPurchaseEvent(data.invoice?.amount ?? 0, invoiceId)
         setPaymentSuccess(true)
         setLoadingPay(false)
       } else {
@@ -506,7 +543,8 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
       invoiceId,
       setPaymentSuccessData,
       setPaymentSuccess,
-      setLoadingPay
+      setLoadingPay,
+      gtagPurchaseEvent
     )
   }
 
