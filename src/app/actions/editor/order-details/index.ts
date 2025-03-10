@@ -1,6 +1,6 @@
 'use server'
 
-import { JobStatus } from '@prisma/client'
+import { JobStatus, OrderType } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 
 import config from '../../../../../config.json'
@@ -14,7 +14,7 @@ export async function getOrderDetailsAction(fileId: string) {
   const user = session?.user
   const transcriberId = user?.userId
   if (!transcriberId) {
-    logger.error(`Missing  transcriberId for file ${fileId}`)
+    logger.error(`Missing transcriberId for file ${fileId}`)
     return {
       success: false,
       error: 'Missing transcriberId',
@@ -49,6 +49,19 @@ export async function getOrderDetailsAction(fileId: string) {
         duration: true,
       },
     })
+
+    let userRateInfo = null
+    if (order.orderType === OrderType.FORMATTING) {
+      userRateInfo = await prisma.userRate.findUnique({
+        where: {
+          userId: order?.userId,
+        },
+        select: {
+          customFormatOption: true,
+          outputFormat: true,
+        },
+      })
+    }
 
     const assignment = await prisma.jobAssignment.findFirst({
       where: {
@@ -109,6 +122,8 @@ export async function getOrderDetailsAction(fileId: string) {
       remainingTime: remainingTime.toString(),
       duration: file?.duration?.toString(),
       LLMDone: resultJson.LLMDone,
+      customFormatOption: userRateInfo?.customFormatOption || null,
+      outputFormat: userRateInfo?.outputFormat || null,
     }
 
     logger.info(`orderDetails fetched for file ${resultJson.file_id}`)

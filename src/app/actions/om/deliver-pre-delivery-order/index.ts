@@ -86,13 +86,60 @@ export async function deliverPreDeliveryOrder(
       }
     }
 
+    if (order?.orderType === OrderType.FORMATTING) {
+      const OMFileVersions = await prisma.fileVersion.findMany({
+        where: {
+          fileId: orderInformation.fileId,
+          tag: FileTag.CF_OM_DELIVERED,
+          userId: omId,
+        },
+        orderBy: {
+          updatedAt: 'desc',
+        },
+      })
+
+      if (OMFileVersions && OMFileVersions.length > 0) {
+        await prisma.fileVersion.createMany({
+          data: OMFileVersions.map((omVersion) => ({
+            fileId: orderInformation.fileId,
+            tag: FileTag.CF_CUSTOMER_DELIVERED,
+            userId: order?.userId,
+            s3VersionId: omVersion.s3VersionId,
+            extension: omVersion.extension,
+          })),
+        })
+      } else {
+        const finalizerFileVersions = await prisma.fileVersion.findMany({
+          where: {
+            fileId: orderInformation.fileId,
+            tag: FileTag.CF_FINALIZER_SUBMITTED,
+          },
+          orderBy: {
+            updatedAt: 'desc',
+          },
+        })
+
+        if (finalizerFileVersions.length > 0) {
+          await prisma.fileVersion.createMany({
+            data: finalizerFileVersions.map((finalizerVersion) => ({
+              fileId: orderInformation.fileId,
+              tag: FileTag.CF_CUSTOMER_DELIVERED,
+              userId: order?.userId,
+              s3VersionId: finalizerVersion.s3VersionId,
+              extension: finalizerVersion.extension,
+            })),
+          })
+        }
+      }
+    }
+
     if (order?.orderType === OrderType.TRANSCRIPTION) {
       const tokenRes = await fileCacheTokenAction(session)
       const transcriptRes = await axios.get(
         `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderInformation.fileId}&orderId=${orderInformation.id}`,
         {
           headers: {
-            'Authorization': `Bearer ${tokenRes.token}`
+            Authorization: `Bearer ${tokenRes.token}`,
           },
         }
       )
