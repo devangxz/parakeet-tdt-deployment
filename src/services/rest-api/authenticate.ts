@@ -50,6 +50,7 @@ export async function authenticateApiKey(apiKey: string | null) {
       organizationName: user.Organization?.name || 'NONE',
       legalEnabled: false,
       reviewEnabled: false,
+      generalFinalizerEnabled: false,
     }
 
     return payload

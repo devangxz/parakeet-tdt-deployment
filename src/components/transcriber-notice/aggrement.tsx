@@ -17,9 +17,10 @@ function AgreementNotice() {
       </div>
       <div className='ml-3'>
         <p className='text-sm font-medium text-blue-800'>
-          We are bringing down the terms and agreement since there were some
-          questions about it. We will review and update the same. You will be
-          requested to sign it again post that.
+          We have temporarily taken down our Terms and Agreement to address
+          certain queries and ensure clarity. After a thorough review and
+          necessary updates, we will request you to sign the revised version.
+          Thank you for your patience and cooperation.
         </p>
       </div>
     </div>

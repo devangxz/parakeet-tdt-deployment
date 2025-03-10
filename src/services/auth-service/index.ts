@@ -90,6 +90,8 @@ export async function signInUser(userData: PropsData) {
         organizationName: adminTeamMember?.user.Organization?.name || 'NONE',
         legalEnabled: user?.Verifier?.legalEnabled || false,
         reviewEnabled: user?.Verifier?.cfReviewEnabled || false,
+        generalFinalizerEnabled:
+          user?.Verifier?.generalFinalizerEnabled || false,
       }
 
       const token = signJwtAccessToken(payload)
@@ -118,6 +120,8 @@ export async function signInUser(userData: PropsData) {
         organizationName: user.Organization?.name || 'NONE',
         legalEnabled: user?.Verifier?.legalEnabled || false,
         reviewEnabled: user?.Verifier?.cfReviewEnabled || false,
+        generalFinalizerEnabled:
+          user?.Verifier?.generalFinalizerEnabled || false,
       }
 
       const token = signJwtAccessToken(payload)

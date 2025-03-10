@@ -29,9 +29,14 @@ export async function updateCreditPreferences(
     const use_credits_default = uc === 1
     const refund_to_credits = rc === 1
 
-    await prisma.customer.update({
+    await prisma.customer.upsert({
       where: { userId: selectedId },
-      data: {
+      update: {
+        useCreditsDefault: use_credits_default,
+        refundToCredits: refund_to_credits,
+      },
+      create: {
+        userId: selectedId,
         useCreditsDefault: use_credits_default,
         refundToCredits: refund_to_credits,
       },
