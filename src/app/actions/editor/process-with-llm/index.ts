@@ -89,21 +89,21 @@ instructions: string
           userPrompt,
           instructions,
       );
+      if(completion.choices.length === 0 || !completion?.choices[0]?.message.content){
+        logger.error(`No content returned from LLM for file ${fileId}`);
+        throw new Error(`No content returned from LLM for file ${fileId}`);
+      }
       if(completion.choices[0].message.content){
         logger.info(`Marked transcript part: ${currentPart} of ${totalParts}`);
         return completion.choices[0].message.content;
       }
-      logger.error(`No content returned from LLM for file ${fileId}`);
-      return '';
-  }catch(error)
-  {
+  }catch(error){
       const errorMsg = `Error while making a call to LLM for file ${fileId} ${(error as Error).toString()}`;
-      logger.error(errorMsg);
+      logger.error(`Error while making a call to LLM ${JSON.stringify((error as Error).stack)}`);
       const ses = getAWSSesInstance()
       await ses.sendAlert(`LLM call failed for ${fileId}`, errorMsg, 'software')
       throw error;
   }
-    
 }
 
 export const saveProcessWithLLMStats = async (stats: ProcessWithLLMStats) => {
