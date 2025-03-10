@@ -253,7 +253,7 @@ export default function ApprovalPage() {
       ),
     },
     {
-      accessorKey: 'id',
+      accessorKey: 'fileId',
       header: 'Details',
       cell: ({ row }) => (
         <div>
