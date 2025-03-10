@@ -15,6 +15,7 @@ import EnableACRReview from './components/enable-acr-review'
 import EnableCustomFormattingBonus from './components/enable-custom-format-bonus'
 import EnableCustomFormattingReview from './components/enable-custom-format-review'
 import EnableCustomers from './components/enable-customers'
+import EnableGeneralFinalizer from './components/enable-general-finalizer'
 import EnablePreDelivery from './components/enable-pre-delivery'
 import OrderWatch from './components/order-watch'
 import TranscriberWatch from './components/transcriber-watch'
@@ -44,6 +45,7 @@ export default function AdminDashboard() {
             <EnablePreDelivery />
             <EnableCustomFormattingBonus />
             <EnableACRReview />
+            <EnableGeneralFinalizer />
             <AddTestCustomer />
             <EnableCustomers />
             <UpdateICQCRates />

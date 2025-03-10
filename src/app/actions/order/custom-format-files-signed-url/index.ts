@@ -8,23 +8,41 @@ import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getFileVersionSignedURLFromS3 } from '@/utils/backend-helper'
 
-export async function getCustomFormatFilesSignedUrl(fileId: string) {
+export async function getCustomFormatFilesSignedUrl(
+  fileId: string,
+  isReviewerSubmitted = false,
+  isFinalizerSubmitted = false
+) {
   try {
     const session = await getServerSession(authOptions)
     const user = session?.user
     const userId = user?.internalTeamUserId || user?.userId
-    const fileVersion = await prisma.fileVersion.findMany({
-      where: {
-        fileId,
-        tag: FileTag.CF_CUSTOMER_DELIVERED,
-        userId,
-      },
+
+    const whereClause: {
+      fileId: string
+      tag: FileTag
+      userId?: number
+    } = {
+      fileId,
+      tag: isReviewerSubmitted
+        ? FileTag.CF_REV_SUBMITTED
+        : isFinalizerSubmitted
+        ? FileTag.CF_FINALIZER_SUBMITTED
+        : FileTag.CF_CUSTOMER_DELIVERED,
+    }
+
+    if (!isReviewerSubmitted && !isFinalizerSubmitted && userId) {
+      whereClause.userId = userId
+    }
+
+    const fileVersions = await prisma.fileVersion.findMany({
+      where: whereClause,
       orderBy: {
-        createdAt: 'desc',
+        createdAt: 'asc',
       },
     })
 
-    if (!fileVersion) {
+    if (!fileVersions || fileVersions.length === 0) {
       logger.error(`File version not found for ${fileId}`)
       return {
         success: false,
@@ -41,18 +59,45 @@ export async function getCustomFormatFilesSignedUrl(fileId: string) {
       },
     })
 
+    const versionsByExtension = new Map<string, typeof fileVersions>()
+
+    for (const version of fileVersions) {
+      const extension = version.extension || 'docx'
+
+      if (!versionsByExtension.has(extension)) {
+        versionsByExtension.set(extension, [])
+      }
+
+      versionsByExtension.get(extension)?.push(version)
+    }
+
     const signedUrls = await Promise.all(
-      fileVersion.map(async (version) => {
+      fileVersions.map(async (version) => {
+        const extension = version.extension || 'docx'
+
+        const versionsOfThisExt = versionsByExtension.get(extension) || []
+        const index = versionsOfThisExt.findIndex(
+          (v: typeof version) => v.id === version.id
+        )
+
+        let s3Key
+        if (index === 0) {
+          s3Key = `${fileId}.${extension}`
+        } else {
+          s3Key = `${fileId}_${index}.${extension}`
+        }
+
         const signedUrl = await getFileVersionSignedURLFromS3(
-          `${fileId}.${version.extension ?? 'docx'}`,
+          s3Key,
           version.s3VersionId || '',
           900,
-          `${file?.filename}.${version.extension ?? 'docx'}`
+          `${file?.filename}.${extension}`
         )
+
         return {
           signedUrl,
           filename: file?.filename || '',
-          extension: version.extension || 'docx',
+          extension,
         }
       })
     )

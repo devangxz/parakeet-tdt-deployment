@@ -116,7 +116,7 @@ const CustomFormatOrder = ({
   const [loadingCoupon, setLoadingCoupon] = useState<boolean>(false)
   const [billBreakdownOpen, setBillBreakdownOpen] = useState<boolean>(false)
   const [bills, setBills] = useState<
-    { name: string; amount: number; duration: number }[]
+    { name: string; amount: number; duration: number; fileId: string }[]
   >([])
   const [billingEnabled, setBillingEnabled] = useState<boolean>(false)
 
@@ -181,12 +181,13 @@ const CustomFormatOrder = ({
         setTemplates(templateData)
         const bills = response.responseData.files.map(
           (file: {
-            File: { filename: string; duration: number }
+            File: { filename: string; duration: number; fileId: string }
             price: number
           }) => ({
             name: file.File.filename,
             amount: file.price,
             duration: file.File.duration,
+            fileId: file.File.fileId,
           })
         )
         setBills(bills)
@@ -199,6 +200,15 @@ const CustomFormatOrder = ({
         } else {
           setRushOrderEnable(false)
         }
+        const gtag = (window as any).gtag
+        if (typeof gtag === 'function') {
+          gtag('event', 'initiate_order', {
+            customer_id: session?.user?.userId ?? 'public',
+            file_ids: response.responseData.files.map(
+              (file: { File: { fileId: string } }) => file.File.fileId
+            ),
+          })
+        }
       } catch (err) {
         console.error('Failed to fetch pending files:', err)
       } finally {
@@ -208,6 +218,28 @@ const CustomFormatOrder = ({
 
     fetchOrderInformation()
   }, [status])
+
+  const gtagPurchaseEvent = (amount: number, invoiceId: string) => {
+    const gtag = (window as any).gtag
+    if (typeof gtag === 'function') {
+      gtag('event', 'purchase', {
+        transaction_id: invoiceId,
+        value: amount,
+        tax: 10,
+        shipping: 10,
+        currency: 'USD',
+        new_customer: false,
+        coupon: 'No',
+        items: bills.map((bill, index) => ({
+          item_name: bill.name,
+          item_id: bill.fileId,
+          index: index,
+          price: bill.amount,
+          quantity: 1,
+        })),
+      })
+    }
+  }
 
   const handleTemplateChange = async (fileId: string, newValue: string) => {
     const templateName = templates.find(
@@ -306,6 +338,7 @@ const CustomFormatOrder = ({
           cc_last4: response.cc_last4 ?? '',
           amount: response.invoice?.amount ?? 0,
         }))
+        gtagPurchaseEvent(response.invoice?.amount ?? 0, invoiceId)
         setPaymentSuccess(true)
       } else {
         toast.error(`Payment failed: ${response.message}`)
@@ -338,6 +371,7 @@ const CustomFormatOrder = ({
         }))
         setPaymentSuccess(true)
         setLoadingPay(false)
+        gtagPurchaseEvent(data.invoice?.amount ?? 0, invoiceId)
       } else {
         setLoadingPay(false)
         toast.error(`Failed to order the file`)
@@ -354,7 +388,8 @@ const CustomFormatOrder = ({
       invoiceId,
       setPaymentSuccessData,
       setPaymentSuccess,
-      setLoadingPay
+      setLoadingPay,
+      gtagPurchaseEvent
     )
   }
 

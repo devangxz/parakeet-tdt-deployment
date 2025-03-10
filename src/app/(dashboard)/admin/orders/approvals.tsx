@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 
 import { DataTableColumnHeader } from './components/column-header'
 import { DataTable } from './components/data-table'
+import QCLink from './components/qc-link'
 import { getListenCountAndEditedSegmentAction } from '@/app/actions/admin/get-listen-count-and-edited-segment'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { fetchApprovalOrders } from '@/app/actions/om/fetch-approval-orders'
@@ -42,7 +43,7 @@ interface File {
   status: string
   priority: number
   duration: number
-  qc: string
+  qc: { name: string; email: string; id: string }[]
   deliveryTs: string
   hd: boolean
   fileCost: FileCost
@@ -132,14 +133,16 @@ export default function ApprovalPage() {
 
       if (response.success && response.details) {
         const orders = response.details.map((order, index: number) => {
-          const qcNames = order.Assignment.filter(
+          const qcUsers = order.Assignment.filter(
             (a) =>
               a.status === 'ACCEPTED' ||
               a.status === 'COMPLETED' ||
               a.status === 'SUBMITTED_FOR_APPROVAL'
-          )
-            .map((a) => `${a.user.firstname} ${a.user.lastname}`)
-            .join(', ')
+          ).map((a) => ({
+            name: `${a.user.firstname} ${a.user.lastname}`,
+            email: a.user.email,
+            id: a.user.id.toString(),
+          }))
 
           fetchWaveformUrl(order.fileId)
           fetchEditorData(order.fileId)
@@ -154,7 +157,7 @@ export default function ApprovalPage() {
             status: order.status,
             priority: order.priority,
             duration: order?.File?.duration ?? 0,
-            qc: qcNames || '-',
+            qc: qcUsers,
             deliveryTs: order.deliveryTs.toISOString(),
             hd: order.highDifficulty ?? false,
             fileCost: order.fileCost,
@@ -250,7 +253,7 @@ export default function ApprovalPage() {
       ),
     },
     {
-      accessorKey: 'id',
+      accessorKey: 'fileId',
       header: 'Details',
       cell: ({ row }) => (
         <div>
@@ -333,7 +336,7 @@ export default function ApprovalPage() {
           {formatDuration(row.getValue('duration'))}
           {row.original.type === 'FORMATTING' ? (
             <p>
-              Formatting cost: <br /> ${row.original.fileCost.customFormatCost}
+              Formatting cost: <br /> ${row.original.fileCost.customFormatCost}{' '}
               ($
               {row.original.fileCost.customFormatRate}/ah + $
               {row.original.rateBonus}/ah)
@@ -342,14 +345,13 @@ export default function ApprovalPage() {
             <>
               <p>
                 Transcription cost: <br /> $
-                {row.original.fileCost.transcriptionCost}
-                ($
+                {row.original.fileCost.transcriptionCost} ($
                 {row.original.fileCost.transcriptionRate}/ah + $
                 {row.original.rateBonus}/ah)
               </p>
               {row.original.type === 'TRANSCRIPTION_FORMATTING' && (
                 <p className='mt-1'>
-                  Review cost: <br /> ${row.original.fileCost.customFormatCost}
+                  Review cost: <br /> ${row.original.fileCost.customFormatCost}{' '}
                   ($
                   {row.original.fileCost.customFormatRate}/ah + $
                   {row.original.rateBonus}/ah)
@@ -370,9 +372,20 @@ export default function ApprovalPage() {
     {
       accessorKey: 'qc',
       header: 'Editor',
-      cell: ({ row }) => (
-        <div className='font-medium'>{row.getValue('qc')}</div>
-      ),
+      cell: ({ row }) => {
+        const qcUsers = row.original.qc
+        return (
+          <div className='font-medium'>
+            {qcUsers && qcUsers.length > 0
+              ? qcUsers.map(
+                  (user: { name: string; email: string; id: string }) => (
+                    <QCLink key={user.id} user={user} />
+                  )
+                )
+              : '-'}
+          </div>
+        )
+      },
     },
     {
       accessorKey: 'deliveryTs',

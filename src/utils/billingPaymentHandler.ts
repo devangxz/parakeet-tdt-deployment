@@ -16,7 +16,8 @@ export const handleBillingPaymentMethod = async (
   invoiceId: string,
   setPaymentSuccessData: Dispatch<SetStateAction<PaymentSuccessData | null>>,
   setPaymentSuccess: Dispatch<SetStateAction<boolean>>,
-  setLoadingPay: Dispatch<SetStateAction<boolean>>
+  setLoadingPay: Dispatch<SetStateAction<boolean>>,
+  gtagPurchaseEvent: (amount: number, invoiceId: string) => void
 ) => {
   try {
     setLoadingPay(true)
@@ -35,6 +36,7 @@ export const handleBillingPaymentMethod = async (
         cc_last4: data.cc_last4 ?? '',
         amount: data.invoice?.amount ?? 0,
       }))
+      gtagPurchaseEvent(data.invoice?.amount ?? 0, invoiceId)
       setPaymentSuccess(true)
     } else {
       toast.error(`Failed to order the file`)

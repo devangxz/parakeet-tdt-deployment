@@ -75,6 +75,8 @@ export type OrderDetails = {
   remainingTime: string
   duration: string
   LLMDone: boolean
+  customFormatOption?: string
+  outputFormat?: string
 }
 
 export type UploadFilesType = {
@@ -678,7 +680,7 @@ function EditorPage() {
         audioDuration={audioDuration}
         autoCapitalize={autoCapitalize}
         onAutoCapitalizeChange={setAutoCapitalize}
-        transcript={initialEditorData?.transcript || ""}
+        transcript={initialEditorData?.transcript || ''}
         ctms={ctms}
         editorRef={editorRef}
       />
@@ -700,10 +702,11 @@ function EditorPage() {
       <div className='flex h-full overflow-hidden'>
         <div className='flex h-full flex-col items-center flex-1 overflow-hidden'>
           <div
-            className={`flex ${step !== 'QC' && editorMode === 'Editor'
-              ? 'justify-between'
-              : 'justify-center'
-              } w-full h-full`}
+            className={`flex ${
+              step !== 'QC' && editorMode === 'Editor'
+                ? 'justify-between'
+                : 'justify-center'
+            } w-full h-full`}
           >
             {step !== 'QC' && editorMode === 'Editor' && (
               <SectionSelector
@@ -713,69 +716,86 @@ function EditorPage() {
             )}
             <div className='flex w-full gap-x-1'>
               <div
-                className={`bg-background border border-customBorder ${step !== 'QC' && editorMode === 'Editor'
-                  ? 'rounded-r-md'
-                  : 'rounded-md'
-                  } w-[80%]`}
+                className={`bg-background border border-customBorder ${
+                  step !== 'QC' && editorMode === 'Editor'
+                    ? 'rounded-r-md'
+                    : 'rounded-md'
+                } w-[80%]`}
               >
-                {selectedSection === 'proceedings' && (
-                  <Tabs
-                    onValueChange={handleTabsValueChange}
-                    defaultValue='transcribe'
-                    className='h-full'
-                  >
-                    <div className='flex border-b border-customBorder text-md font-medium'>
-                      <TabsList className='px-2 gap-x-7'>
-                        <TabsTrigger
-                          className='text-base px-0 pt-2 pb-[6.5px]'
-                          value='transcribe'
-                        >
-                          Transcribe
-                        </TabsTrigger>
-                        <TabsTrigger
-                          className='text-base px-0 pt-2 pb-[6.5px]'
-                          value='diff'
-                        >
-                          Diff
-                        </TabsTrigger>
-                        <TabsTrigger
-                          className='text-base px-0 pt-2 pb-[6.5px]'
-                          value='info'
-                        >
-                          Info
-                        </TabsTrigger>
-                      </TabsList>
-                    </div>
+                {selectedSection === 'proceedings' &&
+                  (orderDetails.orderType === 'FORMATTING' ? (
+                    <Tabs value='info' defaultValue='info' className='h-full'>
+                      <div className='flex border-b border-customBorder text-md font-medium'>
+                        <TabsList className='px-2'>
+                          <TabsTrigger
+                            className='text-base px-0 pt-2 pb-[6.5px]'
+                            value='info'
+                          >
+                            Info
+                          </TabsTrigger>
+                        </TabsList>
+                      </div>
 
-                    <EditorTabComponent
-                      transcriptLoading={!initialEditorData}
-                      ctms={ctms}
-                      audioPlayer={audioPlayer}
-                      audioDuration={audioDuration}
-                      getQuillRef={getQuillRef}
-                      orderDetails={orderDetails}
-                      setSelectionHandler={setSelectionHandler}
-                      selection={selection}
-                      searchHighlight={searchHighlight}
-                      highlightWordsEnabled={highlightWordsEnabled}
-                      setFontSize={setFontSize}
-                      setEditedSegments={setEditedSegments}
-                      editorSettings={editorSettings}
-                      initialEditorData={
-                        initialEditorData || {
-                          transcript: '',
-                          undoStack: [],
-                          redoStack: [],
+                      <InfoTabComponent orderDetails={orderDetails} />
+                    </Tabs>
+                  ) : (
+                    <Tabs
+                      onValueChange={handleTabsValueChange}
+                      defaultValue='transcribe'
+                      className='h-full'
+                    >
+                      <div className='flex border-b border-customBorder text-md font-medium'>
+                        <TabsList className='px-2 gap-x-7'>
+                          <TabsTrigger
+                            className='text-base px-0 pt-2 pb-[6.5px]'
+                            value='transcribe'
+                          >
+                            Transcribe
+                          </TabsTrigger>
+                          <TabsTrigger
+                            className='text-base px-0 pt-2 pb-[6.5px]'
+                            value='diff'
+                          >
+                            Diff
+                          </TabsTrigger>
+                          <TabsTrigger
+                            className='text-base px-0 pt-2 pb-[6.5px]'
+                            value='info'
+                          >
+                            Info
+                          </TabsTrigger>
+                        </TabsList>
+                      </div>
+
+                      <EditorTabComponent
+                        transcriptLoading={!initialEditorData}
+                        ctms={ctms}
+                        audioPlayer={audioPlayer}
+                        audioDuration={audioDuration}
+                        getQuillRef={getQuillRef}
+                        orderDetails={orderDetails}
+                        setSelectionHandler={setSelectionHandler}
+                        selection={selection}
+                        searchHighlight={searchHighlight}
+                        highlightWordsEnabled={highlightWordsEnabled}
+                        setFontSize={setFontSize}
+                        setEditedSegments={setEditedSegments}
+                        editorSettings={editorSettings}
+                        initialEditorData={
+                          initialEditorData || {
+                            transcript: '',
+                            undoStack: [],
+                            redoStack: [],
+                          }
                         }
-                      }
-                      editorRef={editorRef}
-                    />
+                        editorRef={editorRef}
+                      />
 
-                    <DiffTabComponent diff={diff} />
+                      <DiffTabComponent diff={diff} />
 
-                    <InfoTabComponent orderDetails={orderDetails} />
-                  </Tabs>
-                )}
+                      <InfoTabComponent orderDetails={orderDetails} />
+                    </Tabs>
+                  ))}
                 {selectedSection === 'title' && (
                   <div className='p-2 overflow-y-scroll h-full'>
                     <div>{renderTitleInputs(cfd, setCfd)}</div>
@@ -794,8 +814,9 @@ function EditorPage() {
               </div>
               <div className='w-[20%]'>
                 <div
-                  className={`flex flex-col h-full ${findAndReplaceOpen ? 'gap-y-1' : ''
-                    }`}
+                  className={`flex flex-col h-full ${
+                    findAndReplaceOpen ? 'gap-y-1' : ''
+                  }`}
                 >
                   {findAndReplaceOpen && (
                     <div className='bg-background border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out h-[50%]'>
@@ -890,8 +911,9 @@ function EditorPage() {
                   )}
 
                   <div
-                    className={`bg-background border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out ${findAndReplaceOpen ? 'h-[50%]' : 'h-full'
-                      }`}
+                    className={`bg-background border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out ${
+                      findAndReplaceOpen ? 'h-[50%]' : 'h-full'
+                    }`}
                   >
                     <div className='font-medium text-md border-b border-customBorder flex items-center p-2'>
                       Notes
@@ -927,25 +949,27 @@ function EditorPage() {
             }
           }}
         >
-          <DialogContent className='max-w-4xl'>
+          <DialogContent className={orderDetails.orderType !== 'FORMATTING' ? 'max-w-4xl' : ''}>
             <DialogHeader>
               <DialogTitle>Submit</DialogTitle>
               <DialogDescription>
-                Please confirm that you want to submit the transcript
+                Please confirm that you want to submit the file
               </DialogDescription>
 
-              <div className='py-4'>
-                <p className='text-sm text-muted-foreground/80 mb-2'>
-                  Audio Playback Coverage:{' '}
-                  <span className='font-medium'>{getPlayedPercentage()}%</span>
-                </p>
-                <WaveformHeatmap
-                  waveformUrl={waveformUrl}
-                  listenCount={listenCount}
-                  editedSegments={editedSegments}
-                  duration={audioDuration}
-                />
-              </div>
+              {orderDetails.orderType !== 'FORMATTING' && (
+                <div className='pt-4'>
+                  <p className='text-sm text-muted-foreground/80 mb-2'>
+                    Audio Playback Coverage:{' '}
+                    <span className='font-medium'>{getPlayedPercentage()}%</span>
+                  </p>
+                  <WaveformHeatmap
+                    waveformUrl={waveformUrl}
+                    listenCount={listenCount}
+                    editedSegments={editedSegments}
+                    duration={audioDuration}
+                  />
+                </div>
+              )}
 
               {orderDetails.status === 'FINALIZER_ASSIGNED' && (
                 <div className='mt-4'>
@@ -967,7 +991,7 @@ function EditorPage() {
                 </div>
               )}
 
-              <div className='flex justify-end gap-2 mt-4'>
+              <div className='flex justify-end gap-2 pt-4'>
                 <Button
                   variant='outline'
                   onClick={() => {
@@ -979,29 +1003,42 @@ function EditorPage() {
                 </Button>
                 <Button
                   onClick={() => {
-                    if (!quillRef?.current) return
-                    const quill = quillRef.current.getEditor()
+                    if (orderDetails.orderType === 'FORMATTING') {
+                      handleSubmit({
+                        orderDetails,
+                        step,
+                        editorMode,
+                        fileToUpload,
+                        setButtonLoading,
+                        getPlayedPercentage,
+                        router,
+                        finalizerComment,
+                      })
+                    } else {
+                      if (!quillRef?.current) return
+                      const quill = quillRef.current.getEditor()
 
-                    let currentAlignments: AlignmentType[] = []
-                    if (editorRef.current && step === 'QC') {
-                      editorRef.current.triggerAlignmentUpdate()
-                      currentAlignments = editorRef.current.getAlignments()
-                    }         
+                      let currentAlignments: AlignmentType[] = []
+                      if (editorRef.current && step === 'QC') {
+                        editorRef.current.triggerAlignmentUpdate()
+                        currentAlignments = editorRef.current.getAlignments()
+                      }
 
-                    handleSubmit({
-                      orderDetails,
-                      step,
-                      editorMode,
-                      fileToUpload,
-                      setButtonLoading,
-                      getPlayedPercentage,
-                      router,
-                      quill,
-                      finalizerComment,
-                      currentAlignments,
-                    })
-                    setSubmitting(false)
-                    setIsSubmitModalOpen(false)
+                      handleSubmit({
+                        orderDetails,
+                        step,
+                        editorMode,
+                        fileToUpload,
+                        setButtonLoading,
+                        getPlayedPercentage,
+                        router,
+                        quill,
+                        finalizerComment,
+                        currentAlignments,
+                      })
+                      setSubmitting(false)
+                      setIsSubmitModalOpen(false)
+                    }
                   }}
                   disabled={buttonLoading.submit}
                 >

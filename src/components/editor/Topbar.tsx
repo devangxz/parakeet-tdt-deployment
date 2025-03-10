@@ -187,13 +187,13 @@ export default memo(function Topbar({
     cfDocxSignedUrl: '',
   })
   const [customFormatFilesSignedUrls, setCustomFormatFilesSignedUrls] =
-  useState<
-    {
-      signedUrl: string
-      filename: string
-      extension: string
-    }[]
-  >([])
+    useState<
+      {
+        signedUrl: string
+        filename: string
+        extension: string
+      }[]
+    >([])
   const [reportModalOpen, setReportModalOpen] = useState(false)
   const [reportDetails, setReportDetails] = useState({
     reportOption: '',
@@ -256,8 +256,12 @@ export default memo(function Topbar({
       }
     }
 
-    if(orderDetails.fileId != '' && !orderDetails.LLMDone
-      && currentStep === 'CF') {
+    if (
+      orderDetails.fileId != '' &&
+      !orderDetails.LLMDone &&
+      currentStep === 'CF' &&
+      orderDetails.orderType === 'TRANSCRIPTION_FORMATTING'
+    ) {
       setProcessWithLLMModalOpen(true)
     }
     setStep(currentStep)
@@ -696,9 +700,8 @@ export default memo(function Topbar({
     const requiredSections = ['PROCEEDINGS', 'EXAMINATION'];
     // Ensure all required sections are present in separate paragraphs
     const hasMarkedSections = requiredSections.every(section =>
-      paragraphs.some(para => {
-        return para.trim().toUpperCase().includes(`[--${section}--]`) // Check for [--SECTION--] format
-      }
+      paragraphs.some(para => 
+         para.trim().toUpperCase().includes(`[--${section}--]`) // Check for [--SECTION--] format      
     ));
 
     const timestampPattern = /\b\d{1,2}:\d{2}:\d{2}(?:\.\d+)?\b/; // Matches [HH:MM:SS]
@@ -775,22 +778,29 @@ export default memo(function Topbar({
     setIsCheckAndDownloadLoading(true)
     try {
       let currentAlignments: AlignmentType[] = []
-      if (typeof editorRef === 'object' && editorRef !== null && editorRef.current) {
+      if (
+        typeof editorRef === 'object' &&
+        editorRef !== null &&
+        editorRef.current
+      ) {
         editorRef.current.triggerAlignmentUpdate()
         currentAlignments = editorRef.current.getAlignments()
-      }         
+      }
 
-      await handleSave({
-        getEditorText,
-        orderDetails,
-        notes,
-        cfd,
-        setButtonLoading,
-        listenCount,
-        editedSegments,
-        role: session?.user?.role || '',
-        currentAlignments,
-      }, false)
+      await handleSave(
+        {
+          getEditorText,
+          orderDetails,
+          notes,
+          cfd,
+          setButtonLoading,
+          listenCount,
+          editedSegments,
+          role: session?.user?.role || '',
+          currentAlignments,
+        },
+        false
+      )
 
       const txtRes = await getFileTxtSignedUrl(fileId)
       const docxRes = await getFileDocxSignedUrl(
@@ -864,12 +874,17 @@ export default memo(function Topbar({
             <>
               {editorMode === 'Manual' && (
                 <>
-                  <DownloadDocxDialog
-                    orderDetails={orderDetails}
-                    downloadableType={downloadableType}
-                    setDownloadableType={setDownloadableType}
-                    verifyTranscriptForDownload={verifyTranscriptForDownload}
-                  />
+                  {!(
+                    orderDetails.orderType === 'FORMATTING' &&
+                    orderDetails.status === 'REVIEWER_ASSIGNED'
+                  ) && (
+                    <DownloadDocxDialog
+                      orderDetails={orderDetails}
+                      downloadableType={downloadableType}
+                      setDownloadableType={setDownloadableType}
+                      verifyTranscriptForDownload={verifyTranscriptForDownload}
+                    />
+                  )}
                   <UploadDocxDialog
                     orderDetails={orderDetails}
                     setButtonLoading={setButtonLoading}
@@ -907,7 +922,7 @@ export default memo(function Topbar({
           )}
 
           <div className='flex'>
-            {['CUSTOMER', 'OM', 'ADMIN'].includes(session?.user?.role ?? '') ? (
+            {['CUSTOMER'].includes(session?.user?.role ?? '') ? (
               <Button
                 disabled={isCheckAndDownloadLoading}
                 onClick={() => handleCheckAndDownload(orderDetails.fileId)}
@@ -1016,9 +1031,13 @@ export default memo(function Topbar({
                 <DropdownMenuItem onClick={() => setReviewModalOpen(true)}>
                   Review with Gemini
                 </DropdownMenuItem>
-                {step == 'CF' &&<DropdownMenuItem onClick={() => setProcessWithLLMModalOpen(true)}>
-                  Marking with LLM
-                </DropdownMenuItem>}
+                {orderDetails.orderType === 'TRANSCRIPTION_FORMATTING' && (
+                  <DropdownMenuItem
+                    onClick={() => setProcessWithLLMModalOpen(true)}
+                  >
+                    Marking with LLM
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={toggleAutoCapitalize}>
                   {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
                 </DropdownMenuItem>
@@ -1377,16 +1396,24 @@ export default memo(function Topbar({
           orderDetails={orderDetails}
           setButtonLoading={setButtonLoading}
           buttonLoading={buttonLoading}
-          transcript={quillRef?.current ? quillRef.current.getEditor().getText() : transcript}
+          transcript={
+            quillRef?.current
+              ? quillRef.current.getEditor().getText()
+              : transcript
+          }
           ctms={ctms}
           updateQuill={updateTranscript}
           role={session?.user?.role || ''}
         />
       )}
       {/* process with llm */}
-      { processWithLLMModalOpen && (
+      {processWithLLMModalOpen && (
         <ProcessWithLLMDialog
-          transcript={quillRef?.current ? quillRef.current.getEditor().getText() : transcript}
+          transcript={
+            quillRef?.current
+              ? quillRef.current.getEditor().getText()
+              : transcript
+          }
           processWithLLMModalOpen={processWithLLMModalOpen}
           setprocessWithLLMModalOpen={setProcessWithLLMModalOpen}
           quillRef={quillRef}

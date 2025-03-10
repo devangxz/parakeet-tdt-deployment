@@ -1,13 +1,6 @@
-import { Metadata } from 'next'
-
 import AuthenticatedFooter from '@/components/authenticated-footer'
 import PaymentsNavbar from '@/components/navbar/payments'
 import { SidebarNav } from '@/components/Sidebar/payments'
-
-export const metadata: Metadata = {
-  title: 'Invoices',
-  description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-}
 
 interface PaymentsLayoutProps {
   children: React.ReactNode
