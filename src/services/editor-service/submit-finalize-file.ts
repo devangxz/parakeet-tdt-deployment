@@ -187,8 +187,38 @@ export async function submitFinalize(
       file_id: order.fileId,
       subject: 'Scribie.ai Finalizer Assignment Submitted',
     }
-
     await sendTemplateMail('TRANSCRIBER_SUBMIT', transcriberId, templateData)
+
+    if (finalizerComment.trim()) {
+      try {
+        const fileInfo = await prisma.file.findUnique({
+          where: { fileId: order.fileId },
+        })
+
+        const reviewerAssignment = await prisma.jobAssignment.findFirst({
+          where: {
+            orderId: order.id,
+            type: JobType.REVIEW,
+            status: JobStatus.COMPLETED,
+          },
+        })
+
+        if (reviewerAssignment) {
+          const feedbackTemplateData = {
+            fileId: order.fileId,
+            fileName: fileInfo?.filename || order.fileId,
+            feedback: finalizerComment.trim(),
+          }
+          await sendTemplateMail(
+            'CUSTOM_FORMATTING_FEEDBACK',
+            reviewerAssignment.transcriberId,
+            feedbackTemplateData
+          )
+        }
+      } catch (error) {
+        logger.error(`Failed to send feedback email: ${error}`)
+      }
+    }
 
     return {
       success: true,
