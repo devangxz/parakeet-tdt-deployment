@@ -163,6 +163,7 @@
   "ALERT_SW_MAIL": {
     "FROM": "$$ALERT_BE_EMAIL_ID$$",
     "TO": ["$$ADMIN_EMAIL_ID$$"],
+    "CC": ["$$SUPPORT_EMAIL_ID$$"],
     "SUBJECT": "Scribie.ai TO BE FILLED IN CODE",
     "HTML": "",
     "TEXT": "TO BE FILLED IN CODE"
@@ -192,9 +193,9 @@
     "TEXT": ""
   },
   "QUOTE_REQUEST": {
-    "FROM": "$$ADMIN_EMAIL_ID$$",
+    "FROM": "$$SUPPORT_EMAIL_ID$$",
     "TO": ["$$HELLO_EMAIL_ID$$"],
-    "CC": ["$$SUPPORT_EMAIL_ID$$"],
+    "CC": [],
     "BCC": [],
     "SUBJECT": "Scribie.ai Quote Request",
     "HTML": "QUOTE_REQUEST.html",
@@ -324,6 +325,15 @@
     "BCC": ["$$CONTACT_EMAIL_ID$$"],
     "SUBJECT": "Scribie.ai Automatic Refund",
     "HTML": "REFUND_FILE.html",
+    "TEXT": ""
+  },
+  "CUSTOM_FORMATTING_FEEDBACK": {
+    "FROM": "$$SUPPORT_EMAIL_ID$$",
+    "TO": ["$$USER_EMAIL_ID$$"],
+    "CC": ["$$SUPPORT_EMAIL_ID$$"],
+    "BCC": [],
+    "SUBJECT": "Scribie.ai Custom Formatting Feedback",
+    "HTML": "CUSTOM_FORMATTING_FEEDBACK.html",
     "TEXT": ""
   }
 }

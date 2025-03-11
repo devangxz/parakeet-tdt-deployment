@@ -297,20 +297,21 @@ const Navbar = () => {
         >
           <div className='max-w-7xl h-full mx-auto px-4 sm:px-6 lg:px-8'>
             <div className='flex items-center justify-between h-full'>
-              <Link href='/'>
-                <div className='flex items-center'>
-                  <Image
-                    className='h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12'
-                    src='/assets/images/logo.svg'
-                    alt='scribie.ai'
-                    width={48}
-                    height={48}
-                  />
-                  <span className='ml-2 sm:ml-3 text-xl sm:text-2xl md:text-3xl font-semibold text-primary'>
-                    scribie.ai
-                  </span>
-                </div>
-              </Link>
+              <div
+                className='flex items-center cursor-pointer'
+                onClick={() => (window.location.href = '/')}
+              >
+                <Image
+                  className='h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12'
+                  src='/assets/images/logo.svg'
+                  alt='scribie.ai'
+                  width={48}
+                  height={48}
+                />
+                <span className='ml-2 sm:ml-3 text-xl sm:text-2xl md:text-3xl font-semibold text-primary'>
+                  scribie.ai
+                </span>
+              </div>
 
               <div className='flex items-center space-x-8'>
                 <div className='hidden md:flex items-center space-x-8'>

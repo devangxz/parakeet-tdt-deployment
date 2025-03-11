@@ -130,7 +130,6 @@ export default memo(function ProcessWithLLMDialog (
   const handleSaveButton = async() => {
     updateQuill(quillRef, markedTranscript);
     setprocessWithLLMModalOpen(false);
-    await new Promise((resolve) => setTimeout(() => resolve(null), 1000)) // sleeping for 1 second to ensure the quill is updated
     
     await saveProcessWithLLMStats({
       userId: Number(orderDetails.userId),
@@ -139,6 +138,9 @@ export default memo(function ProcessWithLLMDialog (
       llmTimeTaken: llmTimeTaken,
       savedTime: new Date()
     })
+
+    await new Promise((resolve) => setTimeout(() => resolve(null), 1000)) // sleeping for 1 second to ensure the quill is updated
+    
     await handleSave(
       {
         orderDetails,

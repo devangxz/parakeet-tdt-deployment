@@ -190,6 +190,7 @@ export default async function submitReview(
         where: { id: order.id },
         data: {
           status: OrderStatus.REVIEW_COMPLETED,
+          updatedAt: new Date(),
         },
       })
     })

@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { DateRange } from 'react-day-picker'
 
+import { DataTableFacetedFilter } from './components/filter'
 import { getOrgRevenue } from '@/app/actions/admin/revenue-dashboard/get-org-revenue'
 import { DateRangePicker } from '@/components/date-range-picker'
 import { RevenueDetailsModal } from '@/components/revenue-details-modal'
@@ -60,14 +61,32 @@ interface OrderData {
   customerEmail: string
 }
 
+const statusOptions = [
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'TRANSCRIBED', label: 'Transcribed' },
+  { value: 'QC_ASSIGNED', label: 'QC Assigned' },
+  { value: 'QC_COMPLETED', label: 'QC Completed' },
+  { value: 'FORMATTED', label: 'Formatted' },
+  { value: 'REVIEWER_ASSIGNED', label: 'Reviewer Assigned' },
+  { value: 'REVIEW_COMPLETED', label: 'Review Completed' },
+  { value: 'FINALIZER_ASSIGNED', label: 'Finalizer Assigned' },
+  { value: 'FINALIZING_COMPLETED', label: 'Finalizing Completed' },
+  { value: 'BLOCKED', label: 'Blocked' },
+  { value: 'PRE_DELIVERED', label: 'Pre-delivered' },
+  { value: 'SUBMITTED_FOR_APPROVAL', label: 'Submitted for Approval' },
+  { value: 'SUBMITTED_FOR_SCREENING', label: 'Submitted for Screening' },
+]
+
 export default function RevenueDashboard() {
   const { data: session } = useSession()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [metrics, setMetrics] = useState<OrderData[]>([])
+  const [filteredMetrics, setFilteredMetrics] = useState<OrderData[]>([])
   const [isLoadingMore, setIsLoadingMore] = useState(false)
 
   const [selectedOrg, setSelectedOrg] = useState<Organization>('REMOTELEGAL')
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
 
   const [dateRange, setDateRange] = useState<DateRange>(() => ({
     from: subDays(new Date(), 10),
@@ -85,6 +104,7 @@ export default function RevenueDashboard() {
     try {
       const data = await getOrgRevenue(from, to, selectedOrg)
       setMetrics(data)
+      setFilteredMetrics(data)
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -102,6 +122,16 @@ export default function RevenueDashboard() {
   useEffect(() => {
     loadRevenueData(dateRange.from ?? new Date(), dateRange.to ?? new Date())
   }, [selectedOrg])
+
+  useEffect(() => {
+    if (selectedStatuses.length === 0) {
+      setFilteredMetrics(metrics)
+    } else {
+      setFilteredMetrics(
+        metrics.filter((order) => selectedStatuses.includes(order.status))
+      )
+    }
+  }, [selectedStatuses, metrics])
 
   async function handleLoadMore() {
     if (metrics.length === 0 || isLoadingMore) return
@@ -129,7 +159,7 @@ export default function RevenueDashboard() {
   }
 
   function handleDownloadExcel() {
-    const exportData = metrics.map((order) => ({
+    const exportData = filteredMetrics.map((order) => ({
       'Customer Email': order.customerEmail,
       'File ID': order.fileId,
       'File Name': order.fileName,
@@ -185,11 +215,19 @@ export default function RevenueDashboard() {
                   <SelectItem value='ACR'>ACR</SelectItem>
                 </SelectContent>
               </Select>
+
+              <DataTableFacetedFilter
+                title='Status'
+                options={statusOptions}
+                value={selectedStatuses}
+                onChange={setSelectedStatuses}
+              />
+
               <Button
                 variant='order'
                 size='lg'
                 onClick={handleDownloadExcel}
-                disabled={isLoading || metrics.length === 0}
+                disabled={isLoading || filteredMetrics.length === 0}
                 className='not-rounded'
               >
                 <Download className='h-4 w-4 mr-2' />
@@ -243,14 +281,14 @@ export default function RevenueDashboard() {
                       <Loader2 className='h-8 w-8 animate-spin mx-auto' />
                     </TableCell>
                   </TableRow>
-                ) : metrics.length === 0 ? (
+                ) : filteredMetrics.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={20} className='text-center py-8'>
                       No data available for the selected period
                     </TableCell>
                   </TableRow>
                 ) : (
-                  metrics.map((order, index) => (
+                  filteredMetrics.map((order, index) => (
                     <TableRow key={order.orderId}>
                       <TableCell>{index + 1}</TableCell>
                       <TableCell>{order.customerEmail}</TableCell>

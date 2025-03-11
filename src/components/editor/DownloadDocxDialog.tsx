@@ -1,5 +1,6 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
+import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
 import { Badge } from '../ui/badge'
@@ -24,17 +25,16 @@ type DownloadDocxDialogProps = {
   orderDetails: OrderDetails
   downloadableType: string
   setDownloadableType: React.Dispatch<React.SetStateAction<string>>
-  verifyTranscriptForDownload: () => {
-    hasMarkedSections: boolean
-    hasTimestamps: boolean
-  }
+  quillRef?: React.RefObject<ReactQuill>
+  transcript: string
 }
 
 const DownloadDocxDialog = ({
   orderDetails,
   downloadableType,
   setDownloadableType,
-  verifyTranscriptForDownload,
+  quillRef,
+  transcript,
 }: DownloadDocxDialogProps) => {
   const [docxUrl, setDocxUrl] = useState('')
   const [confirmationDialogMessage, setConfirmationDialogMessage] = useState('')
@@ -108,6 +108,24 @@ const DownloadDocxDialog = ({
       setDownloadableType('cf-rev-submit')
     }
   }, [])
+
+  const verifyTranscriptForDownload = useCallback(() => {
+    const editorContentTranscript = quillRef?.current?.getEditor().getText() || transcript
+    const paragraphs = editorContentTranscript.split('\n\n');
+    // Keywords to check
+    // check timestamps
+    const requiredSections = ['PROCEEDINGS', 'EXAMINATION'];
+    // Ensure all required sections are present in separate paragraphs
+    const hasMarkedSections = requiredSections.every(section =>
+      paragraphs.some(para => 
+         para.trim().toUpperCase().includes(`[--${section}--]`) // Check for [--SECTION--] format      
+    ));
+
+    const timestampPattern = /\b\d{1,2}:\d{2}:\d{2}(?:\.\d+)?\b/; // Matches [HH:MM:SS]
+    const hasTimestamps = editorContentTranscript.match(timestampPattern) !== null;
+    // Return whether both conditions are met
+    return {hasMarkedSections, hasTimestamps};
+  }, [quillRef, transcript])
 
   const handleDownloadMarkingDocx = (downloadableType: string) => {
     if (downloadableType === 'marking') {
