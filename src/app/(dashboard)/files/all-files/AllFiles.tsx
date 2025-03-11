@@ -17,6 +17,7 @@ import React, { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
+import { DataTableColumnHeader } from '../../../../components/table-components/column-header'
 import { CheckAndDownload } from '../delivered/components/check-download'
 import { getAllFilesAction } from '@/app/actions/all-files'
 import { downloadMp3 } from '@/app/actions/file/download-mp3'
@@ -465,7 +466,9 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
     },
     {
       accessorKey: 'name',
-      header: 'File name',
+      header: ({column}) => (
+        <DataTableColumnHeader column={column} title='File name' />
+      ),
       cell: ({ row }) => (
         <div>
           {'parentId' in row.original && 'id' in row.original ? (
@@ -490,7 +493,9 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
     },
     {
       accessorKey: 'date',
-      header: 'Date',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Date' />
+      ),
       cell: ({ row }) => (
         <div className='font-medium'>
           {formatDateTime(row.getValue('date'))}
@@ -499,7 +504,9 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
     },
     {
       accessorKey: 'duration',
-      header: 'Duration',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Duration' />
+      ),
       cell: ({ row }) => (
         <div className='font-medium'>
           {row.getValue('duration')

@@ -692,24 +692,6 @@ export default memo(function Topbar({
     }
   }
 
-  const verifyTranscriptForDownload = useCallback(() => {
-    const editorContentTranscript = quillRef?.current?.getEditor().getText() || transcript
-    const paragraphs = editorContentTranscript.split('\n\n');
-    // Keywords to check
-    // check timestamps
-    const requiredSections = ['PROCEEDINGS', 'EXAMINATION'];
-    // Ensure all required sections are present in separate paragraphs
-    const hasMarkedSections = requiredSections.every(section =>
-      paragraphs.some(para => 
-         para.trim().toUpperCase().includes(`[--${section}--]`) // Check for [--SECTION--] format      
-    ));
-
-    const timestampPattern = /\b\d{1,2}:\d{2}:\d{2}(?:\.\d+)?\b/; // Matches [HH:MM:SS]
-    const hasTimestamps = transcript.match(timestampPattern) !== null;
-    // Return whether both conditions are met
-    return {hasMarkedSections, hasTimestamps};
-  }, [quillRef, transcript])
-
   useEffect(() => {
     if (submitting && orderDetails.status === 'QC_ASSIGNED') {
       toggleSpeakerName()
@@ -882,7 +864,8 @@ export default memo(function Topbar({
                       orderDetails={orderDetails}
                       downloadableType={downloadableType}
                       setDownloadableType={setDownloadableType}
-                      verifyTranscriptForDownload={verifyTranscriptForDownload}
+                      quillRef={quillRef}
+                      transcript={transcript}
                     />
                   )}
                   <UploadDocxDialog
