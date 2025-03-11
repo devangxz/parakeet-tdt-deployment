@@ -31,7 +31,7 @@ export function DataTableToolbar<TData>({
         />
 
         {table.getColumn('date') && (
-          <DateFilter column={table.getColumn('date')} title='Delivery Date Filter' />
+          <DateFilter column={table.getColumn('date')} title='Filter By Date' />
         )}
 
         {isFiltered && (
