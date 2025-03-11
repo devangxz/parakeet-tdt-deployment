@@ -41,11 +41,13 @@ export async function withRetry<T>(
         attempts
       };
     } catch (error: unknown) {
-      if (config.retryErrors && 
-          !config.retryErrors.some(errMsg => 
-            (error as Error)?.message?.includes(errMsg) || 
-            (error as Error)?.toString().includes(errMsg)
-          )) {
+      if (
+        config.retryErrors &&
+        !config.retryErrors.some((errMsg) => {
+          const errorStr = (error as Error)?.message?.toLowerCase() || (error as Error)?.toString().toLowerCase();
+          return new RegExp(errMsg, "i").test(errorStr);
+        })
+      ) {
         return {
           success: false,
           error: error as Error,
@@ -61,8 +63,8 @@ export async function withRetry<T>(
         };
       }
 
-      logger.info(`Attempt ${attempts} failed. Retrying in ${delay}ms...`);
-      logger.error('Error:', error);
+      logger.info(`Attempt ${attempts} failed. Retrying in ${delay}ms`);
+      logger.error('Error:', (error as Error).stack ?? (error as Error).toString());
 
       await sleep(delay);
       delay = Math.min(delay * config.backoffFactor, config.maxDelayMs);
