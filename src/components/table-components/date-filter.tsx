@@ -54,7 +54,7 @@ export function DateFilter<TData, TValue>({
           <Button
             variant='outline'
             className={cn(
-              'h-8 w-[180px] border-dashed not-rounded justify-start text-left font-normal'
+              'h-8 w-full border-dashed not-rounded justify-start text-left font-normal'
             )}
           >
             <CalendarIcon className='mr-2 h-4 w-4' />
