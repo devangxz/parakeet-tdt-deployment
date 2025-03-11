@@ -12,16 +12,15 @@ declare global {
 
 function BrevoChatWidget() {
   useEffect(() => {
-    window.BrevoConversationsID = process.env.NEXT_PUBLIC_BREVO_CONVERSATION_ID;
+    window.BrevoConversationsID = process.env.NEXT_PUBLIC_BREVO_CONVERSATION_ID
     const script = document.createElement('script')
     script.async = true
     script.src = 'https://conversations-widget.brevo.com/brevo-conversations.js'
     script.onload = () => {
-      window["c"] =
+      window['c'] =
         window.c ||
         function (...args: unknown[]) {
-          ;(window.c.q =
-            window.c.q || []).push(...args)
+          ;(window.c.q = window.c.q || []).push(...args)
         }
     }
     document.head.appendChild(script)

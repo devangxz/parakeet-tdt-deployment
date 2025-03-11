@@ -312,7 +312,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
 
   const handleOrderFile = async (fileId: string, orderType: string) => {
     if (session?.user?.status !== 'VERIFIED') {
-      router.push('/verify-email')
+      window.location.href = '/verify-email'
       return
     }
     setLoadingFileOrder((prev) => ({ ...prev, [fileId]: true }))
@@ -466,7 +466,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
     },
     {
       accessorKey: 'name',
-      header: ({column}) => (
+      header: ({ column }) => (
         <DataTableColumnHeader column={column} title='File name' />
       ),
       cell: ({ row }) => (
@@ -689,7 +689,7 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
 
   const orderBulkFile = async (orderType: string) => {
     if (session?.user?.status !== 'VERIFIED') {
-      router.push('/verify-email')
+      window.location.href = '/verify-email'
       return
     }
 

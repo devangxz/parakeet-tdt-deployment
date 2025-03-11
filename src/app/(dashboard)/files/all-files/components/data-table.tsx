@@ -41,7 +41,9 @@ export function DataTable<TData, TValue>({
   onFileDrop,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
-  const [draggedOverFolderId, setDraggedOverFolderId] = React.useState<number | null>(null)
+  const [draggedOverFolderId, setDraggedOverFolderId] = React.useState<
+    number | null
+  >(null)
 
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
@@ -83,7 +85,10 @@ export function DataTable<TData, TValue>({
     }
   }, [rowSelection])
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, fileId: string) => {
+  const handleDragStart = (
+    e: React.DragEvent<HTMLDivElement>,
+    fileId: string
+  ) => {
     e.dataTransfer.setData('text/plain', fileId)
     // Create a custom drag image
     const dragImage = e.currentTarget.cloneNode(true) as HTMLDivElement
@@ -103,7 +108,10 @@ export function DataTable<TData, TValue>({
     setTimeout(() => document.body.removeChild(dragImage), 0)
   }
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, folderId: number) => {
+  const handleDragOver = (
+    e: React.DragEvent<HTMLDivElement>,
+    folderId: number
+  ) => {
     e.preventDefault()
     setDraggedOverFolderId(folderId)
   }
@@ -136,9 +144,9 @@ export function DataTable<TData, TValue>({
                     {header.isPlaceholder
                       ? null
                       : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -147,14 +155,28 @@ export function DataTable<TData, TValue>({
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => {
-                const rowData = row.original as { id: string; parentId?: string; date?: string }
+                const rowData = row.original as {
+                  id: string
+                  parentId?: string
+                  date?: string
+                }
                 return (
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() && 'selected'}
                     className={`
-                      ${rowData.date && calculateDifferenceInHours(new Date(row.getValue('date') as string)) <= 1 && 'dark:bg-indigo-950/40 bg-[#FFFBEB]'}
-                      ${draggedOverFolderId === Number(rowData.id) ? 'dark:bg-blue-800/40 bg-blue-50' : ''}
+                      ${
+                        rowData.date &&
+                        calculateDifferenceInHours(
+                          new Date(row.getValue('date') as string)
+                        ) <= 1 &&
+                        'dark:bg-indigo-950/40 bg-[#FFFBEB]'
+                      }
+                      ${
+                        draggedOverFolderId === Number(rowData.id)
+                          ? 'dark:bg-blue-800/40 bg-blue-50'
+                          : ''
+                      }
                     `}
                   >
                     {row.getVisibleCells().map((cell) => (
@@ -163,23 +185,38 @@ export function DataTable<TData, TValue>({
                           <div>
                             {'parentId' in rowData ? (
                               <div
-                                onDragOver={(e) => handleDragOver(e, Number(rowData.id))}
+                                onDragOver={(e) =>
+                                  handleDragOver(e, Number(rowData.id))
+                                }
                                 onDragLeave={handleDragLeave}
-                                onDrop={(e) => handleDrop(e, Number(rowData.id))}
+                                onDrop={(e) =>
+                                  handleDrop(e, Number(rowData.id))
+                                }
                               >
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext()
+                                )}
                               </div>
                             ) : (
                               <div
                                 draggable
-                                onDragStart={(e) => handleDragStart(e, rowData.id)}
+                                onDragStart={(e) =>
+                                  handleDragStart(e, rowData.id)
+                                }
                               >
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext()
+                                )}
                               </div>
                             )}
                           </div>
                         ) : (
-                          flexRender(cell.column.columnDef.cell, cell.getContext())
+                          flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )
                         )}
                       </TableCell>
                     ))}

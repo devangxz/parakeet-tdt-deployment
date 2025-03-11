@@ -163,6 +163,7 @@
   "ALERT_SW_MAIL": {
     "FROM": "$$ALERT_BE_EMAIL_ID$$",
     "TO": ["$$ADMIN_EMAIL_ID$$"],
+    "CC": ["$$SUPPORT_EMAIL_ID$$"],
     "SUBJECT": "Scribie.ai TO BE FILLED IN CODE",
     "HTML": "",
     "TEXT": "TO BE FILLED IN CODE"
@@ -192,9 +193,9 @@
     "TEXT": ""
   },
   "QUOTE_REQUEST": {
-    "FROM": "$$ADMIN_EMAIL_ID$$",
+    "FROM": "$$SUPPORT_EMAIL_ID$$",
     "TO": ["$$HELLO_EMAIL_ID$$"],
-    "CC": ["$$SUPPORT_EMAIL_ID$$"],
+    "CC": [],
     "BCC": [],
     "SUBJECT": "Scribie.ai Quote Request",
     "HTML": "QUOTE_REQUEST.html",
