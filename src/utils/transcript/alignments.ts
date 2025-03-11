@@ -194,8 +194,8 @@ export function createAlignments(text: string, ctms: CTMType[]): AlignmentType[]
         const word = words[i];
         
         if (ctmIndex < ctms.length && 
-            (word.toLowerCase() === ctms[ctmIndex].word || 
-             word === ctms[ctmIndex].punct)) {
+            (word.toLowerCase() === ctms[ctmIndex].word.toLowerCase() || 
+             word.toLowerCase() === ctms[ctmIndex].punct.toLowerCase())) {
             alignments.push({
                 ...ctms[ctmIndex],
                 word: word,

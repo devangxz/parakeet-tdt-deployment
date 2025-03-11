@@ -67,6 +67,7 @@ export interface EditorHandle {
   triggerAlignmentUpdate: () => void
   clearAllHighlights: () => void
   scrollToCurrentWord: () => void
+  getAlignments: () => AlignmentType[]
 }
 
 // Wrap the component in forwardRef so the parent can call exposed methods
@@ -731,6 +732,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     const currentText = quill.getText()
     if (!currentText) return
 
+    setAlignmentWorkerRunning(true)
     alignmentWorker.current?.postMessage({
       newText: currentText,
       currentAlignments: newAlignments,
@@ -979,6 +981,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
         editorEl.scrollTo({ top: targetScrollTop, behavior: 'smooth' })
       }
     },
+    getAlignments: () => alignments,
   }))
 
   return (
@@ -999,8 +1002,8 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
         <div
           className='fixed z-50 w-fit bg-white rounded-md shadow-lg border border-customBorder backdrop-blur-sm bg-opacity-95'
           style={{
-            left: menuPosition.x,
-            top: menuPosition.y,
+            left: `${Math.min(menuPosition.x, window.innerWidth - 200)}px`,
+            top: `${Math.min(menuPosition.y, window.innerHeight - 150)}px`,
           }}
         >
           <button

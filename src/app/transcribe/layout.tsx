@@ -1,13 +1,17 @@
 import Header from './components/header'
 import { SidebarNav } from './components/sidebar'
+// import { TermsAndConditionsModal } from './components/terms-modal'
+// import { checkSignOffStatus } from '@/app/actions/transcriber/accept-terms'
 import AuthenticatedFooter from '@/components/authenticated-footer'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
-export default function TranscribeLayout({
+export default async function TranscribeLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  // const hasAcceptedTerms = await checkSignOffStatus()
+
   return (
     <TooltipProvider>
       <div className='flex min-h-screen flex-col'>
@@ -23,6 +27,7 @@ export default function TranscribeLayout({
           </main>
         </div>
         <AuthenticatedFooter />
+        {/* <TermsAndConditionsModal open={!hasAcceptedTerms} /> */}
       </div>
     </TooltipProvider>
   )

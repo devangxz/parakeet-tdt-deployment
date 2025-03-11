@@ -49,6 +49,7 @@ interface ReviewWithGeminiDialogProps {
   transcript: string;
   ctms: CTMType[];
   updateQuill: (quillRef: React.RefObject<ReactQuill> | undefined, content: string) => void;
+  role: string;
 }
 
 export default memo(function ReviewTranscriptDialog({
@@ -59,6 +60,7 @@ export default memo(function ReviewTranscriptDialog({
   transcript,
   ctms,
   updateQuill,
+  role,
 }: ReviewWithGeminiDialogProps) {
   
   const [step, setStep] = useState<'options' | 'processing' | 'review' | 'preview'>('options');
@@ -205,7 +207,7 @@ export default memo(function ReviewTranscriptDialog({
       : newTranscript + '\n';
 
     updateQuill(quillRef, saveTranscript);
-    
+    setReviewModalOpen(false);
     await new Promise((resolve) => setTimeout(() => resolve(null), 1000)) // sleeping for 1 second to ensure the quill is updated
 
     const duration = processingStartedAt && processingEndedAt 
@@ -214,7 +216,7 @@ export default memo(function ReviewTranscriptDialog({
     const savedTimeVal = new Date();
     // Call the server action to store the ReviewWithGeminiStats data.
     // Replace userId with the authenticated user's id as appropriate.
-    setReviewModalOpen(false);
+
     await saveReviewWithGeminiStats({
       fileId,
       options: selectedPrompts,
@@ -236,7 +238,8 @@ export default memo(function ReviewTranscriptDialog({
         setButtonLoading: () => {},
         listenCount: [],
         editedSegments: new Set(),
-        isGeminiReviewed: true
+        isGeminiReviewed: true,
+        role,
       },
       true
     );

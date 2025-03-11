@@ -17,6 +17,8 @@ import { setPlayStatsAction } from '@/app/actions/editor/set-play-stats'
 import { submitQCAction } from '@/app/actions/editor/submit-qc'
 import { submitReviewAction } from '@/app/actions/editor/submit-review'
 import { uploadDocxAction } from '@/app/actions/editor/upload-docx'
+import { uploadFormattingFilesAction } from '@/app/actions/editor/upload-formatting-files'
+import { uploadSubtitlesAction } from '@/app/actions/editor/upload-subtitles'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { OrderDetails, UploadFilesType } from '@/app/editor/[fileId]/page'
 import {
@@ -26,7 +28,7 @@ import {
   MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
   COMMON_ABBREVIATIONS,
 } from '@/constants'
-import { CTMType, UndoRedoItem } from '@/types/editor'
+import { AlignmentType, CTMType, UndoRedoItem } from '@/types/editor'
 import {
   getEditorDataIDB,
   persistEditorDataIDB,
@@ -243,7 +245,7 @@ const uploadFile = async (
   if (!session?.user?.token) {
     return
   }
-  const toastId = toast.loading('Uploading File...')
+
   setButtonLoading((prevButtonLoading) => ({
     ...prevButtonLoading,
     upload: true,
@@ -254,9 +256,8 @@ const uploadFile = async (
   try {
     const response = await uploadDocxAction(formData, fileId)
 
-    toast.dismiss(toastId)
     if (response.success) {
-      toast.success('File uploaded successfully')
+      toast.success('File uploaded successfully')      
       setFileToUpload({
         renamedFile: null,
         originalFile: null,
@@ -266,13 +267,91 @@ const uploadFile = async (
       throw new Error(response.message)
     }
   } catch (uploadError) {
-    toast.dismiss(toastId)
     toast.error('Failed to upload file')
     setFileToUpload({
       renamedFile: null,
       originalFile: null,
       isUploaded: false,
     })
+  } finally {
+    setButtonLoading((prevButtonLoading) => ({
+      ...prevButtonLoading,
+      upload: false,
+    }))
+  }
+}
+
+const uploadFormattingFiles = async (
+  uploadedFiles: File[],
+  setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
+  session: Session | null,
+  setFileToUpload: React.Dispatch<
+    React.SetStateAction<{
+      renamedFile: File | null
+      originalFile: File | null
+      isUploaded?: boolean
+    }>
+  >,
+  fileId: string
+) => {
+  if (!uploadedFiles.length) {
+    return toast.error('Please select files to upload.')
+  }
+
+  if (!session?.user?.token) {
+    return
+  }
+
+  setButtonLoading((prevButtonLoading) => ({
+    ...prevButtonLoading,
+    upload: true,
+  }))
+
+  try {
+    const formData = new FormData()
+
+    uploadedFiles.forEach((file, index) => {
+      formData.append(`file-${index}`, file)
+
+      const fileParts = file.name.split('.')
+      const fileExtension =
+        fileParts.length > 1
+          ? fileParts[fileParts.length - 1].toLowerCase()
+          : 'docx'
+
+      formData.append(`extension-${index}`, fileExtension)
+    })
+
+    formData.append('fileCount', uploadedFiles.length.toString())
+    formData.append('fileId', fileId)
+
+    const response = await uploadFormattingFilesAction(formData)
+
+    if (response.success) {
+      toast.success('All files uploaded successfully')
+      setFileToUpload({
+        renamedFile: null,
+        originalFile: null,
+        isUploaded: true,
+      })
+      return true
+    } else {
+      toast.error(response.message || 'Failed to upload files')
+      setFileToUpload({
+        renamedFile: null,
+        originalFile: null,
+        isUploaded: false,
+      })
+      return false
+    }
+  } catch (error) {
+    toast.error('Failed to upload files')
+    setFileToUpload({
+      renamedFile: null,
+      originalFile: null,
+      isUploaded: false,
+    })
+    return false
   } finally {
     setButtonLoading((prevButtonLoading) => ({
       ...prevButtonLoading,
@@ -439,17 +518,29 @@ const fetchFileDetails = async ({
       throw new Error('Order details not found')
     }
 
-    const orderDetailsFormatted = {
-      ...orderRes.orderDetails,
+    const orderDetailsFormatted: OrderDetails = {
       orderId: orderRes.orderDetails.orderId.toString(),
       userId: orderRes.orderDetails.userId.toString(),
       duration: orderRes.orderDetails.duration || '',
+      fileId: orderRes.orderDetails.fileId,
+      orderType: orderRes.orderDetails.orderType,
+      filename: orderRes.orderDetails.filename,
+      templateName: orderRes.orderDetails.templateName,
+      orgName: orderRes.orderDetails.orgName,
+      cfd: orderRes.orderDetails.cfd,
+      status: orderRes.orderDetails.status,
+      instructions: orderRes.orderDetails.instructions,
+      remainingTime: orderRes.orderDetails.remainingTime,
+      LLMDone: orderRes.orderDetails.LLMDone,
+      customFormatOption: orderRes.orderDetails.customFormatOption || undefined,
+      outputFormat: orderRes.orderDetails.outputFormat || undefined
     }
+
     setOrderDetails(orderDetailsFormatted)
     setCfd(orderRes.orderDetails.cfd)
     const cfStatus = [
       'FORMATTED',
-      'REVIEWER_ASSIGNED', 
+      'REVIEWER_ASSIGNED',
       'REVIEW_COMPLETED',
       'FINALIZER_ASSIGNED',
       'FINALIZER_COMPLETED',
@@ -460,13 +551,18 @@ const fetchFileDetails = async ({
     }
 
     if (orderRes.orderDetails.status === 'PRE_DELIVERED') {
-      if (orderRes.orderDetails.orderType === 'TRANSCRIPTION_FORMATTING') {
+      if (orderRes.orderDetails.orderType === 'TRANSCRIPTION_FORMATTING' || orderRes.orderDetails.orderType === 'FORMATTING') {
         step = 'CF'
       } else {
         step = 'QC'
       }
     }
     setStep(step)
+
+    if (orderRes.orderDetails.orderType === 'FORMATTING') {
+      return { orderDetails: orderDetailsFormatted, initialEditorData: {} }
+    }
+
     const transcriptRes = await axios.get(
       `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.orderDetails.fileId}&step=${step}&orderId=${orderRes.orderDetails.orderId}`, //step will be used later when cf editor is implemented
       {
@@ -525,6 +621,111 @@ const fetchFileDetails = async ({
   }
 }
 
+function getSRTVTT(alignments: AlignmentType[]) {
+  try {
+    if (!alignments?.length) {
+      return null
+    }
+
+    let srt = ''
+    let vtt = 'WEBVTT\r\n\r\n'
+    let line: string[] = []
+    let paraCount = 0
+    let lastLineProcessed = false
+
+    for (let i = 0; i < alignments.length; i++) {
+      const current = alignments[i]
+      const word = current.word
+      const currentCase = current.case ?? 'success'
+      const nextAlignment =
+        i + 1 < alignments.length ? alignments[i + 1] : undefined
+
+      line.push(word)
+
+      if (!nextAlignment && line.length > 0) {
+        const startTs = alignments[i - line.length + 1].start
+        const endTs = current.end
+        const srtTimestamp = `00:${secondsToTs(startTs).replace(
+          '.',
+          ','
+        )} --> 00:${secondsToTs(endTs).replace('.', ',')}`
+        const vttTimestamp = `00:${secondsToTs(startTs)} --> 00:${secondsToTs(
+          endTs
+        )}`
+
+        paraCount++
+        srt += `${paraCount}\r\n${srtTimestamp}\r\n${line
+          .join(' ')
+          .trim()}\r\n\r\n`
+        vtt += `${vttTimestamp}\r\n${line.join(' ').trim()}\r\n\r\n`
+        lastLineProcessed = true
+        break
+      }
+
+      let forceBreak = false
+      forceBreak =
+        line.length > 10 &&
+        !/\w/.test(word[word.length - 1]) &&
+        currentCase === 'success'
+
+      const shouldBreakOnGap =
+        nextAlignment !== undefined &&
+        line.length > 7 &&
+        currentCase === 'success' &&
+        (nextAlignment.case ?? 'success') === 'success' &&
+        nextAlignment.start - current.end > 0.5
+
+      forceBreak = forceBreak || shouldBreakOnGap
+      forceBreak = forceBreak || (line.length > 12 && currentCase === 'success')
+      forceBreak = forceBreak || line.join(' ').length > 70
+
+      if (forceBreak) {
+        const startTs = alignments[i - line.length + 1].start
+        const endTs = current.end
+        const srtTimestamp = `00:${secondsToTs(startTs).replace(
+          '.',
+          ','
+        )} --> 00:${secondsToTs(endTs).replace('.', ',')}`
+        const vttTimestamp = `00:${secondsToTs(startTs)} --> 00:${secondsToTs(
+          endTs
+        )}`
+
+        paraCount++
+        srt += `${paraCount}\r\n${srtTimestamp}\r\n${line
+          .join(' ')
+          .trim()}\r\n\r\n`
+        vtt += `${vttTimestamp}\r\n${line.join(' ').trim()}\r\n\r\n`
+        line = []
+      }
+    }
+
+    if (line.length > 0 && !lastLineProcessed) {
+      const startIndex = alignments.length - line.length
+      const endIndex = alignments.length - 1
+      const startTs = alignments[startIndex].start
+      const endTs = alignments[endIndex].end
+      const srtTimestamp = `00:${secondsToTs(startTs).replace(
+        '.',
+        ','
+      )} --> 00:${secondsToTs(endTs).replace('.', ',')}`
+      const vttTimestamp = `00:${secondsToTs(startTs)} --> 00:${secondsToTs(
+        endTs
+      )}`
+
+      paraCount++
+      srt += `${paraCount}\r\n${srtTimestamp}\r\n${line.join(' ').trim()}\r\n`
+      vtt += `${vttTimestamp}\r\n${line.join(' ').trim()}\r\n`
+    }
+
+    return {
+      srt,
+      vtt,
+    }
+  } catch (error) {
+    return null
+  }
+}
+
 type HandleSaveParams = {
   getEditorText: () => string
   orderDetails: OrderDetails
@@ -535,6 +736,8 @@ type HandleSaveParams = {
   editedSegments: Set<number>
   isGeminiReviewed?: boolean
   isCF?: boolean
+  role: string
+  currentAlignments?: AlignmentType[]
 }
 
 const handleSave = async (
@@ -547,7 +750,9 @@ const handleSave = async (
     listenCount,
     editedSegments,
     isGeminiReviewed = false,
-    isCF = false
+    isCF = false,
+    role,
+    currentAlignments,
   }: HandleSaveParams,
   showToast = true
 ) => {
@@ -572,28 +777,47 @@ const handleSave = async (
       .split('\n')
       .filter((paragraph: string) => paragraph.trim() !== '')
 
-    // Helper function to detect meta-only paragraphs
-    const isMetaOnlyParagraph = (text: string) => {
-      const trimmed = text.trim()
-      return /^\[.*\]$/.test(trimmed)
+    if (role !== 'CUSTOMER') {
+      // Helper function to detect meta-only paragraphs
+      const isMetaOnlyParagraph = (text: string) => {
+        const trimmed = text.trim()
+        return /^\[.*\]$/.test(trimmed)
+      }
+
+      const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/
+
+      for (const paragraph of paragraphs) {
+        // Skip validation for meta-only paragraphs
+        if (isMetaOnlyParagraph(paragraph)) continue
+
+        if (
+          !paragraphRegex.test(paragraph) &&
+          orderDetails.orderType !== 'TRANSCRIPTION_FORMATTING'
+        ) {
+          if (showToast) {
+            if (toastId) toast.dismiss(toastId)
+            toast.error(
+              'Invalid paragraph format detected. Each paragraph must start with a timestamp and speaker identification.'
+            )
+          }
+          return
+        }
+      }
     }
 
-    const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/
-    for (const paragraph of paragraphs) {
-      // Skip validation for meta-only paragraphs
-      if (isMetaOnlyParagraph(paragraph)) continue
+    if (
+      currentAlignments &&
+      Array.isArray(currentAlignments) &&
+      currentAlignments.length > 0 &&
+      role === 'CUSTOMER'
+    ) {
+      const filteredAlignments = currentAlignments.filter(
+        (alignment) => 'type' in alignment && alignment.type !== 'meta'
+      )
 
-      if (
-        !paragraphRegex.test(paragraph) &&
-        orderDetails.orderType !== 'TRANSCRIPTION_FORMATTING'
-      ) {
-        if (showToast) {
-          if (toastId) toast.dismiss(toastId)
-          toast.error(
-            'Invalid paragraph format detected. Each paragraph must start with a timestamp and speaker identification.'
-          )
-        }
-        return
+      const subtitles = getSRTVTT(filteredAlignments)
+      if (subtitles) {
+        await uploadSubtitlesAction(orderDetails.fileId, subtitles)
       }
     }
 
@@ -696,24 +920,6 @@ function autoCapitalizeSentences(
   }
 }
 
-type HandleSubmitParams = {
-  orderDetails: OrderDetails
-  step: string
-  editorMode: string
-  fileToUpload: {
-    renamedFile: File | null
-    originalFile: File | null
-    isUploaded?: boolean
-  }
-  setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
-  getPlayedPercentage: () => number
-  router: {
-    push: (path: string) => void
-  }
-  quill: Quill
-  finalizerComment: string
-}
-
 const checkTranscriptForAllowedMeta = (quill: Quill) => {
   if (!quill) return null
 
@@ -742,6 +948,25 @@ const checkTranscriptForAllowedMeta = (quill: Quill) => {
   }
 }
 
+type HandleSubmitParams = {
+  orderDetails: OrderDetails
+  step: string
+  editorMode: string
+  fileToUpload: {
+    renamedFile: File | null
+    originalFile: File | null
+    isUploaded?: boolean
+  }
+  setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
+  getPlayedPercentage: () => number
+  router: {
+    push: (path: string) => void
+  }
+  quill?: Quill
+  finalizerComment: string
+  currentAlignments?: AlignmentType[]
+}
+
 const handleSubmit = async ({
   orderDetails,
   step,
@@ -752,22 +977,30 @@ const handleSubmit = async ({
   router,
   quill,
   finalizerComment,
+  currentAlignments,
 }: HandleSubmitParams) => {
   if (!orderDetails || !orderDetails.orderId || !step) return
-  const toastId = toast.loading(`Submitting Transcription...`)
-  const transcript = quill.getText() || ''
+
+  const submissionType =
+    orderDetails.orderType === 'FORMATTING' ? 'file(s)' : 'transcription'
+  const toastId = toast.loading(`Submitting ${submissionType}...`)
+  const transcript = quill?.getText() || ''
 
   try {
-    if (orderDetails.status === 'QC_ASSIGNED') {
-      checkTranscriptForAllowedMeta(quill)
-    }
     setButtonLoading((prevButtonLoading) => ({
       ...prevButtonLoading,
       submit: true,
     }))
-    const playedPercentage = getPlayedPercentage()
-    if (playedPercentage < MINIMUM_AUDIO_PLAYBACK_PERCENTAGE) {
-      throw new Error(`MAPPNM`) //Stands for "Minimum Audio Playback Percentage Not Met"
+
+    if (orderDetails.orderType !== 'FORMATTING') {
+      if (orderDetails.status === 'QC_ASSIGNED') {
+        if (!quill) return
+        checkTranscriptForAllowedMeta(quill)
+      }
+      const playedPercentage = getPlayedPercentage()
+      if (playedPercentage < MINIMUM_AUDIO_PLAYBACK_PERCENTAGE) {
+        throw new Error(`MAPPNM`) //Stands for "Minimum Audio Playback Percentage Not Met"
+      }
     }
 
     if (step === 'CF') {
@@ -779,6 +1012,21 @@ const handleSubmit = async ({
         finalizerComment
       )
     } else {
+      if (
+        currentAlignments &&
+        Array.isArray(currentAlignments) &&
+        currentAlignments.length > 0
+      ) {
+        const filteredAlignments = currentAlignments.filter(
+          (alignment) => 'type' in alignment && alignment.type !== 'meta'
+        )
+  
+        const subtitles = getSRTVTT(filteredAlignments)
+        if (subtitles) {
+          await uploadSubtitlesAction(orderDetails.fileId, subtitles)
+        }
+      }
+
       await submitQCAction({
         fileId: orderDetails.fileId,
         orderId: Number(orderDetails.orderId),
@@ -786,12 +1034,16 @@ const handleSubmit = async ({
       })
     }
 
-    // TODO: remove this after March 1st
-    localStorage.removeItem('editorData')
-    await deleteEditorDataIDB(orderDetails.fileId)
+    if (orderDetails.orderType !== 'FORMATTING') {
+      // TODO: remove this after March 1st
+      localStorage.removeItem('editorData')
+      await deleteEditorDataIDB(orderDetails.fileId)
+    }
 
     toast.dismiss(toastId)
-    const successToastId = toast.success(`Transcription submitted successfully`)
+    const successToastId = toast.success(
+      `${submissionType} submitted successfully`
+    )
     toast.dismiss(successToastId)
     router.push(`/transcribe/${step === 'QC' ? 'qc' : 'legal-cf-reviewer'}`)
   } catch (error) {
@@ -1594,6 +1846,7 @@ export {
   handleTextFilesUpload,
   uploadTextFile,
   uploadFile,
+  uploadFormattingFiles,
   handleFilesUpload,
   regenDocx,
   reportHandler,

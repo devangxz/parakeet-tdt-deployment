@@ -186,8 +186,11 @@
   "revenueDashboardEmails": [
     "yukti+admin@scribie.com",
     "bireswar@scribie.com",
-    "daya@scribie.com"
+    "daya@scribie.com",
+    "vivian@scribie.com",
+    "balram@scribie.com"
   ],
+  "onlyRevenueDashboardEmails": ["balram@scribie.com"],
   "max_file_size": 10737418240,
   "allowed_file_types": {
     ".mp3": [

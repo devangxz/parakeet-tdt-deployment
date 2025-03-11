@@ -216,6 +216,9 @@ const MobileMenu = ({
                   <MenuItem href='/faq' icon={FileQuestion}>
                     FAQs
                   </MenuItem>
+                  <MenuItem href='/customer-guide' icon={FileQuestion}>
+                    Guide
+                  </MenuItem>
                   <MenuItem href='/contact' icon={Mail}>
                     Contact Support
                   </MenuItem>

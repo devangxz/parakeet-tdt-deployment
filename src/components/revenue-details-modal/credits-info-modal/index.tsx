@@ -34,6 +34,7 @@ interface CreditData {
   amount: number
   date: string
   type: string
+  paidBy: string
 }
 
 export function CreditsInfoModal({
@@ -92,6 +93,7 @@ export function CreditsInfoModal({
                   <TableHead>Date</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Amount</TableHead>
+                  <TableHead>Added By</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -107,6 +109,7 @@ export function CreditsInfoModal({
                         : 'Free Credits'}
                     </TableCell>
                     <TableCell>${credit.amount.toFixed(2)}</TableCell>
+                    <TableCell>{credit.paidBy}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

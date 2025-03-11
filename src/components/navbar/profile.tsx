@@ -46,7 +46,11 @@ const Profile = () => {
           <ChevronDown className='h-4 w-4 text-primary' />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className='w-56 border border-customBorder' align='end' forceMount>
+      <DropdownMenuContent
+        className='w-56 border border-customBorder'
+        align='end'
+        forceMount
+      >
         <DropdownMenuLabel className='font-normal'>
           <div className='flex flex-col space-y-1'>
             <p className='text-sm font-medium leading-none'>
@@ -79,6 +83,9 @@ const Profile = () => {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => router.push(`/faq`)}>
           FAQs
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push(`/customer-guide`)}>
+          Guide
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push(`/contact`)}>
           Contact Support

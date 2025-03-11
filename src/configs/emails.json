@@ -111,8 +111,17 @@
     "TO": ["$$USER_EMAIL_ID$$"],
     "CC": ["$$SUPPORT_EMAIL_ID$$"],
     "BCC": [],
-    "SUBJECT": "Scribie.ai Finalizer File Assigned",
+    "SUBJECT": "Scribie.ai Reviewer File Assigned",
     "HTML": "REVIEWER_ASSIGNMENT.html",
+    "TEXT": ""
+  },
+  "FINALIZER_ASSIGNMENT": {
+    "FROM": "$$SUPPORT_EMAIL_ID$$",
+    "TO": ["$$USER_EMAIL_ID$$"],
+    "CC": ["$$SUPPORT_EMAIL_ID$$"],
+    "BCC": [],
+    "SUBJECT": "Scribie.ai Finalizer File Assigned",
+    "HTML": "FINALIZER_ASSIGNMENT.html",
     "TEXT": ""
   },
   "QC_JOB_TIMEOUT": {
@@ -315,6 +324,15 @@
     "BCC": ["$$CONTACT_EMAIL_ID$$"],
     "SUBJECT": "Scribie.ai Automatic Refund",
     "HTML": "REFUND_FILE.html",
+    "TEXT": ""
+  },
+  "CUSTOM_FORMATTING_FEEDBACK": {
+    "FROM": "$$SUPPORT_EMAIL_ID$$",
+    "TO": ["$$USER_EMAIL_ID$$"],
+    "CC": ["$$SUPPORT_EMAIL_ID$$"],
+    "BCC": [],
+    "SUBJECT": "Scribie.ai Custom Formatting Feedback",
+    "HTML": "CUSTOM_FORMATTING_FEEDBACK.html",
     "TEXT": ""
   }
 }

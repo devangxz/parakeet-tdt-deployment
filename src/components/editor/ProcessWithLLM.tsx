@@ -28,6 +28,7 @@ interface ProcessWithLLMProps {
   orderDetails: OrderDetails;
   quillRef: React.RefObject<ReactQuill> | undefined;
   updateQuill: (quillRef: React.RefObject<ReactQuill> | undefined, content: string) => void;
+  role: string;
 }
 
 export default memo(function ProcessWithLLMDialog (
@@ -36,7 +37,8 @@ export default memo(function ProcessWithLLMDialog (
     setprocessWithLLMModalOpen,
     orderDetails,
     quillRef,
-    updateQuill  
+    updateQuill,
+    role
   }: ProcessWithLLMProps) {
  
   const [isLoading, setIsLoading] = useState(false)
@@ -128,7 +130,6 @@ export default memo(function ProcessWithLLMDialog (
   const handleSaveButton = async() => {
     updateQuill(quillRef, markedTranscript);
     setprocessWithLLMModalOpen(false);
-    await new Promise((resolve) => setTimeout(() => resolve(null), 1000)) // sleeping for 1 second to ensure the quill is updated
     
     await saveProcessWithLLMStats({
       userId: Number(orderDetails.userId),
@@ -137,6 +138,9 @@ export default memo(function ProcessWithLLMDialog (
       llmTimeTaken: llmTimeTaken,
       savedTime: new Date()
     })
+
+    await new Promise((resolve) => setTimeout(() => resolve(null), 1000)) // sleeping for 1 second to ensure the quill is updated
+    
     await handleSave(
       {
         orderDetails,
@@ -146,7 +150,8 @@ export default memo(function ProcessWithLLMDialog (
         listenCount: [],
         editedSegments: new Set(),
         getEditorText: () => markedTranscript,
-        isCF: true
+        isCF: true,
+        role
       },
       true
     )

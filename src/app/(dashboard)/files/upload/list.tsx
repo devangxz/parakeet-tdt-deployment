@@ -21,6 +21,7 @@ import DeleteBulkFileModal from '@/components/delete-bulk-file'
 import DeleteFileDialog from '@/components/delete-file-modal'
 import RenameFileDialog from '@/components/file-rename-dialog'
 import PaymentsDetailsModal from '@/components/payment-details-modal'
+import { DataTableColumnHeader } from '@/components/table-components/column-header'
 import TransferFileModal from '@/components/transfer-files'
 import TrimFileModal from '@/components/trim-file-modal'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -329,7 +330,9 @@ const FileList = ({
     },
     {
       accessorKey: 'name',
-      header: 'File name',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='File name' />
+      ),
       cell: ({ row }) => (
         <div>
           <div className='font-medium cursor-grab flex items-center gap-2'>
@@ -350,7 +353,15 @@ const FileList = ({
     },
     {
       accessorKey: 'date',
-      header: 'Date',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Date' />
+      ),
+      filterFn: (row, id, value: [string, string]) => {
+        if (!value || !value[0] || !value[1]) return true
+        const cellDate = new Date(row.getValue(id))
+        const [start, end] = value.map((str) => new Date(str))
+        return cellDate >= start && cellDate <= end
+      },
       cell: ({ row }) => (
         <div className='font-medium'>
           {formatDateTime(row.getValue('date'))}
@@ -359,7 +370,9 @@ const FileList = ({
     },
     {
       accessorKey: 'duration',
-      header: 'Duration',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Duration' />
+      ),
       cell: ({ row }) => (
         <div className='font-medium'>
           {row.getValue('duration')

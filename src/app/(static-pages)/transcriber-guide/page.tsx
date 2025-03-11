@@ -111,10 +111,10 @@ const content = [
           also helps us save on support costs for payments related issues.
         </p>
         <p className='text-slate-500'>
-          You can specify any PayPal account as long as it&apos;s Verified and not in
-          use already. It can also be changed later on. The PayPal account is
-          not used for any purpose other than funds transfer. We do not support
-          any other payment methods currently.
+          You can specify any PayPal account as long as it&apos;s Verified and
+          not in use already. It can also be changed later on. The PayPal
+          account is not used for any purpose other than funds transfer. We do
+          not support any other payment methods currently.
         </p>
       </div>
     ),
@@ -169,7 +169,7 @@ const content = [
           </p>
           <p className='text-slate-500'>
             <a
-              href='/help/customer-guide#additional-charges'
+              href='/customer-guide#additional-charges'
               className='text-blue-500 underline'
             >
               Additional charges

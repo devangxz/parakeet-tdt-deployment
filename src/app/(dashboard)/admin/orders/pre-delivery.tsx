@@ -4,7 +4,9 @@ import { ColumnDef } from '@tanstack/react-table'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
+import { DataTableColumnHeader } from './components/column-header'
 import { DataTable } from './components/data-table'
+import QCLink from './components/qc-link'
 import { getListenCountAndEditedSegmentAction } from '@/app/actions/admin/get-listen-count-and-edited-segment'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { fetchPreDeliveryOrders } from '@/app/actions/om/fetch-pre-delivery-orders'
@@ -32,6 +34,12 @@ import { FileCost } from '@/types/files'
 import formatDateTime from '@/utils/formatDateTime'
 import formatDuration from '@/utils/formatDuration'
 
+interface QCUser {
+  id: string
+  name: string
+  email: string
+}
+
 interface File {
   index: number
   orderId: number
@@ -42,10 +50,10 @@ interface File {
   status: string
   priority: number
   duration: number
-  qc: string
+  qc: QCUser[]
   deliveryTs: string
   hd: boolean
-  orderType: string
+  type: string
   fileCost: FileCost
   rateBonus: number
   waveformUrl?: string
@@ -130,14 +138,16 @@ export default function PreDeliveryPage() {
 
       if (response.success && response.details) {
         const orders = response.details.map((order, index) => {
-          const qcNames = order.Assignment.filter(
+          const qcUsers: QCUser[] = order.Assignment.filter(
             (a) =>
               a.status === 'ACCEPTED' ||
               a.status === 'COMPLETED' ||
               a.status === 'SUBMITTED_FOR_APPROVAL'
-          )
-            .map((a) => `${a.user.firstname} ${a.user.lastname}`)
-            .join(', ')
+          ).map((a) => ({
+            id: a.user.id.toString(),
+            name: `${a.user.firstname} ${a.user.lastname}`,
+            email: a.user.email,
+          }))
 
           fetchWaveformUrl(order.fileId)
           fetchEditorData(order.fileId)
@@ -152,14 +162,34 @@ export default function PreDeliveryPage() {
             status: order.status,
             priority: order.priority,
             duration: order.File?.duration ?? 0,
-            qc: qcNames || '-',
+            qc: qcUsers,
             deliveryTs: order.deliveryTs.toISOString(),
             hd: order.highDifficulty ?? false,
-            orderType: order.orderType,
+            type: order.orderType,
             fileCost: order.fileCost,
             rateBonus: order.rateBonus,
           }
         })
+        // Sort orders so that overdue files from yesterday are placed on top
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const yesterday = new Date(today)
+        yesterday.setDate(today.getDate() - 1)
+
+        orders.sort((a, b) => {
+          const aDelivery = new Date(a.deliveryTs)
+          aDelivery.setHours(0, 0, 0, 0)
+          const bDelivery = new Date(b.deliveryTs)
+          bDelivery.setHours(0, 0, 0, 0)
+
+          const aOverdue = aDelivery.getTime() === yesterday.getTime()
+          const bOverdue = bDelivery.getTime() === yesterday.getTime()
+
+          if (aOverdue && !bOverdue) return -1
+          if (!aOverdue && bOverdue) return 1
+          return a.index - b.index
+        })
+
         setPreDelieryFiles(orders ?? [])
         setError(null)
       } else {
@@ -226,7 +256,7 @@ export default function PreDeliveryPage() {
       ),
     },
     {
-      accessorKey: 'id',
+      accessorKey: 'fileId',
       header: 'Details',
       cell: ({ row }) => (
         <div>
@@ -307,7 +337,7 @@ export default function PreDeliveryPage() {
           style={{ minWidth: '250px', maxWidth: '250px' }}
         >
           {formatDuration(row.getValue('duration'))}
-          {row.original.orderType === 'FORMATTING' ? (
+          {row.original.type === 'FORMATTING' ? (
             <>
               <p>
                 Formatting cost: <br /> $
@@ -326,7 +356,7 @@ export default function PreDeliveryPage() {
                 {row.original.fileCost.transcriptionRate}/ah + $
                 {row.original.rateBonus}/ah)
               </p>
-              {row.original.orderType === 'TRANSCRIPTION_FORMATTING' && (
+              {row.original.type === 'TRANSCRIPTION_FORMATTING' && (
                 <p className='mt-1'>
                   Review cost: <br /> ${row.original.fileCost.customFormatCost}
                   ($
@@ -349,9 +379,19 @@ export default function PreDeliveryPage() {
     {
       accessorKey: 'qc',
       header: 'Editor',
-      cell: ({ row }) => (
-        <div className='font-medium'>{row.getValue('qc')}</div>
-      ),
+      cell: ({ row }) => {
+        const qcUsers = row.original.qc
+        if (!qcUsers || qcUsers.length === 0) {
+          return <div className='font-medium'>-</div>
+        }
+        return (
+          <div className='font-medium flex flex-wrap gap-2'>
+            {qcUsers.map((user) => (
+              <QCLink key={user.id} user={user} />
+            ))}
+          </div>
+        )
+      },
     },
     {
       accessorKey: 'deliveryTs',
@@ -361,6 +401,19 @@ export default function PreDeliveryPage() {
           {formatDateTime(row.getValue('deliveryTs'))}
         </div>
       ),
+      filterFn: (row, id, value: [string, string]) => {
+        if (!value || !value[0] || !value[1]) return true
+        const cellDate = new Date(row.getValue(id))
+        const [start, end] = value.map((str) => new Date(str))
+        return cellDate >= start && cellDate <= end
+      },
+    },
+    {
+      accessorKey: 'type',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Order Type' />
+      ),
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
       id: 'actions',
@@ -415,8 +468,8 @@ export default function PreDeliveryPage() {
               >
                 Re-assign Editor
               </DropdownMenuItem>
-              {(row.original.orderType === 'TRANSCRIPTION_FORMATTING' ||
-                row.original.orderType === 'FORMATTING') && (
+              {(row.original.type === 'TRANSCRIPTION_FORMATTING' ||
+                row.original.type === 'FORMATTING') && (
                 <DropdownMenuItem
                   className=''
                   onClick={() => {

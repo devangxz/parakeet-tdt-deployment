@@ -1,6 +1,6 @@
 'use server'
 
-import { OrderStatus } from '@prisma/client'
+import { OrderStatus, OrderType } from '@prisma/client'
 import axios from 'axios'
 import { getServerSession } from 'next-auth'
 
@@ -17,7 +17,7 @@ export async function submitReviewAction(
   transcript: string,
   finalizerComment: string
 ) {
-  logger.info('--> submitFinalize')
+  logger.info('--> submitReviewAction')
 
   try {
     const session = await getServerSession(authOptions)
@@ -26,7 +26,7 @@ export async function submitReviewAction(
     if (!fileId) {
       return {
         success: false,
-        error: 'File ID and transcript are required',
+        error: 'File ID is required',
       }
     }
 
@@ -43,19 +43,21 @@ export async function submitReviewAction(
       }
     }
 
-    await axios.post(
-      `${FILE_CACHE_URL}/save-transcript`,
-      {
-        fileId: order.fileId,
-        transcript: transcript,
-        userId: transcriberId,
-      },
-      {
-        headers: {
-          'x-api-key': process.env.SCRIBIE_API_KEY,
+    if (order.orderType !== OrderType.FORMATTING && transcript) {
+      await axios.post(
+        `${FILE_CACHE_URL}/save-transcript`,
+        {
+          fileId: order.fileId,
+          transcript: transcript,
+          userId: transcriberId,
         },
-      }
-    )
+        {
+          headers: {
+            'x-api-key': process.env.SCRIBIE_API_KEY,
+          },
+        }
+      )
+    }
 
     if (order.status === OrderStatus.REVIEWER_ASSIGNED) {
       const { success, message } = await submitReview(transcriberId, order)
@@ -80,13 +82,13 @@ export async function submitReviewAction(
       }
     }
 
-    logger.info('<-- submitFinalize')
+    logger.info('<-- submitReviewAction')
     return {
       success: true,
       message: 'Review submitted',
     }
   } catch (error) {
-    logger.error(`Error in submitFinalize: ${fileId} ${orderId} ${error}`)
+    logger.error(`Error in submitReviewAction: ${fileId} ${orderId} ${error}`)
     return {
       success: false,
       error: 'Internal Server Error',

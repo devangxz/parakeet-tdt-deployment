@@ -13,6 +13,7 @@ import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
 import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
 import { getFiles } from '@/app/actions/share-file/get-files'
 import { removeSharedFiles } from '@/app/actions/share-file/remove'
+import { DataTableColumnHeader } from '@/components/table-components/column-header'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -196,7 +197,9 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
     },
     {
       accessorKey: 'filename',
-      header: 'File name',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='File name' />
+      ),
       cell: ({ row }) => (
         <div className='font-medium'>{row.getValue('filename')}</div>
       ),
@@ -235,7 +238,9 @@ export default function SharedFilesPage({ files }: { files: File[] }) {
     },
     {
       accessorKey: 'duration',
-      header: 'Duration',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Duration' />
+      ),
       cell: ({ row }) => (
         <div className='font-medium'>
           {formatDuration(row.getValue('duration'))}

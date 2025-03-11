@@ -187,7 +187,7 @@ export default function ReReviewPage() {
       ),
     },
     {
-      accessorKey: 'id',
+      accessorKey: 'fileId',
       header: 'Details',
       cell: ({ row }) => (
         <div>
