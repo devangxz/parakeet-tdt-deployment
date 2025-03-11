@@ -7,9 +7,8 @@ import { createHeaders, PORTKEY_GATEWAY_URL } from "portkey-ai";
 import config from '../../../../../config.json'
 import logger from "@/lib/logger";
 import prisma from "@/lib/prisma";
-import { getAWSSesInstance } from "@/lib/ses";
-import { systemPrompt, userPrompt } from "@/utils/processWithLLMUtils";
 import { withRetry } from "@/lib/retry";
+import { systemPrompt, userPrompt } from "@/utils/processWithLLMUtils";
 
 interface ProcessWithLLMStats {
   userId: number;
