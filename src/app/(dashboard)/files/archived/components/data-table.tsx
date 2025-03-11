@@ -17,7 +17,7 @@ import {
 import * as React from 'react'
 
 import { DataTablePagination } from './data-table-pagination'
-import { DataTableToolbar } from './toolbar'
+import { DataTableToolbar } from '@/components/table-components/toolbar'
 import {
   Table,
   TableBody,

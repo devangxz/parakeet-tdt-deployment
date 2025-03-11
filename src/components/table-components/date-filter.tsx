@@ -15,11 +15,13 @@ import {
 import { cn } from '@/lib/utils'
 
 interface DateFilterProps<TData, TValue> {
-  column?: Column<TData, TValue>
+  column?: Column<TData, TValue>,
+  title: string
 }
 
 export function DateFilter<TData, TValue>({
   column,
+  title
 }: DateFilterProps<TData, TValue>) {
   const [date, setDate] = React.useState<Date>()
 
@@ -56,7 +58,7 @@ export function DateFilter<TData, TValue>({
             )}
           >
             <CalendarIcon className='mr-2 h-4 w-4' />
-            {date ? format(date, 'PPP') : <span>Delivery Date Filter</span>}
+            {date ? format(date, 'PPP') : <span>{title}</span>}
           </Button>
         </PopoverTrigger>
         <PopoverContent className='w-auto p-0' align='start'>
