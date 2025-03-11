@@ -9,6 +9,7 @@ import logger from "@/lib/logger";
 import prisma from "@/lib/prisma";
 import { getAWSSesInstance } from "@/lib/ses";
 import { systemPrompt, userPrompt } from "@/utils/processWithLLMUtils";
+import { withRetry } from "@/lib/retry";
 
 interface ProcessWithLLMStats {
   userId: number;
@@ -82,6 +83,7 @@ totalParts: number,
 instructions: string
 ) => {
   try{
+    const result = await withRetry(async () => {
     logger.info(`Marking transcript part: ${currentPart+1} of ${totalParts}`);
     const { completion } = await makeLLMCall(
           transcript,
@@ -89,20 +91,32 @@ instructions: string
           userPrompt,
           instructions,
       );
-      if(completion.choices.length === 0 || !completion?.choices[0]?.message.content){
+      if(completion.choices.length === 0 || !completion?.choices[0]?.message?.content){
         logger.error(`No content returned from LLM for file ${fileId}`);
-        throw new Error(`No content returned from LLM for file ${fileId}`);
+        throw new Error(`No content returned from LLM for file`);
       }
       if(completion.choices[0].message.content){
         logger.info(`Marked transcript part: ${currentPart} of ${totalParts}`);
         return completion.choices[0].message.content;
       }
+    }, {
+      maxRetries: 2,
+      initialDelayMs: 1000,
+      maxDelayMs: 32000,
+      backoffFactor: 2,
+      retryErrors: [
+        "429|rate limit|too many requests",
+        "500|internal server error",
+        "No content returned from LLM for file"
+      ],
+    });
+    if(!result.success){
+      throw result.error || new Error(`No content returned from LLM for file ${fileId}`);
+    }
+    return result.data;
   }catch(error){
-      const errorMsg = `Error while making a call to LLM for file ${fileId} ${(error as Error).toString()}`;
-      logger.error(`Error while making a call to LLM ${JSON.stringify((error as Error).stack)}`);
-      const ses = getAWSSesInstance()
-      await ses.sendAlert(`LLM call failed for ${fileId}`, errorMsg, 'software')
-      throw error;
+    logger.error(`Error while making a call to LLM ${JSON.stringify((error as Error).stack)}`);
+    throw error;
   }
 }
 
