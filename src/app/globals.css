@@ -313,7 +313,7 @@ html {
 }
 
 .line-highlight {
-  background-color: #EDEDED;
+  background-color: #ededed;
 }
 
 .dark .line-highlight {
@@ -322,4 +322,53 @@ html {
 
 .ql-editor {
   caret-color: red;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6,
+.markdown-content p {
+  margin: calc(1em + 1ex) 0;
+}
+
+.markdown-content h1 {
+  border-bottom: 1px solid #e1e4e8;
+}
+
+.markdown-content h2 {
+  border-bottom: 1px solid #e1e4e8;
+}
+
+.markdown-content h1 {
+  font-size: 2.5em;
+  margin-bottom: calc(0.4em + 0.7ex);
+  margin-top: calc(0.4em + 0.7ex);
+  padding-bottom: calc(0.2em + 0.2ex);
+}
+
+.markdown-content h2 {
+  font-size: 2em;
+  margin-bottom: calc(0.5em + 0.625ex);
+  margin-top: calc(0.5em + 0.625ex);
+  padding-bottom: calc(0.25em + 0.25ex);
+}
+
+.markdown-content hr,
+.markdown-content kbd,
+.markdown-content pre {
+  background-color: hsla(0, 0%, 100%, 0.12);
+}
+
+.markdown-content hr {
+  background-color: rgba(0, 0, 0, 0.04);
+  border: 0;
+  border-radius: 3px;
+  height: calc(0.25em + 0.25ex);
+}
+
+.markdown-content a {
+  color: hsl(var(--primary));
 }

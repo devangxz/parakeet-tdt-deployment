@@ -5,11 +5,11 @@ export function getRedirectPathByRole(role: string) {
     case 'TRANSCRIBER':
       return '/transcribe/transcriber'
     case 'TRANSCRIBER_LEVEL_2':
-      return '/transcribe/reviewer'
+      return '/transcribe/transcriber'
     case 'PROOFREADER':
-      return '/transcribe/proofreader'
+      return '/transcribe/transcriber'
     case 'VERIFIER':
-      return '/transcribe/proofreader'
+      return '/transcribe/transcriber'
     case 'QC':
       return '/transcribe/qc'
     case 'REVIEWER':
