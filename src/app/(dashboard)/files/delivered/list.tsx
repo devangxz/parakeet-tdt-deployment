@@ -24,6 +24,7 @@ import DeleteFileDialog from '@/components/delete-file-modal'
 import DownloadModal from '@/components/download-modal'
 import RenameFileDialog from '@/components/file-rename-dialog'
 import OrderReReviewModal from '@/components/order-re-review'
+import { DataTableColumnHeader } from '@/components/table-components/column-header'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -256,14 +257,24 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
     },
     {
       accessorKey: 'filename',
-      header: 'File name',
+      header: ({column}) => (
+        <DataTableColumnHeader column={column} title='File name' />
+      ),
       cell: ({ row }) => (
         <div className='font-medium'>{row.getValue('filename')}</div>
       ),
     },
     {
       accessorKey: 'date',
-      header: 'Date',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Date' />
+      ),
+      filterFn: (row, id, value: [string, string]) => {
+        if (!value || !value[0] || !value[1]) return true
+        const cellDate = new Date(row.getValue(id))
+        const [start, end] = value.map((str) => new Date(str))
+        return cellDate >= start && cellDate <= end
+      },
       cell: ({ row }) => (
         <div className='font-medium'>
           {formatDateTime(row.getValue('date'))}
@@ -272,7 +283,9 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
     },
     {
       accessorKey: 'duration',
-      header: 'Duration',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Duration' />
+      ),
       cell: ({ row }) => (
         <div className='font-medium'>
           {formatDuration(row.getValue('duration'))}

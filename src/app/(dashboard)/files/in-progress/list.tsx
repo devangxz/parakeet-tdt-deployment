@@ -15,6 +15,7 @@ import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import DraftTranscriptFileDialog from '@/components/draft-transcript'
 import CanceOrderDialog from '@/components/draft-transcript/cancel-order'
 import RenameFileDialog from '@/components/file-rename-dialog'
+import { DataTableColumnHeader } from '@/components/table-components/column-header'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -193,14 +194,24 @@ export default function InprogressFilesPage({ files }: ListProps) {
     },
     {
       accessorKey: 'filename',
-      header: 'File name',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='File name' />
+      ),
       cell: ({ row }) => (
         <div className='font-medium'>{row.getValue('filename')}</div>
       ),
     },
     {
       accessorKey: 'date',
-      header: 'Date',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Date' />
+      ),
+      filterFn: (row, id, value: [string, string]) => {
+        if (!value || !value[0] || !value[1]) return true
+        const cellDate = new Date(row.getValue(id))
+        const [start, end] = value.map((str) => new Date(str))
+        return cellDate >= start && cellDate <= end
+      },
       cell: ({ row }) => (
         <div className='font-medium'>
           {formatDateTime(row.getValue('date'))}
@@ -209,7 +220,9 @@ export default function InprogressFilesPage({ files }: ListProps) {
     },
     {
       accessorKey: 'duration',
-      header: 'Duration',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Duration' />
+      ),
       cell: ({ row }) => (
         <div className='font-medium'>
           {formatDuration(row.getValue('duration'))}
@@ -409,7 +422,7 @@ export default function InprogressFilesPage({ files }: ListProps) {
             )}
             <Button
               variant='order'
-              className='not-rounded text-black w-[140px] ml-2'
+              className='not-rounded w-[140px] ml-2'
               onClick={handleBulkPermalink}
             >
               Permalink
