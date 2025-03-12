@@ -45,18 +45,6 @@ export function SidebarNav() {
       type: 'transcriber',
     },
     {
-      href: '/transcribe/reviewer',
-      name: 'Review',
-      isActive: false,
-      type: 'reviewer',
-    },
-    {
-      href: '/transcribe/proofreader',
-      name: 'Proofread',
-      isActive: false,
-      type: 'proofreader',
-    },
-    {
       href: '/transcribe/qc',
       name: 'GT-Editor',
       isActive: true,

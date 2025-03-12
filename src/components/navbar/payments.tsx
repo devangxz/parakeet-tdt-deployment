@@ -1,7 +1,6 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 
@@ -26,20 +25,23 @@ function PaymentsNavbar() {
       ) : (
         <div className='sticky top-0 z-50 bg-background border-b-2 border-customBorder'>
           <div className='flex justify-between items-center px-2 lg:px-4 py-4'>
-            <Link href='/'>
-              <div className='flex items-center justify-center gap-2'>
-                <Image
-                  loading='lazy'
-                  src='/assets/images/logo.svg'
-                  alt='Scribie'
-                  width={36}
-                  height={36}
-                />
-                <span className='inline font-semibold lg:text-3xl text-lg text-primary'>
-                  scribie
-                </span>
-              </div>
-            </Link>
+            {/* <Link href='/'> */}
+            <div
+              className='flex items-center justify-center gap-2 cursor-pointer'
+              onClick={() => (window.location.href = '/')}
+            >
+              <Image
+                loading='lazy'
+                src='/assets/images/logo.svg'
+                alt='Scribie'
+                width={36}
+                height={36}
+              />
+              <span className='inline font-semibold lg:text-3xl text-lg text-primary'>
+                scribie
+              </span>
+            </div>
+            {/* </Link> */}
             <div className='flex items-center gap-4'>
               {session?.user?.readonly && (
                 <Badge

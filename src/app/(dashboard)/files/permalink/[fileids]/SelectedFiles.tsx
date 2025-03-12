@@ -122,7 +122,7 @@ export function SelectedFiles({
 
   const handleOrderFile = async (fileId: string, orderType: string) => {
     if (session?.user?.status !== 'VERIFIED') {
-      router.push('/verify-email')
+      window.location.href = '/verify-email'
       return
     }
     setLoadingFileOrder((prev) => ({ ...prev, [fileId]: true }))

@@ -1,6 +1,5 @@
 'use client'
 import Image from 'next/image'
-import Link from 'next/link'
 
 import Profile from '@/components/navbar/profile'
 import { ThemeSwitcher } from '@/components/theme-switcher'
@@ -11,7 +10,10 @@ function InvoiceNavbar({ orderType }: { orderType: string }) {
     <div className='sticky top-0 z-50 bg-background border-b-2 border-customBorder'>
       <div className='flex items-center justify-between px-2 lg:px-4 py-4'>
         <div className='flex items-center gap-x-5'>
-          <Link href='/'>
+          <div
+            className='cursor-pointer'
+            onClick={() => (window.location.href = '/')}
+          >
             <Image
               loading='lazy'
               src='/assets/images/logo.svg'
@@ -19,10 +21,12 @@ function InvoiceNavbar({ orderType }: { orderType: string }) {
               width={36}
               height={36}
             />
-          </Link>
+          </div>
 
           <div className='flex items-center gap-x-2'>
-            <span className='inline font-medium text-lg text-primary'>Checkout</span>
+            <span className='inline font-medium text-lg text-primary'>
+              Checkout
+            </span>
             <Badge
               variant='outline'
               className='lg:text-md text-sm text-primary bg-secondary pt-1 pb-1 font-medium'

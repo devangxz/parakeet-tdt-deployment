@@ -23,6 +23,9 @@ export async function getAvailableFiles(type: string) {
         orderType: {
           in: [OrderType.TRANSCRIPTION_FORMATTING, OrderType.FORMATTING],
         },
+        updatedAt: {
+          lte: new Date(Date.now() - 60 * 1000),
+        },
       },
       include: {
         File: true,

@@ -49,6 +49,9 @@ export async function getAvailableQCFiles(type?: string | null) {
         status: {
           in: [OrderStatus.TRANSCRIBED, OrderStatus.FORMATTED],
         },
+        updatedAt: {
+          lte: new Date(Date.now() - 60 * 1000),
+        },
       },
       include: {
         File: true,
