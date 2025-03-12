@@ -71,9 +71,16 @@ export default memo(function ProcessWithLLMDialog (
 
       for(let i = 0; i < transcriptParts.length; i++) {
         setProgressMessage(`Marking transcript part ${i + 1} of ${transcriptParts.length}`);
-        const markedPart = await markTranscriptWithLLMServerAction(transcriptParts[i], orderDetails.fileId, i, transcriptParts.length, instructions);
-        setProgressValue((i+1)/transcriptParts.length * 100);
-        transcriptFromLLM += markedPart;
+        try{
+          const markedPart = await markTranscriptWithLLMServerAction(transcriptParts[i], orderDetails.fileId, i, transcriptParts.length, instructions);
+          setProgressValue((i+1)/transcriptParts.length * 100);
+          transcriptFromLLM += markedPart;
+        }
+        catch(error){
+          setIsError(true);
+          setErrorMessage(`Something went wrong! Please Try Again after sometime.`);
+          return;
+        }
       }
 
       transcriptFromLLM = "[--PROCEEDINGS--]\n\n" + transcriptFromLLM.replaceAll('. ', '.  ').replaceAll('? ', '? ').replaceAll(': ', ': '); //using a regex here removes the line breaks
@@ -87,7 +94,7 @@ export default memo(function ProcessWithLLMDialog (
     }
     catch(error){
       setIsError(true);
-      setErrorMessage(`Error marking transcript with LLM: ${error}`);
+      setErrorMessage(`Something went wrong! Please Try Again after sometime.`);
     }
     finally{
       setIsLoading(false);
@@ -192,8 +199,14 @@ export default memo(function ProcessWithLLMDialog (
         <div className="px-4 pt-2">
           <Stepper steps={['Instructions', 'Marking', 'Review', 'Preview']} activeStep={activeStepIndex} />
         </div>
-
-          { currentStage === 'Instructions' && (
+          {
+            isError && (
+              <div className="flex space-x-2 justify-center items-center h-[60vh]">
+                  <p>{errorMessage}</p>
+              </div>
+            )
+          }
+          { (currentStage === 'Instructions' && !isError) && (
             !isLoading ? (
             <div className="pb-4 min-h-[20vh] space-y-8 w-full ">
               <div className="flex flex-col space-y-2 w-full">
@@ -232,14 +245,14 @@ export default memo(function ProcessWithLLMDialog (
             </div>)
           )}
 
-          { currentStage === 'Marking' && (
+          { (currentStage === 'Marking' && !isError) && (
             <div className="flex flex-col space-y-2 justify-center items-center h-[60vh]">
               <Progress value={progressValue} className="w-1/3 sm:w-1/2 animate-pulse" color="primary" />
               <span>{progressMessage}</span>
             </div>
           )}
             
-          {currentStage === 'Review' && (
+          {(currentStage === 'Review' && !isError) && (
             <div className="flex space-x-2 justify-center items-center h-[60vh]">
               <ReviewSectionHelper
                 isError={isError}
@@ -252,7 +265,7 @@ export default memo(function ProcessWithLLMDialog (
                 onReject={handleReject}
               />
             </div>)}
-            { currentStage === 'Preview' && (
+            { (currentStage === 'Preview' && !isError) && (
             <div className="p-2 px-4 overflow-y-auto h-[60vh] whitespace-pre-wrap">
               {markedTranscript}
             </div>
