@@ -249,7 +249,7 @@ const runFFprobe = (filePath) => new Promise((resolve, reject) => {
                     sample_rate: parseInt(videoStream.sample_rate) || parseInt(audioStream.sample_rate),
                 };
 
-                if (!result.duration) {
+                if (!result.duration || result.duration <= 0) {
                     reject(new Error('Failed to parse ffprobe output: Invalid file'));
                 }
 
@@ -299,7 +299,7 @@ const runMediaInfo = (filePath) => new Promise((resolve, reject) => {
                     sample_rate: parseInt(videoTrack.SamplingRate) || parseInt(audioTrack.SamplingRate),
                 };
 
-                if (!result.duration) {
+                if (!result.duration || result.duration <= 0) {
                     reject(new Error('Failed to parse mediainfo output: Invalid file'));
                 }
 
