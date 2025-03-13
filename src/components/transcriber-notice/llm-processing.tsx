@@ -1,10 +1,10 @@
 function LlmProcessingNotice() {
   return (
-    <div className='flex items-start p-4 my-4 bg-blue-50 border border-blue-200 rounded-md shadow-sm'>
+    <div className='border-l-4 border-primary flex items-start p-4 mb-2 my-1 bg-primary/10 border border-primary rounded-md shadow-sm'>
       <div className='flex-shrink-0'>
         <svg
           xmlns='http://www.w3.org/2000/svg'
-          className='h-6 w-6 text-blue-500'
+          className='h-6 w-6 text-primary'
           viewBox='0 0 20 20'
           fill='currentColor'
         >
@@ -16,11 +16,11 @@ function LlmProcessingNotice() {
         </svg>
       </div>
       <div className='ml-3'>
-        <p className='text-sm font-medium text-blue-800'>
+        <p className='text-sm font-medium text-primary'>
           We’ve moved LLM processing to the frontend instead of the backend,
           giving you more control!
         </p>
-        <ul className='mt-2 list-disc pl-5 text-sm text-blue-700 space-y-1'>
+        <ul className='mt-2 font-medium list-disc pl-5 text-sm text-primary space-y-1'>
           <li>
             After QC completion, you can open the editor immediately. The CF
             markings using LLMs will now run after you open the editor.
@@ -30,7 +30,7 @@ function LlmProcessingNotice() {
             the dropdown menu.
           </li>
         </ul>
-        <p className='mt-2 text-sm text-blue-700'>
+        <p className='mt-2 font-medium text-sm text-primary'>
           Try it out and let us know your feedback!
         </p>
       </div>
