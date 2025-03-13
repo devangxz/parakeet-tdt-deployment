@@ -187,10 +187,12 @@ export default async function extractDataFromRISFile(
     //  \n    \"comm_no\": \"\",\n    \"comm_exp\": \"\"\n}\n```"
     const jsonRegex = /\{[\s\S]*\}/
     const trimmedRisData = risData?.match(jsonRegex)?.[0]
-    logger.info(`Trimmed RIS Data: ${trimmedRisData?.slice(0, 100)}`)
+    logger.info(
+      `Trimmed RIS Data for file ${fileId}: ${trimmedRisData?.slice(0, 100)}`
+    )
     if (!trimmedRisData) {
       logger.error(
-        'extractDataFromRISFile: No JSON object found in the input string'
+        `extractDataFromRISFile: No JSON object found in the input string for file ${fileId}`
       )
     }
 
@@ -199,10 +201,10 @@ export default async function extractDataFromRISFile(
       risDataJson = JSON.parse(trimmedRisData)
     }
     const result = validateRISJson(risDataJson)
-    logger.info(`Validation result ${result}`)
+    logger.info(`Validation result for file ${fileId}: ${result}`)
     if (result.length > 0) {
       logger.error(
-        `Validation failed with the following inconsistencies: ${result.join(
+        `Validation failed with the following inconsistencies for file ${fileId}: ${result.join(
           ', '
         )}`
       )
@@ -219,7 +221,7 @@ export default async function extractDataFromRISFile(
     logger.info(`<-- extractDataFromRISFile ${fileId}`)
     return risDataJson
   } catch (error) {
-    logger.info(`<-- extractDataFromRISFile ${(error as Error).toString()}`)
+    logger.error(`<-- extractDataFromRISFile ${error} for file ${fileId}`)
     throw new Error(error instanceof Error ? error.message : String(error))
   }
 }
