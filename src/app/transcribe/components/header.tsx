@@ -28,9 +28,6 @@ export default function Header() {
               scribie
             </span>
           </div>
-          <span className='text-muted-foreground font-medium text-lg'>
-            Transcriber
-          </span>
         </div>
         <div className='flex items-center gap-x-4'>
           <Button

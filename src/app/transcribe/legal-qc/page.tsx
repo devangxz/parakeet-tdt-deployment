@@ -42,6 +42,7 @@ export default function LegalQCPage() {
           onValueChange={(value) => {
             setActiveTab(value)
           }}
+          className='mt-1'
         >
           <TabsList className='rounded-md'>
             <TabsTrigger value='available'>Available</TabsTrigger>
