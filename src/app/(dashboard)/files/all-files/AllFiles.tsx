@@ -496,6 +496,12 @@ const AllFiles = ({ folderId = null }: { folderId: string | null }) => {
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title='Date' />
       ),
+      filterFn: (row, id, value: [string, string]) => {
+        if (!value || !value[0] || !value[1]) return true
+        const cellDate = new Date(row.getValue(id))
+        const [start, end] = value.map((str) => new Date(str))
+        return cellDate >= start && cellDate <= end
+      },
       cell: ({ row }) => (
         <div className='font-medium'>
           {formatDateTime(row.getValue('date'))}

@@ -13,6 +13,7 @@ interface SidebarProps {
   sidebarItems: SidebarItemType[]
   showTeams?: boolean
   heading?: string
+  isCollapsed?: boolean
 }
 
 const Sidebar = ({
@@ -63,19 +64,19 @@ const Sidebar = ({
               className={`flex items-center gap-2.5 px-3 pt-1 pb-2 transition-all hover:text-primary`}
             >
               <Database className='h-5 w-5' />
-              Credits
-              <div className='ml-auto flex items-center' test-id='credit-balance'>
-                <p className='font-normal mr-1'>${creditsBalance}</p>
-                <ChevronDown className='h-5 w-5 -rotate-90 font-normal' />
-              </div>
+                Credits
+                <div className='ml-auto flex items-center' test-id='credit-balance'>
+                  <p className='font-normal mr-1'>${creditsBalance}</p>
+                  <ChevronDown className='h-5 w-5 -rotate-90 font-normal' />
+                </div>
             </Link>
             <Link
               href='/settings/personal-info'
               className={`flex items-center gap-2.5 px-3 py-1.5 transition-all hover:text-primary`}
             >
               <Settings className='h-5 w-5' />
-              Settings
-              <ChevronDown className='h-5 w-5 ml-auto flex -rotate-90 font-normal' />
+                Settings
+                <ChevronDown className='h-5 w-5 ml-auto flex -rotate-90 font-normal' />
             </Link>
           </div>
         </div>

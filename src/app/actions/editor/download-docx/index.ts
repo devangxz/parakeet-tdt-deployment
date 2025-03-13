@@ -61,7 +61,7 @@ export async function downloadBlankDocxAction(
             const signedUrl = await getFileVersionSignedURLFromS3(
                 `${fileId}.docx`,
                 fileVersion?.s3VersionId
-            )
+            ) 
 
             return {
                 success: true,

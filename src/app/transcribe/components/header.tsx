@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 export default function Header() {
   const router = useRouter()
   return (
-    <div className='sticky top-0 z-10 bg-background border-b-2 border-customBorder'>
+    <div className='sticky top-0 z-50 bg-background border-b-2 border-customBorder'>
       <div className='flex justify-between items-center px-2 lg:px-4 py-4'>
         <div className='flex items-center justify-center gap-5'>
           <div
