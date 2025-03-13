@@ -8,6 +8,7 @@ import {
   FileUp,
   Share2,
   File,
+  Pin,
 } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import React from 'react'
@@ -15,6 +16,7 @@ import React from 'react'
 import AuthenticatedFooter from '@/components/authenticated-footer'
 import PaymentsNavbar from '@/components/navbar/payments'
 import Sidebar from '@/components/Sidebar'
+import { cn } from '@/lib/utils'
 import { SidebarItemType } from '@/types/sidebar'
 
 export default function FilesLayout({
@@ -23,6 +25,9 @@ export default function FilesLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const [isPinned, setIsPinned] = React.useState(true) // Default to collapsed
+  const [isHovered, setIsHovered] = React.useState(false)
+  const isExpanded = isPinned || isHovered
 
   const sidebarItems: SidebarItemType[] = [
     {
@@ -76,12 +81,52 @@ export default function FilesLayout({
     <div className='flex min-h-screen flex-col'>
       <PaymentsNavbar />
       <div className='flex flex-1'>
-        <div className='hidden border-r-2 border-customBorder md:block md:w-[220px] lg:w-[280px]'>
-          <aside className='sticky top-[69.5px]'>
+        {/* Sidebar container */}
+        <div 
+          className={cn(
+            'relative hidden md:block',
+            'transition-all duration-300 ease-in-out',
+            'border-r border-customBorder',
+            isExpanded ? 'lg:w-72 md:w-48 bg-background' : 'w-2 bg-primary overflow-hidden'
+          )} 
+          onMouseEnter={() => setIsHovered(true)} 
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          <button
+            className={cn(
+              "absolute right-3 top-5 z-20 p-1 rounded-full hover:bg-accent",
+              "transition-opacity duration-300",
+              isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
+            )}
+            onClick={() => setIsPinned(!isPinned)}
+            aria-label={isPinned ? "Unpin sidebar" : "Pin sidebar"}
+          >
+            {isPinned ? (
+              <PackageMinus size={16} className="text-primary" />
+            ) : (
+              <Pin size={16} className="text-primary" />
+            )}
+          </button>
+
+          <aside className={cn(
+            'transition-all duration-300 ease-in-out',
+            isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-full'
+          )}>
             <Sidebar sidebarItems={sidebarItems} />
           </aside>
         </div>
-        <main className='flex-1'>
+
+        {/* Hover trigger area when sidebar is collapsed */}
+        {!isExpanded && (
+          <div 
+            className="fixed top-0 bottom-0 left-0 w-4 z-10 cursor-pointer hidden md:block"
+            onMouseEnter={() => setIsHovered(true)}
+            aria-label="Expand sidebar"
+          />
+        )}
+
+        {/* Main content without left margin */}
+        <main className="flex-1">
           <div className='h-full'>{children}</div>
         </main>
       </div>

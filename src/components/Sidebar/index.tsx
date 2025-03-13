@@ -20,7 +20,6 @@ const Sidebar = ({
   sidebarItems,
   showTeams = true,
   heading = 'Files',
-  isCollapsed = false,
 }: SidebarProps) => {
   const pathname = usePathname()
   const [creditsBalance, setCreditsBalance] = useState(0)
@@ -55,7 +54,6 @@ const Sidebar = ({
               sidebarItems={sidebarItems}
               heading={heading}
               pathname={pathname || ''}
-              isCollapsed={isCollapsed}
             />
           </div>
 
@@ -66,23 +64,19 @@ const Sidebar = ({
               className={`flex items-center gap-2.5 px-3 pt-1 pb-2 transition-all hover:text-primary`}
             >
               <Database className='h-5 w-5' />
-              {isCollapsed ? <></> : <>
                 Credits
                 <div className='ml-auto flex items-center' test-id='credit-balance'>
                   <p className='font-normal mr-1'>${creditsBalance}</p>
                   <ChevronDown className='h-5 w-5 -rotate-90 font-normal' />
                 </div>
-              </>}
             </Link>
             <Link
               href='/settings/personal-info'
               className={`flex items-center gap-2.5 px-3 py-1.5 transition-all hover:text-primary`}
             >
               <Settings className='h-5 w-5' />
-              {isCollapsed ? <></> : <>
                 Settings
                 <ChevronDown className='h-5 w-5 ml-auto flex -rotate-90 font-normal' />
-              </>}
             </Link>
           </div>
         </div>
@@ -97,7 +91,6 @@ export type props = {
   sidebarItems: SidebarItemType[]
   heading: string
   pathname: string
-  isCollapsed: boolean
 }
 
 interface FileNode {
@@ -160,7 +153,7 @@ const FileTreeNode = ({ data, expandedNodes, setExpandedNodes }: {
 }
 
 export function SidebarItems(props: props) {
-  const { heading, sidebarItems, pathname, isCollapsed } = props
+  const { heading, sidebarItems, pathname } = props
   const [expandedNodes, setExpandedNodes] = useState<Record<number, boolean>>({})
   const [rootFolders, setRootFolders] = useState<FileNode[]>([])
   const [isRootExpanded, setIsRootExpanded] = useState(false)
@@ -237,8 +230,8 @@ export function SidebarItems(props: props) {
                 }`}
             >
               <Icon className='h-5 w-5' />
-              {!isCollapsed && item.name}
-              {!isCollapsed && item.badgeCount !== undefined && (
+              {item.name}
+              {item.badgeCount !== undefined && (
                 <p className='ml-auto flex font-normal mr-1'>{item.badgeCount}</p>
               )}
             </Link>
