@@ -476,6 +476,22 @@ export default function ApprovalPage() {
               >
                 Re-assign
               </DropdownMenuItem>
+              <DropdownMenuItem
+                className=''
+                onClick={() =>
+                  window.open(
+                    `/editor/${row.original.fileId}`,
+                    '_blank',
+                    'toolbar=no,location=no,menubar=no,width=' +
+                      window.screen.width +
+                      ',height=' +
+                      window.screen.height +
+                      ',left=0,top=0'
+                  )
+                }
+              >
+                Open Editor
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
