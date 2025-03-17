@@ -259,10 +259,12 @@ html {
 
 .removed {
   background-color: #ffe6e6;
+  text-decoration: line-through;
 }
 
 .dark .removed {
   background-color: #be0000;
+  text-decoration: line-through;
 }
 
 .menu-icon {
