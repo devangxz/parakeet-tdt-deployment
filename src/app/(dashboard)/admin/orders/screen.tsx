@@ -65,7 +65,11 @@ interface File {
   type: string
 }
 
-export default function ScreenPage() {
+interface ScreenPageProps {
+  onActionComplete?: () => Promise<void>
+}
+
+export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
   const [screeningFiles, setScreeningFiles] = useState<File[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -133,6 +137,10 @@ export default function ScreenPage() {
         }) as unknown as File[]
         setScreeningFiles(orders ?? [])
         setError(null)
+
+        if (onActionComplete) {
+          await onActionComplete()
+        }
       } else {
         toast.error(response.message || 'An error occurred')
         setError(response.message || 'An error occurred')

@@ -26,6 +26,7 @@ const StatusPage = dynamic(() => import('./status'), {
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { changeDeliveryDate } from '@/app/actions/om/change-delivery-date'
 import { fetchPendingOrders } from '@/app/actions/om/fetch-pending-orders'
+import { fetchTabCounts } from '@/app/actions/om/fetch-tab-counts'
 import { CancellationDetailsModal } from '@/components/cancellation-details-modal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -112,6 +113,11 @@ export default function OrdersPage() {
       status: CancellationStatus
     }[]
   >([])
+  const [pendingCount, setPendingCount] = useState<number>(0)
+  const [screenFilesCount, setScreenFilesCount] = useState<number>(0)
+  const [preDeliveryFilesCount, setPreDeliveryFilesCount] = useState<number>(0)
+  const [approvalFilesCount, setApprovalFilesCount] = useState<number>(0)
+  const [reReviewFilesCount, setReReviewFilesCount] = useState<number>(0)
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -192,6 +198,7 @@ export default function OrdersPage() {
         })
 
         setPendingOrders(orders ?? [])
+        setPendingCount(orders.length)
         setError(null)
       } else {
         setError(response.message ?? 'Unknown error')
@@ -203,8 +210,38 @@ export default function OrdersPage() {
     }
   }
 
+  const fetchAllTabCounts = async () => {
+    try {
+      const response = await fetchTabCounts()
+
+      if (response.success && response.counts) {
+        const {
+          screenCount,
+          preDeliveryCount,
+          approvalCount,
+          reReviewCount,
+          pendingCount,
+        } = response.counts
+
+        setScreenFilesCount(screenCount)
+        setPreDeliveryFilesCount(preDeliveryCount)
+        setApprovalFilesCount(approvalCount)
+        setReReviewFilesCount(reReviewCount)
+
+        if (!pendingOrders) {
+          setPendingCount(pendingCount)
+        }
+      } else {
+        console.error('Failed to fetch tab counts:', response.message)
+      }
+    } catch (error) {
+      console.error('Error fetching tab counts:', error)
+    }
+  }
+
   useEffect(() => {
     getPendingOrders(true)
+    fetchAllTabCounts()
   }, [])
 
   const handleDeliveryDateChanged = async (orderId: number, day: number) => {
@@ -532,16 +569,58 @@ export default function OrdersPage() {
       <Tabs
         defaultValue='orders'
         value={activeTab}
-        onValueChange={(value) => setActiveTab(value)}
+        onValueChange={(value) => {
+          setActiveTab(value)
+          fetchAllTabCounts()
+        }}
       >
-        <TabsList className='grid grid-cols-7 mt-5 ml-8 w-[900px]'>
-          <TabsTrigger value='orders'>Orders</TabsTrigger>
-          <TabsTrigger value='status'>Status</TabsTrigger>
-          <TabsTrigger value='screen'>Screen</TabsTrigger>
-          <TabsTrigger value='pre-delivery'>Pre Delivery</TabsTrigger>
-          <TabsTrigger value='approval'>Approval</TabsTrigger>
-          <TabsTrigger value='re-review'>Re-Review</TabsTrigger>
-          <TabsTrigger value='compare'>Compare</TabsTrigger>
+        <TabsList className='grid grid-cols-7 mt-5 ml-8 w-[1000px]'>
+          <TabsTrigger value='orders' className='relative'>
+            Orders
+            {pendingCount > 0 && (
+              <span className='absolute -top-2 -right-2 inline-flex items-center justify-center min-w-5 h-5 px-1 bg-red-500 text-white rounded-full text-xs font-medium'>
+                {pendingCount}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value='status' className='relative ml-3'>
+            Status
+          </TabsTrigger>
+          <TabsTrigger value='screen' className='relative ml-3'>
+            <span>Screen</span>
+            {screenFilesCount > 0 && (
+              <span className='absolute -top-2 -right-2 inline-flex items-center justify-center min-w-5 h-5 px-1 bg-red-500 text-white rounded-full text-xs font-medium'>
+                {screenFilesCount}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value='pre-delivery' className='relative ml-3'>
+            <span>Pre Delivery</span>
+            {preDeliveryFilesCount > 0 && (
+              <span className='absolute -top-2 -right-2 inline-flex items-center justify-center min-w-5 h-5 px-1 bg-red-500 text-white rounded-full text-xs font-medium'>
+                {preDeliveryFilesCount}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value='approval' className='relative ml-3'>
+            <span>Approval</span>
+            {approvalFilesCount > 0 && (
+              <span className='absolute -top-2 -right-2 inline-flex items-center justify-center min-w-5 h-5 px-1 bg-red-500 text-white rounded-full text-xs font-medium'>
+                {approvalFilesCount}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value='re-review' className='relative ml-3'>
+            <span>Re-Review</span>
+            {reReviewFilesCount > 0 && (
+              <span className='absolute -top-2 -right-2 inline-flex items-center justify-center min-w-5 h-5 px-1 bg-red-500 text-white rounded-full text-xs font-medium'>
+                {reReviewFilesCount}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value='compare' className='relative ml-3'>
+            <span>Compare</span>
+          </TabsTrigger>
         </TabsList>
         <TabsContent value='orders'>
           <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
@@ -574,16 +653,16 @@ export default function OrdersPage() {
           <StatusPage selectedFileId={fileId} />
         </TabsContent>
         <TabsContent value='screen'>
-          <ScreenPage />
+          <ScreenPage onActionComplete={fetchAllTabCounts} />
         </TabsContent>
         <TabsContent value='pre-delivery'>
-          <PreDeliveryPage />
+          <PreDeliveryPage onActionComplete={fetchAllTabCounts} />
         </TabsContent>
         <TabsContent value='approval'>
-          <ApprovalPage />
+          <ApprovalPage onActionComplete={fetchAllTabCounts} />
         </TabsContent>
         <TabsContent value='re-review'>
-          <ReReviewPage />
+          <ReReviewPage onActionComplete={fetchAllTabCounts} />
         </TabsContent>
         <TabsContent value='compare'>
           <ComparePage />
