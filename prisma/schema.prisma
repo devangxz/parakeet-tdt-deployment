@@ -242,6 +242,7 @@ model Order {
   reReview         Boolean?      @default(false) @map("re_review")
   reReviewComment  String?       @map("re_review_comment")
   finalizerComment String?       @map("finalizer_comment")
+  screenCount      Int           @default(0) @map("screen_count")
 
   // Relations
   File       File?           @relation(fields: [fileId], references: [fileId])
@@ -877,6 +878,7 @@ enum ReportOption {
   OTHER
   AUTO_PWER_ABOVE_THRESHOLD
   AUTO_DIFF_BELOW_THRESHOLD
+  NOT_PICKED_UP
 }
 
 enum InvoiceType {

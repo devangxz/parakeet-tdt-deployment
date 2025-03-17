@@ -40,6 +40,7 @@ const reportReasonMap = {
   ONLY_BACKGROUND_CONVERSATION: 'Only Background Conversation',
   ONLY_MUSIC: 'Only Music',
   OTHER: 'Other',
+  NOT_PICKED_UP: 'Not Picked Up',
 }
 
 type ReportReasonMap = typeof reportReasonMap
@@ -63,6 +64,7 @@ interface File {
   fileCost: FileCost
   rateBonus: number
   type: string
+  screenCount: number
 }
 
 interface ScreenPageProps {
@@ -133,6 +135,7 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
             fileCost: order.fileCost,
             rateBonus: order.rateBonus,
             type: order.orderType,
+            screenCount: order.screenCount,
           }
         }) as unknown as File[]
         setScreeningFiles(orders ?? [])
@@ -270,6 +273,21 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Priority File</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {row.original.screenCount > 0 && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge
+                    variant='outline'
+                    className='font-semibold text-[10px] text-green-600'
+                  >
+                    {row.original.screenCount}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Screen Count</p>
                 </TooltipContent>
               </Tooltip>
             )}

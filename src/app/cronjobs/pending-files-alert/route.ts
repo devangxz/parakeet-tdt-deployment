@@ -1,4 +1,4 @@
-import { OrderStatus } from '@prisma/client'
+import { OrderStatus, ReportOption } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
 import logger from '@/lib/logger'
@@ -59,6 +59,7 @@ export async function POST() {
         duration: number
         orderTs: Date
         hoursElapsed: number
+        orderId: number
       }>
     > = {}
 
@@ -85,6 +86,7 @@ export async function POST() {
             duration: order.File?.duration || 0,
             orderTs: order.orderTs,
             hoursElapsed: elapsedHours,
+            orderId: order.id,
           })
           break
         }
@@ -110,6 +112,8 @@ export async function POST() {
     pendingFilesTable += '</tr>'
 
     let hasFiles = false
+    // Keep track of orders to update
+    const ordersToUpdate: number[] = []
 
     // Add files to the table
     NOTIFICATION_THRESHOLDS.forEach((threshold) => {
@@ -129,6 +133,8 @@ export async function POST() {
           )}</td>`
           pendingFilesTable += `<td style="padding: 8px; text-align: left; border: 1px solid #ddd;">${threshold} hours</td>`
           pendingFilesTable += '</tr>'
+
+          ordersToUpdate.push(file.orderId)
         })
       }
     })
@@ -156,9 +162,32 @@ export async function POST() {
 
     logger.info('Pending files alert email sent successfully')
 
+    if (ordersToUpdate.length > 0) {
+      await Promise.all(
+        ordersToUpdate.map(async (orderId) => {
+          await prisma.order.update({
+            where: { id: orderId },
+            data: {
+              status: OrderStatus.SUBMITTED_FOR_SCREENING,
+              screenCount: {
+                increment: 1,
+              },
+              reportOption: ReportOption.NOT_PICKED_UP,
+              updatedAt: new Date(),
+            },
+          })
+        })
+      )
+
+      logger.info(
+        `Updated ${ordersToUpdate.length} orders to SUBMITTED_FOR_SCREENING status`
+      )
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Pending files alert email sent successfully',
+      message:
+        'Pending files alert email sent successfully and orders moved to screening',
     })
   } catch (error) {
     logger.error(`Error sending pending files alert: ${error}`)
