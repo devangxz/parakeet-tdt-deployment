@@ -124,7 +124,7 @@ function markExactMatches(alignments: AlignmentType[], ctms: CTMType[]) {
 
         // Exact matching by start/end
         if (ctm.start === alignment.start && ctm.end === alignment.end) {
-            const isWordMatch = ctm.word.toLowerCase() === alignment.word.toLowerCase();
+            const isWordMatch = ctm.punct.toLowerCase() === alignment.word.toLowerCase();
 
             alignments[alignIndex] = {
                 ...alignment,
