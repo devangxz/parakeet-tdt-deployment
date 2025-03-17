@@ -8,6 +8,7 @@ import { DataTable } from './components/data-table'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { fetchScreeningOrders } from '@/app/actions/om/fetch-screening-orders'
 import AcceptRejectScreenFileDialog from '@/components/admin-components/accept-reject-screen-file'
+import AssignQcDialog from '@/components/admin-components/assign-qc-dialog'
 import FlagHighDifficulyDialog from '@/components/admin-components/flag-high-difficulty-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -76,6 +77,7 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [orderId, setOrderId] = useState<string>('')
+  const [selectedFileId, setSelectedFileId] = useState<string>('')
   const [openDialog, setOpenDialog] = useState(false)
   const [isAccept, setIsAccept] = useState(true)
   const [highDifficultyDialog, setHighDifficultyDialog] = useState(false)
@@ -83,6 +85,7 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
+  const [openAssignQcDialog, setAssignQcDialog] = useState(false)
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -399,6 +402,14 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
             <DropdownMenuContent align='end'>
               <DropdownMenuItem
                 onClick={() => {
+                  setSelectedFileId(row.original.fileId)
+                  setAssignQcDialog(true)
+                }}
+              >
+                Assign Editor
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
                   setOrderId(row.original.orderId.toString())
                   setHighDifficultyDialog(true)
                 }}
@@ -446,6 +457,11 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
         onClose={() => setHighDifficultyDialog(false)}
         orderId={orderId || ''}
         refetch={() => getScreeningOrders()}
+      />
+      <AssignQcDialog
+        open={openAssignQcDialog}
+        onClose={() => setAssignQcDialog(false)}
+        fileId={selectedFileId || ''}
       />
     </>
   )

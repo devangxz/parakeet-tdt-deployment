@@ -6,9 +6,13 @@ import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { sendTemplateMail } from '@/lib/ses'
 
-export async function rejectScreenFile(formData: { orderId: number }) {
+export async function rejectScreenFile(formData: {
+  orderId: number
+  reasons?: string
+  comment?: string
+}) {
   try {
-    const { orderId } = formData
+    const { orderId, reasons, comment } = formData
 
     const order = await prisma.order.findUnique({
       where: { id: Number(orderId) },
@@ -28,6 +32,13 @@ export async function rejectScreenFile(formData: { orderId: number }) {
       },
     })
 
+    // Format the rejection comments
+    const rejectionComment = reasons
+      ? `Rejection Reasons: ${reasons}${
+          comment ? `\nAdditional Comments: ${comment}` : ''
+        }`
+      : comment || ''
+
     await prisma.order.update({
       where: {
         id: order.id,
@@ -35,6 +46,7 @@ export async function rejectScreenFile(formData: { orderId: number }) {
       data: {
         status: OrderStatus.CANCELLED,
         updatedAt: new Date(),
+        comments: rejectionComment,
       },
     })
 
@@ -49,7 +61,11 @@ export async function rejectScreenFile(formData: { orderId: number }) {
       templateData
     )
 
-    logger.info(`rejected the screening file, for ${orderId}`)
+    logger.info(
+      `rejected the screening file, for ${order.fileId}, reasons: ${
+        reasons || 'none'
+      }, comment: ${comment || 'none'}`
+    )
     return {
       success: true,
       message: 'Successfully rejected',
