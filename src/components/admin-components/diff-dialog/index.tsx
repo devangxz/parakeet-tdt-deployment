@@ -31,7 +31,6 @@ const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
       setDiff(diff)
       setLoading(false)
     } catch (error) {
-      console.log("error",error);
       toast.error('Failed to load diff')
       onClose()
     }
