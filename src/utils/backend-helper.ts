@@ -132,6 +132,7 @@ export const getUserRate = async (userId: number) => {
       atc: userRate.audioTimeCoding,
       ro: userRate.rushOrder || 0,
       cf: userRate.customFormat,
+      cf_deadline: userRate.deadline,
     }
   } catch (error) {
     logger.error('Failed to fetch user rates:', error)

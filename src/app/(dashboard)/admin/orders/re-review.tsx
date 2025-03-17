@@ -47,7 +47,11 @@ interface File {
   rateBonus: number
 }
 
-export default function ReReviewPage() {
+interface ReReviewPageProps {
+  onActionComplete?: () => Promise<void>
+}
+
+export default function ReReviewPage({ onActionComplete }: ReReviewPageProps) {
   const [reReviewFiles, setReReviewFiles] = useState<File[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -123,6 +127,10 @@ export default function ReReviewPage() {
         })
         setReReviewFiles(orders ?? [])
         setError(null)
+
+        if (onActionComplete) {
+          await onActionComplete()
+        }
       } else {
         toast.error(response.message || 'An error occurred')
         setError(response.message || 'An error occurred')

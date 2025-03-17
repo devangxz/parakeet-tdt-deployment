@@ -40,6 +40,7 @@ const reportReasonMap = {
   ONLY_BACKGROUND_CONVERSATION: 'Only Background Conversation',
   ONLY_MUSIC: 'Only Music',
   OTHER: 'Other',
+  NOT_PICKED_UP: 'Not Picked Up',
 }
 
 type ReportReasonMap = typeof reportReasonMap
@@ -63,9 +64,14 @@ interface File {
   fileCost: FileCost
   rateBonus: number
   type: string
+  screenCount: number
 }
 
-export default function ScreenPage() {
+interface ScreenPageProps {
+  onActionComplete?: () => Promise<void>
+}
+
+export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
   const [screeningFiles, setScreeningFiles] = useState<File[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -129,10 +135,15 @@ export default function ScreenPage() {
             fileCost: order.fileCost,
             rateBonus: order.rateBonus,
             type: order.orderType,
+            screenCount: order.screenCount,
           }
         }) as unknown as File[]
         setScreeningFiles(orders ?? [])
         setError(null)
+
+        if (onActionComplete) {
+          await onActionComplete()
+        }
       } else {
         toast.error(response.message || 'An error occurred')
         setError(response.message || 'An error occurred')
@@ -262,6 +273,21 @@ export default function ScreenPage() {
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Priority File</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {row.original.screenCount > 0 && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge
+                    variant='outline'
+                    className='font-semibold text-[10px] text-green-600'
+                  >
+                    {row.original.screenCount}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Screen Count</p>
                 </TooltipContent>
               </Tooltip>
             )}
