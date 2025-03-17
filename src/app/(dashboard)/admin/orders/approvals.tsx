@@ -53,7 +53,11 @@ interface File {
   customerWatch: boolean
 }
 
-export default function ApprovalPage() {
+interface ApprovalPageProps {
+  onActionComplete?: () => Promise<void>
+}
+
+export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
   const [approvalFiles, setApprovalFiles] = useState<File[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -189,6 +193,10 @@ export default function ApprovalPage() {
 
         setApprovalFiles(orders ?? [])
         setError(null)
+
+        if (onActionComplete) {
+          await onActionComplete()
+        }
       } else {
         toast.error(response.message || 'An error occurred')
         setError(response.message || 'An error occurred')

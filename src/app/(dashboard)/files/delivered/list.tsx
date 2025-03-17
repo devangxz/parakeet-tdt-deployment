@@ -257,7 +257,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
     },
     {
       accessorKey: 'filename',
-      header: ({column}) => (
+      header: ({ column }) => (
         <DataTableColumnHeader column={column} title='File name' />
       ),
       cell: ({ row }) => (
@@ -291,6 +291,34 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
           {formatDuration(row.getValue('duration'))}
         </div>
       ),
+    },
+    {
+      accessorKey: 'orderType',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Order Type' />
+      ),
+      cell: ({ row }) => {
+        const orderType = row.getValue('orderType') as string
+        let displayText = '-'
+
+        if (orderType) {
+          switch (orderType) {
+            case 'TRANSCRIPTION':
+              displayText = 'Transcription'
+              break
+            case 'TRANSCRIPTION_FORMATTING':
+              displayText = 'Transcription and Custom Formatting'
+              break
+            case 'FORMATTING':
+              displayText = 'Custom Formatting'
+              break
+            default:
+              displayText = String(orderType).replace(/_/g, ' ').toLowerCase()
+          }
+        }
+
+        return <div className='font-medium'>{displayText}</div>
+      },
     },
     {
       accessorKey: 'transcription',

@@ -39,6 +39,7 @@ import getInitials from '@/utils/getInitials'
 interface ExtendedFile extends File {
   uploadedByUser: User
   folderId: number | null
+  orderType: string
 }
 
 interface ListProps {
@@ -99,6 +100,7 @@ export default function InprogressFilesPage({ files }: ListProps) {
           duration: file.duration,
           uploadedByUser: file.uploadedByUser,
           folderId: file.parentId,
+          orderType: file.Orders[0]?.orderType,
         }))
         .sort((a: ExtendedFile, b: ExtendedFile) => {
           if (a.date && b.date) {
@@ -228,6 +230,34 @@ export default function InprogressFilesPage({ files }: ListProps) {
           {formatDuration(row.getValue('duration'))}
         </div>
       ),
+    },
+    {
+      accessorKey: 'orderType',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Order Type' />
+      ),
+      cell: ({ row }) => {
+        const orderType = row.getValue('orderType') as string
+        let displayText = '-'
+
+        if (orderType) {
+          switch (orderType) {
+            case 'TRANSCRIPTION':
+              displayText = 'Transcription'
+              break
+            case 'TRANSCRIPTION_FORMATTING':
+              displayText = 'Transcription and Custom Formatting'
+              break
+            case 'FORMATTING':
+              displayText = 'Custom Formatting'
+              break
+            default:
+              displayText = String(orderType).replace(/_/g, ' ').toLowerCase()
+          }
+        }
+
+        return <div className='font-medium'>{displayText}</div>
+      },
     },
   ]
 

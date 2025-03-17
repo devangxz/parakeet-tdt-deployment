@@ -61,7 +61,13 @@ interface File {
   editedSegments?: Set<number>
 }
 
-export default function PreDeliveryPage() {
+interface PreDeliveryPageProps {
+  onActionComplete?: () => Promise<void>
+}
+
+export default function PreDeliveryPage({
+  onActionComplete,
+}: PreDeliveryPageProps) {
   const [preDeliveryFiles, setPreDelieryFiles] = useState<File[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -192,6 +198,10 @@ export default function PreDeliveryPage() {
 
         setPreDelieryFiles(orders ?? [])
         setError(null)
+
+        if (onActionComplete) {
+          await onActionComplete()
+        }
       } else {
         toast.error(response.message || 'An error occurred')
         setError(response.message || 'An error occurred')

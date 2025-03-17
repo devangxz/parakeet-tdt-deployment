@@ -58,6 +58,7 @@ interface Payment {
   totalAmount: number
   invoiceId: string
   creditsUsed: number
+  customFormatDeadline?: number
 }
 
 interface PaymentSuccessData {
@@ -119,6 +120,7 @@ const CustomFormatOrder = ({
     { name: string; amount: number; duration: number; fileId: string }[]
   >([])
   const [billingEnabled, setBillingEnabled] = useState<boolean>(false)
+  const [customFormatDeadline, setCustomFormatDeadline] = useState<number>(0)
 
   useEffect(() => {
     const fetchOrderInformation = async () => {
@@ -132,22 +134,37 @@ const CustomFormatOrder = ({
           throw new Error('No response data received')
         }
 
-        const fetchedFiles = response.responseData.files.map((file: any) => ({
-          fileId: file.fileId,
-          filename: file.File.filename,
-          risData: JSON.stringify(file.File.customFormattingDetails),
-          dueDate: file.File.customInstructions
+        const responseData = response.responseData as any
+        const customFormatDeadline = responseData.customFormatDeadline || 1
+        setCustomFormatDeadline(customFormatDeadline)
+
+        const defaultDueDate = new Date()
+        defaultDueDate.setDate(defaultDueDate.getDate() + customFormatDeadline)
+
+        const fetchedFiles = response.responseData.files.map((file: any) => {
+          let dueDate = file.File.customInstructions
             ? JSON.parse(file.File.customInstructions).dueDate
-            : undefined,
-          folderName: '',
-          templateId: file.File.customInstructions
-            ? JSON.parse(file.File.customInstructions).templateId
-            : '',
-          instructions: file.File.customInstructions
-            ? JSON.parse(file.File.customInstructions).instructions
-            : '',
-          cost: file.price,
-        }))
+            : undefined
+
+          if (!dueDate) {
+            dueDate = defaultDueDate.toISOString()
+          }
+
+          return {
+            fileId: file.fileId,
+            filename: file.File.filename,
+            risData: JSON.stringify(file.File.customFormattingDetails),
+            dueDate: dueDate,
+            folderName: '',
+            templateId: file.File.customInstructions
+              ? JSON.parse(file.File.customInstructions).templateId
+              : '',
+            instructions: file.File.customInstructions
+              ? JSON.parse(file.File.customInstructions).instructions
+              : '',
+            cost: file.price,
+          }
+        })
         setCreditsUsed(response.responseData.creditsUsed)
         setBillingEnabled(response.responseData.isBillingEnabledForCustomer)
         setFiles(fetchedFiles)
@@ -165,12 +182,16 @@ const CustomFormatOrder = ({
               ) => total + file.File.duration,
               0
             ) / 60,
-          service: 'Transcribe and Custom Format',
+          service:
+            orderType === 'FORMATTING'
+              ? 'Custom Format'
+              : 'Transcribe and Custom Format',
           baseRate: response.responseData.invoice.orderRate,
           discount: response.responseData.invoice.discount,
           totalAmount: response.responseData.invoice.amount,
           invoiceId,
           creditsUsed: response.responseData.creditsUsed,
+          customFormatDeadline: customFormatDeadline,
         })
         const templateData = response.responseData.templates.map(
           (template: Template) => ({
@@ -286,10 +307,12 @@ const CustomFormatOrder = ({
     }
   }
 
-  const handleDueDateChange = (fileId: string, newDate: Date) => {
+  const handleDueDateChange = (fileId: string, newDate: Date | string) => {
+    const dateValue = typeof newDate === 'string' ? new Date(newDate) : newDate
+
     setFiles((prevFiles) =>
       prevFiles.map((file) =>
-        file.fileId === fileId ? { ...file, dueDate: newDate } : file
+        file.fileId === fileId ? { ...file, dueDate: dateValue } : file
       )
     )
   }
@@ -322,10 +345,14 @@ const CustomFormatOrder = ({
       const { nonce } = await instance.requestPaymentMethod()
       setLoadingPay(true)
 
+      const dueDate =
+        files.length > 0 && files[0].dueDate ? files[0].dueDate : undefined
+
       const response = await checkout({
         paymentMethodNonce: nonce,
         invoiceId,
         orderType: orderType,
+        dueDate: typeof dueDate === 'string' ? dueDate : dueDate?.toISOString(),
       })
 
       setLoadingPay(false)
@@ -354,9 +381,13 @@ const CustomFormatOrder = ({
     try {
       setLoadingPay(true)
 
+      const dueDate =
+        files.length > 0 && files[0].dueDate ? files[0].dueDate : undefined
+
       const response = await checkoutViaCredits({
         invoiceId,
         orderType: orderType,
+        dueDate: typeof dueDate === 'string' ? dueDate : dueDate?.toISOString(),
       })
 
       if (response.success) {
@@ -383,13 +414,17 @@ const CustomFormatOrder = ({
   }
 
   const handlePaymentMethodViaBilling = async () => {
+    const dueDate =
+      files.length > 0 && files[0].dueDate ? files[0].dueDate : undefined
+
     await handleBillingPaymentMethod(
       orderType,
       invoiceId,
       setPaymentSuccessData,
       setPaymentSuccess,
       setLoadingPay,
-      gtagPurchaseEvent
+      gtagPurchaseEvent,
+      typeof dueDate === 'string' ? dueDate : dueDate?.toISOString()
     )
   }
 
@@ -431,7 +466,11 @@ const CustomFormatOrder = ({
     }
     const fileMissingTemplateName = files.find((file) => !file.templateId)
     if (fileMissingTemplateName) {
-      toast.error('Please select a template for all files')
+      if (orderType !== 'FORMATTING') {
+        toast.error('Please select a template for all files')
+      } else {
+        setActiveStep((prevStep) => prevStep + 1)
+      }
     } else {
       setActiveStep((prevStep) => prevStep + 1)
     }
@@ -574,7 +613,6 @@ const CustomFormatOrder = ({
                       <Separator />
                     </>
                   )} */}
-
                 {files.map((file, index) => (
                   <CustomOrderOptions
                     fileId={file.fileId}
@@ -590,6 +628,7 @@ const CustomFormatOrder = ({
                     isInitiallyOpen={index === 0}
                     templates={templates}
                     organizationName={session?.user?.organizationName ?? 'none'}
+                    orderType={orderType}
                   />
                 ))}
               </ScrollArea>

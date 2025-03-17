@@ -17,13 +17,15 @@ export const handleBillingPaymentMethod = async (
   setPaymentSuccessData: Dispatch<SetStateAction<PaymentSuccessData | null>>,
   setPaymentSuccess: Dispatch<SetStateAction<boolean>>,
   setLoadingPay: Dispatch<SetStateAction<boolean>>,
-  gtagPurchaseEvent: (amount: number, invoiceId: string) => void
+  gtagPurchaseEvent: (amount: number, invoiceId: string) => void,
+  dueDate?: string
 ) => {
   try {
     setLoadingPay(true)
     const response = await checkoutViaBilling({
       invoiceId,
       orderType,
+      dueDate,
     })
 
     if (response.success) {

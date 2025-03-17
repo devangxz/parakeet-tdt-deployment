@@ -15,10 +15,11 @@ import {
 interface CheckoutViaBillingPayload {
   invoiceId: string
   orderType: string
+  dueDate?: string
 }
 
 export async function checkoutViaBilling(payload: CheckoutViaBillingPayload) {
-  const { invoiceId, orderType } = payload
+  const { invoiceId, orderType, dueDate } = payload
   try {
     const session = await getServerSession(authOptions)
     const user = session?.user
@@ -89,7 +90,8 @@ export async function checkoutViaBilling(payload: CheckoutViaBillingPayload) {
       invoice.type,
       orderType,
       transactionId,
-      user?.userId
+      user?.userId,
+      dueDate
     )
 
     const invoiceData = await prisma.invoice.update({

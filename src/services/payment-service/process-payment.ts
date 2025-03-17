@@ -17,7 +17,8 @@ export const processPayment = async (
   type: string,
   orderType: string,
   transactionId: string,
-  paidBy: number
+  paidBy: number,
+  dueDate?: string
 ) => {
   const ses = getAWSSesInstance()
   try {
@@ -36,6 +37,20 @@ export const processPayment = async (
       const invoiceOptions = JSON.parse(invoice.options ?? '{}')
       for (const fileId of file_ids) {
         const tatHours = invoiceOptions.exd == 1 ? 12 : 24
+
+        // Set delivery date based on dueDate if provided for formatting orders
+        let deliveryTs = addHours(new Date(), tatHours)
+        let deadlineTs = addHours(new Date(), tatHours)
+
+        if (
+          dueDate &&
+          (orderType === OrderType.FORMATTING ||
+            orderType === OrderType.TRANSCRIPTION_FORMATTING)
+        ) {
+          deliveryTs = new Date(dueDate)
+          deadlineTs = new Date(dueDate)
+        }
+
         if (
           orderType === OrderType.TRANSCRIPTION_FORMATTING ||
           orderType === OrderType.FORMATTING
@@ -66,8 +81,8 @@ export const processPayment = async (
                 : OrderStatus.PENDING,
             priority: 0,
             tat: tatHours,
-            deadlineTs: addHours(new Date(), tatHours),
-            deliveryTs: addHours(new Date(), tatHours),
+            deadlineTs: deadlineTs,
+            deliveryTs: deliveryTs,
             instructions: instructions,
             orderType: orderType as OrderType,
           },
@@ -77,8 +92,8 @@ export const processPayment = async (
                 ? OrderStatus.FORMATTED
                 : OrderStatus.PENDING,
             orderTs: new Date(),
-            deadlineTs: addHours(new Date(), tatHours),
-            deliveryTs: addHours(new Date(), tatHours),
+            deadlineTs: deadlineTs,
+            deliveryTs: deliveryTs,
             instructions: instructions,
           },
         })
