@@ -8,14 +8,14 @@ import TranscriberProfile from './transcriberProfiles'
 import { ThemeSwitcher } from '@/components/theme-switcher'
 import { Button } from '@/components/ui/button'
 
-export default function Header({ setIsExpanded, isExpanded }: { setIsExpanded: (isExpanded: boolean) => void, isExpanded: boolean }) {
+export default function Header({ toggleSidebar, menuButtonRef }: { toggleSidebar: () => void, menuButtonRef: React.RefObject<HTMLDivElement> }) {
   const router = useRouter()
   return (
     <div className='sticky top-0 z-50 bg-background border-b-2 border-customBorder'>
       <div className='flex justify-between items-center px-2 lg:px-4 py-4'>
 
-      <div className="flex items-center gap-6">
-        <Menu className='w-5 h-5 cursor-pointer' onClick={() => setIsExpanded(!isExpanded)}/>
+      <div className="flex items-center gap-6" ref={menuButtonRef}>
+        <Menu className='w-5 h-5 cursor-pointer' onClick={toggleSidebar}/>
         <div className='flex items-center justify-center gap-5'>
           <div
             className='flex items-center justify-center gap-2 cursor-pointer'

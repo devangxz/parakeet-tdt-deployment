@@ -1,5 +1,5 @@
 'use client'
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 import AuthenticatedFooter from '@/components/authenticated-footer'
 import PaymentsNavbar from '@/components/navbar/payments'
@@ -11,22 +11,48 @@ interface PaymentsLayoutProps {
 }
 
 export default function PaymentsLayout({ children }: PaymentsLayoutProps) {
-  const [isExpanded, setIsExpanded] = React.useState(true)
+  const [isExpanded, setIsExpanded] = useState(true)
+  const sidebarRef = useRef<HTMLDivElement>(null)
+  const menuButtonRef = useRef<HTMLDivElement>(null)
 
-  React.useEffect(() => {
+  useEffect(() => {
     if(window.innerWidth < 1024) {
       setIsExpanded(false)
     }
   }, [])
+
+  const toggleSidebar = () => {
+    setIsExpanded(prev => !prev)
+  }
+ 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Only handle click outside in mobile view
+      if (window.innerWidth < 1024 && 
+          isExpanded && 
+          sidebarRef.current && 
+          !sidebarRef.current.contains(event.target as Node) &&
+          !menuButtonRef.current?.contains(event.target as Node)) {
+        setIsExpanded(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isExpanded])
   return (
     <div className='flex min-h-screen flex-col'>
-      <PaymentsNavbar setIsExpanded={setIsExpanded} isExpanded={isExpanded}/>
+      <PaymentsNavbar toggleSidebar={toggleSidebar} menuButtonRef={menuButtonRef}/>
       <div className='space-y-0.5 border-b-2 border-customBorder px-2 lg:px-4 pt-3 pb-4'>
         <h1 className='text-2xl font-bold'>Payments</h1>
         <p className='text-muted-foreground'>Manage your payments</p>
       </div>
       <div className='flex flex-1 relative'>
-        <div className={cn(
+        <div 
+          ref={sidebarRef}
+          className={cn(
             "absolute left-0 top-0 h-full lg:relative lg:h-auto lg:z-10 border-r border-customBorder bg-background z-50 transition-all duration-300 ease-in-out",
             isExpanded ? "w-[60vw] lg:w-72" : "w-0 overflow-hidden"
           )} >

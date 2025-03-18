@@ -12,7 +12,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 
 import AuthenticatedFooter from '@/components/authenticated-footer'
 import PaymentsNavbar from '@/components/navbar/payments'
@@ -27,6 +27,8 @@ export default function FilesLayout({
   children: React.ReactNode
 }) {
   const { data: session } = useSession()
+  const sidebarRef = useRef<HTMLDivElement>(null)
+  const menuButtonRef = useRef<HTMLDivElement>(null)
   const [isExpanded, setIsExpanded] = React.useState(true) // Default to expanded
 
   const sidebarItems: SidebarItemType[] = [
@@ -112,15 +114,38 @@ export default function FilesLayout({
     }
   }, [])
 
+  const toggleSidebar = () => {
+    setIsExpanded(prev => !prev)
+  }
+ 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Only handle click outside in mobile view
+      if (window.innerWidth < 1024 && 
+          isExpanded && 
+          sidebarRef.current && 
+          !sidebarRef.current.contains(event.target as Node) &&
+          !menuButtonRef.current?.contains(event.target as Node)) {
+        setIsExpanded(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isExpanded])
+
   return (
     <>
-      <PaymentsNavbar setIsExpanded={setIsExpanded} isExpanded={isExpanded}/>
+      <PaymentsNavbar toggleSidebar={toggleSidebar} menuButtonRef={menuButtonRef}/>
       <div className={cn(
         'grid min-h-screen w-full relative',
         'grid-cols-[1fr] lg:grid-cols-[auto_1fr]', // Fixed grid layout that doesn't change
         'transition-all duration-300 ease-in-out'
       )}>
         <div 
+          ref={sidebarRef}
           className={cn(
             'fixed lg:relative block bg-background z-50 lg:z-10',
             'transition-all duration-300 ease-in-out',

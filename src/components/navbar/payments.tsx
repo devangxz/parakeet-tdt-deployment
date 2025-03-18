@@ -11,7 +11,7 @@ import { ThemeSwitcher } from '@/components/theme-switcher'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
-function PaymentsNavbar({ setIsExpanded, isExpanded }: { setIsExpanded: (isExpanded: boolean) => void, isExpanded: boolean }) {
+function PaymentsNavbar({ toggleSidebar, menuButtonRef }: { toggleSidebar: () => void, menuButtonRef: React.RefObject<HTMLDivElement> }) {
   const { data: session } = useSession()
   const router = useRouter()
   const handleUpload = () => {
@@ -22,14 +22,14 @@ function PaymentsNavbar({ setIsExpanded, isExpanded }: { setIsExpanded: (isExpan
       {session?.user?.role === 'TRANSCRIBER' ||
       session?.user?.role === 'QC' ||
       session?.user?.role === 'REVIEWER' ? (
-        <Header setIsExpanded={setIsExpanded} isExpanded={isExpanded}/>
+        <Header toggleSidebar={toggleSidebar} menuButtonRef={menuButtonRef}/>
       ) : (
         <div className='sticky top-0 z-50 bg-background border-b-2 border-customBorder'>
           <div className='flex justify-between items-center px-2 lg:px-4 py-4'>
 
             {/* <Link href='/'> */}
-            <div className="flex items-center gap-6">
-              <Menu className='w-5 h-5 cursor-pointer' onClick={() => setIsExpanded(!isExpanded)}/>
+            <div className="flex items-center gap-6" ref={menuButtonRef}>
+              <Menu className='w-5 h-5 cursor-pointer'  onClick={toggleSidebar} />
               <div
                 className='flex items-center justify-center gap-2 cursor-pointer'
                 onClick={() => (window.location.href = '/')}
