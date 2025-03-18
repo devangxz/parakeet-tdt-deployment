@@ -1,6 +1,11 @@
 'use server'
 
-import { OrderStatus, JobStatus, JobType, CancellationStatus } from '@prisma/client'
+import {
+  OrderStatus,
+  JobStatus,
+  JobType,
+  CancellationStatus,
+} from '@prisma/client'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
@@ -8,7 +13,11 @@ import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import unAssignFileFromTranscriber from '@/services/transcribe-service/unassign-file-from-transcriber'
 
-export async function unassignQCFile(orderId: number, reason: string, comment: string) {
+export async function unassignQCFile(
+  orderId: number,
+  reason: string,
+  comment: string
+) {
   try {
     const session = await getServerSession(authOptions)
     const user = session?.user
@@ -60,7 +69,10 @@ export async function unassignQCFile(orderId: number, reason: string, comment: s
         fileId: order.fileId,
         reason,
         comment,
-        status: order.status === OrderStatus.QC_ASSIGNED ? CancellationStatus.QC : CancellationStatus.REVIEW,
+        status:
+          order.status === OrderStatus.QC_ASSIGNED
+            ? CancellationStatus.QC
+            : CancellationStatus.REVIEW,
       },
     })
 

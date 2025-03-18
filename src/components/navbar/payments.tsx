@@ -1,5 +1,6 @@
 'use client'
 
+import { Menu } from 'lucide-react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -10,7 +11,7 @@ import { ThemeSwitcher } from '@/components/theme-switcher'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
-function PaymentsNavbar() {
+function PaymentsNavbar({ toggleSidebar, menuButtonRef }: { toggleSidebar: () => void, menuButtonRef: React.RefObject<HTMLDivElement> }) {
   const { data: session } = useSession()
   const router = useRouter()
   const handleUpload = () => {
@@ -21,25 +22,29 @@ function PaymentsNavbar() {
       {session?.user?.role === 'TRANSCRIBER' ||
       session?.user?.role === 'QC' ||
       session?.user?.role === 'REVIEWER' ? (
-        <Header />
+        <Header toggleSidebar={toggleSidebar} menuButtonRef={menuButtonRef}/>
       ) : (
         <div className='sticky top-0 z-50 bg-background border-b-2 border-customBorder'>
           <div className='flex justify-between items-center px-2 lg:px-4 py-4'>
+
             {/* <Link href='/'> */}
-            <div
-              className='flex items-center justify-center gap-2 cursor-pointer'
-              onClick={() => (window.location.href = '/')}
-            >
-              <Image
-                loading='lazy'
-                src='/assets/images/logo.svg'
-                alt='Scribie'
-                width={36}
-                height={36}
-              />
-              <span className='inline font-semibold lg:text-3xl text-lg text-primary'>
-                scribie
-              </span>
+            <div className="flex items-center gap-6" ref={menuButtonRef}>
+              <Menu className='w-5 h-5 cursor-pointer'  onClick={toggleSidebar} />
+              <div
+                className='flex items-center justify-center gap-2 cursor-pointer'
+                onClick={() => (window.location.href = '/')}
+                >
+                <Image
+                  loading='lazy'
+                  src='/assets/images/logo.svg'
+                  alt='Scribie'
+                  width={36}
+                  height={36}
+                  />
+                <span className='inline font-semibold lg:text-3xl text-lg text-primary'>
+                  scribie
+                </span>
+              </div>
             </div>
             {/* </Link> */}
             <div className='flex items-center gap-4'>
@@ -59,12 +64,12 @@ function PaymentsNavbar() {
                 <Image
                   loading='lazy'
                   src='/assets/images/home/upload.svg'
-                  className='w-5 aspect-square text-md mr-2'
+                  className='w-5 aspect-square text-md sm:mr-2'
                   alt='upload'
                   width={10}
                   height={10}
                 />
-                Upload File
+                <span className='hidden sm:block'>Upload File</span>
               </Button>
               <Profile />
               <ThemeSwitcher />

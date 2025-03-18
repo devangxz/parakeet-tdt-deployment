@@ -551,7 +551,7 @@ export const getTeamSuperAdminEmailAndTeamName = async (teamId: number) => {
     })
 
     if (!team) {
-      logger.error(`No team found with the given team ID ${teamId}`)
+      logger.info(`No team found with the given team ID ${teamId}`)
       return false
     }
 
@@ -640,7 +640,7 @@ export const getCustomerRate = async (userId: number) => {
     })
 
     if (!userRate) {
-      logger.error(`No rates found for user ID ${userId}`)
+      logger.info(`No rates found for user ID ${userId}`)
       return false
     }
 

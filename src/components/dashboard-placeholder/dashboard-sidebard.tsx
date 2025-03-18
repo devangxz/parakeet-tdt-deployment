@@ -12,11 +12,19 @@ export type DashboardSideBarItemType = {
 
 type DashboardSideBarProps = {
   sidebarItems: DashboardSideBarItemType[]
+  setIsExpanded: (isExpanded: boolean) => void
 }
 
 export function DashboardSideBar(props: DashboardSideBarProps) {
   const pathname = usePathname()
-  const { sidebarItems } = props
+  const { sidebarItems, setIsExpanded } = props
+
+  const handleResponsiveCollapse = () => {
+    if (window.innerWidth < 1024 && setIsExpanded) {
+      setIsExpanded(false);
+    }
+  };
+
   return (
     <div className='flex-1'>
       <nav className='grid items-start text-md font-medium px-2 lg:px-4 py-4'>
@@ -36,6 +44,7 @@ export function DashboardSideBar(props: DashboardSideBarProps) {
                 className={`flex items-center gap-2.5 rounded-md px-3 py-2 transition-all ${
                   isActive ? 'text-primary bg-primary/10' : 'hover:text-primary'
                 }`}
+                onClick={handleResponsiveCollapse}
               >
                 <Icon className='h-5 w-5' />
                 {item.title}

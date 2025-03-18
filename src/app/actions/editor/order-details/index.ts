@@ -8,6 +8,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import getOrderUserDetails from '@/services/editor-service/getOrderUserDetails'
+import { getSignedURLFromS3 } from '@/utils/backend-helper'
 
 export async function getOrderDetailsAction(fileId: string) {
   const session = await getServerSession(authOptions)
@@ -51,6 +52,7 @@ export async function getOrderDetailsAction(fileId: string) {
     })
 
     let userRateInfo = null
+    const supportingDocuments = []
     if (order.orderType === OrderType.FORMATTING) {
       userRateInfo = await prisma.userRate.findUnique({
         where: {
@@ -61,6 +63,27 @@ export async function getOrderDetailsAction(fileId: string) {
           outputFormat: true,
         },
       })
+
+      const documents = await prisma.miscJobsAttachments.findMany({
+        where: {
+          filename: resultJson.file_id,
+        },
+      })
+
+      if (documents.length > 0) {
+        for (const doc of documents) {
+          const signedUrl = await getSignedURLFromS3(
+            `${doc.fileId}.${doc.fileExtension}`,
+            5 * 60 * 60
+          )
+          supportingDocuments.push({
+            filename: doc.originalFilename ?? '',
+            signedUrl: signedUrl,
+            fileExtension: doc.fileExtension ?? '',
+            fileId: doc.fileId,
+          })
+        }
+      }
     }
 
     const assignment = await prisma.jobAssignment.findFirst({
@@ -124,6 +147,7 @@ export async function getOrderDetailsAction(fileId: string) {
       LLMDone: resultJson.LLMDone,
       customFormatOption: userRateInfo?.customFormatOption || null,
       outputFormat: userRateInfo?.outputFormat || null,
+      supportingDocuments: supportingDocuments,
     }
 
     logger.info(`orderDetails fetched for file ${resultJson.file_id}`)

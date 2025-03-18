@@ -83,14 +83,58 @@ export async function GET(req: NextRequest) {
     }
 
     if (type === 'custom-formatting') {
-      const qcDeliveredFile = await prisma.fileVersion.findFirst({
+      const finalizerEditVersion = await prisma.fileVersion.findFirst({
         where: {
           fileId: file.fileId,
-          tag: FileTag.QC_DELIVERED,
+          tag: FileTag.CF_FINALIZER_EDIT,
+        },
+        orderBy: {
+          createdAt: 'desc',
         },
       })
-      if (qcDeliveredFile) {
-        versionId = qcDeliveredFile?.s3VersionId ?? ''
+      if (finalizerEditVersion) {
+        versionId = finalizerEditVersion?.s3VersionId ?? ''
+      } else {
+        const revEditVersion = await prisma.fileVersion.findFirst({
+          where: {
+            fileId: file.fileId,
+            tag: FileTag.CF_REV_EDIT,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        })
+        if (revEditVersion) {
+          versionId = revEditVersion?.s3VersionId ?? ''
+        } else {
+          const llmEditVersion = await prisma.fileVersion.findFirst({
+            where: {
+              fileId: file.fileId,
+              tag: FileTag.LLM,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          })
+          if (llmEditVersion) {
+            versionId = llmEditVersion?.s3VersionId ?? ''
+          } else {
+            const qcDeliveredVersion = await prisma.fileVersion.findFirst({
+              where: {
+                fileId: file.fileId,
+                tag: FileTag.QC_DELIVERED,
+              },
+              orderBy: {
+                createdAt: 'desc',
+              },
+            })
+            if (qcDeliveredVersion) {
+              versionId = qcDeliveredVersion?.s3VersionId ?? ''
+            } else {
+              versionId = ''
+            }
+          }
+        }
       }
     }
     const info = {

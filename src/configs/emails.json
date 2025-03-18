@@ -336,6 +336,15 @@
     "HTML": "REFUND_FILE.html",
     "TEXT": ""
   },
+  "INVITE_EMAIL": {
+    "FROM": "$$SUPPORT_EMAIL_ID$$",
+    "TO": ["$$USER_EMAIL_ID$$"],
+    "CC": [],
+    "BCC": [],
+    "SUBJECT": "Scribie Invite",
+    "HTML": "INVITE_EMAIL.html",
+    "TEXT": ""
+  },
   "CUSTOM_FORMATTING_FEEDBACK": {
     "FROM": "$$SUPPORT_EMAIL_ID$$",
     "TO": ["$$USER_EMAIL_ID$$"],

@@ -19,6 +19,7 @@ export async function fetchFileOrderInformation(fileId: string) {
       },
       include: {
         File: true,
+        user: true,
         Assignment: {
           include: {
             user: true,

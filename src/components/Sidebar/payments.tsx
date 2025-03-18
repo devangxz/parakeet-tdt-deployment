@@ -14,7 +14,7 @@ import React, { useState, useEffect } from 'react'
 import { getCreditBalanceAction } from '@/app/actions/credit-balance'
 import TeamSwitcher from '@/components/team-switcher'
 
-export function SidebarNav() {
+export function SidebarNav({ setIsExpanded }: { setIsExpanded: (isExpanded: boolean) => void }) {
   const pathname = usePathname()
   const [creditsBalance, setCreditsBalance] = useState(0)
 
@@ -28,6 +28,12 @@ export function SidebarNav() {
       console.error('Failed to fetch credits balance:', err)
     }
   }
+
+  const handleResponsiveCollapse = () => {
+    if (window.innerWidth < 1024 && setIsExpanded) {
+      setIsExpanded(false);
+    }
+  };
 
   useEffect(() => {
     fetchCreditsBalance()
@@ -70,6 +76,7 @@ export function SidebarNav() {
                 className={`flex items-center gap-2.5 rounded-lg px-3 py-2 transition-all ${
                   isActive ? 'text-primary bg-primary/10' : 'hover:text-primary'
                 }`}
+                onClick={handleResponsiveCollapse}
               >
                 <Icon className='h-5 w-5' />
                 {item.title}
@@ -83,6 +90,7 @@ export function SidebarNav() {
         <Link
             href='/settings/credits'
             className={`flex items-center gap-2.5 px-3 pt-1 pb-2 transition-all hover:text-primary`}
+            onClick={handleResponsiveCollapse}
           >
             <Database className='h-5 w-5' />
             Credits
@@ -94,6 +102,7 @@ export function SidebarNav() {
           <Link
             href='/settings/personal-info'
             className={`flex items-center gap-2.5 px-3 py-1.5 transition-all hover:text-primary`}
+            onClick={handleResponsiveCollapse}
           >
             <Settings className='h-5 w-5' />
             Settings
