@@ -27,6 +27,8 @@ import {
   FILE_CACHE_URL,
   MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
   COMMON_ABBREVIATIONS,
+  MAX_FORMAT_FILES,
+  MAX_FORMAT_FILES_OVERRIDES,
 } from '@/constants'
 import { AlignmentType, CTMType, UndoRedoItem } from '@/types/editor'
 import {
@@ -358,6 +360,16 @@ const uploadFormattingFiles = async (
       upload: false,
     }))
   }
+}
+
+const getMaxFormatFiles = (userId: string | null): number => {
+  if (!userId) return MAX_FORMAT_FILES
+
+  if (userId in MAX_FORMAT_FILES_OVERRIDES) {
+    return MAX_FORMAT_FILES_OVERRIDES[userId as keyof typeof MAX_FORMAT_FILES_OVERRIDES]
+  }
+
+  return MAX_FORMAT_FILES
 }
 
 const handleFilesUpload = async (
@@ -1847,6 +1859,7 @@ export {
   uploadTextFile,
   uploadFile,
   uploadFormattingFiles,
+  getMaxFormatFiles,
   handleFilesUpload,
   regenDocx,
   reportHandler,

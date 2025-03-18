@@ -12,6 +12,7 @@ import prisma from '@/lib/prisma'
 import { sendTemplateMail } from '@/lib/ses'
 import { getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
+import { getMaxFormatFiles } from '@/utils/editorUtils'
 
 export default async function submitReview(
   transcriberId: number,
@@ -78,65 +79,70 @@ export default async function submitReview(
         )
       }
 
+      const maxFiles = getMaxFormatFiles(order.userId?.toString())
+      if (fileVersions.length > maxFiles) {
+        logger.error(
+          `OrderFlow:submitReview - Too many files uploaded: ${fileVersions.length} (maximum is ${maxFiles})`
+        )
+        throw new Error(
+          `OrderFlow:submitReview - Too many files uploaded (maximum is ${maxFiles})`
+        )
+      }
+
       const userRate = await prisma.userRate.findUnique({
         where: { userId: order.userId },
       })
 
       if (userRate?.outputFormat) {
-        const requiredFormats = userRate.outputFormat
+        const formatArray = userRate.outputFormat
           .split(',')
           .map((format) => format.trim().toLowerCase())
           .filter((format) => format !== '')
+        const allowedFormats = Array.from(new Set(formatArray))
 
-        const requiredFormatCounts: Record<string, number> = {}
-        for (const format of requiredFormats) {
-          requiredFormatCounts[format] = (requiredFormatCounts[format] || 0) + 1
+        const uploadedExtensions = fileVersions
+          .map((v) => v.extension?.toLowerCase())
+          .filter(Boolean)
+        const invalidExtensions = uploadedExtensions.filter(
+          (ext) => !allowedFormats.includes(ext as string)
+        )
+
+        if (invalidExtensions.length > 0) {
+          logger.error(
+            `OrderFlow:submitReview - Invalid file formats uploaded: ${invalidExtensions.join(
+              ', '
+            )}`
+          )
+          throw new Error(
+            `OrderFlow:submitReview - Invalid file formats uploaded: ${invalidExtensions.join(
+              ', '
+            )}`
+          )
+        }
+
+        if (uploadedExtensions.length === 0) {
+          logger.error(
+            `OrderFlow:submitReview - No valid files uploaded for ${order.fileId}`
+          )
+          throw new Error(
+            `OrderFlow:submitReview - No valid files have been uploaded`
+          )
         }
 
         const uploadedFormatCounts: Record<string, number> = {}
-        for (const version of fileVersions) {
-          const ext = version.extension?.toLowerCase()
+        for (const ext of uploadedExtensions) {
           if (ext) {
             uploadedFormatCounts[ext] = (uploadedFormatCounts[ext] || 0) + 1
           }
         }
 
-        for (const [format, count] of Object.entries(requiredFormatCounts)) {
-          if (
-            !uploadedFormatCounts[format] ||
-            uploadedFormatCounts[format] < count
-          ) {
-            logger.error(
-              `OrderFlow:submitReview - Missing required format ${format} (have ${
-                uploadedFormatCounts[format] || 0
-              }, need ${count})`
-            )
-            throw new Error(
-              `OrderFlow:submitReview - Missing required format ${format} (have ${
-                uploadedFormatCounts[format] || 0
-              }, need ${count})`
-            )
-          }
-        }
-
-        for (const [format, count] of Object.entries(uploadedFormatCounts)) {
-          if (!requiredFormatCounts[format]) {
-            logger.error(
-              `OrderFlow:submitReview - Unexpected format ${format} uploaded`
-            )
-            throw new Error(
-              `OrderFlow:submitReview - Unexpected format ${format} uploaded`
-            )
-          }
-          if (count > requiredFormatCounts[format]) {
-            logger.error(
-              `OrderFlow:submitReview - Too many ${format} files uploaded (have ${count}, need ${requiredFormatCounts[format]})`
-            )
-            throw new Error(
-              `OrderFlow:submitReview - Too many ${format} files uploaded (have ${count}, need ${requiredFormatCounts[format]})`
-            )
-          }
-        }
+        logger.info(
+          `OrderFlow:submitReview - Formats uploaded for ${
+            order.fileId
+          }: ${Object.entries(uploadedFormatCounts)
+            .map(([format, count]) => `${format}(${count})`)
+            .join(', ')}`
+        )
       }
     } else {
       const fileVersion = await prisma.fileVersion.findFirst({
