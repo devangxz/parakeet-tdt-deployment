@@ -17,6 +17,7 @@ import EnableCustomFormattingReview from './components/enable-custom-format-revi
 import EnableCustomers from './components/enable-customers'
 import EnableGeneralFinalizer from './components/enable-general-finalizer'
 import EnablePreDelivery from './components/enable-pre-delivery'
+import InviteCustomer from './components/invite-customer'
 import OrderWatch from './components/order-watch'
 import TranscriberWatch from './components/transcriber-watch'
 import TransferCredits from './components/transfer-credits'
@@ -34,6 +35,7 @@ export default function AdminDashboard() {
         {session?.user?.role === 'ADMIN' && (
           <>
             <AddCredits />
+            <InviteCustomer />
             <Coupon />
             <TransferFiles />
             <CustomPlan />

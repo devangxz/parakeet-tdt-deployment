@@ -29,7 +29,11 @@ type ConfigEmailsType = {
   TEXT: string
 }
 
-const dynamicSubjectTemplates = ['UNASSIGN_FILE', 'TRANSCRIBER_SUBMIT']
+const dynamicSubjectTemplates = [
+  'UNASSIGN_FILE',
+  'TRANSCRIBER_SUBMIT',
+  'ORDER_CONFIRMATION',
+]
 
 // Create SES client
 const createSESClient = () =>

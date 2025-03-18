@@ -122,6 +122,27 @@ export const InfoTabComponent = ({
               </span>
             </div>
           )}
+        {orderDetails.orderType === 'FORMATTING' &&
+          orderDetails.supportingDocuments &&
+          orderDetails.supportingDocuments.length > 0 && (
+            <div className='bg-background rounded-md p-4 shadow-sm border border-customBorder'>
+              <h3 className='font-medium mb-2'>Supporting Documents</h3>
+              <div className='flex flex-col gap-2'>
+                {orderDetails.supportingDocuments.map((doc) => (
+                  <a
+                    key={doc.fileId}
+                    href={doc.signedUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='text-primary hover:underline flex items-center gap-1'
+                    download={doc.filename}
+                  >
+                    <span>{doc.filename}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         <p>{orderDetails.instructions || 'No customer instructions.'}</p>
       </div>
     </div>

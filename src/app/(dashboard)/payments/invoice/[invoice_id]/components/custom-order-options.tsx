@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, InfoIcon } from 'lucide-react'
 import * as React from 'react'
 
 import JsonEditor from '@/components/json-editor'
+import SupportingDocumentsDialog from '@/components/supporting-documents-dialog'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import {
@@ -128,7 +129,7 @@ export function CustomOrderOptions({
       </div>
       <CollapsibleContent className='mt-5 ml-5'>
         <div className='flex items-center justify-between gap-5'>
-          {orderType !== 'FORMATTING' && (
+          {orderType !== 'FORMATTING' ? (
             <div className='w-[229px]'>
               <div className='flex items-center gap-1'>
                 <Label>Select template</Label>
@@ -161,6 +162,24 @@ export function CustomOrderOptions({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          ) : (
+            <div className='w-[229px]'>
+              <div className='flex items-center gap-1'>
+                <Label>Supporting Documents</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <InfoIcon className='h-4 w-4 text-muted-foreground' />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Upload up to 5 supporting documents (PDF, DOCX, TXT) to
+                      help with formatting.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <SupportingDocumentsDialog fileId={fileId} />
             </div>
           )}
           <div className='w-[229px] flex flex-col'>

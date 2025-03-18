@@ -150,6 +150,12 @@ export const processPayment = async (
         disclaimer:
           'Additional charges may apply for files with non-American accents, poor audio quality, distortions, distant speakers, high background and/or ambient noise. A full refund will be issued if the additional charges is unacceptable, or if the file is un-transcribeable.',
         files: body,
+        subject:
+          orderType === OrderType.TRANSCRIPTION_FORMATTING
+            ? 'Scribie.ai Custom Format Order Confirmation'
+            : orderType === OrderType.FORMATTING
+            ? 'Scribie.ai Format Order Confirmation'
+            : 'Scribie.ai Transcript Order Confirmation',
       }
 
       await ses.sendMail('ORDER_CONFIRMATION', emailData, templateData)

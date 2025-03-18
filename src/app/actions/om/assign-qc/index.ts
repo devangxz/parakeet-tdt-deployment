@@ -24,16 +24,6 @@ export async function assignQC(fileId: string, userEmail: string) {
       return { success: false, message: 'File not found' }
     }
 
-    if (orderInformation.status !== OrderStatus.TRANSCRIBED) {
-      logger.error(
-        `QC can be assigned to ${orderInformation.status} file ${fileId}`
-      )
-      return {
-        success: false,
-        message: 'QC can only be assigned to transcribed files.',
-      }
-    }
-
     const user = await prisma.user.findUnique({
       where: { email: userEmail.toLowerCase() },
     })
