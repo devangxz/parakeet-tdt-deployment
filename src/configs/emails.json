@@ -309,6 +309,15 @@
     "HTML": "BILLING_ALERT.html",
     "TEXT": ""
   },
+  "PENDING_FILES_ALERT": {
+    "FROM": "$$ALERT_BE_EMAIL_ID$$",
+    "TO": ["$$SUPPORT_EMAIL$$"],
+    "CC": [],
+    "BCC": ["$$CONTACT_EMAIL_ID$$"],
+    "SUBJECT": "Scribie.ai Pending Files Alert",
+    "HTML": "PENDING_FILES_ALERT.html",
+    "TEXT": ""
+  },
   "FILE_SHARED": {
     "FROM": "$$ALERT_BE_EMAIL_ID$$",
     "TO": ["$$USER_EMAIL_ID$$"],
@@ -325,6 +334,15 @@
     "BCC": ["$$CONTACT_EMAIL_ID$$"],
     "SUBJECT": "Scribie.ai Automatic Refund",
     "HTML": "REFUND_FILE.html",
+    "TEXT": ""
+  },
+  "INVITE_EMAIL": {
+    "FROM": "$$SUPPORT_EMAIL_ID$$",
+    "TO": ["$$USER_EMAIL_ID$$"],
+    "CC": [],
+    "BCC": [],
+    "SUBJECT": "Scribie Invite",
+    "HTML": "INVITE_EMAIL.html",
     "TEXT": ""
   },
   "CUSTOM_FORMATTING_FEEDBACK": {

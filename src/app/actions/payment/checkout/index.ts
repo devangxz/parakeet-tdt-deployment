@@ -33,10 +33,11 @@ interface CheckoutPayload {
   paymentMethodNonce: string
   invoiceId: string
   orderType: string
+  dueDate?: string
 }
 
 export async function checkout(payload: CheckoutPayload) {
-  const { paymentMethodNonce, invoiceId, orderType } = payload
+  const { paymentMethodNonce, invoiceId, orderType, dueDate } = payload
   const session = await getServerSession(authOptions)
   const user = session?.user
   const userId = user?.internalTeamUserId || user?.userId
@@ -96,7 +97,8 @@ export async function checkout(payload: CheckoutPayload) {
         invoice.type,
         orderType,
         result.transaction.id,
-        user?.userId as number
+        user?.userId as number,
+        dueDate
       )
       const invoiceData = await prisma.invoice.update({
         where: { invoiceId },

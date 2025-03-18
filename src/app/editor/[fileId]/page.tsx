@@ -61,6 +61,12 @@ import { persistEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
 import { diff_match_patch, DmpDiff } from '@/utils/transcript/diff_match_patch'
 
+export type SupportingDocument = {
+  filename: string
+  signedUrl: string
+  fileExtension: string
+  fileId: string
+}
 export type OrderDetails = {
   orderId: string
   filename: string
@@ -77,6 +83,7 @@ export type OrderDetails = {
   LLMDone: boolean
   customFormatOption?: string
   outputFormat?: string
+  supportingDocuments?: SupportingDocument[]
 }
 
 export type UploadFilesType = {
@@ -952,7 +959,11 @@ function EditorPage() {
             }
           }}
         >
-          <DialogContent className={orderDetails.orderType !== 'FORMATTING' ? 'max-w-4xl' : ''}>
+          <DialogContent
+            className={
+              orderDetails.orderType !== 'FORMATTING' ? 'max-w-4xl' : ''
+            }
+          >
             <DialogHeader>
               <DialogTitle>Submit</DialogTitle>
               <DialogDescription>
@@ -963,7 +974,9 @@ function EditorPage() {
                 <div className='pt-4'>
                   <p className='text-sm text-muted-foreground/80 mb-2'>
                     Audio Playback Coverage:{' '}
-                    <span className='font-medium'>{getPlayedPercentage()}%</span>
+                    <span className='font-medium'>
+                      {getPlayedPercentage()}%
+                    </span>
                   </p>
                   <WaveformHeatmap
                     waveformUrl={waveformUrl}

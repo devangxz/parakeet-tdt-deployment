@@ -451,12 +451,11 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       )
 
       alignmentWorker.current.onmessage = (e) => {
-        const { alignments: newAlignments, wer, editedSegments } = e.data
+        const { alignments: newAlignments, editedSegments } = e.data
         setAlignments(newAlignments)
         setEditedSegments(new Set(editedSegments))
         setIsTyping(false)
         setAlignmentWorkerRunning(false)
-        console.log('Updated alignments:', newAlignments, 'WER:', wer)
       }
 
       console.log('Web Worker initialized successfully.')

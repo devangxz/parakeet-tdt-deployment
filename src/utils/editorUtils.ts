@@ -257,7 +257,7 @@ const uploadFile = async (
     const response = await uploadDocxAction(formData, fileId)
 
     if (response.success) {
-      toast.success('File uploaded successfully')      
+      toast.success('File uploaded successfully')
       setFileToUpload({
         renamedFile: null,
         originalFile: null,
@@ -533,7 +533,8 @@ const fetchFileDetails = async ({
       remainingTime: orderRes.orderDetails.remainingTime,
       LLMDone: orderRes.orderDetails.LLMDone,
       customFormatOption: orderRes.orderDetails.customFormatOption || undefined,
-      outputFormat: orderRes.orderDetails.outputFormat || undefined
+      outputFormat: orderRes.orderDetails.outputFormat || undefined,
+      supportingDocuments: orderRes.orderDetails.supportingDocuments || [],
     }
 
     setOrderDetails(orderDetailsFormatted)
@@ -551,7 +552,10 @@ const fetchFileDetails = async ({
     }
 
     if (orderRes.orderDetails.status === 'PRE_DELIVERED') {
-      if (orderRes.orderDetails.orderType === 'TRANSCRIPTION_FORMATTING' || orderRes.orderDetails.orderType === 'FORMATTING') {
+      if (
+        orderRes.orderDetails.orderType === 'TRANSCRIPTION_FORMATTING' ||
+        orderRes.orderDetails.orderType === 'FORMATTING'
+      ) {
         step = 'CF'
       } else {
         step = 'QC'
@@ -823,7 +827,7 @@ const handleSave = async (
 
     // Save notes and other data
     const tokenRes = await fileCacheTokenAction()
-    const body: {[key:string]: string | number | boolean } = {
+    const body: { [key: string]: string | number | boolean } = {
       fileId: orderDetails.fileId,
       transcript,
       cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
@@ -831,20 +835,16 @@ const handleSave = async (
       isGeminiReviewed,
       isCF,
     }
-    if(isCF) {
+    if (isCF) {
       body.transcript = getEditorText()
       body.userId = Number(orderDetails.userId)
     }
 
-    await axios.post(
-      `${FILE_CACHE_URL}/save-transcript`,
-      body,
-      {
-        headers: {
-          Authorization: `Bearer ${tokenRes.token}`,
-        },
-      }
-    )
+    await axios.post(`${FILE_CACHE_URL}/save-transcript`, body, {
+      headers: {
+        Authorization: `Bearer ${tokenRes.token}`,
+      },
+    })
 
     await setPlayStatsAction({
       fileId: orderDetails.fileId,
@@ -1020,7 +1020,7 @@ const handleSubmit = async ({
         const filteredAlignments = currentAlignments.filter(
           (alignment) => 'type' in alignment && alignment.type !== 'meta'
         )
-  
+
         const subtitles = getSRTVTT(filteredAlignments)
         if (subtitles) {
           await uploadSubtitlesAction(orderDetails.fileId, subtitles)
@@ -1541,45 +1541,49 @@ const scrollEditorToPos = (quill: Quill, pos: number) => {
   }
 }
 
-function  getFormattedContent(text: string): Op[] {
+function getFormattedContent(text: string): Op[] {
   const formattedContent: Op[] = []
   let lastIndex = 0
 
-    // Update pattern to explicitly include the timestamp+blank pattern
-    const pattern = /(?:(\d:\d{2}:\d{2}\.\d(?:\s+(?:S\d+:|Speaker\s+\d+:|[A-Za-z][A-Za-z\s]*:))?|\[\d:\d{2}:\d{2}\.\d\](?:\s+____)?|\[[^\]]+\])|(S\d+:|Speaker\s+\d+:|[A-Za-z][A-Za-z\s]*:))/g
-    let match: RegExpExecArray | null
+  // Update pattern to explicitly include the timestamp+blank pattern
+  const pattern =
+    /(?:(\d:\d{2}:\d{2}\.\d(?:\s+(?:S\d+:|Speaker\s+\d+:|[A-Za-z][A-Za-z\s]*:))?|\[\d:\d{2}:\d{2}\.\d\](?:\s+____)?|\[[^\]]+\])|(S\d+:|Speaker\s+\d+:|[A-Za-z][A-Za-z\s]*:))/g
+  let match: RegExpExecArray | null
 
-    while ((match = pattern.exec(text)) !== null) {
-      if (match.index > lastIndex) {
-          formattedContent.push({ insert: text.slice(lastIndex, match.index) })
-      }
-
-      const matchedText = match[0]
-
-      // Rule 1: TS + Speaker labels or standalone speaker labels
-      if (matchedText.match(/^\d:\d{2}:\d{2}\.\d/) || matchedText.match(/^(?:S\d+:|Speaker\s+\d+:|[A-Za-z][A-Za-z\s]*:)$/)) {
-          formattedContent.push({
-              insert: matchedText,
-              attributes: { bold: true }
-          })
-      }
-      // Rule 2: TS + blank (complete pattern)
-      else if (matchedText.match(/\[\d:\d{2}:\d{2}\.\d\]\s+____/)) {
-          formattedContent.push({
-              insert: matchedText,
-              attributes: { color: '#FF0000' }
-          })
-      }
-      // Rule 3: Any other bracketed content
-      else if (matchedText.startsWith('[')) {
-          formattedContent.push({
-              insert: matchedText,
-              attributes: { background: '#f5f5f5', color: '#4A4A4A' }
-          })
-      }
-
-      lastIndex = match.index + matchedText.length
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      formattedContent.push({ insert: text.slice(lastIndex, match.index) })
     }
+
+    const matchedText = match[0]
+
+    // Rule 1: TS + Speaker labels or standalone speaker labels
+    if (
+      matchedText.match(/^\d:\d{2}:\d{2}\.\d/) ||
+      matchedText.match(/^(?:S\d+:|Speaker\s+\d+:|[A-Za-z][A-Za-z\s]*:)$/)
+    ) {
+      formattedContent.push({
+        insert: matchedText,
+        attributes: { bold: true },
+      })
+    }
+    // Rule 2: TS + blank (complete pattern)
+    else if (matchedText.match(/\[\d:\d{2}:\d{2}\.\d\]\s+____/)) {
+      formattedContent.push({
+        insert: matchedText,
+        attributes: { color: '#FF0000' },
+      })
+    }
+    // Rule 3: Any other bracketed content
+    else if (matchedText.startsWith('[')) {
+      formattedContent.push({
+        insert: matchedText,
+        attributes: { background: '#f5f5f5', color: '#4A4A4A' },
+      })
+    }
+
+    lastIndex = match.index + matchedText.length
+  }
 
   if (lastIndex < text.length) {
     formattedContent.push({ insert: text.slice(lastIndex) })

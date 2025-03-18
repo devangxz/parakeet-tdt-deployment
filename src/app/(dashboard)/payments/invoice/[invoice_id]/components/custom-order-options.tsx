@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, InfoIcon } from 'lucide-react'
 import * as React from 'react'
 
 import JsonEditor from '@/components/json-editor'
+import SupportingDocumentsDialog from '@/components/supporting-documents-dialog'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import {
@@ -56,13 +57,14 @@ interface CustomOrderOptionsProps {
   risData: string
   folderName: string
   templateId: string
-  dueDate: Date | undefined
+  dueDate: Date | string | undefined
   onTemplateChange: (fileId: string, newValue: string) => void
-  onDueDateChange: (fileId: string, newDate: Date) => void
+  onDueDateChange: (fileId: string, newDate: Date | string) => void
   onViewRISData: (fileId: string, risData: string) => void
   isInitiallyOpen: boolean
   templates: Template[]
   organizationName: string
+  orderType: string
 }
 
 export function CustomOrderOptions({
@@ -77,12 +79,19 @@ export function CustomOrderOptions({
   isInitiallyOpen,
   templates,
   organizationName,
+  orderType,
 }: CustomOrderOptionsProps) {
   const [isOpen, setIsOpen] = React.useState(isInitiallyOpen)
 
   const templateName =
     templates.find((template) => template.id == Number(templateId))?.name ??
     'not-selected'
+
+  const dueDateObject = dueDate
+    ? typeof dueDate === 'string'
+      ? new Date(dueDate)
+      : dueDate
+    : undefined
 
   const handleTranscriptTemplateChange = (newValue: string) => {
     onTemplateChange(fileId, newValue)
@@ -120,36 +129,59 @@ export function CustomOrderOptions({
       </div>
       <CollapsibleContent className='mt-5 ml-5'>
         <div className='flex items-center justify-between gap-5'>
-          <div className='w-[229px]'>
-            <div className='flex items-center gap-1'>
-              <Label>Select template</Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <InfoIcon className='h-4 w-4 text-muted-foreground' />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    For other templates, please contact support.
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+          {orderType !== 'FORMATTING' ? (
+            <div className='w-[229px]'>
+              <div className='flex items-center gap-1'>
+                <Label>Select template</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <InfoIcon className='h-4 w-4 text-muted-foreground' />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      For other templates, please contact support.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <Select
+                defaultValue={templateId}
+                onValueChange={handleTranscriptTemplateChange}
+              >
+                <SelectTrigger className='w-[220px]'>
+                  <SelectValue placeholder='Template' />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map((template) => (
+                    <SelectItem
+                      key={template.id}
+                      value={template.id.toString()}
+                    >
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <Select
-              defaultValue={templateId}
-              onValueChange={handleTranscriptTemplateChange}
-            >
-              <SelectTrigger className='w-[220px]'>
-                <SelectValue placeholder='Template' />
-              </SelectTrigger>
-              <SelectContent>
-                {templates.map((template) => (
-                  <SelectItem key={template.id} value={template.id.toString()}>
-                    {template.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          ) : (
+            <div className='w-[229px]'>
+              <div className='flex items-center gap-1'>
+                <Label>Supporting Documents</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <InfoIcon className='h-4 w-4 text-muted-foreground' />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Upload up to 5 supporting documents (PDF, DOCX, TXT) to
+                      help with formatting.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <SupportingDocumentsDialog fileId={fileId} />
+            </div>
+          )}
           <div className='w-[229px] flex flex-col'>
             <Label className='pb-1'>Due date</Label>
             <Popover>
@@ -158,17 +190,21 @@ export function CustomOrderOptions({
                   variant={'outline'}
                   className={cn(
                     'w-[240px] pl-3 text-left font-normal not-rounded',
-                    !dueDate && 'text-muted-foreground'
+                    !dueDateObject && 'text-muted-foreground'
                   )}
                 >
-                  {dueDate ? format(dueDate, 'PPP') : <span>Pick a date</span>}
+                  {dueDateObject ? (
+                    format(dueDateObject, 'PPP')
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
                   <CalendarIcon className='ml-auto h-4 w-4 opacity-50' />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className='w-auto p-0' align='start'>
                 <Calendar
                   mode='single'
-                  selected={dueDate}
+                  selected={dueDateObject}
                   onSelect={handleDateSelection}
                   disabled={(date) => date < new Date()}
                   initialFocus

@@ -8,6 +8,7 @@ import { DataTable } from './components/data-table'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { fetchScreeningOrders } from '@/app/actions/om/fetch-screening-orders'
 import AcceptRejectScreenFileDialog from '@/components/admin-components/accept-reject-screen-file'
+import AssignQcDialog from '@/components/admin-components/assign-qc-dialog'
 import FlagHighDifficulyDialog from '@/components/admin-components/flag-high-difficulty-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -40,6 +41,7 @@ const reportReasonMap = {
   ONLY_BACKGROUND_CONVERSATION: 'Only Background Conversation',
   ONLY_MUSIC: 'Only Music',
   OTHER: 'Other',
+  NOT_PICKED_UP: 'Not Picked Up',
 }
 
 type ReportReasonMap = typeof reportReasonMap
@@ -63,13 +65,19 @@ interface File {
   fileCost: FileCost
   rateBonus: number
   type: string
+  screenCount: number
 }
 
-export default function ScreenPage() {
+interface ScreenPageProps {
+  onActionComplete?: () => Promise<void>
+}
+
+export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
   const [screeningFiles, setScreeningFiles] = useState<File[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [orderId, setOrderId] = useState<string>('')
+  const [selectedFileId, setSelectedFileId] = useState<string>('')
   const [openDialog, setOpenDialog] = useState(false)
   const [isAccept, setIsAccept] = useState(true)
   const [highDifficultyDialog, setHighDifficultyDialog] = useState(false)
@@ -77,6 +85,7 @@ export default function ScreenPage() {
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
+  const [openAssignQcDialog, setAssignQcDialog] = useState(false)
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -129,10 +138,15 @@ export default function ScreenPage() {
             fileCost: order.fileCost,
             rateBonus: order.rateBonus,
             type: order.orderType,
+            screenCount: order.screenCount,
           }
         }) as unknown as File[]
         setScreeningFiles(orders ?? [])
         setError(null)
+
+        if (onActionComplete) {
+          await onActionComplete()
+        }
       } else {
         toast.error(response.message || 'An error occurred')
         setError(response.message || 'An error occurred')
@@ -265,6 +279,21 @@ export default function ScreenPage() {
                 </TooltipContent>
               </Tooltip>
             )}
+            {row.original.screenCount > 0 && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge
+                    variant='outline'
+                    className='font-semibold text-[10px] text-green-600'
+                  >
+                    {row.original.screenCount}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Screen Count</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </div>
       ),
@@ -373,6 +402,14 @@ export default function ScreenPage() {
             <DropdownMenuContent align='end'>
               <DropdownMenuItem
                 onClick={() => {
+                  setSelectedFileId(row.original.fileId)
+                  setAssignQcDialog(true)
+                }}
+              >
+                Assign Editor
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
                   setOrderId(row.original.orderId.toString())
                   setHighDifficultyDialog(true)
                 }}
@@ -420,6 +457,11 @@ export default function ScreenPage() {
         onClose={() => setHighDifficultyDialog(false)}
         orderId={orderId || ''}
         refetch={() => getScreeningOrders()}
+      />
+      <AssignQcDialog
+        open={openAssignQcDialog}
+        onClose={() => setAssignQcDialog(false)}
+        fileId={selectedFileId || ''}
       />
     </>
   )

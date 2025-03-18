@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
 
     const searchParams = req.nextUrl.searchParams
     const fileId = searchParams.get('fileId')
+    const type = searchParams.get('type')
 
     if (!fileId) {
       return NextResponse.json(
@@ -38,6 +39,8 @@ export async function GET(req: NextRequest) {
         duration: true,
         fileId: true,
         converted: true,
+        userId: true,
+        customFormattingDetails: true,
         Orders: true,
         InvoiceFile: true,
       },
@@ -79,6 +82,61 @@ export async function GET(req: NextRequest) {
       versionId = qcEditFile?.s3VersionId ?? ''
     }
 
+    if (type === 'custom-formatting') {
+      const finalizerEditVersion = await prisma.fileVersion.findFirst({
+        where: {
+          fileId: file.fileId,
+          tag: FileTag.CF_FINALIZER_EDIT,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      })
+      if (finalizerEditVersion) {
+        versionId = finalizerEditVersion?.s3VersionId ?? ''
+      } else {
+        const revEditVersion = await prisma.fileVersion.findFirst({
+          where: {
+            fileId: file.fileId,
+            tag: FileTag.CF_REV_EDIT,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        })
+        if (revEditVersion) {
+          versionId = revEditVersion?.s3VersionId ?? ''
+        } else {
+          const llmEditVersion = await prisma.fileVersion.findFirst({
+            where: {
+              fileId: file.fileId,
+              tag: FileTag.LLM,
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          })
+          if (llmEditVersion) {
+            versionId = llmEditVersion?.s3VersionId ?? ''
+          } else {
+            const qcDeliveredVersion = await prisma.fileVersion.findFirst({
+              where: {
+                fileId: file.fileId,
+                tag: FileTag.QC_DELIVERED,
+              },
+              orderBy: {
+                createdAt: 'desc',
+              },
+            })
+            if (qcDeliveredVersion) {
+              versionId = qcDeliveredVersion?.s3VersionId ?? ''
+            } else {
+              versionId = ''
+            }
+          }
+        }
+      }
+    }
     const info = {
       filename: file.filename,
       file_id: file.fileId,
@@ -90,6 +148,7 @@ export async function GET(req: NextRequest) {
       pr_id: null,
       terms: null,
       shortcuts: null,
+      customFormattingDetails: file.customFormattingDetails,
       options:
         invoiceDetails && invoiceDetails.options
           ? JSON.parse(invoiceDetails.options)
@@ -107,8 +166,9 @@ export async function GET(req: NextRequest) {
       pwer: file.Orders[0]?.pwer,
       video_available: false,
       video_location: null,
-      legal_file: false,
+      legal_file: type === 'custom-formatting' ? true : false,
       versionId: versionId,
+      editor_type: type === 'custom-formatting' ? 'legal' : 'general',
     }
 
     logger.info(`File details fetched successfully for file ${fileId}`)
