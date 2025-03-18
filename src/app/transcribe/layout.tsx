@@ -1,5 +1,5 @@
 'use client'
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 
 import Header from './components/header'
 import { SidebarNav } from './components/sidebar'
@@ -14,7 +14,8 @@ export default function TranscribeLayout({
 }: {
   children: React.ReactNode
 }) {
-
+  const sidebarRef = useRef<HTMLDivElement>(null)
+  const menuButtonRef = useRef<HTMLDivElement>(null)
   const [isExpanded, setIsExpanded] = React.useState(true) // Default to expanded
 
   React.useEffect(() => {
@@ -23,15 +24,38 @@ export default function TranscribeLayout({
     }
   }, [])
 
+  const toggleSidebar = () => {
+    setIsExpanded(prev => !prev)
+  }
+ 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Only handle click outside in mobile view
+      if (window.innerWidth < 1024 && 
+          isExpanded && 
+          sidebarRef.current && 
+          !sidebarRef.current.contains(event.target as Node) &&
+          !menuButtonRef.current?.contains(event.target as Node)) {
+        setIsExpanded(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isExpanded])
+
   return (
     <TooltipProvider>
       <div className='flex min-h-screen flex-col'>
-        <Header setIsExpanded={setIsExpanded} isExpanded={isExpanded}/>
+        <Header toggleSidebar={toggleSidebar} menuButtonRef={menuButtonRef}/>
         <div className='flex flex-1 relative'>
         {/* Sidebar container */}
         <div 
-           className={cn(
-            "absolute left-0 top-0 h-full lg:relative lg:h-auto lg:z-10 border-r border-customBorder bg-background z-50 transition-all duration-300 ease-in-out",
+          ref={sidebarRef}
+          className={cn(
+            "fixed h-full lg:relative lg:h-auto lg:z-10 border-r border-customBorder bg-background z-50 transition-all duration-300 ease-in-out",
             isExpanded ? "w-[60vw] lg:w-72" : "w-0 overflow-hidden"
           )} 
         >

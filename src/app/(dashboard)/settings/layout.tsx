@@ -13,7 +13,7 @@ import {
   CodeXml,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 
 import DashboardPlaceholder from '@/components/dashboard-placeholder'
 import { DashboardSideBarItemType } from '@/components/dashboard-placeholder/dashboard-sidebard'
@@ -24,6 +24,8 @@ export default function SettingsLayout({
   children: React.ReactNode
 }) {
   const { data: session } = useSession()
+  const sidebarRef = useRef<HTMLDivElement>(null)
+  const menuButtonRef = useRef<HTMLDivElement>(null)
   const sidebarItems: DashboardSideBarItemType[] = []
   const [isExpanded, setIsExpanded] = React.useState(true)
   if (session?.user?.internalTeamUserId) {
@@ -140,6 +142,28 @@ export default function SettingsLayout({
     }
   }, [])
 
+  const toggleSidebar = () => {
+    setIsExpanded(prev => !prev)
+  }
+ 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Only handle click outside in mobile view
+      if (window.innerWidth < 1024 && 
+          isExpanded && 
+          sidebarRef.current && 
+          !sidebarRef.current.contains(event.target as Node) &&
+          !menuButtonRef.current?.contains(event.target as Node)) {
+        setIsExpanded(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isExpanded])
+
   return (
     <>
       <DashboardPlaceholder
@@ -148,6 +172,9 @@ export default function SettingsLayout({
         subtitle='Manage your account settings'
         setIsExpanded={setIsExpanded}
         isExpanded={isExpanded}
+        toggleSidebar={toggleSidebar}
+        menuButtonRef={menuButtonRef}
+        sidebarRef={sidebarRef}
       >
         {children}
       </DashboardPlaceholder>
