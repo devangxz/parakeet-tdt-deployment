@@ -25,7 +25,7 @@ export default function SettingsLayout({
 }) {
   const { data: session } = useSession()
   const sidebarItems: DashboardSideBarItemType[] = []
-
+  const [isExpanded, setIsExpanded] = React.useState(true)
   if (session?.user?.internalTeamUserId) {
     sidebarItems.push(
       {
@@ -134,12 +134,20 @@ export default function SettingsLayout({
     }
   }
 
+  React.useEffect(() => {
+    if(window.innerWidth < 1024) {
+      setIsExpanded(false)
+    }
+  }, [])
+
   return (
     <>
       <DashboardPlaceholder
         sidebarItems={sidebarItems}
         title='Settings'
         subtitle='Manage your account settings'
+        setIsExpanded={setIsExpanded}
+        isExpanded={isExpanded}
       >
         {children}
       </DashboardPlaceholder>

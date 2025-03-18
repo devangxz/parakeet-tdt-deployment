@@ -10,8 +10,6 @@ import {
   CircleDollarSign,
   Building2,
   Loader2,
-  ChevronRight,
-  ChevronLeft,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import React from 'react'
@@ -108,43 +106,28 @@ export default function FilesLayout({
     },
   ]
 
+  React.useEffect(() => {
+    if(window.innerWidth < 1024) {
+      setIsExpanded(false)
+    }
+  }, [])
+
   return (
     <>
-      <PaymentsNavbar />
+      <PaymentsNavbar setIsExpanded={setIsExpanded} isExpanded={isExpanded}/>
       <div className={cn(
         'grid min-h-screen w-full relative',
-        'grid-cols-[auto_1fr]', // Fixed grid layout that doesn't change
+        'grid-cols-[1fr] lg:grid-cols-[auto_1fr]', // Fixed grid layout that doesn't change
         'transition-all duration-300 ease-in-out'
       )}>
-       <div 
+        <div 
           className={cn(
-            'relative hidden md:block',
+            'fixed lg:relative block bg-background z-50 lg:z-10',
             'transition-all duration-300 ease-in-out',
             'border-r border-customBorder',
-            isExpanded ? 'lg:w-72 md:w-48 bg-background' : 'w-10 bg-background overflow-hidden'
+            isExpanded ? 'w-[60vw] lg:w-72' : 'w-0 overflow-hidden'
           )} 
         >
-          {/* Toggle buttons */}
-          {isExpanded ? <button
-            className={cn(
-              "absolute right-3 top-7 z-20 p-1 rounded-full hover:bg-accent",
-              "transition-opacity duration-300",
-              isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
-            )}
-            onClick={() => setIsExpanded(!isExpanded)}
-            aria-label="Expand sidebar"
-          >
-              <ChevronLeft size={16} className="text-primary" />
-          </button> : 
-            <button 
-            className='absolute right-2 top-7 z-20 p-1 rounded-full hover:bg-accent transition-opacity duration-300'
-            onClick={() => setIsExpanded(!isExpanded)}
-            aria-label='Collapse sidebar'
-            >
-              <ChevronRight size={16} className="text-primary" />
-            </button>
-          }
-          
           <div className={cn('flex h-screen flex-col', isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-full')}>
             {session ? (
               <Sidebar
@@ -155,6 +138,7 @@ export default function FilesLayout({
                 }
                 showTeams={false}
                 heading='Dashboards'
+                setIsExpanded={setIsExpanded}
             />
             ) : (
               <div className='flex h-full items-center justify-center'>

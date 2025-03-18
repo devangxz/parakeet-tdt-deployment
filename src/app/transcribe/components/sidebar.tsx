@@ -17,10 +17,16 @@ export interface SidebarItemType {
   type: string
 }
 
-export function SidebarNav() {
+export function SidebarNav({ setIsExpanded }: { setIsExpanded: (isExpanded: boolean) => void }) {
   const { data: session } = useSession()
   const pathname = usePathname()
   const [earnings, setEarnings] = useState<any>(null)
+
+  const handleResponsiveCollapse = () => {
+    if (window.innerWidth < 1024 && setIsExpanded) {
+      setIsExpanded(false);
+    }
+  };
 
   const fetchEarnings = async () => {
     try {
@@ -125,6 +131,7 @@ export function SidebarNav() {
                 className={`flex items-center gap-2.5 rounded-md px-3 py-2 transition-all ${
                   isActive ? 'text-primary bg-primary/10' : 'hover:text-primary'
                 }`}
+                onClick={handleResponsiveCollapse}
               >
                 {item.name}
                 {item.badgeCount !== undefined && (
@@ -148,6 +155,7 @@ export function SidebarNav() {
                 ? 'text-primary bg-primary/10'
                 : 'hover:text-primary'
             }`}
+            onClick={handleResponsiveCollapse}
           >
             <div className='flex gap-1.5 items-center'>
               <DollarSign className='h-5 w-5' />
@@ -178,6 +186,7 @@ export function SidebarNav() {
           <Link
             href='/transcriber-guide'
             className={`flex items-center gap-2.5 px-3 pt-1 pb-2 transition-all hover:text-primary`}
+            onClick={handleResponsiveCollapse}
           >
             <DollarSign className='h-5 w-5' />
             Guides
@@ -186,6 +195,7 @@ export function SidebarNav() {
           <Link
             href='/settings/personal-info'
             className={`flex items-center gap-2.5 px-3 py-1.5 transition-all hover:text-primary`}
+            onClick={handleResponsiveCollapse}
           >
             <Settings className='h-5 w-5' />
             Settings

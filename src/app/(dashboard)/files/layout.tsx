@@ -8,8 +8,6 @@ import {
   FileUp,
   Share2,
   File,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import React from 'react'
@@ -76,44 +74,30 @@ export default function FilesLayout({
     })
   }
 
+  React.useEffect(() => {
+    if(window.innerWidth < 1024) {
+      setIsExpanded(false)
+    }
+  }, [])
+
   return (
     <div className='flex min-h-screen flex-col'>
-      <PaymentsNavbar />
-      <div className='flex flex-1'>
+      <PaymentsNavbar setIsExpanded={setIsExpanded} isExpanded={isExpanded}/>
+      <div className='flex flex-1 relative'>
         {/* Sidebar container */}
         <div 
           className={cn(
-            'relative hidden md:block',
+            'absolute left-0 top-0 lg:relative h-full block',
             'transition-all duration-300 ease-in-out',
-            'border-r border-customBorder',
-            isExpanded ? 'lg:w-72 md:w-48 bg-background' : 'w-10 bg-background overflow-hidden'
+            'border-r border-customBorder bg-background z-50',
+            isExpanded ? 'w-[60vw] lg:w-72' : 'w-0 overflow-hidden'
           )} 
-        >
-          {isExpanded ? <button
-            className={cn(
-              "absolute right-3 top-5 z-20 p-1 rounded-full hover:bg-accent",
-              "transition-opacity duration-300",
-              isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
-            )}
-            onClick={() => setIsExpanded(!isExpanded)}
-            aria-label="Expand sidebar"
-          >
-              <ChevronLeft size={16} className="text-primary" />
-          </button> : 
-            <button 
-            className='absolute right-2 top-5 z-20 p-1 rounded-full hover:bg-accent transition-opacity duration-300'
-            onClick={() => setIsExpanded(!isExpanded)}
-            aria-label='Collapse sidebar'
-            >
-              <ChevronRight size={16} className="text-primary" />
-            </button>
-          }
-          
+        > 
           <aside className={cn(
-            'transition-all duration-300 ease-in-out',
+            'h-full transition-all duration-300 ease-in-out',
             isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-full'
           )}>
-            <Sidebar sidebarItems={sidebarItems} />
+            <Sidebar sidebarItems={sidebarItems} setIsExpanded={setIsExpanded} />
           </aside>
         </div>
 

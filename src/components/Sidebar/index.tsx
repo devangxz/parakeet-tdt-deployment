@@ -13,16 +13,24 @@ interface SidebarProps {
   sidebarItems: SidebarItemType[]
   showTeams?: boolean
   heading?: string
-  isCollapsed?: boolean
+  setIsExpanded?: (isExpanded: boolean) => void
 }
 
 const Sidebar = ({
   sidebarItems,
   showTeams = true,
   heading = 'Files',
+  setIsExpanded,
 }: SidebarProps) => {
   const pathname = usePathname()
   const [creditsBalance, setCreditsBalance] = useState(0)
+  
+  const handleResponsiveCollapse = () => {
+    if (window.innerWidth < 1024 && setIsExpanded) {
+      setIsExpanded(false);
+    }
+  };
+
   const fetchCreditsBalance = async () => {
     try {
       const response = await getCreditBalanceAction()
@@ -54,6 +62,7 @@ const Sidebar = ({
               sidebarItems={sidebarItems}
               heading={heading}
               pathname={pathname || ''}
+              setIsExpanded={setIsExpanded}
             />
           </div>
 
@@ -62,6 +71,7 @@ const Sidebar = ({
             <Link
               href='/settings/credits'
               className={`flex items-center gap-2.5 px-3 pt-1 pb-2 transition-all hover:text-primary`}
+              onClick={handleResponsiveCollapse}
             >
               <Database className='h-5 w-5' />
                 Credits
@@ -73,6 +83,7 @@ const Sidebar = ({
             <Link
               href='/settings/personal-info'
               className={`flex items-center gap-2.5 px-3 py-1.5 transition-all hover:text-primary`}
+              onClick={handleResponsiveCollapse}
             >
               <Settings className='h-5 w-5' />
                 Settings
@@ -91,6 +102,7 @@ export type props = {
   sidebarItems: SidebarItemType[]
   heading: string
   pathname: string
+  setIsExpanded?: (isExpanded: boolean) => void
 }
 
 interface FileNode {
@@ -100,13 +112,20 @@ interface FileNode {
   id: number
 }
 
-const FileTreeNode = ({ data, expandedNodes, setExpandedNodes }: {
+const FileTreeNode = ({ data, expandedNodes, setExpandedNodes, setIsExpanded }: {
   data: FileNode;
   expandedNodes: Record<string, boolean>;
   setExpandedNodes: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  setIsExpanded?: (isExpanded: boolean) => void;
 }) => {
   const isOpen = expandedNodes[data.id]
   const hasChildren = data.children && data.children.length > 0
+
+  const handleResponsiveCollapse = () => {
+    if (window.innerWidth < 1024 && setIsExpanded) {
+      setIsExpanded(false);
+    }
+  };
 
   return (
     <div className="min-w-0">
@@ -131,6 +150,7 @@ const FileTreeNode = ({ data, expandedNodes, setExpandedNodes }: {
           <Link
             href={`/files/all-files?folderId=${data.id}`}
             className="text-sm truncate block w-full hover:text-primary"
+            onClick={handleResponsiveCollapse}
           >
             {data.name}
           </Link>
@@ -144,6 +164,7 @@ const FileTreeNode = ({ data, expandedNodes, setExpandedNodes }: {
               data={child}
               expandedNodes={expandedNodes}
               setExpandedNodes={setExpandedNodes}
+              setIsExpanded={setIsExpanded}
             />
           ))}
         </div>
@@ -153,10 +174,16 @@ const FileTreeNode = ({ data, expandedNodes, setExpandedNodes }: {
 }
 
 export function SidebarItems(props: props) {
-  const { heading, sidebarItems, pathname } = props
+  const { heading, sidebarItems, pathname, setIsExpanded } = props
   const [expandedNodes, setExpandedNodes] = useState<Record<number, boolean>>({})
   const [rootFolders, setRootFolders] = useState<FileNode[]>([])
   const [isRootExpanded, setIsRootExpanded] = useState(false)
+
+  const handleResponsiveCollapse = () => {
+    if (window.innerWidth < 1024 && setIsExpanded) {
+      setIsExpanded(false);
+    }
+  };
 
   useEffect(() => {
     const fetchFolders = async () => {
@@ -202,6 +229,7 @@ export function SidebarItems(props: props) {
                   <Link
                     href={item.href}
                     className="flex-1 flex items-center gap-2.5 py-2 pr-3 min-w-0"
+                    onClick={handleResponsiveCollapse}
                   >
                     <span className="truncate">{item.name}</span>
                   </Link>
@@ -214,6 +242,7 @@ export function SidebarItems(props: props) {
                         data={folder}
                         expandedNodes={expandedNodes}
                         setExpandedNodes={setExpandedNodes}
+                        setIsExpanded={setIsExpanded}
                       />
                     ))}
                   </div>
@@ -228,6 +257,7 @@ export function SidebarItems(props: props) {
               href={item.href}
               className={`flex items-center gap-2.5 rounded-md px-3 py-2 transition-all ${isActive ? 'text-primary bg-primary/10' : 'hover:text-primary'
                 }`}
+              onClick={handleResponsiveCollapse}
             >
               <Icon className='h-5 w-5' />
               {item.name}
