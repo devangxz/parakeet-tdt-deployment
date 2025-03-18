@@ -34,7 +34,7 @@ import formatDuration from '@/utils/formatDuration'
 
 interface File {
   filename: string
-  user: number
+  user: string
   duration: string
   br: number | null
   sr: number
@@ -101,7 +101,7 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
 
         const order = {
           filename: orderDetails.File.filename,
-          user: orderDetails.userId,
+          user: `${orderDetails.user.email} (${orderDetails.userId})`,
           duration: formatDuration(orderDetails.File.duration),
           br: orderDetails.File.bitRate,
           sr: orderDetails.File.sampleRate,
