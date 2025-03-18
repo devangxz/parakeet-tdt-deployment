@@ -2,10 +2,15 @@
 'use client'
 
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { FileUp } from 'lucide-react'
+import { FileUp, FileIcon, ExternalLinkIcon, Trash2 } from 'lucide-react'
 import { ChangeEvent, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
+import { deleteSupportingDocumentAction } from '@/app/actions/delete-supporting-document'
+import {
+  getSupportingDocumentsAction,
+  SupportingDocument,
+} from '@/app/actions/get-supporting-documents'
 import { uploadSupportingDocumentsAction } from '@/app/actions/upload-supporting-documents'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,6 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { Separator } from '@/components/ui/separator'
 
 const MAX_FILES = 5
 const MAX_FILE_SIZE = 1024 * 1024 * 1024
@@ -32,6 +38,17 @@ const SupportingDocumentsDialog = ({
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [uploadedExtensions, setUploadedExtensions] = useState<string[]>([])
+  const [existingDocuments, setExistingDocuments] = useState<
+    SupportingDocument[]
+  >([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [deletingDocIds, setDeletingDocIds] = useState<number[]>([])
+
+  useEffect(() => {
+    if (open) {
+      fetchExistingDocuments()
+    }
+  }, [open])
 
   useEffect(() => {
     if (!open) {
@@ -39,6 +56,22 @@ const SupportingDocumentsDialog = ({
       setUploadedExtensions([])
     }
   }, [open])
+
+  const fetchExistingDocuments = async () => {
+    setIsLoading(true)
+    try {
+      const response = await getSupportingDocumentsAction(fileId)
+      if (response.success && response.documents) {
+        setExistingDocuments(response.documents)
+      } else {
+        toast.error(response.message || 'Failed to fetch supporting documents')
+      }
+    } catch (error) {
+      toast.error('Failed to fetch supporting documents')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) return
@@ -111,7 +144,9 @@ const SupportingDocumentsDialog = ({
 
       if (response.success) {
         toast.success('Supporting documents uploaded successfully')
-        setOpen(false)
+        fetchExistingDocuments()
+        setUploadedFiles([])
+        setUploadedExtensions([])
       } else {
         toast.error(response.message || 'Failed to upload supporting documents')
       }
@@ -142,6 +177,34 @@ const SupportingDocumentsDialog = ({
     }
   }
 
+  const handleFileDownload = (url: string, filename: string) => {
+    window.open(url, '_blank')
+  }
+
+  const handleDeleteDocument = async (documentId: number) => {
+    // Add document ID to loading state
+    setDeletingDocIds((prev) => [...prev, documentId])
+
+    try {
+      const response = await deleteSupportingDocumentAction(documentId)
+
+      if (response.success) {
+        toast.success('Document deleted successfully')
+        // Remove the document from the list
+        setExistingDocuments((prev) =>
+          prev.filter((doc) => doc.id !== documentId)
+        )
+      } else {
+        toast.error(response.message || 'Failed to delete document')
+      }
+    } catch (error) {
+      toast.error('Failed to delete document')
+    } finally {
+      // Remove document ID from loading state
+      setDeletingDocIds((prev) => prev.filter((id) => id !== documentId))
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger>
@@ -154,10 +217,10 @@ const SupportingDocumentsDialog = ({
       </DialogTrigger>
       <DialogContent className='p-0 gap-0'>
         <DialogHeader className='p-4'>
-          <DialogTitle>Upload Supporting Documents</DialogTitle>
+          <DialogTitle>Supporting Documents</DialogTitle>
         </DialogHeader>
 
-        <div className='m-4 mt-1 flex flex-col gap-4'>
+        <div className='m-4 mt-2 flex flex-col gap-4'>
           <div className='border rounded-md p-3 bg-muted/30'>
             <div className='flex flex-wrap gap-2 items-center'>
               <p className='text-sm font-medium mr-1'>Requirements:</p>
@@ -248,11 +311,86 @@ const SupportingDocumentsDialog = ({
             disabled={isUploading || uploadedFiles.length === 0}
             onClick={handleUpload}
           >
-            {isUploading && (
-              <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+            {isUploading ? (
+              <>
+                <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                Uploading...
+              </>
+            ) : (
+              'Upload'
             )}
-            Upload Documents
           </Button>
+
+          {/* Existing documents section */}
+          <Separator className='my-2' />
+
+          <div className='flex flex-col gap-2'>
+            <h3 className='text-sm font-medium mb-2'>Uploaded Documents</h3>
+
+            {isLoading ? (
+              <div className='flex items-center justify-center py-4'>
+                <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                <span>Loading documents...</span>
+              </div>
+            ) : existingDocuments.length > 0 ? (
+              <div className='w-full space-y-2'>
+                {existingDocuments.map((doc) => {
+                  const extension = doc.fileExtension || 'unknown'
+                  const isDeleting = deletingDocIds.includes(doc.id)
+
+                  return (
+                    <div
+                      key={doc.id}
+                      className='flex justify-between items-center p-3 rounded-md border'
+                    >
+                      <div className='flex items-center'>
+                        <FileIcon className='mr-2 h-5 w-5 text-primary' />
+                        <div>
+                          <div className='flex items-center'>
+                            <Badge variant='outline' className='mr-2'>
+                              {extension.toUpperCase()}
+                            </Badge>
+                            <span className='text-sm font-medium truncate max-w-[250px]'>
+                              {doc.filename}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className='flex gap-2'>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          className='h-8 w-8 p-0'
+                          onClick={() =>
+                            handleFileDownload(doc.url, doc.filename)
+                          }
+                        >
+                          <ExternalLinkIcon className='h-4 w-4' />
+                        </Button>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          className='h-8 w-8 p-0 text-destructive hover:text-destructive/80'
+                          onClick={() => handleDeleteDocument(doc.id)}
+                          disabled={isDeleting}
+                        >
+                          {isDeleting ? (
+                            <ReloadIcon className='h-4 w-4 animate-spin' />
+                          ) : (
+                            <Trash2 className='h-4 w-4' />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className='text-muted-foreground text-center py-4 border rounded-md p-3'>
+                No supporting documents uploaded yet
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
