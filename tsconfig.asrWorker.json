@@ -13,7 +13,7 @@
   "include": [
     "src/types/diff_match_patch.d.ts",
     "src/types/openai_chat.d.ts",
-    "src/types/dropbox.d.ts",
+    "src/types/upload/index.ts",
     "src/types/next-auth.d.ts",
     "src/workers/asrWorker.ts",
     "src/lib/**/*",
