@@ -1,16 +1,20 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "CommonJS",
+    "module": "es2022",
     "outDir": "./dist",
     "noEmit": false,
     "moduleResolution": "node",
     "isolatedModules": false,
     "incremental": false,
-    "jsx": "react",
+    "jsx": "react-jsx",
     "plugins": []
   },
   "include": [
+    "src/types/diff_match_patch.d.ts",
+    "src/types/openai_chat.d.ts",
+    "src/types/dropbox.d.ts",
+    "src/types/next-auth.d.ts",
     "src/workers/llmWorker.ts",
     "src/lib/**/*",
     "src/services/**/*",
