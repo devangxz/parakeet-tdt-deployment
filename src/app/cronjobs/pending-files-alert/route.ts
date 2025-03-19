@@ -14,11 +14,7 @@ export async function POST() {
     const pendingOrders = await prisma.order.findMany({
       where: {
         status: {
-          in: [
-            OrderStatus.TRANSCRIBED,
-            OrderStatus.FORMATTED,
-            OrderStatus.REVIEW_COMPLETED,
-          ],
+          in: [OrderStatus.TRANSCRIBED],
         },
       },
       include: {

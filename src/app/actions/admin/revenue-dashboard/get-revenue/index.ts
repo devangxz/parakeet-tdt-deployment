@@ -307,7 +307,10 @@ export async function getRevenue(
               acc +
               (invoice.type === 'FORMATTING' ||
               invoice.type === 'TRANSCRIPT' ||
-              invoice.type === 'ADD_CREDITS'
+              invoice.type === 'ADD_CREDITS' ||
+              invoice.type === 'FREE_CREDITS' ||
+              invoice.type === 'ADDL_FORMATTING' ||
+              invoice.type === 'ADDL_PROOFREADING'
                 ? invoice.amount
                 : 0) -
               (invoice.creditsRefunded || 0) -
