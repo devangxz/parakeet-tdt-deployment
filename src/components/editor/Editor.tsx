@@ -58,6 +58,7 @@ interface EditorProps {
   editorSettings: EditorSettings
   setFontSize: (size: number) => void
   initialEditorData: EditorData
+  highlightNumbersEnabled?: boolean
 }
 
 type Sources = 'user' | 'api' | 'silent'
@@ -68,6 +69,7 @@ export interface EditorHandle {
   clearAllHighlights: () => void
   scrollToCurrentWord: () => void
   getAlignments: () => AlignmentType[]
+  highlightNumbers: () => void
 }
 
 // Wrap the component in forwardRef so the parent can call exposed methods
@@ -85,6 +87,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     editorSettings,
     setFontSize,
     initialEditorData,
+    highlightNumbersEnabled,
   } = props
 
   const ctms = initialCtms // Make CTMs constant
@@ -428,6 +431,31 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     })
   }, [alignments, ctms, typingTimer, quillRef, orderDetails.fileId])
 
+  const highlightNumbers = useCallback(
+    () => {
+      const quill = quillRef.current?.getEditor();
+      if (!quill) return;
+      const quillContent = quill.getContents();
+      const ops = quillContent?.ops;
+      const newOps = ops?.map((op) => {
+        if (typeof op.insert === 'string') {
+          op.insert = op.insert.replace(/\b\d{1,3}(?:,\d{3})*\b/g, '<span class="highlight-number">$&</span>');
+        }
+        return op;
+      });
+      quill.setContents(newOps);
+    },[quillRef]
+  );
+
+  // Add effect to highlight numbers when highlightNumbersEnabled changes
+  useEffect(() => {
+    if (highlightNumbersEnabled) {
+      highlightNumbers()
+    } else {
+      clearHighlights()
+    }
+  }, [highlightNumbersEnabled, highlightNumbers, clearHighlights])
+
   // Create a function to clear any word and line highlights
   const clearAllHighlights = useCallback(() => {
     const quill = quillRef.current?.getEditor()
@@ -517,6 +545,11 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       })
       setRedoStack([])
       scheduleAlignmentUpdate()
+
+      // If number highlighting is enabled, schedule a re-highlight
+      if (highlightNumbersEnabled) {
+        highlightNumbers();
+      }
     }
 
     quill.on('text-change', handleTextChange)
@@ -525,7 +558,14 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       quill.off('text-change', handleTextChange)
       if (typingTimer) clearTimeout(typingTimer)
     }
-  }, [alignments, ctms, typingTimer, scheduleAlignmentUpdate])
+  }, [
+    alignments, 
+    ctms, 
+    typingTimer, 
+    scheduleAlignmentUpdate, 
+    highlightNumbers, 
+    highlightNumbersEnabled
+  ])
   useEffect(() => {
     const originalExecCommand = document.execCommand
     document.execCommand = function (command, ...args) {
@@ -981,6 +1021,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       }
     },
     getAlignments: () => alignments,
+    highlightNumbers,
   }))
 
   return (

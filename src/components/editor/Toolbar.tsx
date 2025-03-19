@@ -13,6 +13,7 @@ import {
   ZoomOutIcon,
   LightningBoltIcon,
 } from '@radix-ui/react-icons'
+import { BinaryIcon } from 'lucide-react'
 
 import PlayerButton from './PlayerButton'
 import { Button } from '../ui/button'
@@ -54,6 +55,7 @@ interface ToolbarProps {
   highlightWordsEnabled: boolean
   setHighlightWordsEnabled: (enabled: boolean) => void
   step: string
+  toggleHighlightNumerics: () => void
 }
 
 export default function Toolbar({
@@ -76,6 +78,7 @@ export default function Toolbar({
   highlightWordsEnabled,
   setHighlightWordsEnabled,
   step,
+  toggleHighlightNumerics,
 }: ToolbarProps) {
   return (
     <TooltipProvider>
@@ -220,6 +223,19 @@ export default function Toolbar({
         </TooltipTrigger>
         <TooltipContent>
           <p>Toggle word highlighting</p>
+        </TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger>
+          <PlayerButton
+            icon={<BinaryIcon className='w-4 h-4' />}
+            tooltip='Highlight numerics'
+            onClick={toggleHighlightNumerics}
+          />
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Hightlight numerics</p>
         </TooltipContent>
       </Tooltip>
 

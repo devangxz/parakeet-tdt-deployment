@@ -180,6 +180,7 @@ function EditorPage() {
     shortcuts: { ...defaultShortcuts },
   })
   const [autoCapitalize, setAutoCapitalize] = useState(true)
+  const [highlightNumbersEnabled, setHighlightNumbersEnabled] = useState(false)
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -665,6 +666,10 @@ function EditorPage() {
     setHighlightWordsEnabled(editorSettings.wordHighlight)
   }, [editorSettings])
 
+  const toggleHighlightNumerics = useCallback(() => {
+    setHighlightNumbersEnabled(prev => !prev)
+  }, [])
+
   return (
     <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
       <Topbar
@@ -709,6 +714,7 @@ function EditorPage() {
         editorSettings={editorSettings}
         editorRef={editorRef}
         step={step}
+        toggleHighlightNumerics={toggleHighlightNumerics}
       />
 
       <div className='flex h-full overflow-hidden'>
@@ -801,6 +807,7 @@ function EditorPage() {
                           }
                         }
                         editorRef={editorRef}
+                        highlightNumbersEnabled={highlightNumbersEnabled}
                       />
 
                       <DiffTabComponent diff={diff} />
