@@ -29,6 +29,7 @@ type FileVersionToCreate = {
   userId: number
   fileId: string
   tag: FileTag
+  s3Key: string
   s3VersionId: string
   extension: string
 }
@@ -107,53 +108,34 @@ export async function uploadFormattingFilesAction(formData: FormData) {
       })
     }
 
-    const filesByExtension = files.reduce<Record<string, FileInfo[]>>(
-      (acc, file) => {
-        const ext = file.extension || ''
-        if (!acc[ext]) {
-          acc[ext] = []
-        }
-        acc[ext].push(file)
-        return acc
-      },
-      {}
-    )
-
     const s3UploadPromises: (UploadDetails & {
       promise: Promise<S3UploadResult>
     })[] = []
 
-    for (const extension in filesByExtension) {
-      const filesOfExtension = filesByExtension[extension]
+    for (let i = 0; i < files.length; i++) {
+      const fileInfo = files[i]
+      const buffer = await fileInfo.file.arrayBuffer()
 
-      for (let i = 0; i < filesOfExtension.length; i++) {
-        const fileInfo = filesOfExtension[i]
-        const buffer = await fileInfo.file.arrayBuffer()
-
-        let mimeType = 'application/octet-stream'
-        const mimeTypes: Record<string, string> = {
-          docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          pdf: 'application/pdf',
-          txt: 'text/plain',
-        }
-        if (fileInfo.extension && fileInfo.extension in mimeTypes) {
-          mimeType = mimeTypes[fileInfo.extension]
-        }
-
-        let s3Key
-        if (i === 0) {
-          s3Key = `${fileId}.${fileInfo.extension}`
-        } else {
-          s3Key = `${fileId}_${i}.${fileInfo.extension}`
-        }
-
-        s3UploadPromises.push({
-          promise: uploadToS3(s3Key, Buffer.from(buffer), mimeType),
-          s3Key,
-          extension: fileInfo.extension,
-          index: i,
-        })
+      let mimeType = 'application/octet-stream'
+      const mimeTypes: Record<string, string> = {
+        docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        pdf: 'application/pdf',
+        txt: 'text/plain',
       }
+      if (fileInfo.extension && fileInfo.extension in mimeTypes) {
+        mimeType = mimeTypes[fileInfo.extension]
+      }
+
+      const s3Key = files.length === 1 
+        ? `${fileId}.${fileInfo.extension}`
+        : `${fileId}_${i + 1}.${fileInfo.extension}`
+
+      s3UploadPromises.push({
+        promise: uploadToS3(s3Key, Buffer.from(buffer), mimeType),
+        s3Key,
+        extension: fileInfo.extension,
+        index: i,
+      })
     }
 
     const s3Results = await Promise.all(
@@ -170,6 +152,7 @@ export async function uploadFormattingFilesAction(formData: FormData) {
         userId: transcriberId,
         fileId,
         tag,
+        s3Key: result.s3Key,
         s3VersionId: result.s3VersionId,
         extension: result.extension,
       })
@@ -177,46 +160,20 @@ export async function uploadFormattingFilesAction(formData: FormData) {
 
     await prisma.$transaction(async (tx) => {
       if (existingVersions.length > 0) {
-        const versionsByExtension = existingVersions.reduce<
-          Record<string, typeof existingVersions>
-        >((acc, version) => {
-          const ext = version.extension || ''
-          if (!acc[ext]) {
-            acc[ext] = []
-          }
-          acc[ext].push(version)
-          return acc
-        }, {})
+        for (const version of existingVersions) {
+          try {
+            logger.info(
+              `Attempting to delete S3 object with key: ${version.s3Key} and versionId: ${version.s3VersionId}`
+            )
 
-        for (const extension in versionsByExtension) {
-          const versionsOfExtension = versionsByExtension[extension].sort(
-            (a, b) =>
-              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-          )
-
-          for (let i = 0; i < versionsOfExtension.length; i++) {
-            const version = versionsOfExtension[i]
-            try {
-              let s3Key
-              if (i === 0) {
-                s3Key = `${fileId}.${version.extension}`
-              } else {
-                s3Key = `${fileId}_${i}.${version.extension}`
-              }
-
-              logger.info(
-                `Attempting to delete S3 object with key: ${s3Key} and versionId: ${version.s3VersionId}`
-              )
-
-              if (version.s3VersionId) {
-                await deleteFileVersionFromS3(s3Key, version.s3VersionId)
-                logger.info(`Successfully deleted S3 object: ${s3Key}`)
-              }
-            } catch (error) {
-              logger.error(
-                `Error deleting S3 version for ${version.id} with key pattern ${fileId}[_index].${version.extension}: ${error}`
-              )
+            if (version.s3Key && version.s3VersionId) {
+              await deleteFileVersionFromS3(version.s3Key, version.s3VersionId)
+              logger.info(`Successfully deleted S3 object: ${version.s3Key}`)
             }
+          } catch (error) {
+            logger.error(
+              `Error deleting S3 version for ${version.id}: ${error}`
+            )
           }
         }
 

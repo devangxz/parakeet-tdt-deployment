@@ -672,5 +672,5 @@
     "diy"
   ],
   "max_format_files": 10,
-  "max_format_files_overrides": {}
+  "format_files_exception_list": []
 }

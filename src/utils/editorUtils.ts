@@ -28,7 +28,7 @@ import {
   MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
   COMMON_ABBREVIATIONS,
   MAX_FORMAT_FILES,
-  MAX_FORMAT_FILES_OVERRIDES,
+  FORMAT_FILES_EXCEPTION_LIST,
 } from '@/constants'
 import { AlignmentType, CTMType, UndoRedoItem } from '@/types/editor'
 import {
@@ -362,11 +362,11 @@ const uploadFormattingFiles = async (
   }
 }
 
-const getMaxFormatFiles = (userId: string | null): number => {
-  if (!userId) return MAX_FORMAT_FILES
+const getMaxFormatFiles = (email: string | null): number | null => {
+  if (!email) return MAX_FORMAT_FILES
 
-  if (userId in MAX_FORMAT_FILES_OVERRIDES) {
-    return MAX_FORMAT_FILES_OVERRIDES[userId as keyof typeof MAX_FORMAT_FILES_OVERRIDES]
+  if (FORMAT_FILES_EXCEPTION_LIST.includes(email)) {
+    return null
   }
 
   return MAX_FORMAT_FILES
@@ -547,6 +547,7 @@ const fetchFileDetails = async ({
       customFormatOption: orderRes.orderDetails.customFormatOption || undefined,
       outputFormat: orderRes.orderDetails.outputFormat || undefined,
       supportingDocuments: orderRes.orderDetails.supportingDocuments || [],
+      email: orderRes.orderDetails.email,
     }
 
     setOrderDetails(orderDetailsFormatted)
@@ -1020,6 +1021,7 @@ const handleSubmit = async ({
       await submitReviewAction(
         Number(orderDetails.orderId),
         orderDetails.fileId,
+        orderDetails.email,
         transcript,
         finalizerComment
       )

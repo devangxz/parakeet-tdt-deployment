@@ -14,6 +14,7 @@ interface OrderDetails {
     instructions: string;
     user_id: number;
     LLMDone: boolean;
+    email: string;
 }
 
 async function getOrderUserDetails(
@@ -31,6 +32,7 @@ async function getOrderUserDetails(
         instructions: '',
         user_id: 0,
         LLMDone: false,
+        email: '',
     };
     try {
         // Get order details
@@ -107,6 +109,7 @@ async function getOrderUserDetails(
             instructions: order?.instructions ?? '',
             user_id: order?.userId ?? 0,
             LLMDone: false,
+            email: order?.user.email ?? '',
         };
 
         if (llmFileVersion && llmFileVersion.s3VersionId) {

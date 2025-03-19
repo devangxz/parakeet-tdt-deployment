@@ -16,7 +16,8 @@ import { getMaxFormatFiles } from '@/utils/editorUtils'
 
 export default async function submitReview(
   transcriberId: number,
-  order: Order
+  order: Order,
+  email: string
 ) {
   logger.info(`--> OrderTranscriptionCFFlow:submitReview ${order.fileId}`)
   try {
@@ -79,8 +80,8 @@ export default async function submitReview(
         )
       }
 
-      const maxFiles = getMaxFormatFiles(order.userId?.toString())
-      if (fileVersions.length > maxFiles) {
+      const maxFiles = getMaxFormatFiles(email)
+      if (maxFiles !== null && fileVersions.length > maxFiles) {
         logger.error(
           `OrderFlow:submitReview - Too many files uploaded: ${fileVersions.length} (maximum is ${maxFiles})`
         )

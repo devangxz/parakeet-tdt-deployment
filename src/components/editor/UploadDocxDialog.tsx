@@ -58,8 +58,8 @@ const UploadDocxDialog = ({
   const [validFilesSelected, setValidFilesSelected] = useState(false)
   
   const maxFiles = useMemo(() => 
-    getMaxFormatFiles(orderDetails.userId || null), 
-    [orderDetails.userId]
+    getMaxFormatFiles(orderDetails.email || null), 
+    [orderDetails.email]
   )
 
   useEffect(() => {
@@ -94,7 +94,7 @@ const UploadDocxDialog = ({
     )
 
     const validFileCount =
-      uploadedFiles.length > 0 && uploadedFiles.length <= maxFiles
+      uploadedFiles.length > 0 && (maxFiles === null || uploadedFiles.length <= maxFiles)
 
     setValidFilesSelected(allFilesValid && validFileCount)
   }, [uploadedFiles, uploadedExtensions, allowedFormats, isFormattingOrder, maxFiles])
@@ -102,7 +102,7 @@ const UploadDocxDialog = ({
   const handleUpload = async () => {
     if (isFormattingOrder) {
       if (!validFilesSelected) {
-        if (uploadedFiles.length > maxFiles) {
+        if (maxFiles !== null && uploadedFiles.length > maxFiles) {
           toast.error(`Maximum ${maxFiles} files allowed`)
         } else {
           toast.error('Please select files with the allowed formats')
@@ -143,7 +143,7 @@ const UploadDocxDialog = ({
     if (isFormattingOrder) {
       const files = Array.from(event.target.files)
 
-      if (files.length > maxFiles) {
+      if (maxFiles !== null && files.length > maxFiles) {
         toast.error(`Maximum ${maxFiles} files allowed`)
         event.target.value = ''
         return

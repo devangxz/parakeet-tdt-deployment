@@ -17,7 +17,8 @@ import { getMaxFormatFiles } from '@/utils/editorUtils'
 export async function submitFinalize(
   transcriberId: number,
   order: Order,
-  finalizerComment: string
+  finalizerComment: string,
+  email: string
 ) {
   logger.info(`--> OrderTranscriptionCFFlow:submitFinalize ${order.fileId}`)
   try {
@@ -62,8 +63,8 @@ export async function submitFinalize(
         )
       }
 
-      const maxFiles = getMaxFormatFiles(order.userId?.toString())
-      if (finalizerVersions.length > maxFiles) {
+      const maxFiles = getMaxFormatFiles(email)
+      if (maxFiles !== null && finalizerVersions.length > maxFiles) {
         logger.error(
           `OrderFlow:submitFinalize - Too many files uploaded by finalizer: ${finalizerVersions.length} (maximum is ${maxFiles})`
         )

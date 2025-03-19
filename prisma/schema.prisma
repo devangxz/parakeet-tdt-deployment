@@ -622,6 +622,7 @@ model FileVersion {
   id          Int      @id @default(autoincrement())
   fileId      String   @map("file_id")
   commitHash  String?  @map("commit_hash")
+  s3Key       String?  @map("s3_key")
   s3VersionId String?  @map("s3_version_id")
   userId      Int?     @map("user_id")
   createdAt   DateTime @default(now()) @map("created_at")
