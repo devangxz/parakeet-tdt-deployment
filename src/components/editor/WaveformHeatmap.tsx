@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 
 import formatDuration from '@/utils/formatDuration';
 
@@ -16,6 +16,7 @@ export function WaveformHeatmap({
   duration
 }: WaveformHeatmapProps) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const tooltipRef = React.useRef<HTMLDivElement>(null);
 
   const getHeatmapColor = (count: number): string => {
     const colors = [
@@ -58,6 +59,20 @@ export function WaveformHeatmap({
   };
 
   const timeMarkers = generateTimeMarkers();
+
+  const handleHoverHeatmap = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!canvasRef.current || !tooltipRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const relativeX = e.clientX - rect.left;
+    const percentage = (relativeX / rect.width) * 100;
+    const time = (percentage / 100) * duration;
+    const timeString = formatDuration(time);
+    // Position relative to the container
+    tooltipRef.current.style.display = 'block';
+    tooltipRef.current.style.left = `${relativeX}px`;
+    tooltipRef.current.textContent = timeString;
+  }, [duration]);
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -146,10 +161,21 @@ export function WaveformHeatmap({
             backgroundSize: 'cover',
             backgroundPosition: 'center'
           }}
+          onMouseMove={handleHoverHeatmap}
+          onMouseLeave={() => {
+            if (tooltipRef.current) {
+              tooltipRef.current.style.display = 'none';
+            }
+          }}
         >
           <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+
         </div>
-        
+        <div
+          ref={tooltipRef}
+          className="absolute z-50 bg-primary text-white px-1 py-0.5 rounded-md text-[11px] pointer-events-none hidden"
+          style={{ transform: 'translate(-50%, -100%)', marginTop: '-5px' }}
+        />
         <div className="relative h-6 px-1">
           <div className="absolute left-0 right-0 top-0 h-1 flex items-center">
             <div className="absolute left-0 w-0.5 h-1.5 bg-gray-300" />
