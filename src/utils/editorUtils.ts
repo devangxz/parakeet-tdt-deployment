@@ -27,6 +27,8 @@ import {
   FILE_CACHE_URL,
   MINIMUM_AUDIO_PLAYBACK_PERCENTAGE,
   COMMON_ABBREVIATIONS,
+  MAX_FORMAT_FILES,
+  FORMAT_FILES_EXCEPTION_LIST,
 } from '@/constants'
 import { AlignmentType, CTMType, UndoRedoItem } from '@/types/editor'
 import {
@@ -360,6 +362,16 @@ const uploadFormattingFiles = async (
   }
 }
 
+const getMaxFormatFiles = (email: string | null): number | null => {
+  if (!email) return MAX_FORMAT_FILES
+
+  if (FORMAT_FILES_EXCEPTION_LIST.includes(email)) {
+    return null
+  }
+
+  return MAX_FORMAT_FILES
+}
+
 const handleFilesUpload = async (
   payload: UploadFilesType,
   orderDetailsId: string,
@@ -535,6 +547,7 @@ const fetchFileDetails = async ({
       customFormatOption: orderRes.orderDetails.customFormatOption || undefined,
       outputFormat: orderRes.orderDetails.outputFormat || undefined,
       supportingDocuments: orderRes.orderDetails.supportingDocuments || [],
+      email: orderRes.orderDetails.email,
     }
 
     setOrderDetails(orderDetailsFormatted)
@@ -1008,6 +1021,7 @@ const handleSubmit = async ({
       await submitReviewAction(
         Number(orderDetails.orderId),
         orderDetails.fileId,
+        orderDetails.email,
         transcript,
         finalizerComment
       )
@@ -1851,6 +1865,7 @@ export {
   uploadTextFile,
   uploadFile,
   uploadFormattingFiles,
+  getMaxFormatFiles,
   handleFilesUpload,
   regenDocx,
   reportHandler,
