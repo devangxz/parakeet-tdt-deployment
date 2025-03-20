@@ -1,7 +1,7 @@
 'use client'
 
 import debounce from 'lodash/debounce'
-import { Search, Play, Book } from 'lucide-react'
+import { Search, Play, Book, Loader2 } from 'lucide-react'
 import { Delta } from 'quill/core'
 import React, {
   useRef,
@@ -58,6 +58,7 @@ interface EditorProps {
   editorSettings: EditorSettings
   setFontSize: (size: number) => void
   initialEditorData: EditorData
+  step: string
   highlightNumbersEnabled?: boolean
 }
 
@@ -69,6 +70,7 @@ export interface EditorHandle {
   clearAllHighlights: () => void
   scrollToCurrentWord: () => void
   getAlignments: () => AlignmentType[]
+  removeTimestamps: () => void
   highlightNumbers: () => void
 }
 
@@ -87,6 +89,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     editorSettings,
     setFontSize,
     initialEditorData,
+    step,
     highlightNumbersEnabled,
   } = props
 
@@ -102,6 +105,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
   const [isTyping, setIsTyping] = useState(false)
   const [alignmentWorkerRunning, setAlignmentWorkerRunning] = useState(false)
   const [isEditorFocused, setIsEditorFocused] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [showCustomContextMenu, setShowCustomContextMenu] = useState<boolean>(
     !editorSettings.useNativeContextMenu
   )
@@ -142,6 +146,21 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     quill.container.style.fontSize = '16px'
   }, [])
 
+  const formatTranscriptWithSpeakers = useCallback((transcript: string, speakerOptions: { fn: string, ln: string }[]) => {
+    const speakersMap = new Map();
+    speakerOptions.forEach((speaker, index) => {
+      speakersMap.set(`S${index + 1}`, `${speaker.fn} ${speaker.ln}`);
+    });
+
+    transcript = transcript.replace(/(S\d+):/g, (match, speakerCode) => {
+        const fullName = speakersMap.get(speakerCode);
+        if (!fullName) return match; // If no mapping found, return original
+        return `${fullName}:`;
+    });
+
+    return transcript;
+  }, [])
+
   // Initialize editor state from the initialEditorData prop
   const {
     content: initialContent,
@@ -161,8 +180,14 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
         delta: new Delta(item.delta.ops),
         oldDelta: new Delta(item.oldDelta.ops),
       }))
+
+    const speakerOptions = orderDetails.speakerOptions;
+    let transcriptWithSpeakers = null;
+    if(step === 'CF') {
+      transcriptWithSpeakers = formatTranscriptWithSpeakers(transcript, speakerOptions);
+    }
     return {
-      content: getFormattedContent(transcript),
+      content: getFormattedContent(transcriptWithSpeakers || transcript),
       undoStack: reconstructStack(editorData.undoStack),
       redoStack: reconstructStack(editorData.redoStack),
     }
@@ -470,6 +495,71 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     // Reset any stored last highlight
     lastHighlightedRef.current = null
   }, [quillRef])
+
+  const removeTimestampsToolbar = useCallback(() => {
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return;
+    
+    setIsLoading(true);
+    
+    const text = quill.getText();
+    
+    setTimeout(() => {
+      try {
+        const timestampRegex = /^\d+:[0-5][0-9]:[0-5][0-9]\.\d+\s/gm;
+        const matches = Array.from(text.matchAll(timestampRegex));
+        
+        if (matches.length === 0) {
+          setIsLoading(false);
+          return;
+        }
+        
+        const sortedMatches = matches.sort((a, b) => 
+          (b.index ?? 0) - (a.index ?? 0)
+        );
+        
+        // Create a working copy of the text that we'll modify
+        let workingText = text;
+        
+        // Process matches in chunks to prevent UI freeze
+        const processBatch = (batchIndex: number) => {
+          const startIdx = batchIndex;
+          const endIdx =  sortedMatches.length
+          
+          // Process this batch
+          for (let i = startIdx; i < endIdx; i++) {
+            const match = sortedMatches[i];
+            if (match.index !== undefined) {
+              // Remove the timestamp from our working text
+              workingText = workingText.substring(0, match.index) + 
+                            workingText.substring(match.index + match[0].length);
+            }
+          }
+          
+          // If we've finished all batches, update the editor
+          if (endIdx >= sortedMatches.length) {
+            // Replace the entire content at once
+            quill.setContents(getFormattedContent(workingText));
+            
+            // Restore selection if needed
+            if (selection) {
+              quill.setSelection(selection);
+            }
+            updateAlignments();
+            setIsLoading(false);
+          } else {
+            // Schedule the next batch with setTimeout to keep UI responsive
+            setTimeout(() => processBatch(endIdx), 0);
+          }
+        };
+        
+        // Start processing the first batch
+        processBatch(0);
+      } catch (error) {
+        setIsLoading(false);
+      }
+    }, 0);
+  }, [quillRef, updateAlignments, selection]);
 
   useEffect(() => {
     try {
@@ -1021,6 +1111,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       }
     },
     getAlignments: () => alignments,
+    removeTimestamps: removeTimestampsToolbar,
     highlightNumbers,
   }))
 
@@ -1037,6 +1128,14 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
         onBlur={handleBlur}
         onFocus={handleFocus}
       />
+
+      {
+        isLoading && (
+          <div className='absolute inset-0 flex items-center justify-center bg-black bg-opacity-50'>
+            <Loader2 className='w-6 h-6 animate-spin text-white' />
+          </div>
+        )
+      }
 
       {showCustomContextMenu && menuPosition && (
         <div

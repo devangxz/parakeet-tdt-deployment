@@ -29,6 +29,7 @@ interface EditorTabComponentProps {
   editorSettings: EditorSettings
   initialEditorData: EditorData
   editorRef?: React.Ref<EditorHandle>
+  step: string
   highlightNumbersEnabled: boolean
 }
 
@@ -48,6 +49,7 @@ export const EditorTabComponent = ({
   editorSettings,
   initialEditorData,
   editorRef,
+  step,
   highlightNumbersEnabled,
 }: EditorTabComponentProps) => (
   <TabsContent
@@ -78,6 +80,7 @@ export const EditorTabComponent = ({
             setEditedSegments={setEditedSegments}
             editorSettings={editorSettings}
             initialEditorData={initialEditorData}
+            step={step}
             highlightNumbersEnabled={highlightNumbersEnabled}
           />
         </div>

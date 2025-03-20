@@ -36,6 +36,21 @@ export async function getOrderDetailsAction(fileId: string) {
         error: 'Order not found',
       }
     }
+    
+    const invoiceFile = await prisma.invoiceFile.findFirst({
+      where: {
+        fileId,
+      }
+    });
+
+    const invoice = await prisma.invoice.findUnique({
+      where: {
+        invoiceId: invoiceFile?.invoiceId,
+      }
+    });
+
+    const options = JSON.parse(invoice?.options ?? '{}');
+    const speakers: { fn: string, ln: string }[] = options.sn ? options.sn[fileId] : [];
 
     const orderId = order?.id
 
@@ -149,6 +164,7 @@ export async function getOrderDetailsAction(fileId: string) {
       outputFormat: userRateInfo?.outputFormat || null,
       supportingDocuments: supportingDocuments,
       email: resultJson.email,
+      speakerOptions: speakers
     }
 
     logger.info(`orderDetails fetched for file ${resultJson.file_id}`)

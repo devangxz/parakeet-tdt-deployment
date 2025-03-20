@@ -29,9 +29,9 @@ export async function updateQCStatus({
     return { success: false, s: 'User not found' }
   }
 
-  if (user.role !== Role.QC) {
+  if (!['QC', 'REVIEWER'].includes(user.role)) {
     logger.error(`User is not a QC: ${userEmail}`)
-    return { success: false, s: 'User is not a QC' }
+    return { success: false, s: 'User is not a QC or a Reviewer' }
   }
 
   try {
