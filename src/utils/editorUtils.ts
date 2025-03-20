@@ -1558,10 +1558,10 @@ const scrollEditorToPos = (quill: Quill, pos: number) => {
 function getFormattedContent(text: string): Op[] {
   const formattedContent: Op[] = []
   let lastIndex = 0
-
+  
   // Update pattern to explicitly include the timestamp+blank pattern
   const pattern =
-    /(?:(\d:\d{2}:\d{2}\.\d(?:\s+(?:S\d+:|Speaker\s+\d+:|[A-Za-z][A-Za-z\s]*:))?|\[\d:\d{2}:\d{2}\.\d\](?:\s+____)?|\[[^\]]+\])|(S\d+:|Speaker\s+\d+:|[A-Za-z][A-Za-z\s]*:))/g
+    /((?:^|\n)(?:\d{1,2}:\d{2}:\d{2}\.\d(?:\s+(?:S\d+:|Speaker\s?\d+:|[A-Za-z][A-Za-z\s]*:))?|S\d+:|Speaker\s?\d+:|[A-Za-z][A-Za-z\s]*:))|(\[\d{1,2}:\d{2}:\d{2}\.\d\](?:\s+____)?|\[[^\]]+\])/g
   let match: RegExpExecArray | null
 
   while ((match = pattern.exec(text)) !== null) {
@@ -1573,16 +1573,25 @@ function getFormattedContent(text: string): Op[] {
 
     // Rule 1: TS + Speaker labels or standalone speaker labels
     if (
-      matchedText.match(/^\d:\d{2}:\d{2}\.\d/) ||
-      matchedText.match(/^(?:S\d+:|Speaker\s+\d+:|[A-Za-z][A-Za-z\s]*:)$/)
+      match[1] &&
+      (matchedText.match(/\d{1,2}:\d{2}:\d{2}\.\d/) ||
+        matchedText.match(/(?:S\d+:|Speaker\s?\d+:|[A-Za-z][A-Za-z\s]*:)/))
     ) {
-      formattedContent.push({
-        insert: matchedText,
-        attributes: { bold: true },
-      })
+      if (matchedText.startsWith('\n')) {
+        formattedContent.push({ insert: '\n' })
+        formattedContent.push({
+          insert: matchedText.substring(1),
+          attributes: { bold: true },
+        })
+      } else {
+        formattedContent.push({
+          insert: matchedText,
+          attributes: { bold: true },
+        })
+      }
     }
     // Rule 2: TS + blank (complete pattern)
-    else if (matchedText.match(/\[\d:\d{2}:\d{2}\.\d\]\s+____/)) {
+    else if (matchedText.match(/\[\d{1,2}:\d{2}:\d{2}\.\d\]\s+____/)) {
       formattedContent.push({
         insert: matchedText,
         attributes: { color: '#FF0000' },
