@@ -54,7 +54,7 @@ export async function deleteAccount(password: string) {
     })
 
     if (!userDetails) {
-      logger.error('User or user role is undefined')
+      logger.error(`user not found ${user?.email}`)
       return {
         success: false,
         message: 'User role is undefined',
@@ -74,20 +74,19 @@ export async function deleteAccount(password: string) {
       }
     }
 
-    logger.info('Fetching orders for deletion')
+    logger.info(`Fetching orders for deletion for ${userDetails.email}`)
     const orders = await prisma.order.findMany({
       where: { userId },
       select: { id: true },
     })
-    const orderIds = orders.map((order) => order.id)
+    const orderIds = orders?.map((order) => order.id) ?? []
 
-    logger.info('Fetching files for deletion')
     const files = await prisma.file.findMany({
       where: { userId },
       select: { fileId: true },
     })
 
-    const fileIds = files.map((file) => file.fileId.toString())
+    const fileIds = files?.map((file) => file.fileId.toString()) ?? []
 
     await Promise.all(
       fileIds.map(async (fileId: string) => {
@@ -96,6 +95,8 @@ export async function deleteAccount(password: string) {
         return { fileId, status: 'deleted' }
       })
     )
+
+    logger.info(`Deleted files for ${userDetails?.email}`)
 
     const operations = []
     const customerRoles = Object.values(CUSTOMERS)
