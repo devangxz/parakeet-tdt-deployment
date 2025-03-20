@@ -14,6 +14,7 @@ import submitReview from '@/services/editor-service/submit-review-file'
 export async function submitReviewAction(
   orderId: number,
   fileId: string,
+  email: string,
   transcript: string,
   finalizerComment: string
 ) {
@@ -60,7 +61,7 @@ export async function submitReviewAction(
     }
 
     if (order.status === OrderStatus.REVIEWER_ASSIGNED) {
-      const { success, message } = await submitReview(transcriberId, order)
+      const { success, message } = await submitReview(transcriberId, order, email)
 
       if (!success) {
         return {
@@ -72,7 +73,8 @@ export async function submitReviewAction(
       const { success, message } = await submitFinalize(
         transcriberId,
         order,
-        finalizerComment
+        finalizerComment,
+        email
       )
       if (!success) {
         return {

@@ -15,6 +15,7 @@ import {
 } from '../ui/dialog'
 import { Label } from '../ui/label'
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group'
+import { ScrollArea } from '../ui/scroll-area'
 import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
 import { downloadBlankDocxAction } from '@/app/actions/editor/download-docx'
 import { getCustomFormatFilesSignedUrl } from '@/app/actions/order/custom-format-files-signed-url'
@@ -237,60 +238,69 @@ const DownloadDocxDialog = ({
                     Available Files:
                   </h3>
 
-                  {Object.entries(filesByExtension).map(
-                    ([extension, files]) => (
-                      <div
-                        key={extension}
-                        className='border rounded-md p-3 shadow-sm mb-4'
-                      >
-                        <div className='flex items-center mb-2'>
-                          <Badge
-                            variant='outline'
-                            className='mr-2 uppercase text-xs font-semibold px-2 py-0.5 bg-secondary'
+                  <ScrollArea className={`w-full ${formattingFiles.length > 6 ? 'h-[400px]' : ''}`}>
+                    <div className='space-y-4'>
+                      {Object.entries(filesByExtension).map(
+                        ([extension, files]) => (
+                          <div
+                            key={extension}
+                            className='border rounded-md p-3 shadow-sm'
                           >
-                            {extension}
-                          </Badge>
-                          <span className='text-sm font-medium text-muted-foreground'>
-                            {files.length} file{files.length !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-                        <div className='space-y-2'>
-                          {files.map((file, index) => (
-                            <div
-                              key={index}
-                              className={`flex justify-between items-center ${
-                                index !== files.length - 1
-                                  ? 'border-b pb-2'
-                                  : ''
-                              }`}
-                            >
-                              <span className='text-sm truncate max-w-[250px] font-medium'>
-                                {files.length > 1
-                                  ? `${file.filename}(${index + 1}).${
-                                      file.extension
-                                    }`
-                                  : `${file.filename}.${file.extension}`}
-                              </span>
-                              <Button
-                                size='sm'
-                                asChild
-                                className='bg-primary hover:bg-primary/90'
+                            <div className='flex items-center mb-2'>
+                              <Badge
+                                variant='outline'
+                                className='mr-2 uppercase text-xs font-semibold px-2 py-0.5 bg-secondary'
                               >
-                                <a
-                                  href={file.signedUrl}
-                                  target='_blank'
-                                  rel='noreferrer'
-                                  className='flex items-center'
-                                >
-                                  Download
-                                </a>
-                              </Button>
+                                {extension}
+                              </Badge>
+                              <span className='text-sm font-medium text-muted-foreground'>
+                                {files.length} file{files.length !== 1 ? 's' : ''}
+                              </span>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  )}
+                            <div className='space-y-2'>
+                              {files.map((file, index) => (
+                                <div
+                                  key={index}
+                                  className={`flex justify-between items-center ${
+                                    index !== files.length - 1
+                                      ? 'border-b pb-2'
+                                      : ''
+                                  }`}
+                                >
+                                  <span 
+                                    className='text-sm truncate max-w-[250px] font-medium'
+                                    title={files.length > 1
+                                      ? `${file.filename}(${index + 1}).${file.extension}`
+                                      : `${file.filename}.${file.extension}`}
+                                  >
+                                    {files.length > 1
+                                      ? `${file.filename}(${index + 1}).${
+                                          file.extension
+                                        }`
+                                      : `${file.filename}.${file.extension}`}
+                                  </span>
+                                  <Button
+                                    size='sm'
+                                    asChild
+                                    className='bg-primary hover:bg-primary/90'
+                                  >
+                                    <a
+                                      href={file.signedUrl}
+                                      target='_blank'
+                                      rel='noreferrer'
+                                      className='flex items-center'
+                                    >
+                                      Download
+                                    </a>
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </ScrollArea>
                 </div>
               )}
             </div>

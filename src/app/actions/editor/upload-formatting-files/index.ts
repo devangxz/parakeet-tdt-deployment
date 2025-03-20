@@ -18,9 +18,6 @@ type UploadDetails = {
   s3Key: string
   extension: string
   index: number
-  isUpdate: boolean
-  versionId?: number
-  oldS3VersionId?: string
 }
 
 type S3UploadResult = {
@@ -28,17 +25,11 @@ type S3UploadResult = {
   [key: string]: unknown
 }
 
-type FileVersionToUpdate = {
-  id: number
-  oldS3VersionId?: string
-  newS3VersionId: string
-  s3Key: string
-}
-
 type FileVersionToCreate = {
   userId: number
   fileId: string
   tag: FileTag
+  s3Key: string
   s3VersionId: string
   extension: string
 }
@@ -96,86 +87,55 @@ export async function uploadFormattingFilesAction(formData: FormData) {
       tag = FileTag.CF_OM_DELIVERED
     }
 
-    const filesByExtension = new Map<string, FileInfo[]>()
+    const existingVersions = await prisma.fileVersion.findMany({
+      where: {
+        userId: transcriberId,
+        fileId,
+        tag,
+      },
+    })
 
+    const files: FileInfo[] = []
     for (let i = 0; i < fileCount; i++) {
       const file = formData.get(`file-${i}`) as File | null
       if (!file) continue
 
       const extension = formData.get(`extension-${i}`) as string
-
-      if (!filesByExtension.has(extension)) {
-        filesByExtension.set(extension, [])
-      }
-
-      filesByExtension.get(extension)?.push({
+      files.push({
         file,
         index: i,
         extension,
       })
     }
 
-    const extensionsToProcess = Array.from(filesByExtension.keys())
-
-    const fileVersionsToCreate: FileVersionToCreate[] = []
-    const fileVersionsToUpdate: FileVersionToUpdate[] = []
     const s3UploadPromises: (UploadDetails & {
       promise: Promise<S3UploadResult>
     })[] = []
 
-    for (const extension of extensionsToProcess) {
-      const files = filesByExtension.get(extension) || []
+    for (let i = 0; i < files.length; i++) {
+      const fileInfo = files[i]
+      const buffer = await fileInfo.file.arrayBuffer()
 
-      const existingVersions = await prisma.fileVersion.findMany({
-        where: {
-          userId: transcriberId,
-          fileId,
-          tag,
-          extension,
-        },
-        orderBy: {
-          createdAt: 'asc',
-        },
-      })
-
-      for (let i = 0; i < files.length; i++) {
-        const fileInfo = files[i]
-        const buffer = await fileInfo.file.arrayBuffer()
-
-        let mimeType = 'application/octet-stream'
-        const mimeTypes: Record<string, string> = {
-          docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          pdf: 'application/pdf',
-          txt: 'text/plain',
-        }
-        if (extension && extension in mimeTypes) {
-          mimeType = mimeTypes[extension]
-        }
-
-        const existingVersion =
-          i < existingVersions.length ? existingVersions[i] : null
-
-        let s3Key
-        if (i === 0) {
-          s3Key = `${fileId}.${extension}`
-        } else {
-          s3Key = `${fileId}_${i}.${extension}`
-        }
-
-        const uploadDetails: UploadDetails = {
-          s3Key,
-          extension,
-          index: i,
-          isUpdate: !!existingVersion,
-          versionId: existingVersion?.id,
-          oldS3VersionId: existingVersion?.s3VersionId || undefined,
-        }
-
-        s3UploadPromises.push({
-          promise: uploadToS3(s3Key, Buffer.from(buffer), mimeType),
-          ...uploadDetails,
-        })
+      let mimeType = 'application/octet-stream'
+      const mimeTypes: Record<string, string> = {
+        docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        pdf: 'application/pdf',
+        txt: 'text/plain',
       }
+      if (fileInfo.extension && fileInfo.extension in mimeTypes) {
+        mimeType = mimeTypes[fileInfo.extension]
+      }
+
+      const s3Key = files.length === 1 
+        ? `${fileId}.${fileInfo.extension}`
+        : `${fileId}_${i + 1}.${fileInfo.extension}`
+
+      s3UploadPromises.push({
+        promise: uploadToS3(s3Key, Buffer.from(buffer), mimeType),
+        s3Key,
+        extension: fileInfo.extension,
+        index: i,
+      })
     }
 
     const s3Results = await Promise.all(
@@ -187,52 +147,54 @@ export async function uploadFormattingFilesAction(formData: FormData) {
       )
     )
 
-    for (const result of s3Results) {
-      if (result.isUpdate && result.versionId) {
-        fileVersionsToUpdate.push({
-          id: result.versionId,
-          oldS3VersionId: result.oldS3VersionId,
-          newS3VersionId: result.s3VersionId,
-          s3Key: result.s3Key,
-        })
-      } else {
-        fileVersionsToCreate.push({
-          userId: transcriberId,
-          fileId,
-          tag,
-          s3VersionId: result.s3VersionId,
-          extension: result.extension,
-        })
-      }
-    }
+    const fileVersionsToCreate: FileVersionToCreate[] = s3Results.map(
+      (result) => ({
+        userId: transcriberId,
+        fileId,
+        tag,
+        s3Key: result.s3Key,
+        s3VersionId: result.s3VersionId,
+        extension: result.extension,
+      })
+    )
 
     await prisma.$transaction(async (tx) => {
+      if (existingVersions.length > 0) {
+        for (const version of existingVersions) {
+          try {
+            logger.info(
+              `Attempting to delete S3 object with key: ${version.s3Key} and versionId: ${version.s3VersionId}`
+            )
+
+            if (version.s3Key && version.s3VersionId) {
+              await deleteFileVersionFromS3(version.s3Key, version.s3VersionId)
+              logger.info(`Successfully deleted S3 object: ${version.s3Key}`)
+            }
+          } catch (error) {
+            logger.error(
+              `Error deleting S3 version for ${version.id}: ${error}`
+            )
+          }
+        }
+
+        await tx.fileVersion.deleteMany({
+          where: {
+            userId: transcriberId,
+            fileId,
+            tag,
+          },
+        })
+      }
+
       if (fileVersionsToCreate.length > 0) {
         await tx.fileVersion.createMany({
           data: fileVersionsToCreate,
         })
       }
-
-      for (const version of fileVersionsToUpdate) {
-        await tx.fileVersion.update({
-          where: { id: version.id },
-          data: { s3VersionId: version.newS3VersionId },
-        })
-
-        if (version.oldS3VersionId) {
-          try {
-            await deleteFileVersionFromS3(version.s3Key, version.oldS3VersionId)
-          } catch (error) {
-            logger.error(
-              `Error deleting old version ${version.oldS3VersionId}: ${error}`
-            )
-          }
-        }
-      }
     })
 
     logger.info(
-      `${s3Results.length} files uploaded successfully for formatting order ${fileId}`
+      `${s3Results.length} files uploaded successfully for formatting order ${fileId} (replaced ${existingVersions.length} existing files)`
     )
     return {
       success: true,

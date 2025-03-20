@@ -7,14 +7,23 @@
     "moduleResolution": "node",
     "isolatedModules": false,
     "incremental": false,
-    "jsx": "react",
+    "jsx": "react-jsx",
     "plugins": []
   },
   "include": [
+    "src/types/diff_match_patch.d.ts",
+    "src/types/openai_chat.d.ts",
+    "src/types/upload/index.ts",
+    "src/types/next-auth.d.ts",
     "src/workers/asrWorker.ts",
     "src/lib/**/*",
     "src/services/**/*",
     "src/scripts/manageASRWorker.ts"
   ],
-  "exclude": ["node_modules", "**/*.test.ts", "**/*.spec.ts"]
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "src/services/editor-service/**/*"
+  ]
 }

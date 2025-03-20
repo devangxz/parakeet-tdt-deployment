@@ -1,7 +1,7 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { FileUp } from 'lucide-react'
 import { Session } from 'next-auth'
-import { ChangeEvent, useEffect, useState } from 'react'
+import { ChangeEvent, useEffect, useState, useMemo } from 'react'
 import { toast } from 'sonner'
 
 import { Badge } from '../ui/badge'
@@ -13,9 +13,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '../ui/dialog'
+import { ScrollArea } from '../ui/scroll-area'
 import { OrderDetails } from '@/app/editor/[fileId]/page'
 import {
   ButtonLoading,
+  getMaxFormatFiles,
   handleFilesUpload,
   uploadFile,
   uploadFormattingFiles,
@@ -50,10 +52,15 @@ const UploadDocxDialog = ({
 }: UploadDocxDialogProps) => {
   const [open, setOpen] = useState(false)
   const [isFormattingOrder, setIsFormattingOrder] = useState(false)
-  const [requiredFormats, setRequiredFormats] = useState<string[]>([])
+  const [allowedFormats, setAllowedFormats] = useState<string[]>([])
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
   const [uploadedExtensions, setUploadedExtensions] = useState<string[]>([])
   const [validFilesSelected, setValidFilesSelected] = useState(false)
+  
+  const maxFiles = useMemo(() => 
+    getMaxFormatFiles(orderDetails.email || null), 
+    [orderDetails.email]
+  )
 
   useEffect(() => {
     setIsFormattingOrder(orderDetails.orderType === 'FORMATTING')
@@ -64,7 +71,7 @@ const UploadDocxDialog = ({
         .map((format) => format.trim().toLowerCase())
         .filter((format) => format !== '')
 
-      setRequiredFormats(formats)
+      setAllowedFormats(Array.from(new Set(formats)))
     }
   }, [orderDetails])
 
@@ -82,31 +89,24 @@ const UploadDocxDialog = ({
       return
     }
 
-    const requiredFormatCounts = requiredFormats.reduce((acc, format) => {
-      acc[format] = (acc[format] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-
-    const uploadedFormatCounts = uploadedExtensions.reduce((acc, ext) => {
-      acc[ext] = (acc[ext] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
-
-    const exactMatch = Object.entries(requiredFormatCounts).every(
-      ([format, count]) => uploadedFormatCounts[format] === count
+    const allFilesValid = uploadedExtensions.every((ext) =>
+      allowedFormats.includes(ext)
     )
 
-    const noExtraFormats = Object.keys(uploadedFormatCounts).every(
-      (format) => requiredFormatCounts[format] !== undefined
-    )
+    const validFileCount =
+      uploadedFiles.length > 0 && (maxFiles === null || uploadedFiles.length <= maxFiles)
 
-    setValidFilesSelected(exactMatch && noExtraFormats)
-  }, [uploadedFiles, uploadedExtensions, requiredFormats, isFormattingOrder])
+    setValidFilesSelected(allFilesValid && validFileCount)
+  }, [uploadedFiles, uploadedExtensions, allowedFormats, isFormattingOrder, maxFiles])
 
   const handleUpload = async () => {
     if (isFormattingOrder) {
       if (!validFilesSelected) {
-        toast.error('Please select exactly the required file formats')
+        if (maxFiles !== null && uploadedFiles.length > maxFiles) {
+          toast.error(`Maximum ${maxFiles} files allowed`)
+        } else {
+          toast.error('Please select files with the allowed formats')
+        }
         return
       }
 
@@ -143,42 +143,25 @@ const UploadDocxDialog = ({
     if (isFormattingOrder) {
       const files = Array.from(event.target.files)
 
+      if (maxFiles !== null && files.length > maxFiles) {
+        toast.error(`Maximum ${maxFiles} files allowed`)
+        event.target.value = ''
+        return
+      }
+
       const extensions = files.map((file) => {
         const parts = file.name.split('.')
         return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : ''
       })
 
-      const requiredFormatCounts = requiredFormats.reduce((acc, format) => {
-        acc[format] = (acc[format] || 0) + 1
-        return acc
-      }, {} as Record<string, number>)
-
-      const uploadedFormatCounts = extensions.reduce((acc, ext) => {
-        acc[ext] = (acc[ext] || 0) + 1
-        return acc
-      }, {} as Record<string, number>)
-
-      const extraFormats = Object.keys(uploadedFormatCounts).filter(
-        (format) => !requiredFormatCounts[format]
+      const invalidExtensions = extensions.filter(
+        (ext) => !allowedFormats.includes(ext)
       )
 
-      if (extraFormats.length > 0) {
-        toast.error(`File format(s) not required: ${extraFormats.join(', ')}`)
-        event.target.value = ''
-        return
-      }
-
-      const excessiveFormats = Object.entries(uploadedFormatCounts).filter(
-        ([format, count]) => count > (requiredFormatCounts[format] || 0)
-      )
-
-      if (excessiveFormats.length > 0) {
-        const formatErrors = excessiveFormats.map(
-          ([format, count]) =>
-            `${format}: have ${count}, need ${requiredFormatCounts[format]}`
-        )
+      if (invalidExtensions.length > 0) {
         toast.error(
-          `Too many files of certain formats: ${formatErrors.join(', ')}`
+          `Invalid file format(s): ${invalidExtensions.join(', ')}. 
+          Allowed formats: ${allowedFormats.join(', ')}`
         )
         event.target.value = ''
         return
@@ -186,7 +169,6 @@ const UploadDocxDialog = ({
 
       setUploadedFiles(files)
       setUploadedExtensions(extensions)
-
     } else {
       handleFilesUpload(
         { files: event.target.files, type: 'files' },
@@ -196,19 +178,10 @@ const UploadDocxDialog = ({
     }
   }
 
-  const requiredFormatCounts = requiredFormats.reduce((acc, format) => {
-    acc[format] = (acc[format] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
-
-  const uploadedFormatCounts = uploadedExtensions.reduce((acc, ext) => {
+  const extensionCounts = uploadedExtensions.reduce((acc, ext) => {
     acc[ext] = (acc[ext] || 0) + 1
     return acc
   }, {} as Record<string, number>)
-
-  const missingFormats = Object.entries(requiredFormatCounts)
-    .filter(([format, count]) => (uploadedFormatCounts[format] || 0) < count)
-    .map(([format]) => format)
 
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen !== open) {
@@ -241,24 +214,36 @@ const UploadDocxDialog = ({
         <div className='m-4 mt-1 flex flex-col gap-4'>
           {isFormattingOrder && (
             <div className='border rounded-md p-3 bg-muted/30'>
-              <div className='flex flex-wrap gap-2 items-center'>
-                <p className='text-sm font-medium mr-1'>Required formats:</p>
-                {Object.entries(requiredFormatCounts).map(([format, count]) => (
-                  <Badge
-                    key={format}
-                    variant='outline'
-                    className={
-                      uploadedFormatCounts[format] === count
-                        ? 'bg-green-500/20 text-green-700 border-green-500/50'
-                        : ''
-                    }
-                  >
-                    {count > 1 ? `${format} (${count})` : format}
-                    {uploadedFormatCounts[format] !== undefined
-                      ? ` - ${uploadedFormatCounts[format]}/${count}`
-                      : ''}
-                  </Badge>
-                ))}
+              <div className='flex flex-col gap-2'>
+                <div className='flex flex-wrap items-center gap-2'>
+                  <span className='text-muted-foreground font-medium text-sm'>
+                    Allowed formats:
+                  </span>
+                  {allowedFormats.map((format, index) => (
+                    <Badge
+                      key={index}
+                      variant='outline'
+                      className='px-1.5 pt-0 pb-[2px] text-xs bg-primary/10 border-primary/20 text-primary'
+                    >
+                      {format}
+                    </Badge>
+                  ))}
+                </div>
+                {uploadedFiles.length > 0 && (
+                  <div className='mt-1 text-sm'>
+                    <span className='font-medium'>
+                      {uploadedFiles.length === 1 ? '1 file selected:' : `${uploadedFiles.length} files selected:`}
+                    </span>{' '}
+                    {Object.entries(extensionCounts).map(
+                      ([ext, count], index, arr) => (
+                        <span key={ext}>
+                          {count} {ext}
+                          {index < arr.length - 1 ? ', ' : ''}
+                        </span>
+                      )
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -272,62 +257,47 @@ const UploadDocxDialog = ({
             {isFormattingOrder ? (
               <div className='w-full'>
                 {uploadedFiles.length > 0 ? (
-                  <div className='space-y-2 mt-2'>
-                    {uploadedFiles.map((file, index) => {
-                      const parts = file.name.split('.')
-                      const extension =
-                        parts.length > 1
-                          ? parts[parts.length - 1].toLowerCase()
-                          : ''
-                      const isRequiredFormat =
-                        requiredFormats.includes(extension)
+                  <ScrollArea className={`w-full mt-2 ${uploadedFiles.length > 4 ? 'h-[200px]' : ''}`}>
+                    <div className='space-y-2'>
+                      {uploadedFiles.map((file, index) => {
+                        const parts = file.name.split('.')
+                        const extension =
+                          parts.length > 1
+                            ? parts[parts.length - 1].toLowerCase()
+                            : ''
+                        const isAllowedFormat = allowedFormats.includes(extension)
 
-                      const formatCount = uploadedExtensions.filter(
-                        (ext) => ext === extension
-                      ).length
-                      const requiredCount = requiredFormatCounts[extension] || 0
-                      const isExcessive = formatCount > requiredCount
-
-                      return (
-                        <div
-                          key={index}
-                          className={`flex justify-between items-center p-2 rounded-md border ${
-                            isRequiredFormat && !isExcessive
-                              ? 'border-green-500/50 bg-green-50/50'
-                              : 'border-yellow-500/50 bg-yellow-50/50'
-                          }`}
-                        >
-                          <div className='flex items-center'>
-                            <Badge
-                              variant={
-                                isRequiredFormat && !isExcessive
-                                  ? 'default'
-                                  : 'outline'
-                              }
-                              className='mr-2'
-                            >
-                              {extension}
-                            </Badge>
-                            <span className='text-sm truncate max-w-[180px]'>
-                              {file.name}
+                        return (
+                          <div
+                            key={index}
+                            className={`flex justify-between items-center p-2 rounded-md border ${
+                              isAllowedFormat
+                                ? 'border-green-500/50 bg-green-50/50'
+                                : 'border-yellow-500/50 bg-yellow-50/50'
+                            }`}
+                          >
+                            <div className='flex items-center'>
+                              <Badge
+                                variant={isAllowedFormat ? 'default' : 'outline'}
+                                className='mr-2'
+                              >
+                                {extension}
+                              </Badge>
+                              <span className='text-sm truncate max-w-[180px]' title={file.name}>
+                                {file.name}
+                              </span>
+                            </div>
+                            <span className='text-xs text-muted-foreground'>
+                              {(file.size / 1024).toFixed(1)} KB
                             </span>
                           </div>
-                          <span className='text-xs text-muted-foreground'>
-                            {(file.size / 1024).toFixed(1)} KB
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
+                        )
+                      })}
+                    </div>
+                  </ScrollArea>
                 ) : (
                   <div className='text-muted-foreground text-center mt-2'>
                     No files selected
-                  </div>
-                )}
-
-                {uploadedFiles.length > 0 && missingFormats.length > 0 && (
-                  <div className='mt-3 text-yellow-600 text-sm'>
-                    Missing formats: {missingFormats.join(', ')}
                   </div>
                 )}
               </div>
@@ -346,7 +316,7 @@ const UploadDocxDialog = ({
                 onChange={handleFileChange}
                 accept={
                   isFormattingOrder
-                    ? undefined
+                    ? allowedFormats.map((format) => `.${format}`).join(',')
                     : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                 }
               />

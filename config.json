@@ -670,5 +670,7 @@
     "tbd",
     "aka",
     "diy"
-  ]
+  ],
+  "max_format_files": 10,
+  "format_files_exception_list": []
 }

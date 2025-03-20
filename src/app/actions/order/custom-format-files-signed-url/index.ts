@@ -37,9 +37,6 @@ export async function getCustomFormatFilesSignedUrl(
 
     const fileVersions = await prisma.fileVersion.findMany({
       where: whereClause,
-      orderBy: {
-        createdAt: 'asc',
-      },
     })
 
     if (!fileVersions || fileVersions.length === 0) {
@@ -59,36 +56,12 @@ export async function getCustomFormatFilesSignedUrl(
       },
     })
 
-    const versionsByExtension = new Map<string, typeof fileVersions>()
-
-    for (const version of fileVersions) {
-      const extension = version.extension || 'docx'
-
-      if (!versionsByExtension.has(extension)) {
-        versionsByExtension.set(extension, [])
-      }
-
-      versionsByExtension.get(extension)?.push(version)
-    }
-
     const signedUrls = await Promise.all(
       fileVersions.map(async (version) => {
         const extension = version.extension || 'docx'
 
-        const versionsOfThisExt = versionsByExtension.get(extension) || []
-        const index = versionsOfThisExt.findIndex(
-          (v: typeof version) => v.id === version.id
-        )
-
-        let s3Key
-        if (index === 0) {
-          s3Key = `${fileId}.${extension}`
-        } else {
-          s3Key = `${fileId}_${index}.${extension}`
-        }
-
         const signedUrl = await getFileVersionSignedURLFromS3(
-          s3Key,
+          version.s3Key || '',
           version.s3VersionId || '',
           900,
           `${file?.filename}.${extension}`

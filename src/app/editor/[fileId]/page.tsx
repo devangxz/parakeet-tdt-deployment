@@ -84,6 +84,7 @@ export type OrderDetails = {
   customFormatOption?: string
   outputFormat?: string
   supportingDocuments?: SupportingDocument[]
+  email: string
 }
 
 export type UploadFilesType = {
@@ -107,6 +108,7 @@ function EditorPage() {
     remainingTime: '',
     duration: '',
     LLMDone: false,
+    email: '',
   })
   const [cfd, setCfd] = useState('')
   const [notes, setNotes] = useState('')
