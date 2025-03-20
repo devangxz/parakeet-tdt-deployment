@@ -186,7 +186,8 @@ export async function submitFinalize(
         deliveredBy: transcriberId,
         status: OrderStatus.PRE_DELIVERED,
         updatedAt: new Date(),
-        finalizerComment: finalizerComment.trim() || null,
+        finalizerComment:
+          finalizerComment.length > 0 ? finalizerComment.trim() : null,
       },
     })
 
@@ -196,7 +197,7 @@ export async function submitFinalize(
     }
     await sendTemplateMail('TRANSCRIBER_SUBMIT', transcriberId, templateData)
 
-    if (finalizerComment.trim()) {
+    if (finalizerComment?.trim()) {
       try {
         const fileInfo = await prisma.file.findUnique({
           where: { fileId: order.fileId },
