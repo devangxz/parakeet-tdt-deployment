@@ -85,6 +85,10 @@ export type OrderDetails = {
   outputFormat?: string
   supportingDocuments?: SupportingDocument[]
   email: string
+  speakerOptions: {
+    fn: string;
+    ln: string;
+  }[]
 }
 
 export type UploadFilesType = {
@@ -109,6 +113,7 @@ function EditorPage() {
     duration: '',
     LLMDone: false,
     email: '',
+    speakerOptions: []
   })
   const [cfd, setCfd] = useState('')
   const [notes, setNotes] = useState('')
@@ -380,6 +385,7 @@ function EditorPage() {
     lastSearchIndex,
     listenCount,
     editedSegments,
+    editorRef,
   ])
 
   useShortcuts(shortcutControls)
@@ -801,6 +807,7 @@ function EditorPage() {
                           }
                         }
                         editorRef={editorRef}
+                        step={step}
                       />
 
                       <DiffTabComponent diff={diff} />

@@ -29,6 +29,7 @@ interface EditorTabComponentProps {
   editorSettings: EditorSettings
   initialEditorData: EditorData
   editorRef?: React.Ref<EditorHandle>
+  step: string
 }
 
 export const EditorTabComponent = ({
@@ -47,6 +48,7 @@ export const EditorTabComponent = ({
   editorSettings,
   initialEditorData,
   editorRef,
+  step,
 }: EditorTabComponentProps) => (
   <TabsContent
     forceMount
@@ -76,6 +78,7 @@ export const EditorTabComponent = ({
             setEditedSegments={setEditedSegments}
             editorSettings={editorSettings}
             initialEditorData={initialEditorData}
+            step={step}
           />
         </div>
       )}

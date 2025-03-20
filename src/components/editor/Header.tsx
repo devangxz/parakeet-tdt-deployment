@@ -556,6 +556,12 @@ export default memo(function Header({
     []
   )
 
+  const removeTimestamps = useCallback(() => {
+    if (editorRef?.current) {
+      editorRef.current.removeTimestamps();
+    }
+  }, [editorRef]);
+
   return (
     <div className='border bg-background border-customBorder rounded-md relative'>
       {!isPlayerLoaded && (
@@ -766,6 +772,7 @@ export default memo(function Header({
                     highlightWordsEnabled={highlightWordsEnabled}
                     setHighlightWordsEnabled={setHighlightWordsEnabled}
                     step={step}
+                    removeTimestamps={removeTimestamps}
                   />
                 </div>
               </TooltipProvider>
