@@ -60,6 +60,7 @@ interface EditorProps {
   initialEditorData: EditorData
   step: string
   highlightNumbersEnabled?: boolean
+  setHighlightNumbersEnabled: (enabled: boolean) => void
 }
 
 type Sources = 'user' | 'api' | 'silent'
@@ -91,6 +92,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     initialEditorData,
     step,
     highlightNumbersEnabled,
+    setHighlightNumbersEnabled,
   } = props
 
   const ctms = initialCtms // Make CTMs constant
@@ -456,29 +458,72 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     })
   }, [alignments, ctms, typingTimer, quillRef, orderDetails.fileId])
 
-  const highlightNumbers = useCallback(
-    () => {
-      const quill = quillRef.current?.getEditor();
-      if (!quill) return;
-      const quillContent = quill.getContents();
-      const ops = quillContent?.ops;
-      const newOps = ops?.map((op) => {
-        if (typeof op.insert === 'string') {
-          op.insert = op.insert.replace(/\b\d{1,3}(?:,\d{3})*\b/g, '<span class="highlight-number">$&</span>');
+  const highlightNumbers = useCallback(() => {
+    const quill = quillRef.current?.getEditor();
+    if (!quill) return;
+    
+    setIsLoading(true);
+    
+    // Move operation off the main thread
+    setTimeout(() => {
+      try {
+        const quillContent = quill.getText();
+        if (!quillContent) {
+          setIsLoading(false);
+          return;
         }
-        return op;
-      });
-      quill.setContents(newOps);
-    },[quillRef]
-  );
+
+        const numberRegex = /\b\d{1,3}(?:,\d{3})*\b(?!\.\d|\w)|\b\d+\b(?!\.\d|\w)/g;
+        const timestampPattern = /\b\d{1,2}:\d{2}:\d{2}(?:\.\d+)?\b/;
+        const delta = new Delta();
+        let lastIndex = 0;
+        let match;
+        numberRegex.lastIndex = 0;
+
+        while ((match = numberRegex.exec(quillContent)) !== null) {
+          const matchIndex = match.index;
+          const matchLength = match[0].length;
+          
+          const contextStart = Math.max(0, matchIndex - 10);
+          const contextEnd = Math.min(quillContent.length, matchIndex + matchLength + 10);
+          const context = quillContent.substring(contextStart, contextEnd);
+          
+          if (timestampPattern.test(context)) {
+            continue;
+          }
+          const beforeChar = matchIndex > 0 ? quillContent[matchIndex - 1] : null;
+          const afterChar = matchIndex + matchLength < quillContent.length ? 
+                           quillContent[matchIndex + matchLength] : null;
+          
+          if ((beforeChar && /[a-zA-Z]/.test(beforeChar)) || 
+              (afterChar && /[a-zA-Z]/.test(afterChar))) {
+            continue;
+          }
+          
+          if (matchIndex > lastIndex) {
+            delta.retain(matchIndex - lastIndex);
+          }
+
+          const highlightProperty = highlightNumbersEnabled ? { background: 'var(--highlight-color)' } : { background: null };
+          delta.retain(matchLength, highlightProperty);
+
+          lastIndex = matchIndex + matchLength;
+        }
+        
+        if (delta.ops.length > 0) {
+          quill.updateContents(delta);
+        }
+      } catch (err) {
+        console.error('Error highlighting numbers:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 0);
+  }, [quillRef, highlightNumbersEnabled]);
 
   // Add effect to highlight numbers when highlightNumbersEnabled changes
   useEffect(() => {
-    if (highlightNumbersEnabled) {
       highlightNumbers()
-    } else {
-      clearHighlights()
-    }
   }, [highlightNumbersEnabled, highlightNumbers, clearHighlights])
 
   // Create a function to clear any word and line highlights
@@ -843,6 +888,11 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
         setIsEditorFocused(true)
       }, 0)
     }
+
+    const storedHighlightNumbers = localStorage.getItem(`highlight-numbers-${orderDetails.fileId}`)
+    if (storedHighlightNumbers !== null) {
+      setHighlightNumbersEnabled(storedHighlightNumbers === 'true')
+    }
   }, [])
 
   // Create initial alignments once when component loads
@@ -1114,6 +1164,12 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     removeTimestamps: removeTimestampsToolbar,
     highlightNumbers,
   }))
+
+  useEffect(() => {
+    if (highlightNumbersEnabled !== undefined) {
+      localStorage.setItem(`highlight-numbers-${orderDetails.fileId}`, String(highlightNumbersEnabled))
+    }
+  }, [highlightNumbersEnabled, orderDetails.fileId])
 
   return (
     <div className='relative w-full h-full'>

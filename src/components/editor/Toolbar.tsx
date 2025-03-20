@@ -13,8 +13,7 @@ import {
   ZoomOutIcon,
   LightningBoltIcon,
 } from '@radix-ui/react-icons'
-import { BinaryIcon } from 'lucide-react'
-import { TimerOff } from 'lucide-react'
+import { BinaryIcon, TimerOff } from 'lucide-react'
 
 import PlayerButton from './PlayerButton'
 import { Button } from '../ui/button'

@@ -355,8 +355,10 @@ function EditorPage() {
       },
       saveChanges: async () => {
         if (editorRef.current) {
-          editorRef.current.clearAllHighlights()
-          editorRef.current.triggerAlignmentUpdate()
+          if (!highlightNumbersEnabled) {
+            editorRef.current.clearAllHighlights();
+          }
+          editorRef.current.triggerAlignmentUpdate();
         }
         autoCapitalizeSentences(quillRef, autoCapitalize)
         await handleSave({
@@ -370,6 +372,15 @@ function EditorPage() {
           role: session?.user?.role || '',
         })
         updateFormattedTranscript()
+        
+        if (highlightNumbersEnabled && editorRef.current != null) {
+          console.log('highlightNumbersEnabled', highlightNumbersEnabled)
+          setTimeout(() => {
+            if(editorRef.current) {
+              editorRef.current.highlightNumbers();
+            }
+          }, 200);
+        }
       },
     }
     return controls as ShortcutControls
@@ -386,6 +397,7 @@ function EditorPage() {
     lastSearchIndex,
     listenCount,
     editedSegments,
+    highlightNumbersEnabled,
     editorRef,
   ])
 
@@ -593,6 +605,9 @@ function EditorPage() {
     // Update the editor contents with the new delta
     quill.setContents(formattedDelta)
 
+    if(highlightNumbersEnabled && editorRef.current != null) {
+      editorRef.current?.highlightNumbers()
+    }
     // Restore the original cursor position if it exists
     if (currentSelection) {
       quill.setSelection(currentSelection)
@@ -815,6 +830,7 @@ function EditorPage() {
                         editorRef={editorRef}
                         step={step}
                         highlightNumbersEnabled={highlightNumbersEnabled}
+                        setHighlightNumbersEnabled={setHighlightNumbersEnabled}
                       />
 
                       <DiffTabComponent diff={diff} />
