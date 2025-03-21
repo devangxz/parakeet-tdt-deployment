@@ -85,6 +85,8 @@ model User {
   editorSettings            UserEditorSettings?
   Cancellations             Cancellations[]
   QCValidationStats         QCValidationStats[]
+  TestInvitations           TestInvitation[]
+  TestAttempts              TestAttempt[]
 
   @@index([role])
   @@index([email])
@@ -809,19 +811,19 @@ model ProcessWithLLMStats {
 }
 
 model QCValidationStats {
-  id                              Int       @id @default(autoincrement())
-  orderId                         Int       @map("order_id")
-  fileId                          String    @map("file_id")
-  transcriberId                   Int       @map("transcriber_id")
-  playedPercentage                Int       @map("played_percentage")
-  werPercentage                   Int       @map("wer_percentage")
-  blankPercentage                 Int       @map("blank_percentage")
-  editListenCorrelationPercentage Int       @map("edit_listen_correlation_percentage")  
-  speakerChangePercentage         Int       @map("speaker_change_percentage")
-  speakerMacroF1Score             Float     @map("speaker_macro_f1_score")
-  isValidationPassed              Boolean   @map("is_validation_passed")
-  isAcceptedByOM                  Boolean?  @map("is_accepted_by_om")
-  createdAt                       DateTime  @default(now()) @map("created_at")
+  id                              Int      @id @default(autoincrement())
+  orderId                         Int      @map("order_id")
+  fileId                          String   @map("file_id")
+  transcriberId                   Int      @map("transcriber_id")
+  playedPercentage                Int      @map("played_percentage")
+  werPercentage                   Int      @map("wer_percentage")
+  blankPercentage                 Int      @map("blank_percentage")
+  editListenCorrelationPercentage Int      @map("edit_listen_correlation_percentage")
+  speakerChangePercentage         Int      @map("speaker_change_percentage")
+  speakerMacroF1Score             Float    @map("speaker_macro_f1_score")
+  isValidationPassed              Boolean  @map("is_validation_passed")
+  isAcceptedByOM                  Boolean? @map("is_accepted_by_om")
+  createdAt                       DateTime @default(now()) @map("created_at")
 
   order Order @relation(fields: [orderId], references: [id])
   file  File  @relation(fields: [fileId], references: [fileId])
@@ -831,6 +833,53 @@ model QCValidationStats {
   @@index([fileId])
   @@index([transcriberId])
   @@map("scb_qc_validation_stats")
+}
+
+model TestFile {
+  id           Int           @id @default(autoincrement())
+  filename     String
+  fileId       String        @map("file_id")
+  isActive     Boolean       @default(true) @map("is_active")
+  instructions String?       @map("instructions")
+  createdBy    Int           @map("created_by")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  TestAttempt  TestAttempt[]
+
+  @@index([fileId])
+  @@index([createdBy])
+  @@map("scb_test_files")
+}
+
+model TestInvitation {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  invitedBy Int      @map("invited_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId])
+  @@index([userId])
+  @@index([invitedBy])
+  @@map("scb_test_invitations")
+}
+
+model TestAttempt {
+  id          Int               @id @default(autoincrement())
+  userId      Int               @map("user_id")
+  user        User              @relation(fields: [userId], references: [id])
+  testFileId  Int               @map("test_file_id")
+  testFile    TestFile          @relation(fields: [testFileId], references: [id])
+  passed      Boolean
+  status      TestAttemptStatus @default(ACCEPTED)
+  startedAt   DateTime          @map("started_at")
+  completedAt DateTime          @map("completed_at")
+  cancelledAt DateTime          @map("cancelled_at")
+
+  @@index([userId])
+  @@index([testFileId])
+  @@map("scb_test_attempts")
 }
 
 //  ███████ ███    ██ ██    ██ ███    ███ ███████
@@ -1032,6 +1081,7 @@ enum JobType {
   QC
   REVIEW
   FINALIZE
+  TEST
 }
 
 enum WithdrawalStatus {
@@ -1088,4 +1138,10 @@ enum CancellationStatus {
   QC
   REVIEW
   FINALIZE
+}
+
+enum TestAttemptStatus {
+  ACCEPTED
+  COMPLETED
+  CANCELLED
 }
