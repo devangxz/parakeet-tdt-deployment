@@ -185,6 +185,7 @@ function EditorPage() {
     shortcuts: { ...defaultShortcuts },
   })
   const [autoCapitalize, setAutoCapitalize] = useState(true)
+  const [highlightNumbersEnabled, setHighlightNumbersEnabled] = useState(false)
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -354,8 +355,10 @@ function EditorPage() {
       },
       saveChanges: async () => {
         if (editorRef.current) {
-          editorRef.current.clearAllHighlights()
-          editorRef.current.triggerAlignmentUpdate()
+          if (!highlightNumbersEnabled) {
+            editorRef.current.clearAllHighlights();
+          }
+          editorRef.current.triggerAlignmentUpdate();
         }
         autoCapitalizeSentences(quillRef, autoCapitalize)
         await handleSave({
@@ -369,6 +372,14 @@ function EditorPage() {
           role: session?.user?.role || '',
         })
         updateFormattedTranscript()
+        
+        if (highlightNumbersEnabled && editorRef.current != null) {
+          setTimeout(() => {
+            if(editorRef.current) {
+              editorRef.current.highlightNumbers();
+            }
+          }, 200);
+        }
       },
     }
     return controls as ShortcutControls
@@ -385,6 +396,7 @@ function EditorPage() {
     lastSearchIndex,
     listenCount,
     editedSegments,
+    highlightNumbersEnabled,
     editorRef,
   ])
 
@@ -592,6 +604,9 @@ function EditorPage() {
     // Update the editor contents with the new delta
     quill.setContents(formattedDelta)
 
+    if(highlightNumbersEnabled && editorRef.current != null) {
+      editorRef.current?.highlightNumbers()
+    }
     // Restore the original cursor position if it exists
     if (currentSelection) {
       quill.setSelection(currentSelection)
@@ -671,6 +686,10 @@ function EditorPage() {
     setHighlightWordsEnabled(editorSettings.wordHighlight)
   }, [editorSettings])
 
+  const toggleHighlightNumerics = useCallback(() => {
+    setHighlightNumbersEnabled(prev => !prev)
+  }, [])
+
   return (
     <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
       <Topbar
@@ -715,6 +734,7 @@ function EditorPage() {
         editorSettings={editorSettings}
         editorRef={editorRef}
         step={step}
+        toggleHighlightNumerics={toggleHighlightNumerics}
       />
 
       <div className='flex h-full overflow-hidden'>
@@ -808,6 +828,8 @@ function EditorPage() {
                         }
                         editorRef={editorRef}
                         step={step}
+                        highlightNumbersEnabled={highlightNumbersEnabled}
+                        setHighlightNumbersEnabled={setHighlightNumbersEnabled}
                       />
 
                       <DiffTabComponent diff={diff} />

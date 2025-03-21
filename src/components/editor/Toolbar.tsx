@@ -13,7 +13,7 @@ import {
   ZoomOutIcon,
   LightningBoltIcon,
 } from '@radix-ui/react-icons'
-import { TimerOff } from 'lucide-react'
+import { BinaryIcon, TimerOff } from 'lucide-react'
 
 import PlayerButton from './PlayerButton'
 import { Button } from '../ui/button'
@@ -56,6 +56,7 @@ interface ToolbarProps {
   setHighlightWordsEnabled: (enabled: boolean) => void
   step: string
   removeTimestamps: () => void
+  toggleHighlightNumerics: () => void
 }
 
 export default function Toolbar({
@@ -79,6 +80,7 @@ export default function Toolbar({
   setHighlightWordsEnabled,
   step,
   removeTimestamps,
+  toggleHighlightNumerics,
 }: ToolbarProps) {
   return (
     <TooltipProvider>
@@ -223,6 +225,19 @@ export default function Toolbar({
         </TooltipTrigger>
         <TooltipContent>
           <p>Toggle word highlighting</p>
+        </TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger>
+          <PlayerButton
+            icon={<BinaryIcon className='w-4 h-4' />}
+            tooltip='Highlight numerics'
+            onClick={toggleHighlightNumerics}
+          />
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Hightlight numerics</p>
         </TooltipContent>
       </Tooltip>
 

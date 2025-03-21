@@ -30,6 +30,8 @@ interface EditorTabComponentProps {
   initialEditorData: EditorData
   editorRef?: React.Ref<EditorHandle>
   step: string
+  highlightNumbersEnabled: boolean
+  setHighlightNumbersEnabled: (enabled: boolean) => void
 }
 
 export const EditorTabComponent = ({
@@ -49,6 +51,8 @@ export const EditorTabComponent = ({
   initialEditorData,
   editorRef,
   step,
+  highlightNumbersEnabled,
+  setHighlightNumbersEnabled,
 }: EditorTabComponentProps) => (
   <TabsContent
     forceMount
@@ -79,6 +83,8 @@ export const EditorTabComponent = ({
             editorSettings={editorSettings}
             initialEditorData={initialEditorData}
             step={step}
+            highlightNumbersEnabled={highlightNumbersEnabled}
+            setHighlightNumbersEnabled={setHighlightNumbersEnabled}
           />
         </div>
       )}
