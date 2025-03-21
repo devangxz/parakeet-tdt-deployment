@@ -374,7 +374,6 @@ function EditorPage() {
         updateFormattedTranscript()
         
         if (highlightNumbersEnabled && editorRef.current != null) {
-          console.log('highlightNumbersEnabled', highlightNumbersEnabled)
           setTimeout(() => {
             if(editorRef.current) {
               editorRef.current.highlightNumbers();

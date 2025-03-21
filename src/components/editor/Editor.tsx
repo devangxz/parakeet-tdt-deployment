@@ -466,7 +466,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     
     // Move operation off the main thread
     setTimeout(() => {
-      try {
         const quillContent = quill.getText();
         if (!quillContent) {
           setIsLoading(false);
@@ -513,11 +512,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
         if (delta.ops.length > 0) {
           quill.updateContents(delta);
         }
-      } catch (err) {
-        console.error('Error highlighting numbers:', err);
-      } finally {
-        setIsLoading(false);
-      }
+        setIsLoading(false);      
     }, 0);
   }, [quillRef, highlightNumbersEnabled]);
 
