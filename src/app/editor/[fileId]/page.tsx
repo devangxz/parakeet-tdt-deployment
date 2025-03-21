@@ -1049,7 +1049,7 @@ function EditorPage() {
                   Cancel
                 </Button>
                 <Button
-                  onClick={() => {
+                  onClick={async () => {
                     if (orderDetails.orderType === 'FORMATTING') {
                       handleSubmit({
                         orderDetails,
@@ -1070,6 +1070,17 @@ function EditorPage() {
                         editorRef.current.triggerAlignmentUpdate()
                         currentAlignments = editorRef.current.getAlignments()
                       }
+                      
+                      await handleSave({
+                        getEditorText,
+                        orderDetails,
+                        notes,
+                        cfd,
+                        setButtonLoading,
+                        listenCount,
+                        editedSegments,
+                        role: session?.user?.role || '',
+                      }, true)
 
                       handleSubmit({
                         orderDetails,

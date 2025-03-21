@@ -5,11 +5,33 @@ import prisma from '@/lib/prisma'
 
 export async function getListenCountAndEditedSegmentAction(fileId: string) {
     try {
-        const playerStats = await prisma.playStats.findFirst({
-            where: {
-                fileId
-            }
+        const jobAssignment = await prisma.jobAssignment.findFirst({
+          where: {
+              status: 'SUBMITTED_FOR_APPROVAL',
+              order: {
+                  fileId
+              }
+          },
+          select: {
+              transcriberId: true
+          }
         })
+
+        if(!jobAssignment) {
+          logger.error(`No transcriberId with SUBMITTED_FOR_APPROVAL status found for fileId ${fileId}`)
+          return {
+            success: false,
+            message: 'No transcriberId with SUBMITTED_FOR_APPROVAL status found'
+          }
+        }
+
+        const playerStats = await prisma.playStats.findFirst({
+          where: {
+            fileId,
+            userId: jobAssignment.transcriberId
+          }
+        })
+
         return {
             success: true,
             listenCount: playerStats?.listenCount,
