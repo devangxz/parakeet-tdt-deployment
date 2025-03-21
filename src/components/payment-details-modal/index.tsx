@@ -673,7 +673,10 @@ const InvoicesDetailDialog = ({
                     </>
                   )}
 
-                  <Services services={services!} />
+                  <Services
+                    services={services!}
+                    invoiceId={selectedInvoiceId}
+                  />
                   <Separator />
                   <Receipt receipt={receipt!} />
                 </>

@@ -93,7 +93,7 @@ export function BillOptions({ billSummary }: OrderOptionProps) {
         </CollapsibleTrigger>
       </div>
       <CollapsibleContent className='mt-3'>
-        <div className='h-[500px] overflow-y-auto'>
+        <div className='max-h-[500px] overflow-y-auto'>
           <FileDataTable data={billSummary.files} columns={fileColumns} />
         </div>
 
