@@ -22,6 +22,7 @@ import OrderWatch from './components/order-watch'
 import TranscriberWatch from './components/transcriber-watch'
 import TransferCredits from './components/transfer-credits'
 import TransferFiles from './components/transfer-files'
+import UnsubscribeNewsletter from './components/unsubscribe-newsletter'
 import UpdateICQCRates from './components/update-ic-qc-rates'
 import YouTubeVideoUploader from './components/youtube-video-uploader'
 
@@ -56,6 +57,7 @@ export default function AdminDashboard() {
             <OrderWatch />
             <TranscriberWatch />
             <YouTubeVideoUploader />
+            <UnsubscribeNewsletter />
           </>
         )}
       </div>
