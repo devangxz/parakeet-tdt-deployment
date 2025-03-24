@@ -548,6 +548,7 @@ const fetchFileDetails = async ({
       outputFormat: orderRes.orderDetails.outputFormat || undefined,
       supportingDocuments: orderRes.orderDetails.supportingDocuments || [],
       email: orderRes.orderDetails.email,
+      speakerOptions: orderRes.orderDetails.speakerOptions || [],
     }
 
     setOrderDetails(orderDetailsFormatted)
