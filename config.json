@@ -334,9 +334,6 @@
   },
   "job_timeout_multiplier": 4,
   "extension_time_multiplier": 2,
-  "qc": {
-    "diff_change_pc_threshold": 0
-  },
   "aws_signed_url_expiration": 600,
   "transcript_part_length": 10000,
   "llm": "gpt-4-turbo-preview",
@@ -672,5 +669,11 @@
     "diy"
   ],
   "max_format_files": 10,
-  "format_files_exception_list": []
+  "format_files_exception_list": [],
+  "qc_validation": {
+    "min_audio_playback_percentage": 99,
+    "min_wer_percentage": 5,
+    "max_wer_percentage": 30,
+    "max_blank_percentage": 2
+  }
 }

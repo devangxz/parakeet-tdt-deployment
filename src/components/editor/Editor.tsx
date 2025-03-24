@@ -64,10 +64,11 @@ type Sources = 'user' | 'api' | 'silent'
 
 // Export an interface for the methods exposed by Editor
 export interface EditorHandle {
-  triggerAlignmentUpdate: () => void
+  triggerAlignmentUpdate: () => Promise<void>
   clearAllHighlights: () => void
   scrollToCurrentWord: () => void
   getAlignments: () => AlignmentType[]
+  getWer: () => number
 }
 
 // Wrap the component in forwardRef so the parent can call exposed methods
@@ -90,11 +91,13 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
   const ctms = initialCtms // Make CTMs constant
   const quillRef = useRef<ReactQuill>(null)
   const [alignments, setAlignments] = useState<AlignmentType[]>([])
+  const [wer, setWer] = useState<number>(0)
   const [typingTimer, setTypingTimer] = useState<NodeJS.Timeout | null>(null)
   const alignmentWorker = useRef<Worker | null>(null)
   const prevLineNodeRef = useRef<HTMLElement | null>(null)
   const lastHighlightedRef = useRef<number | null>(null)
   const beforeSelectionRef = useRef<Range | null>(null)
+  const alignmentCallbacks = useRef<Array<() => void>>([])
   const [currentSelection, setCurrentSelection] = useState<Range | null>(null)
   const [isTyping, setIsTyping] = useState(false)
   const [alignmentWorkerRunning, setAlignmentWorkerRunning] = useState(false)
@@ -449,21 +452,26 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       alignmentWorker.current = new Worker(
         new URL('@/utils/transcript/alignmentWorker.ts', import.meta.url)
       )
-
+  
       alignmentWorker.current.onmessage = (e) => {
-        const { alignments: newAlignments, editedSegments } = e.data
+        const { alignments: newAlignments, editedSegments, wer } = e.data
         setAlignments(newAlignments)
         setEditedSegments(new Set(editedSegments))
         setIsTyping(false)
         setAlignmentWorkerRunning(false)
+        setWer(wer)
+
+        alignmentCallbacks.current.forEach(cb => cb())
+        alignmentCallbacks.current = []
       }
 
       console.log('Web Worker initialized successfully.')
     } catch (error) {
       console.error('Failed to initialize Web Worker:', error)
     }
-
+    
     return () => {
+      alignmentCallbacks.current = []
       if (alignmentWorker.current) {
         alignmentWorker.current.terminate()
         console.log('Web Worker terminated.')
@@ -954,7 +962,11 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
 
   // Expose the immediate alignment update & clear highlights function via ref
   useImperativeHandle(ref, () => ({
-    triggerAlignmentUpdate: updateAlignments,
+    triggerAlignmentUpdate: () =>
+      new Promise<void>((resolve) => {
+        alignmentCallbacks.current.push(() => resolve())
+        updateAlignments()
+      }),
     clearAllHighlights: clearAllHighlights,
     scrollToCurrentWord: () => {
       const quill = quillRef.current?.getEditor()
@@ -981,6 +993,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       }
     },
     getAlignments: () => alignments,
+    getWer: () => wer,
   }))
 
   return (

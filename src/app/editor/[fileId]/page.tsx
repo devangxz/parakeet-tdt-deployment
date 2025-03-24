@@ -14,6 +14,7 @@ import renderCertificationInputs from '@/components/editor/CertificationInputs'
 import { EditorHandle } from '@/components/editor/Editor'
 import Header from '@/components/editor/Header'
 import SectionSelector from '@/components/editor/SectionSelector'
+import SubmissionValidation from '@/components/editor/SubmissionValidation'
 import {
   DiffTabComponent,
   EditorTabComponent,
@@ -56,6 +57,7 @@ import {
   autoCapitalizeSentences,
   getFormattedContent,
   EditorData,
+  calculateBlankPercentage,
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
@@ -180,6 +182,7 @@ function EditorPage() {
     shortcuts: { ...defaultShortcuts },
   })
   const [autoCapitalize, setAutoCapitalize] = useState(true)
+  const [isQCValidationPassed, setIsQCValidationPassed] = useState(false)
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -537,6 +540,17 @@ function EditorPage() {
     return Math.round((playedSections / listenCount.length) * 100)
   }
 
+  const getWerPercentage = (): number => {
+    const werValue = editorRef.current?.getWer() || 0
+    return Number((werValue * 100).toFixed(2))
+  }
+
+  const getBlankPercentage = (): number => {
+    const transcript = quillRef?.current ? quillRef.current.getEditor().getText() : ''
+    const alignments = editorRef.current?.getAlignments() || []
+    return calculateBlankPercentage(transcript, alignments)
+  }
+  
   const getEditorMode = useCallback((editorMode: string) => {
     setEditorMode(editorMode)
   }, [])
@@ -1009,6 +1023,17 @@ function EditorPage() {
                 </div>
               )}
 
+              {step === 'QC' && (
+                <div className='pt-4'>
+                  <SubmissionValidation
+                    playedPercentage={getPlayedPercentage()}
+                    werPercentage={getWerPercentage()}
+                    blankPercentage={getBlankPercentage()}
+                    setIsQCValidationPassed={setIsQCValidationPassed}
+                  />
+                </div>
+              )}
+              
               <div className='flex justify-end gap-2 pt-4'>
                 <Button
                   variant='outline'
@@ -1038,7 +1063,6 @@ function EditorPage() {
 
                       let currentAlignments: AlignmentType[] = []
                       if (editorRef.current && step === 'QC') {
-                        editorRef.current.triggerAlignmentUpdate()
                         currentAlignments = editorRef.current.getAlignments()
                       }
 
@@ -1053,6 +1077,7 @@ function EditorPage() {
                         quill,
                         finalizerComment,
                         currentAlignments,
+                        isQCValidationPassed,
                       })
                       setSubmitting(false)
                       setIsSubmitModalOpen(false)
