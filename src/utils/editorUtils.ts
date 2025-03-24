@@ -979,6 +979,7 @@ type HandleSubmitParams = {
   quill?: Quill
   finalizerComment: string
   currentAlignments?: AlignmentType[]
+  isQCValidationPassed?: boolean
 }
 
 const handleSubmit = async ({
@@ -992,6 +993,7 @@ const handleSubmit = async ({
   quill,
   finalizerComment,
   currentAlignments,
+  isQCValidationPassed,
 }: HandleSubmitParams) => {
   if (!orderDetails || !orderDetails.orderId || !step) return
 
@@ -1046,6 +1048,7 @@ const handleSubmit = async ({
         fileId: orderDetails.fileId,
         orderId: Number(orderDetails.orderId),
         transcript,
+        isQCValidationPassed,
       })
     }
 
@@ -1559,7 +1562,7 @@ const scrollEditorToPos = (quill: Quill, pos: number) => {
 function getFormattedContent(text: string): Op[] {
   const formattedContent: Op[] = []
   let lastIndex = 0
-  
+
   // Update pattern to explicitly include the timestamp+blank pattern
   const pattern =
     /((?:^|\n)(?:\d{1,2}:\d{2}:\d{2}\.\d(?:\s+(?:S\d+:|Speaker\s?\d+:|[A-Za-z][A-Za-z\s]*:))?|S\d+:|Speaker\s?\d+:|[A-Za-z][A-Za-z\s]*:))|(\[\d{1,2}:\d{2}:\d{2}\.\d\](?:\s+____)?|\[[^\]]+\])/g
@@ -1858,6 +1861,21 @@ function rejectAllDiffs(diffs: DiffSegment[]): DiffSegment[] {
   return newDiffs
 }
 
+function calculateBlankPercentage(
+  transcript: string,
+  alignments: AlignmentType[]
+): number {
+  const blankPattern = /\[\d{1,2}:\d{2}:\d{2}\.\d\]\s+____/g
+  const matches = transcript.match(blankPattern) || []
+  const blankCount = matches.length
+
+  const contentWordCount = alignments.filter((al) => al.type === 'ctm').length
+
+  return contentWordCount > 0
+    ? Number(((blankCount / contentWordCount) * 100).toFixed(2))
+    : 0
+}
+
 export enum GeminiModel {
   GEMINI_1_5_FLASH = 'gemini-1.5-flash',
   GEMINI_2_0_FLASH = 'gemini-2.0-flash',
@@ -1902,5 +1920,6 @@ export {
   formatTimestamps,
   acceptAllDiffs,
   rejectAllDiffs,
+  calculateBlankPercentage,
 }
 export type { CTMType }
