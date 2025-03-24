@@ -146,6 +146,7 @@ interface HeaderProps {
   editorSettings: EditorSettings
   editorRef?: React.RefObject<EditorHandle>
   step: string
+  toggleHighlightNumerics: () => void
 }
 
 export default memo(function Header({
@@ -161,6 +162,7 @@ export default memo(function Header({
   editorSettings,
   editorRef,
   step,
+  toggleHighlightNumerics,
 }: HeaderProps) {
   const [currentValue, setCurrentValue] = useState(0)
   const [currentTime, setCurrentTime] = useState('00:00')
@@ -556,6 +558,12 @@ export default memo(function Header({
     []
   )
 
+  const removeTimestamps = useCallback(() => {
+    if (editorRef?.current) {
+      editorRef.current.removeTimestamps();
+    }
+  }, [editorRef]);
+
   return (
     <div className='border bg-background border-customBorder rounded-md relative'>
       {!isPlayerLoaded && (
@@ -766,6 +774,8 @@ export default memo(function Header({
                     highlightWordsEnabled={highlightWordsEnabled}
                     setHighlightWordsEnabled={setHighlightWordsEnabled}
                     step={step}
+                    removeTimestamps={removeTimestamps}
+                    toggleHighlightNumerics={toggleHighlightNumerics}
                   />
                 </div>
               </TooltipProvider>

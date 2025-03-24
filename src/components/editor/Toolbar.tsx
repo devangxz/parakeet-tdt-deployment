@@ -13,6 +13,7 @@ import {
   ZoomOutIcon,
   LightningBoltIcon,
 } from '@radix-ui/react-icons'
+import { BinaryIcon, TimerOff } from 'lucide-react'
 
 import PlayerButton from './PlayerButton'
 import { Button } from '../ui/button'
@@ -54,6 +55,8 @@ interface ToolbarProps {
   highlightWordsEnabled: boolean
   setHighlightWordsEnabled: (enabled: boolean) => void
   step: string
+  removeTimestamps: () => void
+  toggleHighlightNumerics: () => void
 }
 
 export default function Toolbar({
@@ -76,6 +79,8 @@ export default function Toolbar({
   highlightWordsEnabled,
   setHighlightWordsEnabled,
   step,
+  removeTimestamps,
+  toggleHighlightNumerics,
 }: ToolbarProps) {
   return (
     <TooltipProvider>
@@ -223,6 +228,19 @@ export default function Toolbar({
         </TooltipContent>
       </Tooltip>
 
+      <Tooltip>
+        <TooltipTrigger>
+          <PlayerButton
+            icon={<BinaryIcon className='w-4 h-4' />}
+            tooltip='Highlight numerics'
+            onClick={toggleHighlightNumerics}
+          />
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Hightlight numerics</p>
+        </TooltipContent>
+      </Tooltip>
+
       {orderDetails.orgName.toLowerCase() === 'remotelegal' &&
         orderDetails.orderType === 'TRANSCRIPTION_FORMATTING' &&
         step === 'CF' && (
@@ -278,8 +296,41 @@ export default function Toolbar({
                 <p>Insert interpreter swear in line</p>
               </TooltipContent>
             </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <PlayerButton
+                      icon={<TimerOff className='w-4 h-4' />}
+                      onClick={setSelectionHandler}
+                      tooltip='Remove timestamps'
+                      />
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Remove Timestamps</DialogTitle>
+                      <DialogDescription>
+                        Timestamps will be removed permanently from the transcript. This action cannot be undone.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex justify-end space-x-2 mt-4">
+                      <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <DialogClose asChild>
+                        <Button variant="destructive" onClick={removeTimestamps}>Remove</Button>
+                      </DialogClose>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Remove timestamps</p>
+              </TooltipContent>
+            </Tooltip>
           </>
-        )}
+    )}
     </TooltipProvider>
   )
 }
