@@ -217,6 +217,7 @@ export const getCreditsBalance = async (userId: number) => {
             InvoiceType.ADD_CREDITS,
             InvoiceType.FREE_CREDITS,
             InvoiceType.FORMATTING,
+            InvoiceType.DEPRECATED,
           ],
         },
         status: {
