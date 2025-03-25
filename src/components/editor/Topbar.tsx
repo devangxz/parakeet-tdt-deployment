@@ -593,6 +593,9 @@ export default memo(function Topbar({
       toast.success('Speaker names updated successfully')
       setIsSpeakerNameModalOpen(false)
       if (submitting) {
+        if (editorRef && typeof editorRef !== 'function' && editorRef.current && step === 'QC') {
+          await editorRef.current.triggerAlignmentUpdate()
+        }
         setIsSubmitModalOpen(true)
       }
     } catch (error) {
@@ -730,7 +733,7 @@ export default memo(function Topbar({
         editorRef !== null &&
         editorRef.current
       ) {
-        editorRef.current.triggerAlignmentUpdate()
+        await editorRef.current.triggerAlignmentUpdate()
         currentAlignments = editorRef.current.getAlignments()
       }
 

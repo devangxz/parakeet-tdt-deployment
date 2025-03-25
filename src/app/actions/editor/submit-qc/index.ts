@@ -10,12 +10,14 @@ interface SubmitQCParams {
   orderId: number
   fileId: string
   transcript: string
+  isQCValidationPassed?: boolean
 }
 
 export async function submitQCAction({
   orderId,
   fileId,
   transcript,
+  isQCValidationPassed,
 }: SubmitQCParams) {
   try {
     const session = await getServerSession(authOptions)
@@ -29,7 +31,7 @@ export async function submitQCAction({
       throw new Error('File ID is required')
     }
 
-    await submitQCFile(orderId, transcriberId, transcript)
+    await submitQCFile(orderId, transcriberId, transcript, isQCValidationPassed)
     logger.info(`QC submitted for file ${fileId} by ${transcriberId}`)
 
     return { success: true }

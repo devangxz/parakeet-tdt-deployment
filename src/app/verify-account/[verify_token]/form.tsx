@@ -75,7 +75,7 @@ const VerifyAccount = () => {
     }
 
     verifyUserAccount()
-  }, [params?.verify_token])
+  }, [params?.verify_token, status])
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {

@@ -107,6 +107,7 @@ export async function deleteAccount(password: string) {
         prisma.teamMember.deleteMany({ where: { userId } }),
         prisma.folder.deleteMany({ where: { userId } }),
         prisma.order.deleteMany({ where: { id: { in: orderIds } } }),
+        prisma.fileVersion.deleteMany({ where: { fileId: { in: fileIds } } }),
         prisma.invoice.deleteMany({ where: { userId } }),
         prisma.invoiceFile.deleteMany({ where: { fileId: { in: fileIds } } }),
         prisma.file.deleteMany({ where: { userId } }),

@@ -213,19 +213,6 @@ export default function AssignedFilesPage({ changeTab }: Props) {
                 <p>Spellings</p>
               </TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger>
-                <Badge
-                  variant='outline'
-                  className='font-semibold text-[10px] text-green-600'
-                >
-                  {row.original.pwer ? row.original.pwer.toFixed(2) : '-'}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>PWER</p>
-              </TooltipContent>
-            </Tooltip>
             {row.original.priority === 1 && (
               <Tooltip>
                 <TooltipTrigger>

@@ -572,8 +572,15 @@ const InvoicesDetailDialog = ({
           filename: file.File.filename,
           delivery_date: file.createdAt.toISOString(),
           duration: file.File.duration,
-          rate: file.price / (file.File.duration / 60),
-          amount: file.price,
+          rate:
+            response.responseData.invoice.type === 'ADDL_FORMATTING'
+              ? response.responseData.customFormatRate
+              : file.price / (file.File.duration / 60),
+          amount:
+            response.responseData.invoice.type === 'ADDL_FORMATTING'
+              ? response.responseData.customFormatRate *
+                (file.File.duration / 60)
+              : file.price,
         }))
         setBillSummary({ total, files: files as any })
 
@@ -673,7 +680,10 @@ const InvoicesDetailDialog = ({
                     </>
                   )}
 
-                  <Services services={services!} />
+                  <Services
+                    services={services!}
+                    invoiceId={selectedInvoiceId}
+                  />
                   <Separator />
                   <Receipt receipt={receipt!} />
                 </>
