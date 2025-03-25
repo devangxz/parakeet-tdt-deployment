@@ -147,6 +147,7 @@ model File {
   FileVersion               FileVersion[]
   SharedFile                SharedFile[]
   converted                 Boolean?                @map("converted")
+  isTestFile                Boolean?                @default(false) @map("is_test_file")
   PlayStats                 PlayStats[]
   ProcessWithLLMStats       ProcessWithLLMStats[]
   ReviewWithGeminiStats     ReviewWithGeminiStats[]
@@ -247,6 +248,7 @@ model Order {
   reReviewComment  String?       @map("re_review_comment")
   finalizerComment String?       @map("finalizer_comment")
   screenCount      Int           @default(0) @map("screen_count")
+  isTestOrder      Boolean?      @default(false) @map("is_test_order")
 
   // Relations
   File              File?               @relation(fields: [fileId], references: [fileId])
@@ -866,19 +868,16 @@ model TestInvitation {
 }
 
 model TestAttempt {
-  id          Int               @id @default(autoincrement())
-  userId      Int               @map("user_id")
-  user        User              @relation(fields: [userId], references: [id])
-  testFileId  Int               @map("test_file_id")
-  testFile    TestFile          @relation(fields: [testFileId], references: [id])
-  passed      Boolean
-  status      TestAttemptStatus @default(ACCEPTED)
-  startedAt   DateTime          @map("started_at")
-  completedAt DateTime          @map("completed_at")
-  cancelledAt DateTime          @map("cancelled_at")
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  user        User      @relation(fields: [userId], references: [id])
+  passed      Boolean   @default(false)
+  score       Int       @default(0)
+  completedAt DateTime  @map("completed_at")
+  TestFile    TestFile? @relation(fields: [testFileId], references: [id])
+  testFileId  Int?
 
   @@index([userId])
-  @@index([testFileId])
   @@map("scb_test_attempts")
 }
 
@@ -1099,6 +1098,7 @@ enum InputFileType {
   QC_OUTPUT
   LLM_OUTPUT
   REVIEW_OUTPUT
+  TEST_OUTPUT
 }
 
 enum BonusType {
@@ -1127,6 +1127,7 @@ enum FileTag {
   LLM
   CF_OM_DELIVERED
   GEMINI
+  TEST
 }
 
 enum SharedFilePermission {
@@ -1138,10 +1139,4 @@ enum CancellationStatus {
   QC
   REVIEW
   FINALIZE
-}
-
-enum TestAttemptStatus {
-  ACCEPTED
-  COMPLETED
-  CANCELLED
 }
