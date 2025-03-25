@@ -7,13 +7,18 @@ export async function getListenCountAndEditedSegmentAction(fileId: string) {
     try {
         const jobAssignment = await prisma.jobAssignment.findFirst({
           where: {
-              status: 'SUBMITTED_FOR_APPROVAL',
+              status: {
+                in: ['SUBMITTED_FOR_APPROVAL', 'COMPLETED']
+              },
               order: {
                   fileId
               }
           },
           select: {
               transcriberId: true
+          },
+          orderBy: {
+            completedTs: 'desc'
           }
         })
 
