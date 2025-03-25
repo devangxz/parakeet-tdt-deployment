@@ -92,6 +92,7 @@ export const AFFILIATE_RATE = config.affiliate_rate
 export const COMMON_ABBREVIATIONS = new Set(config.common_abbreviations)
 export const MAX_FORMAT_FILES = config.max_format_files
 export const FORMAT_FILES_EXCEPTION_LIST: string[] = config.format_files_exception_list
+export const QC_VALIDATION = config.qc_validation
 
 // Review with Gemini
 export const GEMINI_PROMPT_OPTIONS = [

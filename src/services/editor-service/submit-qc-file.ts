@@ -7,7 +7,6 @@ import {
   OrderStatus,
   OrderType,
   ReportMode,
-  ReportOption,
 } from '@prisma/client'
 import axios from 'axios'
 
@@ -16,11 +15,11 @@ import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
+import deliver from '@/services/file-service/deliver'
 import { getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 import getCustomerTranscript from '@/utils/getCustomerTranscript'
 import getOrgName from '@/utils/getOrgName'
-import qualityCriteriaPassed from '@/utils/qualityCriteriaPassed'
 
 type OrderWithFileData =
   | (Order & {
@@ -104,7 +103,8 @@ async function completeQCJob(order: Order, transcriberId: number) {
 export async function submitQCFile(
   orderId: number,
   transcriberId: number,
-  transcript: string
+  transcript: string,
+  isQCValidationPassed?: boolean
 ) {
   try {
     const assignment = await prisma.jobAssignment.findFirst({
@@ -175,10 +175,9 @@ export async function submitQCFile(
       }
     )
 
-    const testResult = await qualityCriteriaPassed(order.fileId)
     const isTestCustomer = await getTestCustomer(order.userId)
 
-    if (!testResult.result) {
+    if (!isQCValidationPassed && order.orderType === OrderType.TRANSCRIPTION) {
       logger.info(`Quality Criteria failed ${order.fileId}`)
 
       const qcCost = await calculateTranscriberCost(order, transcriberId)
@@ -190,8 +189,6 @@ export async function submitQCFile(
           },
           data: {
             reportMode: ReportMode.AUTO,
-            reportOption: ReportOption.AUTO_DIFF_BELOW_THRESHOLD,
-            reportComment: testResult.details,
             status: OrderStatus.SUBMITTED_FOR_APPROVAL,
           },
         })
@@ -234,20 +231,7 @@ export async function submitQCFile(
         `order ${order.id} Status updated: REVIEWER_ASSIGNED for Order Type: ${order.orderType}`
       )
     } else {
-      // await deliver(order, transcriberId)
-      await prisma.order.update({
-        where: { id: order.id },
-        data: { status: OrderStatus.SUBMITTED_FOR_APPROVAL },
-      })
-      await prisma.jobAssignment.updateMany({
-        where: {
-          orderId: order.id,
-          transcriberId: transcriberId,
-          type: JobType.QC,
-          status: JobStatus.COMPLETED,
-        },
-        data: { status: JobStatus.SUBMITTED_FOR_APPROVAL },
-      })
+      await deliver(order, transcriberId)
     }
   } catch (error) {
     logger.error(`Failed to submit order ${orderId}: ${error}`)

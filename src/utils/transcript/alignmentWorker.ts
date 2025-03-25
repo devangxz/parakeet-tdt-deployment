@@ -162,19 +162,25 @@ function markExactMatches(alignments: AlignmentType[], ctms: CTMType[]) {
 
 function calculateWER(alignments: AlignmentType[], ctms: CTMType[]) {
   const ctmWords = ctms.length;
+  
   const stats = alignments.reduce((acc, al) => {
     if (al.type === 'ctm') {
-      acc.total++;
-      acc.success += al.case === 'success' ? 1 : 0;
+      if (al.case === 'success') {
+        acc.matches++;
+      } else if (al.ctmIndex !== undefined && al.ctmIndex >= 0) {
+        acc.substitutions++;
+      } else {
+        acc.insertions++;
+      }
     }
     return acc;
-  }, { total: 0, success: 0 });
-
-  // Errors = substitutions + insertions + deletions
-  const errors = (stats.total - stats.success) + (ctmWords - stats.success);
-  const wer = errors / ctmWords;
-
-  return wer;
+  }, { matches: 0, substitutions: 0, insertions: 0 });
+  
+  const deletions = ctmWords - (stats.matches + stats.substitutions);
+  
+  const wer = (stats.substitutions + deletions + stats.insertions) / ctmWords;
+  
+  return Number(wer.toFixed(2));
 }
 
 function getEditedSegments(alignments: AlignmentType[]): number[] {
@@ -358,5 +364,5 @@ self.onmessage = (e) => {
     const updatedAlignments = updateAlignments(newText, currentAlignments, ctms);
     const wer = calculateWER(updatedAlignments, ctms);
     const editedSegments = getEditedSegments(updatedAlignments);
-    self.postMessage({ alignments: updatedAlignments, editedSegments, wer: Number(wer.toFixed(2)) });
+    self.postMessage({ alignments: updatedAlignments, editedSegments, wer });
 };
