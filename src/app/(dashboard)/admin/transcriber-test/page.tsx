@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
+import SubmittedFilesPage from './submitted-files'
 import {
   getUsersWithoutTests,
   getActiveTestUsers,
@@ -18,6 +19,7 @@ import {
 import { DataTableColumnHeader } from '@/components/table-components/column-header'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface User {
   id: number
@@ -42,6 +44,7 @@ export default function TestInvitationsPage() {
   const [selectedUsers, setSelectedUsers] = useState<User[]>([])
   const [selectedTestUsers, setSelectedTestUsers] = useState<TestUser[]>([])
   const { data: session } = useSession()
+  const [activeTab, setActiveTab] = useState('transcriber')
 
   const fetchData = async () => {
     try {
@@ -294,70 +297,87 @@ export default function TestInvitationsPage() {
   }
 
   return (
-    <div className='h-full flex-1 flex-col space-y-8 p-5 md:flex'>
-      <h1 className='text-lg font-semibold md:text-lg'>
-        Transcriber Test System
-      </h1>
-      <div>
-        {' '}
-        <div className=''>
+    <Tabs
+      defaultValue='transcriber'
+      value={activeTab}
+      onValueChange={(value) => {
+        setActiveTab(value)
+      }}
+    >
+      <TabsList className='grid grid-cols-2 mt-5 ml-8 w-[400px]'>
+        <TabsTrigger value='transcriber' className='relative'>
+          Transcribers
+        </TabsTrigger>
+        <TabsTrigger value='files' className='relative ml-3'>
+          Submitted Files
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value='transcriber'>
+        <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
           <div>
-            <div className='flex justify-between items-center mb-4'>
-              <h3 className='text-xl font-semibold'>
-                Transcribers Without Tests
-              </h3>
-              <Button
-                onClick={handleInviteUsers}
-                disabled={selectedUsers.length === 0 || isInviting}
-                variant='order'
-                className='not-rounded'
-              >
-                {isInviting ? (
-                  <>
-                    Inviting
-                    <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-                  </>
-                ) : (
-                  `Invite Selected Transcribers (${selectedUsers.length})`
-                )}
-              </Button>
+            <div className=''>
+              <div>
+                <div className='flex justify-between items-center mb-4'>
+                  <h3 className='text-lg font-semibold md:text-lg'>
+                    Transcribers Without Tests
+                  </h3>
+                  <Button
+                    onClick={handleInviteUsers}
+                    disabled={selectedUsers.length === 0 || isInviting}
+                    variant='order'
+                    className='not-rounded'
+                  >
+                    {isInviting ? (
+                      <>
+                        Inviting
+                        <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+                      </>
+                    ) : (
+                      `Invite Selected Transcribers (${selectedUsers.length})`
+                    )}
+                  </Button>
+                </div>
+                <DataTable
+                  data={usersWithoutTests}
+                  columns={userColumns}
+                  onSelectedRowsChange={setSelectedUsers}
+                />
+              </div>
+              <hr className='my-10' />
+              <div className='mt-10'>
+                <div className='flex justify-between items-center mb-4'>
+                  <h3 className='text-lg font-semibold md:text-lg'>
+                    Active Test Transcribers
+                  </h3>
+                  <Button
+                    variant='order'
+                    onClick={() => handleRemoveUsers()}
+                    className='not-rounded'
+                    disabled={selectedTestUsers.length === 0 || isRemoving}
+                  >
+                    {isRemoving ? (
+                      <>
+                        Removing
+                        <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+                      </>
+                    ) : (
+                      `Remove Selected Transcribers (${selectedTestUsers.length})`
+                    )}
+                  </Button>
+                </div>
+                <DataTable
+                  data={activeTestUsers}
+                  columns={testUserColumns}
+                  onSelectedRowsChange={setSelectedTestUsers}
+                />
+              </div>
             </div>
-            <DataTable
-              data={usersWithoutTests}
-              columns={userColumns}
-              onSelectedRowsChange={setSelectedUsers}
-            />
-          </div>
-          <hr className='my-10' />
-          <div className='mt-10'>
-            <div className='flex justify-between items-center mb-4'>
-              <h3 className='text-xl font-semibold'>
-                Active Test Transcribers
-              </h3>
-              <Button
-                variant='order'
-                onClick={() => handleRemoveUsers()}
-                className='not-rounded'
-                disabled={selectedTestUsers.length === 0 || isRemoving}
-              >
-                {isRemoving ? (
-                  <>
-                    Removing
-                    <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
-                  </>
-                ) : (
-                  `Remove Selected Transcribers (${selectedTestUsers.length})`
-                )}
-              </Button>
-            </div>
-            <DataTable
-              data={activeTestUsers}
-              columns={testUserColumns}
-              onSelectedRowsChange={setSelectedTestUsers}
-            />
           </div>
         </div>
-      </div>
-    </div>
+      </TabsContent>
+      <TabsContent value='files'>
+        <SubmittedFilesPage />
+      </TabsContent>
+    </Tabs>
   )
 }

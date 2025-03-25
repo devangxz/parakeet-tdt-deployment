@@ -151,7 +151,11 @@ model File {
   PlayStats                 PlayStats[]
   ProcessWithLLMStats       ProcessWithLLMStats[]
   ReviewWithGeminiStats     ReviewWithGeminiStats[]
+  <<<<<<< HEAD
   QCValidationStats         QCValidationStats[]
+  =======
+  TestAttempt               TestAttempt[]
+  >>>>>>> ae3927f (added om side test system)
 
   @@index([userId])
   @@index([fileId])
@@ -868,16 +872,17 @@ model TestInvitation {
 }
 
 model TestAttempt {
-  id          Int       @id @default(autoincrement())
-  userId      Int       @map("user_id")
-  user        User      @relation(fields: [userId], references: [id])
-  passed      Boolean   @default(false)
-  score       Int       @default(0)
-  completedAt DateTime  @map("completed_at")
-  TestFile    TestFile? @relation(fields: [testFileId], references: [id])
-  testFileId  Int?
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  user        User     @relation(fields: [userId], references: [id])
+  passed      Boolean  @default(false)
+  score       Int      @default(0)
+  fileId      String   @map("file_id")
+  File        File     @relation(fields: [fileId], references: [fileId])
+  completedAt DateTime @map("completed_at")
 
   @@index([userId])
+  @@index([fileId])
   @@map("scb_test_attempts")
 }
 

@@ -25,6 +25,7 @@ export async function fetchApprovalOrders() {
     const orders = await prisma.order.findMany({
       where: {
         status: OrderStatus.SUBMITTED_FOR_APPROVAL,
+        isTestOrder: false,
       },
       include: {
         File: true,

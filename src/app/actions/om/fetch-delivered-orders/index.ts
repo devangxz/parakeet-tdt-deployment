@@ -25,6 +25,7 @@ export async function fetchDeliveredOrders(date: string) {
           lt: nextDay,
         },
         status: OrderStatus.DELIVERED,
+        isTestOrder: false,
       },
       include: {
         File: true,
