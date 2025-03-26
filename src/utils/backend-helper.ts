@@ -1165,3 +1165,31 @@ export const getTestCustomer = async (userId: number) => {
     return false
   }
 }
+
+export const isNewCustomer = async (userId: number): Promise<boolean> => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      select: {
+        createdAt: true,
+      },
+    })
+
+    if (!user) {
+      logger.error(`User not found for ID: ${userId}`)
+      return false
+    }
+
+    const createdAt = new Date(user.createdAt)
+    const currentDate = new Date()
+    const differenceInTime = currentDate.getTime() - createdAt.getTime()
+
+    const differenceInDays = differenceInTime / (1000 * 60 * 60 * 24)
+    return differenceInDays < 30
+  } catch (error) {
+    logger.error(`Error checking if user ${userId} is new: ${String(error)}`)
+    return false
+  }
+}

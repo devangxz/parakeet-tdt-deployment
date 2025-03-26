@@ -10,6 +10,7 @@ import { processPayment } from '@/services/payment-service/process-payment'
 import {
   getTeamSuperAdminUserId,
   generateUniqueTransactionId,
+  isNewCustomer,
 } from '@/utils/backend-helper'
 
 interface CheckoutViaBillingPayload {
@@ -105,6 +106,7 @@ export async function checkoutViaBilling(payload: CheckoutViaBillingPayload) {
       },
     })
     logger.info(`Payment billing successful for invoice ${invoiceId}`)
+    const newCustomer = await isNewCustomer(userId as number)
     return {
       success: true,
       transactionId,
@@ -112,6 +114,7 @@ export async function checkoutViaBilling(payload: CheckoutViaBillingPayload) {
       pp_account: '',
       cc_last4: '',
       invoice: invoiceData,
+      isNewCustomer: newCustomer,
     }
   } catch (error) {
     logger.error(`Failed billing payment for ${invoiceId}`, error)

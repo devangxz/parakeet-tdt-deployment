@@ -12,9 +12,9 @@ export async function getUserInfo({ id }: GetUserInfoParams) {
   let filter = {}
 
   if (!isNaN(id as number)) {
-    filter = { id: parseInt(id as string) }
+    filter = { id: parseInt(id.toString().trim()) }
   } else {
-    filter = { email: id }
+    filter = { email: id.toString().trim() }
   }
 
   try {

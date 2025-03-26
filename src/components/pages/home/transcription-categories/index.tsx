@@ -288,9 +288,9 @@ const TranscriptionCategories = () => {
               </span>
             </div>
 
-            <h3 className='text-3xl sm:text-4xl font-bold text-foreground'>
+            <h1 className='text-3xl sm:text-4xl font-bold text-foreground'>
               {activeService.title} Transcription
-            </h3>
+            </h1>
 
             <p className='text-muted-foreground text-base sm:text-lg'>
               {activeService.longDescription}

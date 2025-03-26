@@ -10,6 +10,7 @@ import { processPayment } from '@/services/payment-service/process-payment'
 import {
   getCreditsBalance,
   generateUniqueTransactionId,
+  isNewCustomer,
 } from '@/utils/backend-helper'
 
 interface CheckoutViaCreditsPayload {
@@ -111,6 +112,7 @@ export async function checkoutViaCredits(payload: CheckoutViaCreditsPayload) {
       },
     })
     logger.info(`Payment credits successful for invoice ${invoiceId}`)
+    const newCustomer = await isNewCustomer(userId as number)
     return {
       success: true,
       transactionId,
@@ -118,6 +120,7 @@ export async function checkoutViaCredits(payload: CheckoutViaCreditsPayload) {
       pp_account: '',
       cc_last4: '',
       invoice: invoiceData,
+      isNewCustomer: newCustomer,
     }
   } catch (error) {
     logger.error(`Failed charged credits payment for ${invoiceId}`, error)
