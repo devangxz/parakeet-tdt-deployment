@@ -2,6 +2,7 @@
 
 import { JobStatus, OrderStatus } from '@prisma/client'
 
+import { getTestTranscriberUserAccount } from './get-test-transcriber-user-account'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 
@@ -15,6 +16,14 @@ export async function cancelTest(
   orderId: number
 ): Promise<CancelTestResponse> {
   try {
+    const testTranscriberUserAccount = await getTestTranscriberUserAccount()
+
+    if (!testTranscriberUserAccount.userId) {
+      return {
+        success: false,
+        error: 'Failed to cancel test',
+      }
+    }
     const order = await prisma.order.findUnique({
       where: {
         id: orderId,
@@ -76,13 +85,13 @@ export async function cancelTest(
       })
       await tx.file.create({
         data: {
-          userId,
+          userId: testTranscriberUserAccount.userId as number,
           fileId: order.fileId,
           filename: order.File?.filename ?? '',
           duration: order.File?.duration ?? 0,
           filesize: order.File?.filesize ?? '',
           isTestFile: true,
-          uploadedBy: userId,
+          uploadedBy: testTranscriberUserAccount.userId as number,
         },
       })
     })

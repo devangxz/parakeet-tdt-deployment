@@ -1,5 +1,6 @@
 'use server'
 
+import { getTestTranscriberUserAccount } from './get-test-transcriber-user-account'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 
@@ -40,9 +41,19 @@ interface TestHistoryResponse {
 
 export async function getTestFiles(): Promise<TestFilesResponse> {
   try {
+    const testTranscriberUserAccount = await getTestTranscriberUserAccount()
+
+    if (!testTranscriberUserAccount.userId) {
+      return {
+        success: false,
+        error: 'Failed to fetch test files',
+      }
+    }
+
     const testFiles = await prisma.file.findMany({
       where: {
         isTestFile: true,
+        userId: testTranscriberUserAccount.userId,
         Orders: {
           none: {},
         },

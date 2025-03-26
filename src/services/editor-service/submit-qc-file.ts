@@ -111,20 +111,6 @@ export async function submitQCFile(
   qcValidation?: QCValidation
 ) {
   try {
-    const assignment = await prisma.jobAssignment.findFirst({
-      where: {
-        orderId,
-        transcriberId,
-        type: JobType.QC,
-      },
-    })
-
-    if (!assignment) {
-      logger.error(
-        `Unauthorized try to submit a QC file by user ${transcriberId} for order ${orderId}`
-      )
-    }
-
     const order = await prisma.order.findUnique({
       where: {
         id: orderId,
@@ -140,6 +126,110 @@ export async function submitQCFile(
         success: false,
         message: 'Order not found',
       }
+    }
+
+    const isTestOrder = order.isTestOrder
+
+    if (isTestOrder) {
+      const assignment = await prisma.jobAssignment.findFirst({
+        where: {
+          orderId,
+          transcriberId,
+          type: JobType.TEST,
+        },
+      })
+
+      if (!assignment) {
+        logger.error(
+          `Unauthorized try to submit a QC Test file by user ${transcriberId} for order ${order.fileId}`
+        )
+        return
+      }
+
+      await axios.post(
+        `${FILE_CACHE_URL}/save-transcript`,
+        {
+          fileId: order.fileId,
+          transcript: transcript,
+          userId: transcriberId,
+        },
+        {
+          headers: {
+            'x-api-key': process.env.SCRIBIE_API_KEY,
+          },
+        }
+      )
+
+      if (!isQCValidationPassed) {
+        await prisma.$transaction(async (prisma) => {
+          await prisma.order.update({
+            where: {
+              id: order.id,
+            },
+            data: {
+              status: OrderStatus.DELIVERED,
+              deliveredTs: new Date(),
+            },
+          })
+          await prisma.jobAssignment.updateMany({
+            where: {
+              orderId: order.id,
+              transcriberId,
+              type: JobType.TEST,
+              status: JobStatus.ACCEPTED,
+            },
+            data: {
+              status: JobStatus.COMPLETED,
+              completedTs: new Date(),
+            },
+          })
+          await prisma.testAttempt.create({
+            data: {
+              userId: transcriberId,
+              passed: false,
+              score: 0,
+              completedAt: new Date(),
+              fileId: order.fileId,
+            },
+          })
+        })
+      } else {
+        await prisma.order.update({
+          where: {
+            id: order.id,
+          },
+          data: {
+            status: OrderStatus.SUBMITTED_FOR_APPROVAL,
+          },
+        })
+        await prisma.jobAssignment.updateMany({
+          where: {
+            orderId: order.id,
+            transcriberId,
+            type: JobType.TEST,
+            status: JobStatus.ACCEPTED,
+          },
+          data: {
+            status: JobStatus.COMPLETED,
+            completedTs: new Date(),
+          },
+        })
+      }
+      return
+    }
+
+    const assignment = await prisma.jobAssignment.findFirst({
+      where: {
+        orderId,
+        transcriberId,
+        type: JobType.QC,
+      },
+    })
+
+    if (!assignment) {
+      logger.error(
+        `Unauthorized try to submit a QC file by user ${transcriberId} for order ${orderId}`
+      )
     }
 
     logger.info(

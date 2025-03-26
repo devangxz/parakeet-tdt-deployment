@@ -1,7 +1,7 @@
-"use server"
+'use server'
 
-import { OrderType } from "@prisma/client"
-import prisma from "../src/lib/prisma"
+import { OrderType } from '@prisma/client'
+import prisma from '../src/lib/prisma'
 
 const legalOnboarding = async (
   email: string,
@@ -82,12 +82,12 @@ const legalOnboarding = async (
 }
 
 async function createSeedUserAccount(user: {
-  email: string,
-  pass: string,
-  salt: string,
-  firstname: string,
-  lastname: string,
-  role: string, 
+  email: string
+  pass: string
+  salt: string
+  firstname: string
+  lastname: string
+  role: string
   phone: string
   industry: string
   rc: string
@@ -106,7 +106,7 @@ async function createSeedUserAccount(user: {
       industry,
       rc,
       newsletter,
-      inviteKey
+      inviteKey,
     } = user
     const newUser = await prisma.user.create({
       data: {
@@ -115,16 +115,21 @@ async function createSeedUserAccount(user: {
         salt,
         firstname,
         lastname,
-        role: role == 'CUSTOMER' ? "CUSTOMER" : role === 'TRANSCRIBER' ? "TRANSCRIBER" : "REVIEWER",
+        role:
+          role == 'CUSTOMER'
+            ? 'CUSTOMER'
+            : role === 'TRANSCRIBER'
+            ? 'TRANSCRIBER'
+            : 'REVIEWER',
         user: email,
-        referralCode: "q1w2e3r4t5y6",
+        referralCode: 'q1w2e3r4t5y6',
         phoneNumber: phone,
         industry,
-        status: 'VERIFIED'
+        status: 'VERIFIED',
       },
     })
 
-    if(role == 'CUSTOMER'){
+    if (role == 'CUSTOMER') {
       await prisma.customer.create({
         data: {
           userId: newUser.id,
@@ -137,12 +142,11 @@ async function createSeedUserAccount(user: {
           newsletter: true,
         },
       })
-    }
-    else {
+    } else {
       await prisma.verifier.create({
         data: {
           userId: newUser.id,
-          qcType: "FREELANCER",
+          qcType: 'FREELANCER',
           legalEnabled: true,
           cfReviewEnabled: true,
         },
@@ -165,72 +169,93 @@ async function createSeedUserAccount(user: {
     if (industry.toLocaleLowerCase() === 'legal' && role === 'CUSTOMER') {
       await legalOnboarding(email, newUser.id, firstname)
     }
-
   } catch (error) {
     console.error('Error creating user:', error)
     throw error
   }
 }
 
-
 // B2C consumer account
 createSeedUserAccount({
-  email: "demo@gmail.com",
-  pass: "$2b$10$oRhLtaqmOGk..0wMoNUy6.6wyP6r44lvWph3jet6B14O/m/pqwRcK",
-  salt: "$2b$10$oRhLtaqmOGk..0wMoNUy6.",
-  firstname: "demo",
-  lastname: "user",
+  email: 'demo@gmail.com',
+  pass: '$2b$10$oRhLtaqmOGk..0wMoNUy6.6wyP6r44lvWph3jet6B14O/m/pqwRcK',
+  salt: '$2b$10$oRhLtaqmOGk..0wMoNUy6.',
+  firstname: 'demo',
+  lastname: 'user',
   role: 'CUSTOMER',
-  phone: "+918877665544",
-  industry: "Video",
-  rc: "",
+  phone: '+918877665544',
+  industry: 'Video',
+  rc: '',
   newsletter: false,
-  inviteKey: "iv"
-}).then((_) => console.log("dev b2c user created successfully")).catch((err) => console.log(err));
+  inviteKey: 'iv',
+})
+  .then((_) => console.log('dev b2c user created successfully'))
+  .catch((err) => console.log(err))
 
+// Test Transcriber User Account
+createSeedUserAccount({
+  email: 'test+transcriber+customer@scribie.com',
+  pass: '$2b$10$oRhLtaqmOGk..0wMoNUy6.6wyP6r44lvWph3jet6B14O/m/pqwRcK',
+  salt: '$2b$10$oRhLtaqmOGk..0wMoNUy6.',
+  firstname: 'demo',
+  lastname: 'user',
+  role: 'CUSTOMER',
+  phone: '+918877665544',
+  industry: 'Video',
+  rc: '',
+  newsletter: false,
+  inviteKey: 'iv',
+})
+  .then((_) => console.log('dev test transcriber user created successfully'))
+  .catch((err) => console.log(err))
 
 // // transcriber account
 createSeedUserAccount({
-  email: "demo+tr@gmail.com",
-  pass: "$2b$10$oRhLtaqmOGk..0wMoNUy6.6wyP6r44lvWph3jet6B14O/m/pqwRcK",
-  salt: "$2b$10$oRhLtaqmOGk..0wMoNUy6.",
-  firstname: "demo+tr",
-  lastname: "user",
+  email: 'demo+tr@gmail.com',
+  pass: '$2b$10$oRhLtaqmOGk..0wMoNUy6.6wyP6r44lvWph3jet6B14O/m/pqwRcK',
+  salt: '$2b$10$oRhLtaqmOGk..0wMoNUy6.',
+  firstname: 'demo+tr',
+  lastname: 'user',
   role: 'TRANSCRIBER',
-  phone: "+918877665544",
-  industry: "",
-  rc: "",
+  phone: '+918877665544',
+  industry: '',
+  rc: '',
   newsletter: false,
-  inviteKey: "iv+tr"
-}).then((_) => console.log("dev transcriber user created successfully")).catch((err) => console.log(err));
-
+  inviteKey: 'iv+tr',
+})
+  .then((_) => console.log('dev transcriber user created successfully'))
+  .catch((err) => console.log(err))
 
 // reviewer account
 createSeedUserAccount({
-  email: "demo+rv@gmail.com",
-  pass: "$2b$10$oRhLtaqmOGk..0wMoNUy6.6wyP6r44lvWph3jet6B14O/m/pqwRcK",
-  salt: "$2b$10$oRhLtaqmOGk..0wMoNUy6.",
-  firstname: "demo+rv",
-  lastname: "user",
+  email: 'demo+rv@gmail.com',
+  pass: '$2b$10$oRhLtaqmOGk..0wMoNUy6.6wyP6r44lvWph3jet6B14O/m/pqwRcK',
+  salt: '$2b$10$oRhLtaqmOGk..0wMoNUy6.',
+  firstname: 'demo+rv',
+  lastname: 'user',
   role: 'REVIEWER',
-  phone: "+918877665544",
-  industry: "",
-  rc: "",
+  phone: '+918877665544',
+  industry: '',
+  rc: '',
   newsletter: false,
-  inviteKey: "iv+rv"
-}).then((_) => console.log("dev reviewer user created successfully")).catch((err) => console.log(err));
+  inviteKey: 'iv+rv',
+})
+  .then((_) => console.log('dev reviewer user created successfully'))
+  .catch((err) => console.log(err))
 
 // reviewer account
 createSeedUserAccount({
-  email: "demo+rl@gmail.com",
-  pass: "$2b$10$oRhLtaqmOGk..0wMoNUy6.6wyP6r44lvWph3jet6B14O/m/pqwRcK",
-  salt: "$2b$10$oRhLtaqmOGk..0wMoNUy6.",
-  firstname: "demo+rl",
-  lastname: "user",
+  email: 'demo+rl@gmail.com',
+  pass: '$2b$10$oRhLtaqmOGk..0wMoNUy6.6wyP6r44lvWph3jet6B14O/m/pqwRcK',
+  salt: '$2b$10$oRhLtaqmOGk..0wMoNUy6.',
+  firstname: 'demo+rl',
+  lastname: 'user',
   role: 'CUSTOMER',
-  phone: "+918877665544",
-  industry: "Legal",
-  rc: "",
+  phone: '+918877665544',
+  industry: 'Legal',
+  rc: '',
   newsletter: false,
-  inviteKey: "iv+rl"
-}).then((_) => console.log("dev rl user created successfully")).catch((err) => console.log(err));
+  inviteKey: 'iv+rl',
+})
+  .then((_) => console.log('dev rl user created successfully'))
+  .catch((err) => console.log(err))

@@ -2,6 +2,7 @@
 
 import { OrderStatus } from '@prisma/client'
 
+import { getTestTranscriberUserAccount } from './get-test-transcriber-user-account'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 
@@ -16,6 +17,14 @@ export async function startTest(
   fileId: string
 ): Promise<StartTestResponse> {
   try {
+    const testTranscriberUserAccount = await getTestTranscriberUserAccount()
+
+    if (!testTranscriberUserAccount.userId) {
+      return {
+        success: false,
+        error: 'Failed to cancel test',
+      }
+    }
     const file = await prisma.file.findUnique({
       where: {
         fileId,
@@ -72,9 +81,9 @@ export async function startTest(
 
     const order = await prisma.order.create({
       data: {
-        userId,
+        userId: testTranscriberUserAccount.userId as number,
         fileId,
-        status: OrderStatus.PENDING,
+        status: OrderStatus.QC_ASSIGNED,
         tat: 24,
         isTestOrder: true,
         deadlineTs: new Date(Date.now() + 24 * 60 * 60 * 1000),
