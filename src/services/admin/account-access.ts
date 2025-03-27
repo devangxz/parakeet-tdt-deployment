@@ -14,6 +14,9 @@ export const accessAccount = async (userEmail: string) => {
     where: { email: userEmail.toLowerCase() },
     include: {
       Verifier: true,
+      UserRate: true,
+      Customer: true,
+      Organization: true,
     },
   })
 
@@ -42,6 +45,9 @@ export const accessAccount = async (userEmail: string) => {
     internalTeamUserId: null,
     teamName: null,
     selectedUserTeamRole: null,
+    customPlan: user?.Customer?.customPlan || false,
+    orderType: user.UserRate?.orderType || 'TRANSCRIPTION',
+    organizationName: user.Organization?.name || 'NONE',
   }
 
   const token = signJwtAccessToken(payload)
@@ -61,6 +67,9 @@ export const accessAccount = async (userEmail: string) => {
     internalTeamUserId: null,
     teamName: null,
     selectedUserTeamRole: null,
+    customPlan: user?.Customer?.customPlan || false,
+    orderType: user.UserRate?.orderType || 'TRANSCRIPTION',
+    organizationName: user.Organization?.name || 'NONE',
   }
 
   return { success: true, details }
