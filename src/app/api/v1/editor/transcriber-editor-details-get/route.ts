@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams
     const fileId = searchParams.get('fileId')
     const type = searchParams.get('type')
+    const transcriberUserId = searchParams.get('userId')
 
     if (!fileId) {
       return NextResponse.json(
@@ -68,6 +69,10 @@ export async function GET(req: NextRequest) {
       where: {
         fileId: file.fileId,
         tag: FileTag.QC_EDIT,
+        userId: parseInt(transcriberUserId ?? '0'),
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     })
     if (!qcEditFile) {
