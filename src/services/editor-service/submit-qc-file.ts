@@ -16,6 +16,7 @@ import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
 import deliver from '@/services/file-service/deliver'
+import { QCValidation } from '@/types/editor'
 import { getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 import getCustomerTranscript from '@/utils/getCustomerTranscript'
@@ -57,10 +58,13 @@ async function completeQCJob(order: Order, transcriberId: number) {
       completedTs: new Date(),
     },
   })
-  await prisma.order.update({
-    where: { id: order.id },
-    data: { status: OrderStatus.QC_COMPLETED, updatedAt: new Date() },
-  })
+  if (order.status === OrderStatus.QC_ASSIGNED) {
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { status: OrderStatus.QC_COMPLETED, updatedAt: new Date() },
+    })
+  }
+  
   const user = await prisma.user.findFirst({ where: { id: transcriberId } })
   const userEmail = user?.email || ''
 
@@ -104,7 +108,7 @@ export async function submitQCFile(
   orderId: number,
   transcriberId: number,
   transcript: string,
-  isQCValidationPassed?: boolean
+  qcValidation?: QCValidation
 ) {
   try {
     const assignment = await prisma.jobAssignment.findFirst({
@@ -177,7 +181,35 @@ export async function submitQCFile(
 
     const isTestCustomer = await getTestCustomer(order.userId)
 
-    if (!isQCValidationPassed && order.orderType === OrderType.TRANSCRIPTION) {
+    if (qcValidation && order.status === OrderStatus.QC_ASSIGNED) {
+      try {
+        await prisma.qCValidationStats.create({
+          data: {
+            orderId,
+            fileId: order.fileId,
+            transcriberId,
+            playedPercentage: qcValidation.playedPercentage,
+            werPercentage: qcValidation.werPercentage,
+            blankPercentage: qcValidation.blankPercentage,
+            editListenCorrelationPercentage:
+              qcValidation.editListenCorrelationPercentage,
+            speakerChangePercentage: qcValidation.speakerChangePercentage,
+            speakerMacroF1Score: qcValidation.speakerMacroF1Score,
+            isValidationPassed: qcValidation.isValidationPassed,
+          },
+        })
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        logger.error(`Failed to create QC validation stats: ${errorMessage}`)
+      }
+    }
+
+    if (
+      qcValidation &&
+      !qcValidation.isValidationPassed &&
+      order.orderType === OrderType.TRANSCRIPTION &&
+      order.status === OrderStatus.QC_ASSIGNED
+    ) {
       logger.info(`Quality Criteria failed ${order.fileId}`)
 
       const qcCost = await calculateTranscriberCost(order, transcriberId)
@@ -231,7 +263,9 @@ export async function submitQCFile(
         `order ${order.id} Status updated: REVIEWER_ASSIGNED for Order Type: ${order.orderType}`
       )
     } else {
-      await deliver(order, transcriberId)
+      if (order.status === OrderStatus.QC_ASSIGNED) {
+        await deliver(order, transcriberId)
+      }
     }
   } catch (error) {
     logger.error(`Failed to submit order ${orderId}: ${error}`)

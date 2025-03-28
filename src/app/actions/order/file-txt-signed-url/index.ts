@@ -28,6 +28,9 @@ export async function getFileTxtSignedUrl(fileId: string) {
         fileId: fileId,
         tag: FileTag.CUSTOMER_EDIT,
       },
+      orderBy: {
+        createdAt: 'desc',
+      },
       select: {
         s3VersionId: true,
       },
@@ -38,6 +41,9 @@ export async function getFileTxtSignedUrl(fileId: string) {
         where: {
           fileId: fileId,
           tag: FileTag.CUSTOMER_DELIVERED,
+        },
+        orderBy: {
+          createdAt: 'desc',
         },
         select: {
           s3VersionId: true,

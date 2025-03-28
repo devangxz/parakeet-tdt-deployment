@@ -28,7 +28,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import FileAudioPlayer from '@/components/utils/FileAudioPlayer'
-import { HIGH_PWER, LOW_PWER } from '@/constants'
+import { HIGH_PWER, LOW_PWER, QC_VALIDATION } from '@/constants'
+import { QCValidation } from '@/types/editor'
 import { FileCost } from '@/types/files'
 import formatDateTime from '@/utils/formatDateTime'
 import formatDuration from '@/utils/formatDuration'
@@ -51,6 +52,7 @@ interface File {
   type: string
   transcriberWatch: boolean
   customerWatch: boolean
+  qcValidationStats?: QCValidation
 }
 
 interface ApprovalPageProps {
@@ -169,7 +171,8 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
             type: order.orderType,
             transcriberWatch: order.watchList.transcriber,
             customerWatch: order.watchList.customer,
-          }
+            qcValidationStats: order.qcValidationStats,
+          } as File
         })
         // Sort orders so that overdue files from yesterday are placed on top
         const today = new Date()
@@ -326,7 +329,7 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
       cell: ({ row }) => (
         <div
           className='font-medium'
-          style={{ minWidth: '250px', maxWidth: '250px' }}
+          style={{ minWidth: '150px' }}
         >
           {formatDuration(row.getValue('duration'))}
           {row.original.type === 'FORMATTING' ? (
@@ -413,6 +416,33 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
         <DataTableColumnHeader column={column} title='Order Type' />
       ),
       filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    },
+    {
+      accessorKey: 'qcStats',
+      header: 'QC Stats',
+      cell: ({ row }) => {
+        const stats = row.original.qcValidationStats
+        if (!stats) {
+          return <div className="font-medium" style={{ minWidth: '185px' }}>No QC Stats</div>
+        }
+        
+        const playedClass = stats.playedPercentage < QC_VALIDATION.min_audio_playback_percentage ? 'text-red-600' : 'text-green-600'
+        const werClass = (stats.werPercentage < QC_VALIDATION.min_wer_percentage || 
+                          stats.werPercentage > QC_VALIDATION.max_wer_percentage) ? 'text-red-600' : 'text-green-600'
+        const blankClass = stats.blankPercentage > QC_VALIDATION.max_blank_percentage ? 'text-red-600' : 'text-green-600'
+        const editListenCorrelationClass = stats.editListenCorrelationPercentage < QC_VALIDATION.min_edit_listen_correlation_percentage ? 'text-red-600' : 'text-green-600'
+        const speakerChangeClass = stats.speakerChangePercentage > QC_VALIDATION.max_speaker_change_percentage ? 'text-red-600' : 'text-green-600'
+
+        return (
+          <div className="font-medium" style={{ minWidth: '185px' }}>
+            <div>Audio Played: <span className={playedClass}>{stats.playedPercentage}%</span></div>
+            <div>Changes Made: <span className={werClass}>{stats.werPercentage}%</span></div>
+            <div>Blanks Added: <span className={blankClass}>{stats.blankPercentage}%</span></div>
+            <div>Edit-listen Correlation: <span className={editListenCorrelationClass}>{stats.editListenCorrelationPercentage}%</span></div>
+            <div>Speakers Changed: <span className={speakerChangeClass}>{stats.speakerChangePercentage}%</span></div>
+          </div>
+        )
+      },
     },
     {
       id: 'actions',

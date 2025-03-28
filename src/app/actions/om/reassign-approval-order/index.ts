@@ -75,6 +75,28 @@ export async function reassignApprovalOrder(formData: {
       },
     })
 
+    const qcValidationStats = await prisma.qCValidationStats.findFirst({
+      where: {
+        orderId: orderInformation.id,
+        fileId: orderInformation.fileId,
+        transcriberId: currentJobAssignment.transcriberId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+
+    if (qcValidationStats) {
+      await prisma.qCValidationStats.update({
+        where: {
+          id: qcValidationStats.id,
+        },
+        data: {
+          isAcceptedByOM: retainEarnings ? true : false,
+        },
+      })
+    }
+
     logger.info(`Successfully re-assigned qc for file ${orderId}`)
     return {
       success: true,

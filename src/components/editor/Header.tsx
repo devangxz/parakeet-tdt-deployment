@@ -642,7 +642,7 @@ export default memo(function Header({
                         tooltip='Go back 10 seconds'
                         onClick={() => {
                           if (audioPlayer.current) {
-                            audioPlayer.current.currentTime -= 5
+                            audioPlayer.current.currentTime -= 10
                           }
                         }}
                       />
@@ -686,7 +686,7 @@ export default memo(function Header({
                         tooltip='Go forward 5 seconds'
                         onClick={() => {
                           if (audioPlayer.current) {
-                            audioPlayer.current.currentTime += 5
+                            audioPlayer.current.currentTime += 10
                           }
                         }}
                       />

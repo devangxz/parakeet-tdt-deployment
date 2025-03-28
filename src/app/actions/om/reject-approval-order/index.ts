@@ -42,6 +42,28 @@ export async function rejectApprovalOrder(formData: { orderId: number }) {
       'QC'
     )
 
+    const qcValidationStats = await prisma.qCValidationStats.findFirst({
+      where: {
+        orderId: order.id,
+        fileId: order.fileId,
+        transcriberId: currentJobAssignment.transcriberId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+
+    if (qcValidationStats) {
+      await prisma.qCValidationStats.update({
+        where: {
+          id: qcValidationStats.id,
+        },
+        data: {
+          isAcceptedByOM: false,
+        },
+      })
+    }
+
     logger.info(`rejected the approval file, for ${orderId}`)
     return {
       success: true,
