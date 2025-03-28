@@ -76,13 +76,30 @@ export async function GET(req: NextRequest) {
       },
     })
     if (!qcEditFile) {
-      const autoEditFile = await prisma.fileVersion.findFirst({
+      const qcDeliveredFile = await prisma.fileVersion.findFirst({
         where: {
           fileId: file.fileId,
-          tag: FileTag.AUTO,
+          tag: FileTag.QC_DELIVERED,
+          userId: parseInt(transcriberUserId ?? '0'),
+        },
+        orderBy: {
+          createdAt: 'desc',
         },
       })
-      versionId = autoEditFile?.s3VersionId ?? ''
+      if (!qcDeliveredFile) {
+        const autoEditFile = await prisma.fileVersion.findFirst({
+          where: {
+            fileId: file.fileId,
+            tag: FileTag.AUTO,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        })
+        versionId = autoEditFile?.s3VersionId ?? ''
+      } else {
+        versionId = qcDeliveredFile?.s3VersionId ?? ''
+      }
     } else {
       versionId = qcEditFile?.s3VersionId ?? ''
     }
