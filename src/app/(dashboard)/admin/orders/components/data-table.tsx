@@ -33,6 +33,7 @@ interface DataTableProps<TData, TValue> {
   onSelectedRowsChange?: (selectedRows: TData[]) => void
   renderRowSubComponent?: (props: { row: unknown }) => React.ReactNode
   renderWaveform?: (row: TData) => React.ReactNode
+  defaultColumnVisibility?: VisibilityState
 }
 
 const isDeliveryDatePast = (deliveryTs: string) =>
@@ -44,19 +45,20 @@ export function DataTable<TData, TValue>({
   onSelectedRowsChange,
   renderRowSubComponent,
   renderWaveform,
+  defaultColumnVisibility,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
 
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({
-      orgName: false,
-      customerWatch: false,
-      transcriberWatch: false,
-      type: false,
-    })
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  )
+    React.useState<VisibilityState>(
+      defaultColumnVisibility ?? {
+        orgName: false,
+        customerWatch: false,
+        transcriberWatch: false,
+        type: false,
+      }
+    )
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [sorting, setSorting] = React.useState<SortingState>([])
 
   const table = useReactTable({
