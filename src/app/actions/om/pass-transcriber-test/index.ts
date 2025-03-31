@@ -51,31 +51,51 @@ export async function passTranscriberTest(orderId: number) {
     const currentJobAssignment = orderInformation.Assignment[0]
     const transcriberId = currentJobAssignment.transcriberId
 
-    await prisma.order.update({
-      where: { id: orderInformation.id },
-      data: {
-        deliveredTs: new Date(),
-        deliveredBy: transcriberId,
-        status: 'DELIVERED',
-        updatedAt: new Date(),
-      },
-    })
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { id: orderInformation.id },
+        data: {
+          deliveredTs: new Date(),
+          deliveredBy: transcriberId,
+          status: 'DELIVERED',
+          updatedAt: new Date(),
+        },
+      })
 
-    await prisma.jobAssignment.update({
-      where: { id: currentJobAssignment.id },
-      data: {
-        status: JobStatus.COMPLETED,
-        completedTs: new Date(),
-      },
-    })
+      await tx.jobAssignment.update({
+        where: { id: currentJobAssignment.id },
+        data: {
+          status: JobStatus.COMPLETED,
+          completedTs: new Date(),
+        },
+      })
 
-    await prisma.testAttempt.create({
-      data: {
-        userId: transcriberId,
-        fileId: orderInformation.fileId,
-        passed: true,
-        completedAt: new Date(),
-      },
+      await tx.testAttempt.create({
+        data: {
+          userId: transcriberId,
+          fileId: orderInformation.fileId,
+          passed: true,
+          completedAt: new Date(),
+        },
+      })
+
+      await tx.user.update({
+        where: { id: transcriberId },
+        data: {
+          role: 'QC',
+        },
+      })
+
+      await tx.verifier.upsert({
+        where: { userId: transcriberId },
+        update: {
+          qcDisabled: false,
+        },
+        create: {
+          userId: transcriberId,
+          qcDisabled: false,
+        },
+      })
     })
 
     logger.info(
