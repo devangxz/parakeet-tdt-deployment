@@ -1,7 +1,5 @@
 'use server'
 
-import { JobStatus, OrderStatus } from '@prisma/client'
-
 import { getTestTranscriberUserAccount } from './get-test-transcriber-user-account'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
@@ -24,6 +22,7 @@ export async function cancelTest(
         error: 'Failed to cancel test',
       }
     }
+
     const order = await prisma.order.findUnique({
       where: {
         id: orderId,
@@ -41,59 +40,29 @@ export async function cancelTest(
       }
     }
 
-    const jobAssignment = await prisma.jobAssignment.findFirst({
+    const testAttempt = await prisma.testAttempt.findFirst({
       where: {
-        orderId,
-        transcriberId: userId,
-        type: 'TEST',
-        status: JobStatus.ACCEPTED,
+        fileId: order.fileId,
+        userId,
+        status: 'ACCEPTED',
       },
     })
 
-    if (!jobAssignment) {
+    if (!testAttempt) {
       return {
         success: false,
-        error: 'No test assignment found',
+        error: 'No test attempt found',
       }
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.order.update({
-        where: { id: orderId },
-        data: {
-          status: OrderStatus.DELIVERED,
-          deliveredTs: new Date(),
-        },
-      })
-
-      await tx.jobAssignment.update({
-        where: { id: jobAssignment.id },
-        data: {
-          status: JobStatus.CANCELLED,
-          cancelledTs: new Date(),
-        },
-      })
-
-      await tx.testAttempt.create({
-        data: {
-          userId,
-          passed: false,
-          score: 0,
-          completedAt: new Date(),
-          fileId: order.fileId,
-        },
-      })
-      await tx.file.create({
-        data: {
-          userId: testTranscriberUserAccount.userId as number,
-          fileId: order.fileId,
-          filename: order.File?.filename ?? '',
-          duration: order.File?.duration ?? 0,
-          filesize: order.File?.filesize ?? '',
-          isTestFile: true,
-          uploadedBy: testTranscriberUserAccount.userId as number,
-        },
-      })
+    await prisma.testAttempt.update({
+      where: { id: testAttempt.id },
+      data: {
+        status: 'CANCELLED',
+        cancelledAt: new Date(),
+        passed: false,
+        score: 0,
+      },
     })
 
     logger.info(

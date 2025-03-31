@@ -1,7 +1,5 @@
 'use server'
 
-import { OrderStatus } from '@prisma/client'
-
 import { getTestTranscriberUserAccount } from './get-test-transcriber-user-account'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
@@ -54,6 +52,9 @@ export async function startTest(
       where: {
         userId,
         passed: false,
+        status: {
+          in: ['COMPLETED', 'CANCELLED', 'SUBMITTED_FOR_APPROVAL'],
+        },
       },
     })
 
@@ -64,11 +65,10 @@ export async function startTest(
       }
     }
 
-    const currentAssignment = await prisma.jobAssignment.findFirst({
+    const currentAssignment = await prisma.testAttempt.findFirst({
       where: {
-        transcriberId: userId,
+        userId: userId,
         status: 'ACCEPTED',
-        type: 'TEST',
       },
     })
 
@@ -79,32 +79,16 @@ export async function startTest(
       }
     }
 
-    const order = await prisma.order.create({
+    await prisma.testAttempt.create({
       data: {
-        userId: testTranscriberUserAccount.userId as number,
+        userId,
         fileId,
-        status: OrderStatus.QC_ASSIGNED,
-        tat: 24,
-        isTestOrder: true,
-        deadlineTs: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      },
-    })
-
-    await prisma.jobAssignment.create({
-      data: {
-        transcriberId: userId,
-        orderId: order.id,
         status: 'ACCEPTED',
-        earnings: 0,
-        type: 'TEST',
-        inputFile: 'ASR_OUTPUT',
-        assignMode: 'AUTO',
       },
     })
 
     return {
       success: true,
-      orderId: order.id,
     }
   } catch (error) {
     logger.error(`Error starting test: ${error}`)

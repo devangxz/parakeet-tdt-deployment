@@ -1,42 +1,43 @@
 'use server'
 
-import { OrderStatus } from '@prisma/client'
-
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
-import getOrderType from '@/utils/getOrderType'
 
 export async function fetchTestApprovalFiles() {
   try {
-    const orders = await prisma.order.findMany({
+    const testAttempts = await prisma.testAttempt.findMany({
       where: {
-        status: OrderStatus.SUBMITTED_FOR_APPROVAL,
-        isTestOrder: true,
+        status: 'SUBMITTED_FOR_APPROVAL',
       },
       include: {
-        File: true,
-        Assignment: {
-          include: {
-            user: true,
-          },
-        },
+        user: true,
       },
     })
 
-    const ordersWithCost = await Promise.all(
-      orders.map(async (order) => {
-        const orderType = await getOrderType(order.fileId, order.orderType)
-        const transcriberId = order.Assignment.find(
-          (a) => a.status === 'SUBMITTED_FOR_APPROVAL' && a.type === 'TEST'
-        )?.user.id
-        return { ...order, orderType, transcriberId }
+    const orders = await Promise.all(
+      testAttempts.map(async (testAttempt) => {
+        const order = await prisma.order.findUnique({
+          where: { fileId: testAttempt.fileId },
+          include: {
+            File: true,
+          },
+        })
+        if (order) {
+          return {
+            ...order,
+            transcriberId: testAttempt.userId,
+            testAttempt: {
+              ...testAttempt,
+            },
+          }
+        }
       })
     )
 
     logger.info(`fetched test approval files`)
     return {
       success: true,
-      details: ordersWithCost,
+      details: orders,
     }
   } catch (error) {
     logger.error(`Error while fetching test approval files`, error)

@@ -21,7 +21,7 @@ import { Label } from '@/components/ui/label'
 interface DialogProps {
   open: boolean
   onClose: () => void
-  orderId: string
+  fileId: string
   isAccept: boolean
   refetch: () => void
   transcriber?: {
@@ -34,7 +34,7 @@ interface DialogProps {
 const PassFailTranscriberTestDialog = ({
   open,
   onClose,
-  orderId,
+  fileId,
   isAccept,
   refetch,
   transcriber,
@@ -45,32 +45,34 @@ const PassFailTranscriberTestDialog = ({
     setLoading(true)
     try {
       if (isAccept) {
-        if (transcriber) {
-          const result = await passTranscriberTest(Number(orderId))
-          if (result.success) {
-            const successToastId = toast.success(
-              `Successfully passed transcriber test`
-            )
-            toast.dismiss(successToastId)
-            refetch()
-            onClose()
-          } else {
-            toast.error(result.message)
-          }
+        const result = await passTranscriberTest(
+          fileId,
+          Number(transcriber ? transcriber.id : 0)
+        )
+        if (result.success) {
+          const successToastId = toast.success(
+            `Successfully passed transcriber test`
+          )
+          toast.dismiss(successToastId)
+          refetch()
+          onClose()
+        } else {
+          toast.error(result.message)
         }
       } else {
-        if (transcriber) {
-          const result = await failTranscriberTest(Number(orderId))
-          if (result.success) {
-            const successToastId = toast.success(
-              `Successfully failed transcriber test`
-            )
-            toast.dismiss(successToastId)
-            refetch()
-            onClose()
-          } else {
-            toast.error(result.message)
-          }
+        const result = await failTranscriberTest(
+          fileId,
+          Number(transcriber ? transcriber.id : 0)
+        )
+        if (result.success) {
+          const successToastId = toast.success(
+            `Successfully failed transcriber test`
+          )
+          toast.dismiss(successToastId)
+          refetch()
+          onClose()
+        } else {
+          toast.error(result.message)
         }
       }
     } catch (error) {
@@ -85,13 +87,7 @@ const PassFailTranscriberTestDialog = ({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {isAccept
-              ? transcriber
-                ? 'Pass Transcriber Test'
-                : 'Accept File'
-              : transcriber
-              ? 'Fail Transcriber Test'
-              : 'Reject File'}
+            {isAccept ? 'Pass Transcriber Test' : 'Fail Transcriber Test'}
           </AlertDialogTitle>
           <AlertDialogDescription>
             <div className='grid items-center gap-1.5'>
@@ -120,15 +116,9 @@ const PassFailTranscriberTestDialog = ({
                 <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
               </>
             ) : isAccept ? (
-              transcriber ? (
-                'Pass'
-              ) : (
-                'Accept'
-              )
-            ) : transcriber ? (
-              'Fail'
+              'Pass'
             ) : (
-              'Reject'
+              'Fail'
             )}
           </AlertDialogAction>
         </AlertDialogFooter>

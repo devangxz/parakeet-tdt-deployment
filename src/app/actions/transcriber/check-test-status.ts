@@ -43,7 +43,12 @@ export async function checkTranscriberTestStatus(
     const isInvited = !!invitation
 
     const testAttempts = await prisma.testAttempt.findMany({
-      where: { userId },
+      where: {
+        userId,
+        status: {
+          in: ['COMPLETED', 'CANCELLED', 'SUBMITTED_FOR_APPROVAL'],
+        },
+      },
       orderBy: { completedAt: 'desc' },
     })
 

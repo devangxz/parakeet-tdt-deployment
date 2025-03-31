@@ -1,79 +1,44 @@
 'use server'
 
-import { JobStatus } from '@prisma/client'
-
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 
-export async function passTranscriberTest(orderId: number) {
+export async function passTranscriberTest(fileId: string, userId: number) {
   try {
-    if (!orderId) {
+    if (!fileId) {
       return {
         success: false,
-        message: 'Order Id parameter is required.',
+        message: 'File Id parameter is required.',
       }
     }
 
-    const orderInformation = await prisma.order.findUnique({
-      where: { id: Number(orderId) },
-      include: {
-        Assignment: {
-          where: {
-            status: JobStatus.SUBMITTED_FOR_APPROVAL,
-            type: 'TEST',
-          },
-          include: {
-            user: true,
-          },
-        },
-      },
+    const testAttempt = await prisma.testAttempt.findFirst({
+      where: { fileId, status: 'SUBMITTED_FOR_APPROVAL', userId },
     })
 
-    if (!orderInformation) {
-      logger.error(`Order not found for ${orderId}`)
+    if (!testAttempt) {
+      logger.error(`Test attempt not found for ${fileId}`)
       return {
         success: false,
-        message: 'Order not found',
+        message: 'Test attempt not found',
       }
     }
 
-    if (
-      !orderInformation.Assignment ||
-      orderInformation.Assignment.length === 0
-    ) {
-      logger.error(`No test assignment found for ${orderId}`)
+    if (testAttempt.status !== 'SUBMITTED_FOR_APPROVAL') {
+      logger.error(`Test attempt is not submitted for approval for ${fileId}`)
       return {
         success: false,
-        message: 'No test assignment found',
+        message: 'Test attempt is not submitted for approval',
       }
     }
 
-    const currentJobAssignment = orderInformation.Assignment[0]
-    const transcriberId = currentJobAssignment.transcriberId
+    const transcriberId = testAttempt.userId
 
     await prisma.$transaction(async (tx) => {
-      await tx.order.update({
-        where: { id: orderInformation.id },
+      await tx.testAttempt.update({
+        where: { id: testAttempt.id },
         data: {
-          deliveredTs: new Date(),
-          deliveredBy: transcriberId,
-          status: 'DELIVERED',
-          updatedAt: new Date(),
-        },
-      })
-
-      await tx.jobAssignment.update({
-        where: { id: currentJobAssignment.id },
-        data: {
-          status: JobStatus.COMPLETED,
-          completedTs: new Date(),
-        },
-      })
-
-      await tx.testAttempt.create({
-        data: {
-          userId: transcriberId,
-          fileId: orderInformation.fileId,
+          status: 'COMPLETED',
           passed: true,
           completedAt: new Date(),
         },
@@ -99,7 +64,7 @@ export async function passTranscriberTest(orderId: number) {
     })
 
     logger.info(
-      `Successfully passed transcriber test for transcriber ${transcriberId}, order ${orderId}`
+      `Successfully passed transcriber test for transcriber ${transcriberId}, file ${fileId}`
     )
     return {
       success: true,

@@ -1,85 +1,42 @@
 'use server'
 
-import { JobStatus } from '@prisma/client'
-
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 
-export async function failTranscriberTest(orderId: number) {
+export async function failTranscriberTest(fileId: string, userId: number) {
   try {
-    if (!orderId) {
+    if (!fileId) {
       return {
         success: false,
-        message: 'Order Id parameter is required.',
+        message: 'File Id parameter is required.',
       }
     }
 
-    const orderInformation = await prisma.order.findUnique({
-      where: { id: Number(orderId) },
-      include: {
-        Assignment: {
-          where: {
-            status: JobStatus.SUBMITTED_FOR_APPROVAL,
-            type: 'TEST',
-          },
-          include: {
-            user: true,
-          },
-        },
-      },
+    const testAttempt = await prisma.testAttempt.findFirst({
+      where: { fileId, status: 'SUBMITTED_FOR_APPROVAL', userId },
     })
 
-    if (!orderInformation) {
-      logger.error(`Order not found for ${orderId}`)
+    if (!testAttempt) {
+      logger.error(`Test attempt not found for ${fileId}`)
       return {
         success: false,
-        message: 'Order not found',
+        message: 'Test attempt not found',
       }
     }
 
-    if (
-      !orderInformation.Assignment ||
-      orderInformation.Assignment.length === 0
-    ) {
-      logger.error(`No test assignment found for ${orderId}`)
-      return {
-        success: false,
-        message: 'No test assignment found',
-      }
-    }
+    const transcriberId = testAttempt.userId
 
-    const currentJobAssignment = orderInformation.Assignment[0]
-    const transcriberId = currentJobAssignment.transcriberId
-
-    await prisma.order.update({
-      where: { id: orderInformation.id },
+    await prisma.testAttempt.update({
+      where: { id: testAttempt.id },
       data: {
-        deliveredTs: new Date(),
-        deliveredBy: transcriberId,
-        status: 'DELIVERED',
-        updatedAt: new Date(),
-      },
-    })
-
-    await prisma.jobAssignment.update({
-      where: { id: currentJobAssignment.id },
-      data: {
-        status: JobStatus.COMPLETED,
-        completedTs: new Date(),
-      },
-    })
-
-    await prisma.testAttempt.create({
-      data: {
-        userId: transcriberId,
-        fileId: orderInformation.fileId,
+        status: 'COMPLETED',
         passed: false,
         completedAt: new Date(),
       },
     })
 
     logger.info(
-      `Failed transcriber test for transcriber ${transcriberId}, order ${orderId}`
+      `Failed transcriber test for transcriber ${transcriberId}, file ${fileId}`
     )
     return {
       success: true,

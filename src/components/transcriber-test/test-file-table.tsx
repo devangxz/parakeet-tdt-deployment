@@ -120,14 +120,6 @@ export function TestFileTable({
     }
   }
 
-  if (files.length === 0) {
-    return (
-      <div className='text-center py-6 rounded-md border-2 border-customBorder'>
-        <p className='text-muted-foreground'>No files available</p>
-      </div>
-    )
-  }
-
   const getColumns = (): ColumnDef<any>[] => {
     const baseColumns: ColumnDef<any>[] = [
       {
@@ -157,22 +149,6 @@ export function TestFileTable({
         header: 'Details',
         cell: ({ row }) => {
           const file = row.original
-
-          if (type === 'history') {
-            return (
-              <div>
-                <div className='mb-2 font-medium'>{file.filename}</div>
-                <div className='flex gap-2'>
-                  <Badge
-                    variant='outline'
-                    className='font-semibold text-[10px]'
-                  >
-                    Score: {file.score}
-                  </Badge>
-                </div>
-              </div>
-            )
-          }
 
           return (
             <div>
@@ -300,22 +276,29 @@ export function TestFileTable({
     }
 
     if (type === 'history') {
-      baseColumns.push({
-        id: 'result',
-        header: 'Result',
-        cell: ({ row }) => (
-          <div>
-            <Badge
-              variant={row.original.passed ? 'secondary' : 'destructive'}
-              className={`font-semibold text-[10px] ${
-                row.original.passed ? 'bg-green-100 text-green-800' : ''
-              }`}
-            >
-              {row.original.passed ? 'Passed' : 'Failed'}
-            </Badge>
-          </div>
-        ),
-      })
+      baseColumns.push(
+        {
+          id: 'score',
+          header: 'Score',
+          cell: ({ row }) => <div>{row.original.score}</div>,
+        },
+        {
+          id: 'result',
+          header: 'Result',
+          cell: ({ row }) => (
+            <div>
+              <Badge
+                variant={row.original.passed ? 'secondary' : 'destructive'}
+                className={`font-semibold text-[10px] ${
+                  row.original.passed ? 'bg-green-100 text-green-800' : ''
+                }`}
+              >
+                {row.original.passed ? 'Passed' : 'Failed'}
+              </Badge>
+            </div>
+          ),
+        }
+      )
     }
 
     return baseColumns

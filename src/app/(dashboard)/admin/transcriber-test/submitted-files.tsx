@@ -57,7 +57,6 @@ export default function SubmittedFilesPage({
   const [approvalFiles, setApprovalFiles] = useState<File[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [orderId, setOrderId] = useState<string>('')
   const [openDialog, setOpenDialog] = useState(false)
   const [isAccept, setIsAccept] = useState(true)
   const [diffDialogOpen, setDiffDialogOpen] = useState(false)
@@ -131,56 +130,42 @@ export default function SubmittedFilesPage({
       const response = await fetchTestApprovalFiles()
 
       if (response.success && response.details) {
-        const orders = response.details.map((order, index: number) => {
-          const qcUsers = order.Assignment.filter(
-            (a) =>
-              a.status === 'ACCEPTED' ||
-              a.status === 'COMPLETED' ||
-              a.status === 'SUBMITTED_FOR_APPROVAL'
-          ).map((a) => ({
-            name: `${a.user.firstname} ${a.user.lastname}`,
-            email: a.user.email,
-            id: a.user.id.toString(),
-          }))
+        const orders = response.details
+          .filter(
+            (order): order is NonNullable<typeof order> =>
+              order !== undefined && order !== null
+          )
+          .map((order, index: number) => {
+            const qcUsers = [
+              {
+                name: `${order.testAttempt?.user?.firstname ?? ''} ${
+                  order.testAttempt?.user?.lastname ?? ''
+                }`,
+                email: order.testAttempt?.user?.email ?? '',
+                id: order.testAttempt?.user?.id?.toString() ?? '',
+              },
+            ]
 
-          fetchWaveformUrl(order.fileId)
-          fetchEditorData(order.fileId)
+            fetchWaveformUrl(order.fileId)
+            fetchEditorData(order.fileId)
 
-          return {
-            index: index + 1,
-            orderId: order.id,
-            fileId: order.fileId,
-            filename: order?.File?.filename ?? '',
-            orderTs: order.orderTs.toISOString(),
-            pwer: order.pwer ?? 0,
-            status: order.status,
-            priority: order.priority,
-            duration: order?.File?.duration ?? 0,
-            qc: qcUsers,
-            deliveryTs: order.deliveryTs.toISOString(),
-            hd: order.highDifficulty ?? false,
-            rateBonus: order.rateBonus,
-            type: order.orderType,
-          }
-        })
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const yesterday = new Date(today)
-        yesterday.setDate(today.getDate() - 1)
-
-        orders.sort((a, b) => {
-          const aDelivery = new Date(a.deliveryTs)
-          aDelivery.setHours(0, 0, 0, 0)
-          const bDelivery = new Date(b.deliveryTs)
-          bDelivery.setHours(0, 0, 0, 0)
-
-          const aOverdue = aDelivery.getTime() === yesterday.getTime()
-          const bOverdue = bDelivery.getTime() === yesterday.getTime()
-
-          if (aOverdue && !bOverdue) return -1
-          if (!aOverdue && bOverdue) return 1
-          return a.index - b.index
-        })
+            return {
+              index: index + 1,
+              orderId: order.id,
+              fileId: order.fileId,
+              filename: order.File?.filename ?? '',
+              orderTs: order.orderTs.toISOString(),
+              pwer: order.pwer ?? 0,
+              status: order.status,
+              priority: order.priority,
+              duration: order.File?.duration ?? 0,
+              qc: qcUsers,
+              deliveryTs: order.deliveryTs.toISOString(),
+              hd: order.highDifficulty ?? false,
+              rateBonus: order.rateBonus,
+              type: order.orderType,
+            }
+          })
 
         setApprovalFiles(orders ?? [])
         setError(null)
@@ -344,7 +329,7 @@ export default function SubmittedFilesPage({
               <DropdownMenuItem
                 className=''
                 onClick={() => {
-                  setOrderId(row.original.orderId.toString())
+                  setFileId(row.original.fileId)
                   setOpenDialog(true)
                   setIsAccept(true)
                 }}
@@ -354,7 +339,7 @@ export default function SubmittedFilesPage({
               <DropdownMenuItem
                 className='text-red-500'
                 onClick={() => {
-                  setOrderId(row.original.orderId.toString())
+                  setFileId(row.original.fileId)
                   setOpenDialog(true)
                   setIsAccept(false)
                 }}
@@ -417,12 +402,10 @@ export default function SubmittedFilesPage({
       <PassFailTranscriberTestDialog
         open={openDialog}
         onClose={() => setOpenDialog(false)}
-        orderId={orderId || ''}
+        fileId={fileId || ''}
         refetch={() => fetchOrders()}
         isAccept={isAccept}
-        transcriber={
-          approvalFiles?.find((f) => f.orderId.toString() === orderId)?.qc[0]
-        }
+        transcriber={approvalFiles?.find((f) => f.fileId === fileId)?.qc[0]}
       />
       <OpenDiffDialog
         open={diffDialogOpen}

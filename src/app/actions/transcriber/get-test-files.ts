@@ -21,10 +21,10 @@ export interface TestAttempt {
   filesize: string | undefined
   createdAt: Date | undefined
   status: string
-  orderTs: Date | undefined
+  orderTs: Date | undefined | null
   passed: boolean | undefined
   score: number | undefined
-  completedAt: Date | undefined
+  completedAt: Date | undefined | null
 }
 
 interface TestFilesResponse {
@@ -54,9 +54,6 @@ export async function getTestFiles(): Promise<TestFilesResponse> {
       where: {
         isTestFile: true,
         userId: testTranscriberUserAccount.userId,
-        Orders: {
-          none: {},
-        },
       },
       select: {
         id: true,
@@ -85,17 +82,16 @@ export async function getAssignedTestFiles(
   userId: number
 ): Promise<TestFilesResponse> {
   try {
-    const assignedTestFiles = await prisma.jobAssignment.findMany({
+    const assignedTestFiles = await prisma.testAttempt.findMany({
       where: {
-        transcriberId: userId,
-        type: 'TEST',
+        userId: userId,
         status: 'ACCEPTED',
       },
     })
 
     const orders = await prisma.order.findMany({
       where: {
-        id: { in: assignedTestFiles.map((file) => file.orderId) },
+        fileId: { in: assignedTestFiles.map((file) => file.fileId) },
       },
       select: {
         id: true,
@@ -141,55 +137,33 @@ export async function getTestHistory(
   userId: number
 ): Promise<TestHistoryResponse> {
   try {
-    const testAssignments = await prisma.jobAssignment.findMany({
+    const testAttempts = await prisma.testAttempt.findMany({
       where: {
-        transcriberId: userId,
-        type: 'TEST',
+        userId: userId,
         status: {
-          in: ['COMPLETED', 'CANCELLED'],
+          in: ['COMPLETED', 'CANCELLED', 'SUBMITTED_FOR_APPROVAL'],
         },
+      },
+      orderBy: {
+        completedAt: 'desc',
+      },
+      include: {
+        File: true,
       },
     })
 
-    const testFiles = await prisma.order.findMany({
-      where: {
-        id: { in: testAssignments.map((assignment) => assignment.orderId) },
-      },
-      select: {
-        id: true,
-        fileId: true,
-        status: true,
-        orderTs: true,
-        File: {
-          select: {
-            filename: true,
-            duration: true,
-            filesize: true,
-            createdAt: true,
-            TestAttempt: {
-              select: {
-                passed: true,
-                score: true,
-                completedAt: true,
-              },
-            },
-          },
-        },
-      },
-    })
-
-    const formattedFiles = testFiles.map((file) => ({
-      id: file.id,
-      fileId: file.fileId,
-      filename: file.File?.filename,
-      duration: file.File?.duration,
-      filesize: file.File?.filesize,
-      createdAt: file.File?.createdAt,
-      status: file.status,
-      passed: file.File?.TestAttempt[0]?.passed,
-      score: file.File?.TestAttempt[0]?.score,
-      completedAt: file.File?.TestAttempt[0]?.completedAt,
-      orderTs: file.orderTs,
+    const formattedFiles = testAttempts.map((testAttempt) => ({
+      id: testAttempt.id,
+      fileId: testAttempt.fileId,
+      filename: testAttempt.File?.filename,
+      duration: testAttempt.File?.duration,
+      filesize: testAttempt.File?.filesize,
+      createdAt: testAttempt.File?.createdAt,
+      status: testAttempt.status,
+      passed: testAttempt.passed,
+      score: testAttempt.score,
+      completedAt: testAttempt.completedAt,
+      orderTs: testAttempt.completedAt,
     }))
 
     return {

@@ -872,14 +872,17 @@ model TestInvitation {
 }
 
 model TestAttempt {
-  id          Int      @id @default(autoincrement())
-  userId      Int      @map("user_id")
-  user        User     @relation(fields: [userId], references: [id])
-  passed      Boolean  @default(false)
-  score       Int      @default(0)
-  fileId      String   @map("file_id")
-  File        File     @relation(fields: [fileId], references: [fileId])
-  completedAt DateTime @map("completed_at")
+  id          Int        @id @default(autoincrement())
+  userId      Int        @map("user_id")
+  user        User       @relation(fields: [userId], references: [id])
+  passed      Boolean    @default(false)
+  score       Int        @default(0)
+  fileId      String     @map("file_id")
+  status      TestStatus @default(ACCEPTED)
+  File        File       @relation(fields: [fileId], references: [fileId])
+  startedAt   DateTime   @default(now()) @map("started_at")
+  completedAt DateTime?  @map("completed_at")
+  cancelledAt DateTime?  @map("cancelled_at")
 
   @@index([userId])
   @@index([fileId])
@@ -1075,6 +1078,13 @@ enum JobStatus {
   CANCELLED
   REJECTED
   TIMEDOUT
+  SUBMITTED_FOR_APPROVAL
+}
+
+enum TestStatus {
+  ACCEPTED
+  COMPLETED
+  CANCELLED
   SUBMITTED_FOR_APPROVAL
 }
 

@@ -7,6 +7,7 @@ import {
   OrderStatus,
   OrderType,
   ReportMode,
+  TestStatus,
 } from '@prisma/client'
 import axios from 'axios'
 
@@ -131,11 +132,11 @@ export async function submitQCFile(
     const isTestOrder = order.isTestOrder
 
     if (isTestOrder) {
-      const assignment = await prisma.jobAssignment.findFirst({
+      const assignment = await prisma.testAttempt.findFirst({
         where: {
-          orderId,
-          transcriberId,
-          type: JobType.TEST,
+          fileId: order.fileId,
+          userId: transcriberId,
+          status: TestStatus.ACCEPTED,
         },
       })
 
@@ -162,28 +163,10 @@ export async function submitQCFile(
 
       if (!isQCValidationPassed) {
         await prisma.$transaction(async (prisma) => {
-          await prisma.order.update({
+          await prisma.testAttempt.update({
             where: {
-              id: order.id,
+              id: assignment.id,
             },
-            data: {
-              status: OrderStatus.DELIVERED,
-              deliveredTs: new Date(),
-            },
-          })
-          await prisma.jobAssignment.updateMany({
-            where: {
-              orderId: order.id,
-              transcriberId,
-              type: JobType.TEST,
-              status: JobStatus.ACCEPTED,
-            },
-            data: {
-              status: JobStatus.COMPLETED,
-              completedTs: new Date(),
-            },
-          })
-          await prisma.testAttempt.create({
             data: {
               userId: transcriberId,
               passed: false,
@@ -194,24 +177,13 @@ export async function submitQCFile(
           })
         })
       } else {
-        await prisma.order.update({
+        await prisma.testAttempt.update({
           where: {
-            id: order.id,
+            id: assignment.id,
           },
           data: {
-            status: OrderStatus.SUBMITTED_FOR_APPROVAL,
-          },
-        })
-        await prisma.jobAssignment.updateMany({
-          where: {
-            orderId: order.id,
-            transcriberId,
-            type: JobType.TEST,
-            status: JobStatus.ACCEPTED,
-          },
-          data: {
-            status: JobStatus.SUBMITTED_FOR_APPROVAL,
-            completedTs: new Date(),
+            status: TestStatus.SUBMITTED_FOR_APPROVAL,
+            completedAt: new Date(),
           },
         })
       }
