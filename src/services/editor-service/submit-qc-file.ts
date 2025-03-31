@@ -210,7 +210,7 @@ export async function submitQCFile(
             status: JobStatus.ACCEPTED,
           },
           data: {
-            status: JobStatus.COMPLETED,
+            status: JobStatus.SUBMITTED_FOR_APPROVAL,
             completedTs: new Date(),
           },
         })
