@@ -47,4 +47,14 @@ export interface UndoRedoItem {
   oldDelta: Delta;
   beforeSelection: Range | null;
   afterSelection: Range | null;
-} 
+}
+
+export interface QCValidation {
+  isValidationPassed: boolean
+  playedPercentage: number
+  werPercentage: number
+  blankPercentage: number
+  editListenCorrelationPercentage: number
+  speakerChangePercentage: number
+  speakerMacroF1Score: number
+}

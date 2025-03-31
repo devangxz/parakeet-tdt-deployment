@@ -84,6 +84,7 @@ model User {
   ReviewWithGeminiStats     ReviewWithGeminiStats[]
   editorSettings            UserEditorSettings?
   Cancellations             Cancellations[]
+  QCValidationStats         QCValidationStats[]
 
   @@index([role])
   @@index([email])
@@ -147,6 +148,7 @@ model File {
   PlayStats                 PlayStats[]
   ProcessWithLLMStats       ProcessWithLLMStats[]
   ReviewWithGeminiStats     ReviewWithGeminiStats[]
+  QCValidationStats         QCValidationStats[]
 
   @@index([userId])
   @@index([fileId])
@@ -245,8 +247,9 @@ model Order {
   screenCount      Int           @default(0) @map("screen_count")
 
   // Relations
-  File       File?           @relation(fields: [fileId], references: [fileId])
-  Assignment JobAssignment[]
+  File              File?               @relation(fields: [fileId], references: [fileId])
+  Assignment        JobAssignment[]
+  QCValidationStats QCValidationStats[]
 
   @@index([userId])
   @@index([status])
@@ -803,6 +806,31 @@ model ProcessWithLLMStats {
   @@index([userId])
   @@index([fileId])
   @@map("scb_process_with_llm_stats")
+}
+
+model QCValidationStats {
+  id                              Int       @id @default(autoincrement())
+  orderId                         Int       @map("order_id")
+  fileId                          String    @map("file_id")
+  transcriberId                   Int       @map("transcriber_id")
+  playedPercentage                Int       @map("played_percentage")
+  werPercentage                   Int       @map("wer_percentage")
+  blankPercentage                 Int       @map("blank_percentage")
+  editListenCorrelationPercentage Int       @map("edit_listen_correlation_percentage")  
+  speakerChangePercentage         Int       @map("speaker_change_percentage")
+  speakerMacroF1Score             Float     @map("speaker_macro_f1_score")
+  isValidationPassed              Boolean   @map("is_validation_passed")
+  isAcceptedByOM                  Boolean?  @map("is_accepted_by_om")
+  createdAt                       DateTime  @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id])
+  file  File  @relation(fields: [fileId], references: [fileId])
+  user  User  @relation(fields: [transcriberId], references: [id])
+
+  @@index([orderId])
+  @@index([fileId])
+  @@index([transcriberId])
+  @@map("scb_qc_validation_stats")
 }
 
 //  ███████ ███    ██ ██    ██ ███    ███ ███████

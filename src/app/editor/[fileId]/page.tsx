@@ -58,6 +58,9 @@ import {
   getFormattedContent,
   EditorData,
   calculateBlankPercentage,
+  calculateEditListenCorrelationPercentage,
+  calculateSpeakerChangePercentage,
+  calculateSpeakerMacroF1Score,
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
@@ -560,14 +563,29 @@ function EditorPage() {
 
   const getWerPercentage = (): number => {
     const werValue = editorRef.current?.getWer() || 0
-    return Number((werValue * 100).toFixed(2))
+    return werValue > 0 && Math.round(werValue * 100) === 0 ? 1 : Math.round(werValue * 100)
   }
 
   const getBlankPercentage = (): number => {
-    const transcript = quillRef?.current ? quillRef.current.getEditor().getText() : ''
+    const transcript = getEditorText()
     const alignments = editorRef.current?.getAlignments() || []
     return calculateBlankPercentage(transcript, alignments)
   }
+
+  const getEditListenCorrelationPercentage = (): number =>
+    calculateEditListenCorrelationPercentage(listenCount, editedSegments)
+
+  const getSpeakerChangePercentage = (): number =>
+    calculateSpeakerChangePercentage(
+      getFormattedTranscript(ctms),
+      getEditorText()
+    )
+
+  const getSpeakerMacroF1Score = (): number =>
+    calculateSpeakerMacroF1Score(
+      getFormattedTranscript(ctms),
+      getEditorText()
+    )
   
   const getEditorMode = useCallback((editorMode: string) => {
     setEditorMode(editorMode)
@@ -1052,17 +1070,20 @@ function EditorPage() {
                 </div>
               )}
 
-              {step === 'QC' && (
-                <div className='pt-4'>
-                  <SubmissionValidation
-                    playedPercentage={getPlayedPercentage()}
-                    werPercentage={getWerPercentage()}
-                    blankPercentage={getBlankPercentage()}
-                    setIsQCValidationPassed={setIsQCValidationPassed}
-                  />
-                </div>
-              )}
-              
+              {step === 'QC' &&
+                !['OM', 'ADMIN'].includes(session?.user?.role || '') && (
+                  <div className='pt-4'>
+                    <SubmissionValidation
+                      playedPercentage={getPlayedPercentage()}
+                      werPercentage={getWerPercentage()}
+                      blankPercentage={getBlankPercentage()}
+                      editListenCorrelationPercentage={getEditListenCorrelationPercentage()}
+                      speakerChangePercentage={getSpeakerChangePercentage()}
+                      setIsQCValidationPassed={setIsQCValidationPassed}
+                    />
+                  </div>
+                )}
+
               <div className='flex justify-end gap-2 pt-4'>
                 <Button
                   variant='outline'
@@ -1092,19 +1113,23 @@ function EditorPage() {
 
                       let currentAlignments: AlignmentType[] = []
                       if (editorRef.current && step === 'QC') {
+                        await editorRef.current.triggerAlignmentUpdate()
                         currentAlignments = editorRef.current.getAlignments()
                       }
-                      
-                      await handleSave({
-                        getEditorText,
-                        orderDetails,
-                        notes,
-                        cfd,
-                        setButtonLoading,
-                        listenCount,
-                        editedSegments,
-                        role: session?.user?.role || '',
-                      }, true)
+
+                      await handleSave(
+                        {
+                          getEditorText,
+                          orderDetails,
+                          notes,
+                          cfd,
+                          setButtonLoading,
+                          listenCount,
+                          editedSegments,
+                          role: session?.user?.role || '',
+                        },
+                        false
+                      )
 
                       handleSubmit({
                         orderDetails,
@@ -1117,7 +1142,16 @@ function EditorPage() {
                         quill,
                         finalizerComment,
                         currentAlignments,
-                        isQCValidationPassed,
+                        qcValidation: {
+                          isValidationPassed: isQCValidationPassed,
+                          playedPercentage: getPlayedPercentage(),
+                          werPercentage: getWerPercentage(),
+                          blankPercentage: getBlankPercentage(),
+                          editListenCorrelationPercentage:
+                            getEditListenCorrelationPercentage(),
+                          speakerChangePercentage: getSpeakerChangePercentage(),
+                          speakerMacroF1Score: getSpeakerMacroF1Score(),
+                        },
                       })
                       setSubmitting(false)
                       setIsSubmitModalOpen(false)
