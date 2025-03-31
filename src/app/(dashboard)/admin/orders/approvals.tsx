@@ -327,10 +327,7 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
       accessorKey: 'duration',
       header: 'Duration',
       cell: ({ row }) => (
-        <div
-          className='font-medium'
-          style={{ minWidth: '150px' }}
-        >
+        <div className='font-medium' style={{ minWidth: '150px' }}>
           {formatDuration(row.getValue('duration'))}
           {row.original.type === 'FORMATTING' ? (
             <p>
@@ -422,24 +419,75 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
       header: 'QC Stats',
       cell: ({ row }) => {
         const stats = row.original.qcValidationStats
+
         if (!stats) {
-          return <div className="font-medium" style={{ minWidth: '185px' }}>No QC Stats</div>
+          return (
+            <div className='font-medium' style={{ maxWidth: '125px' }}>
+              No QC Stats
+            </div>
+          )
         }
-        
-        const playedClass = stats.playedPercentage < QC_VALIDATION.min_audio_playback_percentage ? 'text-red-600' : 'text-green-600'
-        const werClass = (stats.werPercentage < QC_VALIDATION.min_wer_percentage || 
-                          stats.werPercentage > QC_VALIDATION.max_wer_percentage) ? 'text-red-600' : 'text-green-600'
-        const blankClass = stats.blankPercentage > QC_VALIDATION.max_blank_percentage ? 'text-red-600' : 'text-green-600'
-        const editListenCorrelationClass = stats.editListenCorrelationPercentage < QC_VALIDATION.min_edit_listen_correlation_percentage ? 'text-red-600' : 'text-green-600'
-        const speakerChangeClass = stats.speakerChangePercentage > QC_VALIDATION.max_speaker_change_percentage ? 'text-red-600' : 'text-green-600'
+
+        const getStatusClass = (value: number, isError: boolean) =>
+          `inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
+            isError
+              ? 'bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20'
+              : 'bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-400/10 dark:text-green-400 dark:ring-green-400/20'
+          }`
+
+        const statsConfig = [
+          {
+            value: stats.playedPercentage,
+            isError:
+              stats.playedPercentage <
+              QC_VALIDATION.min_audio_playback_percentage,
+            tooltip: `Indicates percentage of audio file that was played by QC. Should be at least ${QC_VALIDATION.min_audio_playback_percentage}% to ensure thorough review.`,
+          },
+          {
+            value: stats.werPercentage,
+            isError:
+              stats.werPercentage < QC_VALIDATION.min_wer_percentage ||
+              stats.werPercentage > QC_VALIDATION.max_wer_percentage,
+            tooltip: `Indicates percentage of changes made to the transcript by QC. Should be between ${QC_VALIDATION.min_wer_percentage}% and ${QC_VALIDATION.max_wer_percentage}% - too few changes may indicate insufficient review, while too many could indicate potential issues.`,
+          },
+          {
+            value: stats.blankPercentage,
+            isError: stats.blankPercentage > QC_VALIDATION.max_blank_percentage,
+            tooltip: `Indicates percentage of inaudible/blank segments in the transcript added by QC. Should not exceed ${QC_VALIDATION.max_blank_percentage}% to maintain transcript quality.`,
+          },
+          {
+            value: stats.editListenCorrelationPercentage,
+            isError:
+              stats.editListenCorrelationPercentage <
+              QC_VALIDATION.min_edit_listen_correlation_percentage,
+            tooltip: `Indicates correlation between edits and audio playback, showing if changes were made by QC while listening carefully. Should be at least ${QC_VALIDATION.min_edit_listen_correlation_percentage}% to ensure accurate corrections based on careful audio review.`,
+          },
+          {
+            value: stats.speakerChangePercentage,
+            isError:
+              stats.speakerChangePercentage >
+              QC_VALIDATION.max_speaker_change_percentage,
+            tooltip: `Indicates percentage of speaker label changes made by QC. Should not exceed ${QC_VALIDATION.max_speaker_change_percentage}% to maintain speaker consistency.`,
+          },
+        ]
 
         return (
-          <div className="font-medium" style={{ minWidth: '185px' }}>
-            <div>Audio Played: <span className={playedClass}>{stats.playedPercentage}%</span></div>
-            <div>Changes Made: <span className={werClass}>{stats.werPercentage}%</span></div>
-            <div>Blanks Added: <span className={blankClass}>{stats.blankPercentage}%</span></div>
-            <div>Edit-listen Correlation: <span className={editListenCorrelationClass}>{stats.editListenCorrelationPercentage}%</span></div>
-            <div>Speakers Changed: <span className={speakerChangeClass}>{stats.speakerChangePercentage}%</span></div>
+          <div
+            className='font-medium flex flex-wrap gap-0.5'
+            style={{ maxWidth: '125px' }}
+          >
+            {statsConfig.map((stat, index) => (
+              <Tooltip key={index}>
+                <TooltipTrigger>
+                  <div className={getStatusClass(stat.value, stat.isError)}>
+                    {stat.value}%
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent className='max-w-[350px]'>
+                  <p>{stat.tooltip}</p>
+                </TooltipContent>
+              </Tooltip>
+            ))}
           </div>
         )
       },
@@ -537,6 +585,12 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
         <DataTable
           data={approvalFiles ?? []}
           columns={columns}
+          defaultColumnVisibility={{
+            customerWatch: false,
+            transcriberWatch: false,
+            type: false,
+            status: false,
+          }}
           renderWaveform={(row) => {
             if (!('fileId' in row)) return null
             const fileId = row.fileId as string
