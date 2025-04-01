@@ -4,7 +4,6 @@ import { ColumnDef } from '@tanstack/react-table'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
-import { DataTableColumnHeader } from './components/column-header'
 import { DataTable } from './components/data-table'
 import QCLink from './components/qc-link'
 import { getListenCountAndEditedSegmentAction } from '@/app/actions/admin/get-listen-count-and-edited-segment'
@@ -365,6 +364,14 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
       ),
     },
     {
+      accessorKey: 'type',
+      header: 'Order Type',
+      cell: ({ row }) => (
+        <div className='capitalize font-medium'>{row.getValue('type')}</div>
+      ),
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    },
+    {
       accessorKey: 'qc',
       header: 'Editor',
       cell: ({ row }) => {
@@ -407,13 +414,7 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
       header: 'Customer Watch',
       enableHiding: true,
     },
-    {
-      accessorKey: 'type',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Order Type' />
-      ),
-      filterFn: (row, id, value) => value.includes(row.getValue(id)),
-    },
+
     {
       accessorKey: 'qcStats',
       header: 'QC Stats',
@@ -588,7 +589,6 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
           defaultColumnVisibility={{
             customerWatch: false,
             transcriberWatch: false,
-            type: false,
             status: false,
           }}
           renderWaveform={(row) => {

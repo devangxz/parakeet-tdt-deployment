@@ -1,3 +1,4 @@
+import { ReloadIcon } from '@radix-ui/react-icons'
 import React from 'react'
 
 import {
@@ -19,7 +20,17 @@ interface Payment {
   creditsUsed: number
 }
 
-const Bill = ({ paymentInfo }: { paymentInfo: Payment | null }) => (
+const Bill = ({
+  paymentInfo,
+  rushOrderEnable,
+  rushOrderPrice,
+  loadingAmount,
+}: {
+  paymentInfo: Payment | null
+  rushOrderEnable: boolean
+  rushOrderPrice: number
+  loadingAmount: boolean
+}) => (
   <div>
     <div className='flex justify-between mr-5 mb-6'>
       <div className='flex items-center gap-2'>
@@ -37,10 +48,16 @@ const Bill = ({ paymentInfo }: { paymentInfo: Payment | null }) => (
     </div>
     <div className='flex justify-between mr-5 mb-6'>
       <div className='flex items-center gap-2'>
-        <div className='text-md font-medium'>Base rate</div>
+        <div className='text-md font-medium'>
+          {rushOrderEnable ? 'Order rate' : 'Base rate'}
+        </div>
       </div>
       <div className='text-md font-normal'>
-        ${paymentInfo?.baseRate.toFixed(2)} /min
+        $
+        {rushOrderEnable
+          ? (rushOrderPrice + (paymentInfo?.baseRate ?? 0)).toFixed(2)
+          : paymentInfo?.baseRate.toFixed(2)}{' '}
+        /min
       </div>
     </div>
     <div className='flex justify-between mr-5 mb-6'>
@@ -65,7 +82,11 @@ const Bill = ({ paymentInfo }: { paymentInfo: Payment | null }) => (
         <div className='text-lg font-semibold'>Final amount</div>
       </div>
       <div className='text-lg font-semibold'>
-        ${paymentInfo?.totalAmount.toFixed(2)}
+        {loadingAmount ? (
+          <ReloadIcon className='h-4 w-4 animate-spin mt-2' />
+        ) : (
+          `$${paymentInfo?.totalAmount.toFixed(2)}`
+        )}
       </div>
     </div>
     <Separator className='bg-[#322078]' />

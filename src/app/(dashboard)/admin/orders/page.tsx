@@ -465,6 +465,16 @@ export default function OrdersPage() {
       filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
+      accessorKey: 'type',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Order Type' />
+      ),
+      cell: ({ row }) => (
+        <div className='capitalize font-medium'>{row.getValue('type')}</div>
+      ),
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    },
+    {
       accessorKey: 'qc',
       header: 'Editor',
       cell: ({ row }) => {
@@ -541,13 +551,6 @@ export default function OrdersPage() {
           </Tooltip>
         </div>
       ),
-    },
-    {
-      accessorKey: 'type',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Order Type' />
-      ),
-      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
   ]
 

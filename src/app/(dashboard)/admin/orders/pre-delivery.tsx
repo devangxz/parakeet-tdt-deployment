@@ -4,7 +4,6 @@ import { ColumnDef } from '@tanstack/react-table'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
-import { DataTableColumnHeader } from './components/column-header'
 import { DataTable } from './components/data-table'
 import QCLink from './components/qc-link'
 import { getListenCountAndEditedSegmentAction } from '@/app/actions/admin/get-listen-count-and-edited-segment'
@@ -374,6 +373,14 @@ export default function PreDeliveryPage({
       ),
     },
     {
+      accessorKey: 'type',
+      header: 'Order Type',
+      cell: ({ row }) => (
+        <div className='capitalize font-medium'>{row.getValue('type')}</div>
+      ),
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    },
+    {
       accessorKey: 'qc',
       header: 'Editor',
       cell: ({ row }) => {
@@ -404,13 +411,6 @@ export default function PreDeliveryPage({
         const [start, end] = value.map((str) => new Date(str))
         return cellDate >= start && cellDate <= end
       },
-    },
-    {
-      accessorKey: 'type',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Order Type' />
-      ),
-      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
       id: 'actions',
