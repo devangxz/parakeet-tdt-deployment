@@ -596,35 +596,35 @@ const CustomFormatOrder = ({
           {activeStep === 1 && (
             <div className='w-[100%] md:w-[50%] p-4'>
               <ScrollArea className='h-[62vh]'>
-                {/* {session?.user?.organizationName.toLocaleLowerCase() !==
+                {session?.user?.organizationName.toLocaleLowerCase() !==
                   'remotelegal' && (
-                    <>
-                      {' '}
-                      <div className='flex justify-between flex-wrap'>
-                        <div className='flex items-center gap-2'>
-                          <Switch
-                            id='exd-switch'
-                            checked={rushOrderEnable}
-                            onCheckedChange={handleRushOrder}
-                          />
-                          <div className='text-md font-medium ml-3'>
-                            Rush Order
-                          </div>
+                  <>
+                    {' '}
+                    <div className='flex justify-between flex-wrap'>
+                      <div className='flex items-center gap-2'>
+                        <Switch
+                          id='exd-switch'
+                          checked={rushOrderEnable}
+                          onCheckedChange={handleRushOrder}
+                        />
+                        <div className='text-md font-medium ml-3'>
+                          Rush Order
                         </div>
-                        <div className='text-md font-normal'>{`+${rushOrderPrice.toFixed(
-                          2
-                        )} / min`}</div>
                       </div>
-                      <div className='mt-3 mb-3 font-normal text-sm text-[#8A8A8A]'>
-                        All files are prioritised for completion. Get your files
-                        delivered up to 3x faster. Files exceeding a duration of 2
-                        hours will require more than 12 hours to process. The
-                        lengthier the file, the longer is the turnaround time.
-                        Also, files with audio issues may be delayed.
-                      </div>
-                      <Separator />
-                    </>
-                  )} */}
+                      <div className='text-md font-normal'>{`+${rushOrderPrice.toFixed(
+                        2
+                      )} / min`}</div>
+                    </div>
+                    <div className='mt-3 mb-3 font-normal text-sm text-[#8A8A8A]'>
+                      All files are prioritised for completion. Get your files
+                      delivered up to 3x faster. Files exceeding a duration of 2
+                      hours will require more than 12 hours to process. The
+                      lengthier the file, the longer is the turnaround time.
+                      Also, files with audio issues may be delayed.
+                    </div>
+                    <Separator />
+                  </>
+                )}
                 {files.map((file, index) => (
                   <CustomOrderOptions
                     fileId={file.fileId}
