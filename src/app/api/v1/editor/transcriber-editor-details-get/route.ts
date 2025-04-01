@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams
     const fileId = searchParams.get('fileId')
     const type = searchParams.get('type')
+    const transcriberUserId = searchParams.get('userId')
 
     if (!fileId) {
       return NextResponse.json(
@@ -68,16 +69,37 @@ export async function GET(req: NextRequest) {
       where: {
         fileId: file.fileId,
         tag: FileTag.QC_EDIT,
+        userId: parseInt(transcriberUserId ?? '0'),
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     })
     if (!qcEditFile) {
-      const autoEditFile = await prisma.fileVersion.findFirst({
+      const qcDeliveredFile = await prisma.fileVersion.findFirst({
         where: {
           fileId: file.fileId,
-          tag: FileTag.AUTO,
+          tag: FileTag.QC_DELIVERED,
+          userId: parseInt(transcriberUserId ?? '0'),
+        },
+        orderBy: {
+          createdAt: 'desc',
         },
       })
-      versionId = autoEditFile?.s3VersionId ?? ''
+      if (!qcDeliveredFile) {
+        const autoEditFile = await prisma.fileVersion.findFirst({
+          where: {
+            fileId: file.fileId,
+            tag: FileTag.AUTO,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        })
+        versionId = autoEditFile?.s3VersionId ?? ''
+      } else {
+        versionId = qcDeliveredFile?.s3VersionId ?? ''
+      }
     } else {
       versionId = qcEditFile?.s3VersionId ?? ''
     }

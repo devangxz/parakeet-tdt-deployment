@@ -353,5 +353,14 @@
     "SUBJECT": "Scribie.ai Custom Formatting Feedback",
     "HTML": "CUSTOM_FORMATTING_FEEDBACK.html",
     "TEXT": ""
+  },
+  "TEST_INVITATION": {
+    "FROM": "$$SUPPORT_EMAIL_ID$$",
+    "TO": ["$$USER_EMAIL_ID$$"],
+    "CC": [],
+    "BCC": ["$$CONTACT_EMAIL_ID$$"],
+    "SUBJECT": "Scribie.ai Test Invitation",
+    "HTML": "TEST_INVITATION.html",
+    "TEXT": ""
   }
 }

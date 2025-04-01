@@ -84,6 +84,9 @@ model User {
   ReviewWithGeminiStats     ReviewWithGeminiStats[]
   editorSettings            UserEditorSettings?
   Cancellations             Cancellations[]
+  QCValidationStats         QCValidationStats[]
+  TestInvitations           TestInvitation[]
+  TestAttempts              TestAttempt[]
 
   @@index([role])
   @@index([email])
@@ -144,9 +147,15 @@ model File {
   FileVersion               FileVersion[]
   SharedFile                SharedFile[]
   converted                 Boolean?                @map("converted")
+  isTestFile                Boolean?                @default(false) @map("is_test_file")
   PlayStats                 PlayStats[]
   ProcessWithLLMStats       ProcessWithLLMStats[]
   ReviewWithGeminiStats     ReviewWithGeminiStats[]
+  <<<<<<< HEAD
+  QCValidationStats         QCValidationStats[]
+  =======
+  TestAttempt               TestAttempt[]
+  >>>>>>> ae3927f (added om side test system)
 
   @@index([userId])
   @@index([fileId])
@@ -243,10 +252,12 @@ model Order {
   reReviewComment  String?       @map("re_review_comment")
   finalizerComment String?       @map("finalizer_comment")
   screenCount      Int           @default(0) @map("screen_count")
+  isTestOrder      Boolean?      @default(false) @map("is_test_order")
 
   // Relations
-  File       File?           @relation(fields: [fileId], references: [fileId])
-  Assignment JobAssignment[]
+  File              File?               @relation(fields: [fileId], references: [fileId])
+  Assignment        JobAssignment[]
+  QCValidationStats QCValidationStats[]
 
   @@index([userId])
   @@index([status])
@@ -805,6 +816,79 @@ model ProcessWithLLMStats {
   @@map("scb_process_with_llm_stats")
 }
 
+model QCValidationStats {
+  id                              Int      @id @default(autoincrement())
+  orderId                         Int      @map("order_id")
+  fileId                          String   @map("file_id")
+  transcriberId                   Int      @map("transcriber_id")
+  playedPercentage                Int      @map("played_percentage")
+  werPercentage                   Int      @map("wer_percentage")
+  blankPercentage                 Int      @map("blank_percentage")
+  editListenCorrelationPercentage Int      @map("edit_listen_correlation_percentage")
+  speakerChangePercentage         Int      @map("speaker_change_percentage")
+  speakerMacroF1Score             Float    @map("speaker_macro_f1_score")
+  isValidationPassed              Boolean  @map("is_validation_passed")
+  isAcceptedByOM                  Boolean? @map("is_accepted_by_om")
+  createdAt                       DateTime @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id])
+  file  File  @relation(fields: [fileId], references: [fileId])
+  user  User  @relation(fields: [transcriberId], references: [id])
+
+  @@index([orderId])
+  @@index([fileId])
+  @@index([transcriberId])
+  @@map("scb_qc_validation_stats")
+}
+
+model TestFile {
+  id           Int           @id @default(autoincrement())
+  filename     String
+  fileId       String        @map("file_id")
+  isActive     Boolean       @default(true) @map("is_active")
+  instructions String?       @map("instructions")
+  createdBy    Int           @map("created_by")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  TestAttempt  TestAttempt[]
+
+  @@index([fileId])
+  @@index([createdBy])
+  @@map("scb_test_files")
+}
+
+model TestInvitation {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  invitedBy Int      @map("invited_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId])
+  @@index([userId])
+  @@index([invitedBy])
+  @@map("scb_test_invitations")
+}
+
+model TestAttempt {
+  id          Int        @id @default(autoincrement())
+  userId      Int        @map("user_id")
+  user        User       @relation(fields: [userId], references: [id])
+  passed      Boolean    @default(false)
+  score       Int        @default(0)
+  fileId      String     @map("file_id")
+  status      TestStatus @default(ACCEPTED)
+  File        File       @relation(fields: [fileId], references: [fileId])
+  startedAt   DateTime   @default(now()) @map("started_at")
+  completedAt DateTime?  @map("completed_at")
+  cancelledAt DateTime?  @map("cancelled_at")
+
+  @@index([userId])
+  @@index([fileId])
+  @@map("scb_test_attempts")
+}
+
 //  ███████ ███    ██ ██    ██ ███    ███ ███████
 //  ██      ████   ██ ██    ██ ████  ████ ██
 //  █████   ██ ██  ██ ██    ██ ██ ████ ██ ███████
@@ -997,6 +1081,13 @@ enum JobStatus {
   SUBMITTED_FOR_APPROVAL
 }
 
+enum TestStatus {
+  ACCEPTED
+  COMPLETED
+  CANCELLED
+  SUBMITTED_FOR_APPROVAL
+}
+
 enum JobType {
   TR_LEGACY
   RV_LEGACY
@@ -1004,6 +1095,7 @@ enum JobType {
   QC
   REVIEW
   FINALIZE
+  TEST
 }
 
 enum WithdrawalStatus {
@@ -1021,6 +1113,7 @@ enum InputFileType {
   QC_OUTPUT
   LLM_OUTPUT
   REVIEW_OUTPUT
+  TEST_OUTPUT
 }
 
 enum BonusType {
@@ -1049,6 +1142,7 @@ enum FileTag {
   LLM
   CF_OM_DELIVERED
   GEMINI
+  TEST
 }
 
 enum SharedFilePermission {

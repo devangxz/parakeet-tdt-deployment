@@ -54,6 +54,9 @@ export default function AccountAccess() {
             internalTeamUserId: data?.internalTeamUserId,
             teamName: data?.teamName,
             selectedUserTeamRole: data?.selectedUserTeamRole,
+            customPlan: data?.customPlan,
+            orderType: data?.orderType,
+            organizationName: data?.organizationName,
           },
         })
         toast.success('Sucessfully switched to user')

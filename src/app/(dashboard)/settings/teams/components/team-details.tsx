@@ -243,7 +243,7 @@ const TeamDetailsDialog = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className='sm:max-w-[892px]'>
+        <DialogContent className='sm:max-w-[1092px]'>
           <DialogHeader>
             <DialogTitle>{selectedTeam?.name}</DialogTitle>
           </DialogHeader>

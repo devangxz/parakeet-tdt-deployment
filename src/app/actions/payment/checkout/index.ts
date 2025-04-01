@@ -9,7 +9,7 @@ import gateway from '@/lib/braintree'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { processPayment } from '@/services/payment-service/process-payment'
-import { checkBraintreeCustomer } from '@/utils/backend-helper'
+import { checkBraintreeCustomer, isNewCustomer } from '@/utils/backend-helper'
 
 const braintreePaymentMethodMapping = {
   paypal_account: 'PAYPAL_ACCOUNT',
@@ -116,6 +116,8 @@ export async function checkout(payload: CheckoutPayload) {
       })
       logger.info(`Payment successful for invoice ${invoiceId}`)
 
+      const newCustomer = await isNewCustomer(userId as number)
+
       return {
         success: true,
         transactionId: result.transaction.id,
@@ -127,6 +129,7 @@ export async function checkout(payload: CheckoutPayload) {
         pp_account: `${result.transaction?.paypalAccount?.payerFirstName} ${result.transaction?.paypalAccount?.payerLastName} ${result.transaction?.paypalAccount?.payerEmail}`,
         cc_last4: result.transaction?.creditCard?.last4,
         invoice: invoiceData,
+        isNewCustomer: newCustomer,
       }
     } else {
       logger.error(

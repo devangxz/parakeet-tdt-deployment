@@ -29,8 +29,9 @@ import {
   COMMON_ABBREVIATIONS,
   MAX_FORMAT_FILES,
   FORMAT_FILES_EXCEPTION_LIST,
+  QC_VALIDATION,
 } from '@/constants'
-import { AlignmentType, CTMType, UndoRedoItem } from '@/types/editor'
+import { AlignmentType, CTMType, UndoRedoItem, QCValidation } from '@/types/editor'
 import {
   getEditorDataIDB,
   persistEditorDataIDB,
@@ -979,7 +980,7 @@ type HandleSubmitParams = {
   quill?: Quill
   finalizerComment: string
   currentAlignments?: AlignmentType[]
-  isQCValidationPassed?: boolean
+  qcValidation?: QCValidation
 }
 
 const handleSubmit = async ({
@@ -993,7 +994,7 @@ const handleSubmit = async ({
   quill,
   finalizerComment,
   currentAlignments,
-  isQCValidationPassed,
+  qcValidation,
 }: HandleSubmitParams) => {
   if (!orderDetails || !orderDetails.orderId || !step) return
 
@@ -1045,10 +1046,10 @@ const handleSubmit = async ({
       }
 
       await submitQCAction({
-        fileId: orderDetails.fileId,
         orderId: Number(orderDetails.orderId),
+        fileId: orderDetails.fileId,
         transcript,
-        isQCValidationPassed,
+        qcValidation,
       })
     }
 
@@ -1871,9 +1872,243 @@ function calculateBlankPercentage(
 
   const contentWordCount = alignments.filter((al) => al.type === 'ctm').length
 
-  return contentWordCount > 0
-    ? Number(((blankCount / contentWordCount) * 100).toFixed(2))
+  if (contentWordCount === 0) return 0
+  
+  const blankPercentage = Math.round((blankCount / contentWordCount) * 100)
+  return (blankCount / contentWordCount) > 0 && blankPercentage === 0 ? 1 : blankPercentage
+}
+
+function calculateEditListenCorrelationPercentage(
+  listenCount: number[],
+  editedSegments: Set<number>
+): number {
+  if (editedSegments.size === 0) return 100
+
+  let correlatedEdits = 0
+  editedSegments.forEach((segment) => {
+    if (
+      (segment >= 0 &&
+        segment < listenCount.length &&
+        listenCount[segment] >= QC_VALIDATION.min_listen_count_threshold) ||
+      (segment - 1 >= 0 && listenCount[segment - 1] >= QC_VALIDATION.min_listen_count_threshold) ||
+      (segment + 1 < listenCount.length &&
+        listenCount[segment + 1] >= QC_VALIDATION.min_listen_count_threshold)
+    ) {
+      correlatedEdits++
+    }
+  })
+
+  return Math.round((correlatedEdits / editedSegments.size) * 100)
+}
+
+function calculateSpeakerChangePercentage(
+  originalTranscript: string,
+  editedTranscript: string
+): number {
+  const speakerLabelRegex = /\d{1,2}:\d{2}:\d{2}\.\d\s+(S\d+):/g
+  const FUZZY_MATCH_THRESHOLD = 0.5
+
+  const originalLabels: { [key: string]: string } = {}
+  const editedLabels: { [key: string]: string } = {}
+  const processedTimestamps = new Set<string>()
+
+  let match
+  while ((match = speakerLabelRegex.exec(originalTranscript)) !== null) {
+    const timestamp = match[0].split(' ')[0]
+    const speakerLabel = match[1]
+    originalLabels[timestamp] = speakerLabel
+  }
+
+  speakerLabelRegex.lastIndex = 0
+
+  while ((match = speakerLabelRegex.exec(editedTranscript)) !== null) {
+    const timestamp = match[0].split(' ')[0]
+    const speakerLabel = match[1]
+    editedLabels[timestamp] = speakerLabel
+  }
+
+  const timestampToSeconds = (timestamp: string): number => {
+    const parts = timestamp.split(':')
+    const seconds = 
+      parseInt(parts[0]) * 3600 + 
+      parseInt(parts[1]) * 60 + 
+      parseFloat(parts[2])
+    return seconds
+  }
+
+  const findClosestTimestamp = (timestamp: string, targetObj: { [key: string]: string }): string | null => {
+    const timeInSeconds = timestampToSeconds(timestamp)
+    let closestMatch: string | null = null
+    let minDifference = FUZZY_MATCH_THRESHOLD + 0.1
+    
+    for (const targetTimestamp in targetObj) {
+      if (processedTimestamps.has(targetTimestamp)) continue
+      
+      const targetTimeInSeconds = timestampToSeconds(targetTimestamp)
+      const difference = Math.abs(timeInSeconds - targetTimeInSeconds)
+      
+      if (difference < FUZZY_MATCH_THRESHOLD && difference < minDifference) {
+        minDifference = difference
+        closestMatch = targetTimestamp
+      }
+    }
+    
+    return closestMatch
+  }
+
+  let changedCount = 0
+  let addedCount = 0
+  let removedCount = 0
+  const totalOriginalCount = Object.keys(originalLabels).length
+
+  for (const origTimestamp in originalLabels) {
+    if (editedLabels[origTimestamp]) {
+      if (originalLabels[origTimestamp] !== editedLabels[origTimestamp]) {
+        changedCount++
+      }
+      processedTimestamps.add(origTimestamp)
+    } else {
+      const closestMatch = findClosestTimestamp(origTimestamp, editedLabels)
+      if (closestMatch) {
+        if (originalLabels[origTimestamp] !== editedLabels[closestMatch]) {
+          changedCount++
+        }
+        processedTimestamps.add(closestMatch)
+      } else {
+        removedCount++
+      }
+    }
+  }
+
+  for (const editedTimestamp in editedLabels) {
+    if (!processedTimestamps.has(editedTimestamp)) {
+      addedCount++
+    }
+  }
+
+  const totalChanges = changedCount + addedCount + removedCount
+  
+  return totalOriginalCount > 0 ? Math.round((totalChanges / totalOriginalCount) * 100) : 0
+}
+
+function calculateSpeakerMacroF1Score(
+  originalTranscript: string,
+  editedTranscript: string
+): number {
+  const extractSpeakerSegments = (transcript: string) => {
+    const segments: { timestamp: string; speaker: string; text: string }[] = []
+    const lines = transcript
+      .split('\n')
+      .filter((line) => line.trim().length > 0)
+
+    for (const line of lines) {
+      const match = line.match(/^(\d{1,2}:\d{2}:\d{2}\.\d)\s+(S\d+):\s+(.+)$/)
+      if (match) {
+        segments.push({
+          timestamp: match[1],
+          speaker: match[2],
+          text: match[3].trim(),
+        })
+      }
+    }
+
+    return segments
+  }
+
+  const originalSegments = extractSpeakerSegments(originalTranscript)
+  const editedSegments = extractSpeakerSegments(editedTranscript)
+
+  if (originalSegments.length === 0 || editedSegments.length === 0) {
+    return 0
+  }
+
+  const FUZZY_MATCH_THRESHOLD = 0.5
+  const findMatchingSegment = (segment: typeof originalSegments[0], targetSegments: typeof editedSegments) => {
+    const exactMatch = targetSegments.find(s => s.timestamp === segment.timestamp)
+    if (exactMatch) return exactMatch
+
+    const segmentTime = timestampToSeconds(segment.timestamp)
+    let closestMatch = null
+    let minDifference = FUZZY_MATCH_THRESHOLD
+    
+    for (const targetSegment of targetSegments) {
+      const targetTime = timestampToSeconds(targetSegment.timestamp)
+      const difference = Math.abs(segmentTime - targetTime)
+      
+      if (difference < minDifference) {
+        minDifference = difference
+        closestMatch = targetSegment
+      }
+    }
+    
+    return closestMatch
+  }
+
+  const allSpeakers = Array.from(
+    new Set([
+      ...originalSegments.map((s) => s.speaker),
+      ...editedSegments.map((s) => s.speaker),
+    ])
+  ).sort()
+
+  const speakerStats = new Map<string, { tp: number; fp: number; fn: number }>()
+  allSpeakers.forEach(speaker => {
+    speakerStats.set(speaker, { tp: 0, fp: 0, fn: 0 })
+  })
+
+  const processedEditedIndices = new Set<number>()
+
+  for (const originalSegment of originalSegments) {
+    const matchingEditedSegmentIndex = editedSegments.findIndex((segment, index) => {
+      if (processedEditedIndices.has(index)) return false
+      const matchedSegment = findMatchingSegment(originalSegment, [segment])
+      return matchedSegment !== null
+    })
+
+    if (matchingEditedSegmentIndex !== -1) {
+      const editedSegment = editedSegments[matchingEditedSegmentIndex]
+      processedEditedIndices.add(matchingEditedSegmentIndex)
+      
+      if (originalSegment.speaker === editedSegment.speaker) {
+        const stats = speakerStats.get(originalSegment.speaker)!
+        stats.tp += 1
+      } else {
+        const origStats = speakerStats.get(originalSegment.speaker)!
+        origStats.fn += 1
+        
+        const editStats = speakerStats.get(editedSegment.speaker)!
+        editStats.fp += 1
+      }
+    } else {
+      const stats = speakerStats.get(originalSegment.speaker)!
+      stats.fn += 1
+    }
+  }
+
+  editedSegments.forEach((segment, index) => {
+    if (!processedEditedIndices.has(index)) {
+      const stats = speakerStats.get(segment.speaker)!
+      stats.fp += 1
+    }
+  })
+
+  const f1Scores: number[] = []
+  
+  for (const speaker of allSpeakers) {
+    const { tp, fp, fn } = speakerStats.get(speaker)!
+    
+    const precision = tp + fp === 0 ? 0 : tp / (tp + fp)
+    const recall = tp + fn === 0 ? 0 : tp / (tp + fn)
+    
+    const f1 = precision + recall === 0 ? 0 : (2 * precision * recall) / (precision + recall)
+    f1Scores.push(f1)
+  }
+
+  const macroF1 = f1Scores.length > 0
+    ? f1Scores.reduce((sum, score) => sum + score, 0) / f1Scores.length
     : 0
+    
+  return Number(macroF1.toFixed(2))
 }
 
 export enum GeminiModel {
@@ -1921,5 +2156,8 @@ export {
   acceptAllDiffs,
   rejectAllDiffs,
   calculateBlankPercentage,
+  calculateEditListenCorrelationPercentage,
+  calculateSpeakerChangePercentage,
+  calculateSpeakerMacroF1Score,
 }
 export type { CTMType }

@@ -25,6 +25,7 @@ export async function fetchApprovalOrders() {
     const orders = await prisma.order.findMany({
       where: {
         status: OrderStatus.SUBMITTED_FOR_APPROVAL,
+        isTestOrder: false,
       },
       include: {
         File: true,
@@ -47,7 +48,25 @@ export async function fetchApprovalOrders() {
           order.userId,
           transcriberId ?? 0
         )
-        return { ...order, fileCost, watchList, orderType }
+        
+        const qcValidationStats = await prisma.qCValidationStats.findFirst({
+          where: {
+            orderId: order.id,
+            fileId: order.fileId,
+            transcriberId,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        })      
+       
+        return { 
+          ...order, 
+          fileCost, 
+          watchList, 
+          orderType,
+          qcValidationStats
+        }
       })
     )
 

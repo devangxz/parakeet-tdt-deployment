@@ -240,7 +240,11 @@ const CustomFormatOrder = ({
     fetchOrderInformation()
   }, [status])
 
-  const gtagPurchaseEvent = (amount: number, invoiceId: string) => {
+  const gtagPurchaseEvent = (
+    amount: number,
+    invoiceId: string,
+    isNewCustomer: boolean
+  ) => {
     const gtag = (window as any).gtag
     if (typeof gtag === 'function') {
       gtag('event', 'purchase', {
@@ -249,7 +253,7 @@ const CustomFormatOrder = ({
         tax: 10,
         shipping: 10,
         currency: 'USD',
-        new_customer: false,
+        new_customer: isNewCustomer ? 'Yes' : 'No',
         coupon: 'No',
         items: bills.map((bill, index) => ({
           item_name: bill.name,
@@ -365,7 +369,11 @@ const CustomFormatOrder = ({
           cc_last4: response.cc_last4 ?? '',
           amount: response.invoice?.amount ?? 0,
         }))
-        gtagPurchaseEvent(response.invoice?.amount ?? 0, invoiceId)
+        gtagPurchaseEvent(
+          response.invoice?.amount ?? 0,
+          invoiceId,
+          response.isNewCustomer ?? false
+        )
         setPaymentSuccess(true)
       } else {
         toast.error(`Payment failed: ${response.message}`)
@@ -402,7 +410,11 @@ const CustomFormatOrder = ({
         }))
         setPaymentSuccess(true)
         setLoadingPay(false)
-        gtagPurchaseEvent(data.invoice?.amount ?? 0, invoiceId)
+        gtagPurchaseEvent(
+          data.invoice?.amount ?? 0,
+          invoiceId,
+          data.isNewCustomer ?? false
+        )
       } else {
         setLoadingPay(false)
         toast.error(`Failed to order the file`)

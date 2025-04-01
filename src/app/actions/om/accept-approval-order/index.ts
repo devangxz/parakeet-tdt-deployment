@@ -57,6 +57,28 @@ export async function acceptApprovalOrder(orderId: number) {
       data: { status: JobStatus.COMPLETED },
     })
 
+    const qcValidationStats = await prisma.qCValidationStats.findFirst({
+      where: {
+        orderId: orderInformation.id,
+        fileId: orderInformation.fileId,
+        transcriberId: currentJobAssignment.transcriberId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+
+    if (qcValidationStats) {
+      await prisma.qCValidationStats.update({
+        where: {
+          id: qcValidationStats.id,
+        },
+        data: {
+          isAcceptedByOM: true,
+        },
+      })
+    }
+
     logger.info(`Successfully delivered pre delivery file ${orderId}`)
     return {
       success: true,

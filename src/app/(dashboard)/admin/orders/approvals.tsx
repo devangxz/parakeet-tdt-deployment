@@ -28,7 +28,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import FileAudioPlayer from '@/components/utils/FileAudioPlayer'
-import { HIGH_PWER, LOW_PWER } from '@/constants'
+import { HIGH_PWER, LOW_PWER, QC_VALIDATION } from '@/constants'
+import { QCValidation } from '@/types/editor'
 import { FileCost } from '@/types/files'
 import formatDateTime from '@/utils/formatDateTime'
 import formatDuration from '@/utils/formatDuration'
@@ -51,6 +52,7 @@ interface File {
   type: string
   transcriberWatch: boolean
   customerWatch: boolean
+  qcValidationStats?: QCValidation
 }
 
 interface ApprovalPageProps {
@@ -169,7 +171,8 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
             type: order.orderType,
             transcriberWatch: order.watchList.transcriber,
             customerWatch: order.watchList.customer,
-          }
+            qcValidationStats: order.qcValidationStats,
+          } as File
         })
         // Sort orders so that overdue files from yesterday are placed on top
         const today = new Date()
@@ -324,10 +327,7 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
       accessorKey: 'duration',
       header: 'Duration',
       cell: ({ row }) => (
-        <div
-          className='font-medium'
-          style={{ minWidth: '250px', maxWidth: '250px' }}
-        >
+        <div className='font-medium' style={{ minWidth: '150px' }}>
           {formatDuration(row.getValue('duration'))}
           {row.original.type === 'FORMATTING' ? (
             <p>
@@ -413,6 +413,84 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
         <DataTableColumnHeader column={column} title='Order Type' />
       ),
       filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    },
+    {
+      accessorKey: 'qcStats',
+      header: 'QC Stats',
+      cell: ({ row }) => {
+        const stats = row.original.qcValidationStats
+
+        if (!stats) {
+          return (
+            <div className='font-medium' style={{ maxWidth: '125px' }}>
+              No QC Stats
+            </div>
+          )
+        }
+
+        const getStatusClass = (value: number, isError: boolean) =>
+          `inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
+            isError
+              ? 'bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-400/10 dark:text-red-400 dark:ring-red-400/20'
+              : 'bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-400/10 dark:text-green-400 dark:ring-green-400/20'
+          }`
+
+        const statsConfig = [
+          {
+            value: stats.playedPercentage,
+            isError:
+              stats.playedPercentage <
+              QC_VALIDATION.min_audio_playback_percentage,
+            tooltip: `Indicates percentage of audio file that was played by QC. Should be at least ${QC_VALIDATION.min_audio_playback_percentage}% to ensure thorough review.`,
+          },
+          {
+            value: stats.werPercentage,
+            isError:
+              stats.werPercentage < QC_VALIDATION.min_wer_percentage ||
+              stats.werPercentage > QC_VALIDATION.max_wer_percentage,
+            tooltip: `Indicates percentage of changes made to the transcript by QC. Should be between ${QC_VALIDATION.min_wer_percentage}% and ${QC_VALIDATION.max_wer_percentage}% - too few changes may indicate insufficient review, while too many could indicate potential issues.`,
+          },
+          {
+            value: stats.blankPercentage,
+            isError: stats.blankPercentage > QC_VALIDATION.max_blank_percentage,
+            tooltip: `Indicates percentage of inaudible/blank segments in the transcript added by QC. Should not exceed ${QC_VALIDATION.max_blank_percentage}% to maintain transcript quality.`,
+          },
+          {
+            value: stats.editListenCorrelationPercentage,
+            isError:
+              stats.editListenCorrelationPercentage <
+              QC_VALIDATION.min_edit_listen_correlation_percentage,
+            tooltip: `Indicates correlation between edits and audio playback, showing if changes were made by QC while listening carefully. Should be at least ${QC_VALIDATION.min_edit_listen_correlation_percentage}% to ensure accurate corrections based on careful audio review.`,
+          },
+          {
+            value: stats.speakerChangePercentage,
+            isError:
+              stats.speakerChangePercentage >
+              QC_VALIDATION.max_speaker_change_percentage,
+            tooltip: `Indicates percentage of speaker label changes made by QC. Should not exceed ${QC_VALIDATION.max_speaker_change_percentage}% to maintain speaker consistency.`,
+          },
+        ]
+
+        return (
+          <div
+            className='font-medium flex flex-wrap gap-0.5'
+            style={{ maxWidth: '125px' }}
+          >
+            {statsConfig.map((stat, index) => (
+              <Tooltip key={index}>
+                <TooltipTrigger>
+                  <div className={getStatusClass(stat.value, stat.isError)}>
+                    {stat.value}%
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent className='max-w-[350px]'>
+                  <p>{stat.tooltip}</p>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+        )
+      },
     },
     {
       id: 'actions',
@@ -507,6 +585,12 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
         <DataTable
           data={approvalFiles ?? []}
           columns={columns}
+          defaultColumnVisibility={{
+            customerWatch: false,
+            transcriberWatch: false,
+            type: false,
+            status: false,
+          }}
           renderWaveform={(row) => {
             if (!('fileId' in row)) return null
             const fileId = row.fileId as string

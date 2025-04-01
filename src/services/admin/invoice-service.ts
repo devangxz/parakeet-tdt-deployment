@@ -21,31 +21,11 @@ export async function generateInvoice({
   let price = 0
 
   try {
-    if (
-      type === InvoiceType.ADDL_FORMATTING ||
-      type === InvoiceType.ADDL_PROOFREADING
-    ) {
-      const fileIdsArray = fileIds.split(',')
-      const deliveredOrders = await prisma.order.findMany({
-        where: {
-          fileId: {
-            in: fileIdsArray,
-          },
-          status: 'DELIVERED',
-        },
-      })
-      if (deliveredOrders.length !== 0) {
-        return {
-          success: false,
-          s: 'Additional Proofreading invoice can not be generated for delivered file',
-        }
-      }
-    }
-
     const existingInvoice = await prisma.invoice.findFirst({
       where: {
         itemNumber: fileIds,
         type: type as InvoiceType,
+        status: 'PENDING',
       },
     })
 

@@ -182,10 +182,7 @@ export const processPayment = async (
       }
       await sendTemplateMail('ADD_CREDITS', invoice.userId, templateData)
     }
-    if (
-      type === InvoiceType.ADDL_FORMATTING ||
-      type === InvoiceType.ADDL_PROOFREADING
-    ) {
+    if (type === InvoiceType.ADDL_PROOFREADING) {
       const invoice = await prisma.invoice.findUnique({
         where: { invoiceId },
       })
@@ -204,6 +201,29 @@ export const processPayment = async (
             status: OrderStatus.TRANSCRIBED,
             updatedAt: new Date(),
             highDifficulty: false,
+            deliveryTs: addHours(new Date(), 24),
+          },
+        })
+      }
+    }
+    if (type === InvoiceType.ADDL_FORMATTING) {
+      const invoice = await prisma.invoice.findUnique({
+        where: { invoiceId },
+      })
+
+      if (!invoice) {
+        logger.error(`Invoice not found ${invoiceId}`)
+        return false
+      }
+      const file_ids = invoice.itemNumber?.split(',') ?? []
+      for (const fileId of file_ids) {
+        await prisma.order.update({
+          where: {
+            fileId,
+          },
+          data: {
+            orderType: 'TRANSCRIPTION_FORMATTING',
+            updatedAt: new Date(),
             deliveryTs: addHours(new Date(), 24),
           },
         })
