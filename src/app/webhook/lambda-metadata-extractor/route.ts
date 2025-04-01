@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
       JSON.stringify({
         type: 'METADATA_EXTRACTION',
         file: {
+          id: metadata?.fileId,
           status: metadata?.status,
           fileNameWithExtension: metadata?.fileNameWithExtension,
         },
