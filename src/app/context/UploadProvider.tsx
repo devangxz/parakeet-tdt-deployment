@@ -142,8 +142,27 @@ const UploadProvider: React.FC<{ children: React.ReactNode }> = ({
                 status: 'completed',
               })
               callbacksRef.current.onFileSuccess()
+              
+              const gtag = (window as { gtag?: (command: string, action: string, params: object) => void }).gtag
+              if (typeof gtag === 'function') {
+                gtag('event', 'add_to_cart', {
+                  currency: 'USD',
+                  value: 0,
+                  items: [
+                    {
+                      item_id: data?.file?.id,
+                      discount: 0,
+                      index: 0,
+                      price: 0,
+                      quantity: 1,
+                    },
+                  ],
+                })
+              }
             } else {
-              toast.error(`Failed to process ${data?.file?.fileNameWithExtension}. Please try again.`)
+              toast.error(
+                `Failed to process ${data?.file?.fileNameWithExtension}. Please try again.`
+              )
               updateUploadStatus(data?.file?.fileNameWithExtension, {
                 progress: 0,
                 status: 'failed',
