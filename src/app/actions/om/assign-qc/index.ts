@@ -5,6 +5,7 @@ import { JobType, OrderStatus, InputFileType } from '@prisma/client'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import assignFileToQC from '@/services/transcribe-service/assign-file-to-qc'
+import { fileExistsInS3 } from '@/utils/backend-helper'
 
 export async function assignQC(fileId: string, userEmail: string) {
   try {
@@ -31,6 +32,15 @@ export async function assignQC(fileId: string, userEmail: string) {
     if (!user) {
       logger.error(`User not found for ${userEmail}`)
       return { success: false, message: 'User not found' }
+    }
+
+    const asrOutputExists = await fileExistsInS3(`${fileId}.txt`)
+    if (!asrOutputExists) {
+      logger.error(`ASR output file ${fileId}.txt does not exist in S3`)
+      return {
+        success: false,
+        message: 'ASR output file does not exist in S3',
+      }
     }
 
     await assignFileToQC(
