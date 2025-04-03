@@ -6,6 +6,8 @@ import { toast } from 'sonner'
 
 import AudioPlayer from './components/AudioPlayer'
 import { fetchFileOrderInformation } from '@/app/actions/om/fetch-file-order-information'
+import { updatePriority } from '@/app/actions/om/update-priority'
+import AssignCfDialog from '@/components/admin-components/assign-cf-file'
 import AssignFinalizerDialog from '@/components/admin-components/assign-finalizer'
 import AssignQcDialog from '@/components/admin-components/assign-qc-dialog'
 import ReassignFinalizer from '@/components/admin-components/re-assign-finalizer-dialog'
@@ -16,6 +18,7 @@ import SetFileDifficultyDialog from '@/components/admin-components/set-difficult
 import SetFileBonusDialog from '@/components/admin-components/set-file-bonus-dialog'
 import SetFileRateDialog from '@/components/admin-components/set-file-rate-dialog'
 import SetInstructionsDialog from '@/components/admin-components/set-instructions-dialog'
+import UnassignCfDialog from '@/components/admin-components/unassign-cf-dialog'
 import UnassignQcDialog from '@/components/admin-components/unassign-qc-dialog'
 import { Button } from '@/components/ui/button'
 import {
@@ -65,6 +68,7 @@ interface StatusPageProps {
 export default function StatusPage({ selectedFileId }: StatusPageProps) {
   const [orderInformation, setOrderInformation] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isPrioritizing, setIsPrioritizing] = useState(false)
   const [fileId, setFileId] = useState<string>(selectedFileId)
   const [orderId, setOrderId] = useState<string>('')
   const [openRateDialog, setRateDialog] = useState(false)
@@ -79,6 +83,8 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
   const [openReassignFinalizerDialog, setReassignFinalizerDialog] =
     useState(false)
   const [openAssignFinalizerDialog, setAssignFinalizerDialog] = useState(false)
+  const [openAssignCfDialog, setAssignCfDialog] = useState(false)
+  const [openUnassignCfDialog, setUnassignCfDialog] = useState(false)
 
   const handleSearch = async () => {
     try {
@@ -134,6 +140,30 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
       toast.error('Failed to get file status')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handlePrioritize = async () => {
+    if (!orderInformation?.fileId) {
+      toast.error('No file selected')
+      return
+    }
+
+    try {
+      setIsPrioritizing(true)
+      const response = await updatePriority({
+        fileId: orderInformation.fileId,
+      })
+
+      if (response.success) {
+        toast.success('File priority successfully increased')
+      } else {
+        toast.error(response.message)
+      }
+    } catch (error) {
+      toast.error('Failed to prioritize file')
+    } finally {
+      setIsPrioritizing(false)
     }
   }
 
@@ -357,6 +387,22 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
               </Button>
               <Button
                 className='not-rounded'
+                onClick={() => setAssignCfDialog(true)}
+                variant='outline'
+                size='sm'
+              >
+                Assign CF
+              </Button>
+              <Button
+                className='not-rounded'
+                onClick={() => setUnassignCfDialog(true)}
+                variant='outline'
+                size='sm'
+              >
+                Unassign CF
+              </Button>
+              <Button
+                className='not-rounded'
                 onClick={() => {
                   setOrderId(orderInformation?.orderId.toString())
                   setReassignReviewDialog(true)
@@ -384,6 +430,22 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
                 size='sm'
               >
                 Assign Finalizer
+              </Button>
+              <Button
+                className='not-rounded'
+                onClick={handlePrioritize}
+                variant='outline'
+                size='sm'
+                disabled={isPrioritizing}
+              >
+                {isPrioritizing ? (
+                  <>
+                    Prioritizing
+                    <ReloadIcon className='ml-2 h-4 w-4 animate-spin' />
+                  </>
+                ) : (
+                  'Prioritize File'
+                )}
               </Button>
             </CardFooter>
           </Card>
@@ -447,6 +509,16 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
       <AssignFinalizerDialog
         open={openAssignFinalizerDialog}
         onClose={() => setAssignFinalizerDialog(false)}
+        fileId={orderInformation?.fileId || ''}
+      />
+      <AssignCfDialog
+        open={openAssignCfDialog}
+        onClose={() => setAssignCfDialog(false)}
+        fileId={orderInformation?.fileId || ''}
+      />
+      <UnassignCfDialog
+        open={openUnassignCfDialog}
+        onClose={() => setUnassignCfDialog(false)}
         fileId={orderInformation?.fileId || ''}
       />
     </>

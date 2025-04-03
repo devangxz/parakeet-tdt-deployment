@@ -15,18 +15,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import isValidEmail from '@/utils/isValidEmail'
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     type: '',
-    userId: '',
+    userEmail: '',
     fileIds: '',
     rate: 0.5,
   })
   const [invoiceUrl, setInvoiceUrl] = useState('')
 
   const handleSubmit = async () => {
+    if (!formData.userEmail) {
+      toast.error('Please enter a email address.')
+      return
+    }
+
+    if (!isValidEmail(formData.userEmail)) {
+      toast.error('Please enter a valid email address.')
+      return
+    }
     try {
       setLoading(true)
       const response = await generateInvoiceAction(formData)
@@ -71,14 +81,17 @@ export default function AdminDashboard() {
                 </Select>
               </div>
               <div className='grid gap-3'>
-                <Label htmlFor='email'>User Id</Label>
+                <Label htmlFor='email'>User Email</Label>
                 <Input
                   type='text'
                   className='w-full'
-                  placeholder='User Id'
-                  value={formData.userId}
+                  placeholder='User Email'
+                  value={formData.userEmail}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, userId: e.target.value }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      userEmail: e.target.value,
+                    }))
                   }
                 />
               </div>

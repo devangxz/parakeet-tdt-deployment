@@ -67,7 +67,7 @@ export default function AddTestCustomer() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Add Test Customer</CardTitle>
+          <CardTitle>Add Test Customer (For Customers)</CardTitle>
           <CardDescription>
             Please enter the customer email address to add it to test customer.
             After adding, the earnings for the customer files will be 0.

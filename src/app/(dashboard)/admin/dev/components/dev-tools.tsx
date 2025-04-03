@@ -82,6 +82,12 @@ function TemplateManagement() {
 
   return (
     <>
+      <div className='mb-4 mt-3'>
+        <p className='text-muted-foreground'>
+          Mail Templates are used to send emails to customers. They are stored
+          in AWS SES.
+        </p>
+      </div>
       {['create', 'update', 'delete'].map((operation) => (
         <Card key={operation}>
           <CardContent>
@@ -255,6 +261,12 @@ function RISandCFDManagement() {
   return (
     <>
       {/* Get RIS Data */}
+      <div className='mb-4 mt-3'>
+        <p className='text-muted-foreground'>
+          This section is used to get RIS data for a given file id. This is for
+          Remote Legal files.
+        </p>
+      </div>
       <Card>
         <CardContent>
           <Button
@@ -348,7 +360,7 @@ function RISandCFDManagement() {
             )}
           </Button>
           <div className='ml-4 inline-block'>
-            <p className='text-sm text-gray-600 mb-4'>
+            <p>
               Update Custom Formatting Details for a file id in the database
             </p>
           </div>
@@ -423,6 +435,12 @@ function OrderTasksManagement() {
   return (
     <>
       {/* Transcribe with File ID */}
+      <div className='mb-4 mt-3'>
+        <p className='text-muted-foreground'>
+          This section is used to trigger transcribe operation for a given file
+          id.
+        </p>
+      </div>
       <Card className='mt-4'>
         <CardContent className='pt-6'>
           <div className='space-y-4'>
@@ -560,6 +578,11 @@ export default function DevTools() {
 
       <TabsContent value='main-tools'>
         {/* Get Redis Details */}
+        <div className='mb-4 mt-3'>
+          <p className='text-muted-foreground'>
+            This section is used to get the details of the Redis queue.
+          </p>
+        </div>
         <Card>
           <CardContent>
             {loading ? (
@@ -597,6 +620,11 @@ export default function DevTools() {
         {/* Download From AWS S3 */}
         <Card className='mt-4'>
           <CardContent className='pt-6'>
+            <div className='mb-4'>
+              <p className='text-muted-foreground'>
+                This section is used to download a file from AWS S3.
+              </p>
+            </div>
             <div className='space-y-4'>
               <div className='flex flex-wrap items-center gap-4'>
                 <p>Download From AWS S3</p>
@@ -734,8 +762,17 @@ function B2BUserOnboarding() {
 
   return (
     <>
+      <div className='mb-4 mt-3'>
+        <p className='text-muted-foreground'>
+          This section is used to manage B2B Users.
+        </p>
+      </div>
       <Card className='mt-4'>
         <CardContent className='pt-6'>
+          <p className='text-muted-foreground mb-4'>
+            This section is used to fetch templates for a given customer email
+            address.
+          </p>
           <div className='mb-6'>
             <h4 className='text-md font-medium mb-2'>Fetch Templates</h4>
             <div className='flex space-x-2'>
@@ -765,6 +802,9 @@ function B2BUserOnboarding() {
       <Card className='mt-4'>
         <CardContent className='pt-6'>
           <div className='mb-6'>
+            <p className='text-muted-foreground mb-4'>
+              This section is used to add a new organization.
+            </p>
             <h4 className='text-md font-medium mb-2'>Add Organization</h4>
             <div className='flex space-x-2'>
               <Input

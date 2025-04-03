@@ -99,7 +99,7 @@ export default function EnableCustomers() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Enable B2B Customers</CardTitle>
+          <CardTitle>Enable B2B Customers (For Transcribers)</CardTitle>
           <CardDescription>
             Please enter the transcriber email address to see and update their
             enabled b2b customers list. Add the org name to the list to enable

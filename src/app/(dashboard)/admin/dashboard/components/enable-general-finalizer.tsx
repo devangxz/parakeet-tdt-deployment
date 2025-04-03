@@ -70,7 +70,7 @@ export default function EnableGeneralFinalizer() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Enable General Finalizer</CardTitle>
+          <CardTitle>Enable General Finalizer (For Transcribers)</CardTitle>
           <CardDescription>
             Please enter the user email address to enable general finalizer.
           </CardDescription>

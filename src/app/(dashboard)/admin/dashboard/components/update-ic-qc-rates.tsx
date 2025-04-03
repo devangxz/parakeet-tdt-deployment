@@ -97,7 +97,7 @@ export default function UpdateICQCRates() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>IC QC Rates</CardTitle>
+          <CardTitle>IC QC Rates (For Transcribers)</CardTitle>
           <CardDescription>
             Please enter the transcriber email address to see and update their
             ic qc rates.
