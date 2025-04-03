@@ -238,19 +238,6 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
                 <p>Difficulty</p>
               </TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger>
-                <Badge
-                  variant='outline'
-                  className='font-semibold text-[10px] text-blue-800'
-                >
-                  GB, NA
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Spellings</p>
-              </TooltipContent>
-            </Tooltip>
             {row.original.priority === 1 && (
               <Tooltip>
                 <TooltipTrigger>
