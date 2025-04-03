@@ -17,7 +17,11 @@ import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
 import deliver from '@/services/file-service/deliver'
 import { QCValidation } from '@/types/editor'
-import { getTestCustomer } from '@/utils/backend-helper'
+import {
+  getTestCustomer,
+  getTeamAdminUserDetails,
+  getUserRate,
+} from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 import getCustomerTranscript from '@/utils/getCustomerTranscript'
 import getOrgName from '@/utils/getOrgName'
@@ -29,7 +33,7 @@ type OrderWithFileData =
   | null
 
 async function completeQCJob(order: Order, transcriberId: number) {
-  logger.info(`--> completeQCJob ${transcriberId}`)
+  logger.info(`--> completeQCJob ${transcriberId} ${order.fileId}`)
 
   const orderWithFileData = await prisma.order.findUnique({
     where: { id: order.id },
@@ -64,11 +68,25 @@ async function completeQCJob(order: Order, transcriberId: number) {
       data: { status: OrderStatus.QC_COMPLETED, updatedAt: new Date() },
     })
   }
-  
+
   const user = await prisma.user.findFirst({ where: { id: transcriberId } })
   const userEmail = user?.email || ''
 
   if (order.orderType === OrderType.TRANSCRIPTION_FORMATTING) {
+    const teamAdminDetails = await getTeamAdminUserDetails(order.userId)
+    const customerId = teamAdminDetails ? teamAdminDetails.userId : order.userId
+    const userRate = await getUserRate(customerId)
+    const skipAssignment = userRate ? userRate.skipAutoAssignment : false
+    if (skipAssignment) {
+      logger.info(
+        `Skipping auto assignment for order ${order.fileId} as skipAutoAssignment is enabled for the customer`
+      )
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { status: OrderStatus.FORMATTED, updatedAt: new Date() },
+      })
+      return
+    }
     const inputFileType =
       orgName.toLowerCase() === 'remotelegal'
         ? InputFileType.LLM_OUTPUT
@@ -199,7 +217,8 @@ export async function submitQCFile(
           },
         })
       } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
+        const errorMessage =
+          error instanceof Error ? error.message : String(error)
         logger.error(`Failed to create QC validation stats: ${errorMessage}`)
       }
     }

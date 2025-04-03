@@ -76,7 +76,9 @@ export default function EnableCustomFormattingReview() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Enable Custom Formatting Review</CardTitle>
+          <CardTitle>
+            Enable Custom Formatting Review (For Transcribers)
+          </CardTitle>
           <CardDescription>
             Please enter the user email address to enable custom formatting
             review.

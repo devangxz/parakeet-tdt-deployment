@@ -76,7 +76,7 @@ export default function AddMiscEarnings() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Add Misc Earnings</CardTitle>
+          <CardTitle>Add Misc Earnings (For Transcribers)</CardTitle>
           <CardDescription>
             Please enter the following details to add misc earnings.
           </CardDescription>

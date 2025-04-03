@@ -70,7 +70,7 @@ export default function EnablePreDelivery() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Pre Delivery Customers</CardTitle>
+          <CardTitle>Pre Delivery Customers (For Customers)</CardTitle>
           <CardDescription>
             Please enter the user customer address for checking pre delivery
             status.

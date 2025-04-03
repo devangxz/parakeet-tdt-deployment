@@ -95,7 +95,7 @@ export default function DisableQC() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Disable Editor</CardTitle>
+          <CardTitle>Disable Editor (For QCs)</CardTitle>
           <CardDescription>
             Please enter the editor email address for disabling.
           </CardDescription>

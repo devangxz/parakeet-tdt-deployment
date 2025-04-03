@@ -133,6 +133,7 @@ export const getUserRate = async (userId: number) => {
       ro: userRate.rushOrder || 0,
       cf: userRate.customFormat,
       cf_deadline: userRate.deadline,
+      skipAutoAssignment: userRate.skipAutoAssignment,
     }
   } catch (error) {
     logger.error('Failed to fetch user rates:', error)

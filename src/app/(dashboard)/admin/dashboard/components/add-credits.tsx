@@ -68,7 +68,7 @@ export default function AddCredits() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Add Credits</CardTitle>
+          <CardTitle>Add Credits (For Customers)</CardTitle>
           <CardDescription>
             Please enter the email address of an existing user to add free
             account credits.

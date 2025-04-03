@@ -35,6 +35,7 @@ interface UpdateCustomPlanParams {
     cfReviewHighDifficultyRate: string
     outputFormat: string
     defaultOrderButtonLabel: string
+    skipAutoAssignment: boolean
   }
 }
 
@@ -165,6 +166,7 @@ export async function updateCustomPlan({
           orderType: rates.orderType,
           outputFormat: rates.outputFormat,
           defaultOrderButtonLabel: rates.defaultOrderButtonLabel,
+          skipAutoAssignment: rates.skipAutoAssignment,
           updatedAt: new Date(),
         },
         create: {
@@ -200,6 +202,7 @@ export async function updateCustomPlan({
           orderType: rates.orderType,
           defaultOrderButtonLabel: rates.defaultOrderButtonLabel,
           outputFormat: rates.outputFormat,
+          skipAutoAssignment: rates.skipAutoAssignment,
         },
       })
 

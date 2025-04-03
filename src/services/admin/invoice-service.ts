@@ -7,20 +7,30 @@ import { generateInvoiceId } from '@/utils/backend-helper'
 interface GenerateInvoiceParams {
   type: string
   fileIds: string
-  userId: string | number
+  userEmail: string
   rate: number
 }
 
 export async function generateInvoice({
   type,
   fileIds,
-  userId,
+  userEmail,
   rate,
 }: GenerateInvoiceParams) {
   const minAmount = 1
   let price = 0
 
   try {
+    const user = await prisma.user.findUnique({
+      where: {
+        email: userEmail,
+      },
+    })
+
+    if (!user) {
+      return { success: false, s: 'User not found' }
+    }
+
     const existingInvoice = await prisma.invoice.findFirst({
       where: {
         itemNumber: fileIds,
@@ -61,14 +71,14 @@ export async function generateInvoice({
     const invoice = await prisma.invoice.create({
       data: {
         invoiceId,
-        userId: parseInt(userId as string),
+        userId: user.id,
         type: type as InvoiceType,
         amount: price,
         itemNumber: fileIds,
       },
     })
 
-    logger.info(`Invoice generated successfully for ${userId}, ${invoiceId}`)
+    logger.info(`Invoice generated successfully for ${user.id}, ${invoiceId}`)
 
     return {
       success: true,
