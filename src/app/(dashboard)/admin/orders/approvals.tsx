@@ -573,6 +573,14 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
     },
   ]
 
+  const removeOrder = (orderId: string) => {
+    setApprovalFiles((prevFiles) =>
+      prevFiles
+        ? prevFiles.filter((file) => file.orderId.toString() !== orderId)
+        : null
+    )
+  }
+
   return (
     <>
       <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
@@ -617,7 +625,7 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
         open={openDialog}
         onClose={() => setOpenDialog(false)}
         orderId={orderId || ''}
-        refetch={() => fetchOrders()}
+        refetch={() => removeOrder(orderId)}
         isAccept={isAccept}
       />
       <OpenDiffDialog
