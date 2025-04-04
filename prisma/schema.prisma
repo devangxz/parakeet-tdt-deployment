@@ -594,7 +594,6 @@ model MiscJobsAttachments {
   fileExtension    String?  @map("file_extension")
   s3Bucket         String   @map("s3_bucket")
 
-  @@index([fileId])
   @@index([filename])
   @@map("scb_misc_jobs_attachments")
 }
