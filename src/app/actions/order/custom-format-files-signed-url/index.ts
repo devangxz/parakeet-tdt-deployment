@@ -11,12 +11,46 @@ import { getFileVersionSignedURLFromS3 } from '@/utils/backend-helper'
 export async function getCustomFormatFilesSignedUrl(
   fileId: string,
   isReviewerSubmitted = false,
-  isFinalizerSubmitted = false
+  isFinalizerSubmitted = false,
+  isDotComOrder = false
 ) {
   try {
     const session = await getServerSession(authOptions)
     const user = session?.user
     const userId = user?.internalTeamUserId || user?.userId
+
+    if (isDotComOrder) {
+      const files = await prisma.miscJobsAttachments.findMany({
+        where: {
+          OR: [{ fileId: fileId }, { fileId: { contains: fileId } }],
+        },
+      })
+
+      const signedUrls = await Promise.all(
+        files.map(async (file) => {
+          const extension = file.fileExtension || 'docx'
+
+          const signedUrl = await getFileVersionSignedURLFromS3(
+            `${file.filename}.${extension}`,
+            '',
+            900,
+            `${file?.originalFilename}.${extension}`,
+            file.s3Bucket
+          )
+
+          return {
+            signedUrl,
+            filename: file?.originalFilename || '',
+            extension,
+          }
+        })
+      )
+
+      return {
+        success: true,
+        signedUrls,
+      }
+    }
 
     const whereClause: {
       fileId: string

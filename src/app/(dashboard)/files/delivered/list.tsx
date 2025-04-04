@@ -99,6 +99,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
         extension: string
       }[]
     >([])
+  const [isDotComOrder, setIsDotComOrder] = useState(false)
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -214,7 +215,12 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
         txtSignedUrl: txtRes.signedUrl || '',
         cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
       })
-      const customFormatRes = await getCustomFormatFilesSignedUrl(fileId)
+      const customFormatRes = await getCustomFormatFilesSignedUrl(
+        fileId,
+        false,
+        false,
+        true
+      )
       if (customFormatRes.success) {
         setCustomFormatFilesSignedUrls(customFormatRes.signedUrls || [])
       }
@@ -418,6 +424,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                 orderId: row?.original?.orderId,
                 orderType: row?.original?.orderType,
               })
+              setIsDotComOrder(Number(row.original.orderId) < 1000000)
               handleCheckAndDownload(row.original.id)
             }}
           >
@@ -689,6 +696,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
             txtSignedUrl={signedUrls.txtSignedUrl || ''}
             cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
             customFormatFilesSignedUrls={customFormatFilesSignedUrls}
+            isDotComOrder={isDotComOrder}
           />
         )}
       </div>
