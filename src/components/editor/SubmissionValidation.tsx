@@ -1,4 +1,3 @@
-import { AlertCircle } from 'lucide-react'
 import React, { useEffect, useMemo } from 'react'
 
 import { QC_VALIDATION } from '@/constants'
@@ -96,40 +95,46 @@ const SubmissionValidation: React.FC<{
 
   return (
     <div className='space-y-3 mt-4'>
-      <div className='bg-red-50 dark:bg-red-950/20 p-4 rounded-md border border-red-200 dark:border-red-800'>
-        <div className='flex items-start gap-2'>
-          <div className='text-red-500'>
-            <AlertCircle className='h-5 w-5' />
-          </div>
-          <div>
-            <p className='text-sm font-medium text-red-700 dark:text-red-400'>
-              Warning
-            </p>
-            <p className='text-sm text-red-700/90 dark:text-red-400/90 mt-1'>
-              Your submission does not meet our quality standards and may be
-              flagged for review. Please address the issues below before
-              submitting.
-            </p>
+      <div className='border-l-4 border-primary flex items-start p-4 my-1 bg-primary/10 border rounded-md shadow-sm'>
+        <div className='flex-shrink-0'>
+          <svg
+            xmlns='http://www.w3.org/2000/svg'
+            className='h-6 w-6 text-primary'
+            viewBox='0 0 20 20'
+            fill='currentColor'
+          >
+            <path
+              fillRule='evenodd'
+              d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-9-4a1 1 0 112 0v2a1 1 0 01-2 0V6zm1 4a1 1 0 00-.993.883L9 11v2a1 1 0 001.993.117L11 13v-2a1 1 0 00-1-1z'
+              clipRule='evenodd'
+            />
+          </svg>
+        </div>
+        <div className='ml-3'>
+          <p className='text-sm font-medium text-primary'>
+            Warning
+          </p>
+          <p className='text-sm text-primary mt-1'>
+            Your submission does not meet our quality standards and may be
+            flagged for review. Please address the issues below before
+            submitting.
+          </p>
 
-            <div className='mt-3 border-t border-red-200 dark:border-red-800/50 pt-2'>
-              <ul className='list-disc pl-5'>
-                {Object.entries(validationResults)
-                  .filter(
-                    ([key, check]) =>
-                      key !== 'isValid' &&
-                      typeof check === 'object' &&
-                      check.failed
-                  )
-                  .map(([key, check]) => (
-                    <li
-                      key={key}
-                      className='text-sm text-red-700 dark:text-red-400 py-1'
-                    >
-                      {typeof check === 'object' && check.message}
-                    </li>
-                  ))}
-              </ul>
-            </div>
+          <div className='mt-2'>
+            <ul className='list-disc pl-5 text-sm text-primary space-y-1'>
+              {Object.entries(validationResults)
+                .filter(
+                  ([key, check]) =>
+                    key !== 'isValid' &&
+                    typeof check === 'object' &&
+                    check.failed
+                )
+                .map(([key, check]) => (
+                  <li key={key}>
+                    {typeof check === 'object' && check.message}
+                  </li>
+                ))}
+            </ul>
           </div>
         </div>
       </div>

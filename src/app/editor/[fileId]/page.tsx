@@ -467,6 +467,20 @@ function EditorPage() {
     loadDetails()
   }, [session])
 
+  useEffect(() => {
+    const closeFindAndReplaceOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && findAndReplaceOpen) {
+        setFindAndReplaceOpen(false)
+      }
+    }
+    
+    window.addEventListener('keydown', closeFindAndReplaceOnEscape)
+    
+    return () => {
+      window.removeEventListener('keydown', closeFindAndReplaceOnEscape)
+    }
+  }, [findAndReplaceOpen])
+
   const handleTabsValueChange = async (value: string) => {
     if (value === 'diff') {
       const contentText = getEditorText()
@@ -902,7 +916,7 @@ function EditorPage() {
                           <Cross1Icon className='h-4 w-4' />
                         </button>
                       </div>
-                      <div className='space-y-3 px-2 py-[10px]'>
+                      <div className='space-y-3 px-2 py-[10px] h-[calc(100%-41px)] overflow-y-auto'>
                         <div className='relative'>
                           <Input
                             placeholder='Find...'
