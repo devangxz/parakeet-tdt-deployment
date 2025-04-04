@@ -22,7 +22,7 @@ const Motd = dynamic(
       const [slideIn, setSlideIn] = useState(false)
 
       useEffect(() => {
-        if (!localStorage.getItem('motdDismissed')) {
+        if (!localStorage.getItem('motdDismissedFlag')) {
           setShowMotd(true)
           setTimeout(() => setSlideIn(true), 10)
         }
@@ -32,7 +32,7 @@ const Motd = dynamic(
         setSlideIn(false)
         setTimeout(() => {
           setShowMotd(false)
-          localStorage.setItem('motdDismissed', 'true')
+          localStorage.setItem('motdDismissedFlag', 'true')
         }, 300)
       }
 
