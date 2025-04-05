@@ -19,6 +19,7 @@ import {
   DiffTabComponent,
   EditorTabComponent,
   InfoTabComponent,
+  SpeakersTabComponent,
 } from '@/components/editor/TabComponents'
 import { Tabs, TabsList, TabsTrigger } from '@/components/editor/Tabs'
 import renderTitleInputs from '@/components/editor/TitleInputs'
@@ -140,7 +141,6 @@ function EditorPage() {
   const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null)
   const [step, setStep] = useState<string>('')
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
   const [buttonLoading, setButtonLoading] = useState({
     download: false,
     upload: false,
@@ -745,9 +745,7 @@ function EditorPage() {
         editorMode={editorMode}
         notes={notes}
         orderDetails={orderDetails}
-        submitting={submitting}
         setIsSubmitModalOpen={setIsSubmitModalOpen}
-        setSubmitting={setSubmitting}
         setPdfUrl={setPdfUrl}
         setRegenCount={setRegenCount}
         setFileToUpload={setFileToUpload}
@@ -848,6 +846,12 @@ function EditorPage() {
                           >
                             Info
                           </TabsTrigger>
+                          <TabsTrigger
+                            className='text-base px-0 pt-2 pb-[6.5px]'
+                            value='speakers'
+                          >
+                            Speakers
+                          </TabsTrigger>
                         </TabsList>
                       </div>
 
@@ -881,6 +885,11 @@ function EditorPage() {
                       <DiffTabComponent diff={diff} />
 
                       <InfoTabComponent orderDetails={orderDetails} />
+
+                      <SpeakersTabComponent
+                        orderDetails={orderDetails}
+                        quillRef={quillRef}
+                      />
                     </Tabs>
                   ))}
                 {selectedSection === 'title' && (
@@ -1029,12 +1038,7 @@ function EditorPage() {
 
         <Dialog
           open={isSubmitModalOpen}
-          onOpenChange={(open) => {
-            setIsSubmitModalOpen(open)
-            if (!open) {
-              setSubmitting(false)
-            }
-          }}
+          onOpenChange={(open) => setIsSubmitModalOpen(open)}
         >
           <DialogContent
             className={
@@ -1101,10 +1105,7 @@ function EditorPage() {
               <div className='flex justify-end gap-2 pt-4'>
                 <Button
                   variant='outline'
-                  onClick={() => {
-                    setSubmitting(false)
-                    setIsSubmitModalOpen(false)
-                  }}
+                  onClick={() => setIsSubmitModalOpen(false)}
                 >
                   Cancel
                 </Button>
@@ -1167,7 +1168,6 @@ function EditorPage() {
                           speakerMacroF1Score: getSpeakerMacroF1Score(),
                         },
                       })
-                      setSubmitting(false)
                       setIsSubmitModalOpen(false)
                     }
                   }}
