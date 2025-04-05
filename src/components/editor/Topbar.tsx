@@ -4,11 +4,9 @@ import {
   ChevronDownIcon,
   Cross1Icon,
   ReloadIcon,
-  ArrowUpIcon,
 } from '@radix-ui/react-icons'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import axios from 'axios'
-import { PlusIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { Delta } from 'quill/core'
 import React, {
@@ -32,6 +30,7 @@ import FrequentTermsDialog from './FrequentTermsDialog'
 import ProcessWithLLMDialog from './ProcessWithLLM'
 import ReportDialog from './ReportDialog'
 import ShortcutsReferenceDialog from './ShortcutsReferenceDialog'
+import SpeakerManager from './SpeakerManager'
 import UploadDocxDialog from './UploadDocxDialog'
 import ReviewTranscriptDialog from '../review-with-gemini'
 import { Button } from '../ui/button'
@@ -50,13 +49,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu'
-import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group'
 import { Textarea } from '../ui/textarea'
 import { CheckAndDownload } from '@/app/(dashboard)/files/delivered/components/check-download'
 import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
-import { getSpeakerNamesAction } from '@/app/actions/editor/get-speaker-names'
 import { requestReReviewAction } from '@/app/actions/editor/re-review'
 import { requestExtensionAction } from '@/app/actions/editor/request-extension'
 import { updateSpeakerNameAction } from '@/app/actions/editor/update-speaker-name'
@@ -100,9 +97,7 @@ interface TopbarProps {
   editorMode: string
   notes: string
   orderDetails: OrderDetails
-  submitting: boolean
   setIsSubmitModalOpen: React.Dispatch<React.SetStateAction<boolean>>
-  setSubmitting: React.Dispatch<React.SetStateAction<boolean>>
   setPdfUrl: React.Dispatch<React.SetStateAction<string>>
   setRegenCount: React.Dispatch<React.SetStateAction<number>>
   setFileToUpload: React.Dispatch<
@@ -139,9 +134,7 @@ export default memo(function Topbar({
   editorMode,
   notes,
   orderDetails,
-  submitting,
   setIsSubmitModalOpen,
-  setSubmitting,
   setPdfUrl,
   setRegenCount,
   setFileToUpload,
@@ -169,9 +162,6 @@ export default memo(function Topbar({
   const [videoPlayerOpen, setVideoPlayerOpen] = useState(false)
   const [revertTranscriptOpen, setRevertTranscriptOpen] = useState(false)
   const [isSpeakerNameModalOpen, setIsSpeakerNameModalOpen] = useState(false)
-  const [speakerName, setSpeakerName] = useState<{
-    [key: string]: string
-  } | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const autoCapitalizeRef = useRef(autoCapitalize)
   const previousEditorContentRef = useRef('')
@@ -490,225 +480,24 @@ export default memo(function Topbar({
     setRevertTranscriptOpen(!revertTranscriptOpen)
   }
 
-  function checkSpeakerOrder(speakers: Record<string, string>): boolean {
-    const expectedOrder = Object.keys(speakers).sort((a, b) => {
-      const numA = parseInt(a.replace('S', ''))
-      const numB = parseInt(b.replace('S', ''))
-      return numA - numB
-    })
-
-    return Object.keys(speakers).every(
-      (key, index) => key === expectedOrder[index]
-    )
-  }
-
-  const toggleSpeakerName = async () => {
+  const handleSpeakerManagerUpdate = async (updatedSpeakers: Record<string, string>) => {
     try {
-      if (quillRef && quillRef.current) {
-        // Removed !speakerName condition to re-fetch every time
-        const quill = quillRef.current.getEditor()
-        const text = quill.getText()
-        const speakerRegex = /\d{1,2}:\d{2}:\d{2}\.\d\s+(S\d+):/g
-        const speakerOrder: string[] = []
-        let match
-
-        // Collect speakers in order of appearance
-        while ((match = speakerRegex.exec(text)) !== null) {
-          const speaker = match[1]
-          if (!speakerOrder.includes(speaker)) {
-            speakerOrder.push(speaker)
-          }
-        }
-
-        const response = await getSpeakerNamesAction(orderDetails.fileId)
-        const speakerNamesList = response.data
-        const newSpeakerNames: Record<string, string> = {}
-
-        // Map speaker names based on order of appearance
-        speakerOrder.forEach((speaker) => {
-          const speakerNumber = parseInt(speaker.replace('S', '')) - 1
-          // Preserve existing speaker names if they exist
-          if (speakerName && speakerName[speaker]) {
-            newSpeakerNames[speaker] = speakerName[speaker]
-          } else if (
-            speakerNamesList &&
-            speakerNamesList[speakerNumber] &&
-            (speakerNamesList[speakerNumber].fn ||
-              speakerNamesList[speakerNumber].ln)
-          ) {
-            const { fn, ln } = speakerNamesList[speakerNumber]
-            newSpeakerNames[speaker] = `${fn} ${ln}`.trim()
-          } else {
-            newSpeakerNames[speaker] = `Speaker ${speakerNumber + 1}`
-          }
-        })
-
-        // Add any remaining speakers from the API that weren't in the transcript
-        const maxSpeakerNumber = Math.max(
-          ...speakerOrder.map((s) => parseInt(s.replace('S', ''))),
-          speakerNamesList.length
-        )
-
-        for (let i = 1; i <= maxSpeakerNumber; i++) {
-          const speaker = `S${i}`
-          if (!newSpeakerNames[speaker]) {
-            if (speakerName && speakerName[speaker]) {
-              newSpeakerNames[speaker] = speakerName[speaker]
-            } else if (
-              speakerNamesList &&
-              speakerNamesList[i - 1] &&
-              (speakerNamesList[i - 1].fn || speakerNamesList[i - 1].ln)
-            ) {
-              const { fn, ln } = speakerNamesList[i - 1]
-              newSpeakerNames[speaker] = `${fn} ${ln}`.trim()
-            } else {
-              newSpeakerNames[speaker] = `Speaker ${i}`
-            }
-          }
-        }
-
-        setSpeakerName(newSpeakerNames) // Replace instead of merge with previous state
-      }
-      setIsSpeakerNameModalOpen(!isSpeakerNameModalOpen)
-    } catch (error) {
-      toast.error('An error occurred while opening the speaker name modal')
-    }
-  }
-
-  const handleSpeakerNameChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    key: string
-  ) => {
-    setSpeakerName((prev) => ({ ...prev, [key]: e.target.value }))
-  }
-
-  const updateSpeakerName = async () => {
-    const toastId = toast.loading('Updating speaker names...')
-    try {
-      if (!speakerName) {
-        throw new Error('Speaker names cannot be empty')
-      }
-      await updateSpeakerNameAction(orderDetails.fileId, speakerName)
-      toast.dismiss(toastId)
+      await updateSpeakerNameAction(orderDetails.fileId, updatedSpeakers)
       toast.success('Speaker names updated successfully')
       setIsSpeakerNameModalOpen(false)
-      if (submitting) {
-        if (editorRef && typeof editorRef !== 'function' && editorRef.current && step === 'QC') {
-          await editorRef.current.triggerAlignmentUpdate()
-        }
-        setIsSubmitModalOpen(true)
+      if (
+        editorRef &&
+        typeof editorRef !== 'function' &&
+        editorRef.current &&
+        step === 'QC'
+      ) {
+        await editorRef.current.triggerAlignmentUpdate()
       }
+      setIsSubmitModalOpen(true)
     } catch (error) {
-      toast.dismiss(toastId)
       toast.error('Failed to update speaker names')
     }
   }
-
-  const addSpeakerName = async () => {
-    if (!speakerName) return
-    const newKey = `S${Object.keys(speakerName).length + 1}`
-    setSpeakerName((prev) => ({
-      ...prev,
-      [newKey]: 'Speaker ' + (Object.keys(speakerName).length + 1),
-    }))
-  }
-
-  const revertTranscript = async () => {
-    const toastId = toast.loading('Reverting transcript...')
-    let type = 'QC'
-    if (orderDetails.status === 'REVIEWER_ASSIGNED') {
-      type = 'CF_REV'
-    } else if (orderDetails.status === 'FINALIZER_ASSIGNED') {
-      type = 'CF_FINALIZER'
-    }
-
-    try {
-      const tokenRes = await fileCacheTokenAction()
-      await axios.post(
-        `${FILE_CACHE_URL}/revert-transcript`,
-        {
-          fileId: orderDetails.fileId,
-          type,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${tokenRes.token}`,
-          },
-        }
-      )
-      toast.success('Transcript reverted successfully')
-      localStorage.removeItem('transcript')
-      window.location.reload()
-      return
-    } catch (error) {
-      toast.dismiss(toastId)
-      toast.error('Failed to revert transcript')
-    }
-  }
-
-  const requestExtension = async () => {
-    const toastId = toast.loading('Requesting extension...')
-    try {
-      await requestExtensionAction(Number(orderDetails.orderId))
-
-      window.location.reload()
-      toast.dismiss(toastId)
-      toast.success('Extension requested successfully')
-    } catch (error) {
-      toast.dismiss(toastId)
-      toast.error('Failed to request extension')
-    }
-  }
-
-  useEffect(() => {
-    if (submitting && orderDetails.status === 'QC_ASSIGNED') {
-      toggleSpeakerName()
-    }
-    if (submitting && orderDetails.status !== 'QC_ASSIGNED') {
-      setIsSubmitModalOpen(true)
-    }
-  }, [submitting])
-
-  const getEditorText = useCallback(
-    () => quillRef?.current?.getEditor().getText() || '',
-    [quillRef]
-  )
-
-  useEffect(() => {
-    let timer: NodeJS.Timeout
-
-    const updateRemainingTime = () => {
-      const remainingSeconds = parseInt(orderDetails.remainingTime)
-      if (remainingSeconds > 0) {
-        const hours = Math.floor(remainingSeconds / 3600)
-        const minutes = Math.floor((remainingSeconds % 3600) / 60)
-        const seconds = remainingSeconds % 60
-
-        const formattedTime = [
-          hours.toString().padStart(2, '0'),
-          minutes.toString().padStart(2, '0'),
-          seconds.toString().padStart(2, '0'),
-        ].join(':')
-
-        setTimeoutCount(formattedTime)
-        orderDetails.remainingTime = (remainingSeconds - 1).toString()
-
-        timer = setTimeout(updateRemainingTime, 1000)
-      } else {
-        setTimeoutCount('00:00:00')
-      }
-    }
-
-    if (orderDetails.status === 'QC_ASSIGNED') {
-      updateRemainingTime()
-    }
-
-    return () => {
-      if (timer) {
-        clearTimeout(timer)
-      }
-    }
-  }, [orderDetails])
 
   const handleReReview = async () => {
     const toastId = toast.loading('Processing re-review request...')
@@ -787,22 +576,93 @@ export default memo(function Topbar({
     }
   }
 
-  const handleSwapSpeakers = (currentIndex: number) => {
-    if (!speakerName || currentIndex === 0) return
+  const revertTranscript = async () => {
+    const toastId = toast.loading('Reverting transcript...')
+    let type = 'QC'
+    if (orderDetails.status === 'REVIEWER_ASSIGNED') {
+      type = 'CF_REV'
+    } else if (orderDetails.status === 'FINALIZER_ASSIGNED') {
+      type = 'CF_FINALIZER'
+    }
 
-    const entries = Object.entries(speakerName)
-    const currentKey = entries[currentIndex][0]
-    const previousKey = entries[currentIndex - 1][0]
-
-    setSpeakerName((prev) => {
-      if (!prev) return prev
-      return {
-        ...prev,
-        [currentKey]: prev[previousKey],
-        [previousKey]: prev[currentKey],
-      }
-    })
+    try {
+      const tokenRes = await fileCacheTokenAction()
+      await axios.post(
+        `${FILE_CACHE_URL}/revert-transcript`,
+        {
+          fileId: orderDetails.fileId,
+          type,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${tokenRes.token}`,
+          },
+        }
+      )
+      toast.success('Transcript reverted successfully')
+      localStorage.removeItem('transcript')
+      window.location.reload()
+      return
+    } catch (error) {
+      toast.dismiss(toastId)
+      toast.error('Failed to revert transcript')
+    }
   }
+
+  const requestExtension = async () => {
+    const toastId = toast.loading('Requesting extension...')
+    try {
+      await requestExtensionAction(Number(orderDetails.orderId))
+
+      window.location.reload()
+      toast.dismiss(toastId)
+      toast.success('Extension requested successfully')
+    } catch (error) {
+      toast.dismiss(toastId)
+      toast.error('Failed to request extension')
+    }
+  }
+
+  const getEditorText = useCallback(
+    () => quillRef?.current?.getEditor().getText() || '',
+    [quillRef]
+  )
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout
+
+    const updateRemainingTime = () => {
+      const remainingSeconds = parseInt(orderDetails.remainingTime)
+      if (remainingSeconds > 0) {
+        const hours = Math.floor(remainingSeconds / 3600)
+        const minutes = Math.floor((remainingSeconds % 3600) / 60)
+        const seconds = remainingSeconds % 60
+
+        const formattedTime = [
+          hours.toString().padStart(2, '0'),
+          minutes.toString().padStart(2, '0'),
+          seconds.toString().padStart(2, '0'),
+        ].join(':')
+
+        setTimeoutCount(formattedTime)
+        orderDetails.remainingTime = (remainingSeconds - 1).toString()
+
+        timer = setTimeout(updateRemainingTime, 1000)
+      } else {
+        setTimeoutCount('00:00:00')
+      }
+    }
+
+    if (orderDetails.status === 'QC_ASSIGNED') {
+      updateRemainingTime()
+    }
+
+    return () => {
+      if (timer) {
+        clearTimeout(timer)
+      }
+    }
+  }, [orderDetails])
 
   return (
     <div className='bg-background border border-customBorder rounded-md p-2'>
@@ -890,7 +750,13 @@ export default memo(function Topbar({
               </Button>
             ) : (
               <Button
-                onClick={() => setSubmitting(true)}
+                onClick={() => {
+                  if (orderDetails.status === 'QC_ASSIGNED') {
+                    setIsSpeakerNameModalOpen(true)
+                  } else {
+                    setIsSubmitModalOpen(true)
+                  }
+                }}
                 className='format-button border-r-[1.5px] border-white/70'
               >
                 Submit
@@ -942,9 +808,6 @@ export default memo(function Topbar({
                 )}
                 <DropdownMenuItem onClick={toggleVideo}>
                   Toggle Video
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={toggleSpeakerName}>
-                  Speaker Names
                 </DropdownMenuItem>
                 {session?.user?.role !== 'CUSTOMER' && (
                   <DropdownMenuItem
@@ -1098,12 +961,7 @@ export default memo(function Topbar({
       />
       <Dialog
         open={isSpeakerNameModalOpen}
-        onOpenChange={(value) => {
-          setIsSpeakerNameModalOpen(value)
-          if (!value) {
-            setSubmitting(false)
-          }
-        }}
+        onOpenChange={(value) => setIsSpeakerNameModalOpen(value)}
       >
         <DialogContent className='max-w-4xl w-2/4'>
           <DialogHeader>
@@ -1112,97 +970,12 @@ export default memo(function Topbar({
               Please enter the speaker names below
             </DialogDescription>
           </DialogHeader>
-
-          {speakerName && !checkSpeakerOrder(speakerName) && (
-            <div className='mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md'>
-              <p className='text-yellow-800 text-sm'>
-                Warning: Speaker labels in the transcript are not in sequential
-                order. This may cause confusion. Please ensure the transcript
-                follows the correct order before proceeding (S1, S2, S3...).
-              </p>
-            </div>
-          )}
-
-          <div className='space-y-4'>
-            {speakerName &&
-              Object.entries(speakerName).map(([key, value], index) => (
-                <div
-                  key={key}
-                  className='flex items-center justify-start space-x-2'
-                >
-                  <Label htmlFor={key}>{key}:</Label>
-                  <div className='relative flex items-center w-4/5'>
-                    <Input
-                      disabled={!checkSpeakerOrder(speakerName)}
-                      id={key}
-                      value={value}
-                      onChange={(e) => handleSpeakerNameChange(e, key)}
-                      className='w-full'
-                    />
-                    {index > 0 && (
-                      <button
-                        onClick={() => handleSwapSpeakers(index)}
-                        title='Swap with previous speaker'
-                        className='absolute right-2 p-1 hover:bg-gray-100 rounded-full transition-colors'
-                        type='button'
-                      >
-                        <ArrowUpIcon className='h-4 w-4 text-muted-foreground' />
-                      </button>
-                    )}
-                  </div>
-                  {index === Object.entries(speakerName).length - 1 && (
-                    <button
-                      onClick={addSpeakerName}
-                      title='Add Speaker'
-                      className='ml-2 text-red-500 font-bold'
-                    >
-                      <PlusIcon />
-                    </button>
-                  )}
-                </div>
-              ))}
-          </div>
-
-          <div className='space-y-4 mt-4'>
-            <p className='text-sm text-muted-foreground'>
-              Please follow the rules below to determine the speaker name, in
-              order:
-            </p>
-            <ol className='list-decimal list-inside text-sm text-muted-foreground space-y-1'>
-              <li>
-                The name as spoken in the audio if the customer instruction is
-                present.
-              </li>
-              <li>The name as mentioned in the customer instructions.</li>
-              <li>
-                If the customer instructions (CI) explicitly stated that we
-                should use the names they listed in the CI instead of the names
-                mentioned in the audio, then that CI should be followed.
-              </li>
-              <li>
-                Leave blank otherwise. Do <strong>NOT</strong> use
-                Interviewer/Interviewee or any other format unless specified
-                explicitly by the customer.
-              </li>
-            </ol>
-            <p className='text-sm font-semibold'>Customer Instructions:</p>
-            <p className='text-sm text-muted-foreground italic'>
-              {/* Add actual customer instructions here if available */}
-              No specific instructions provided.
-            </p>
-          </div>
-
-          <div className='mt-6 flex justify-between'>
-            <DialogClose asChild>
-              <Button variant='outline'>Close</Button>
-            </DialogClose>
-            <Button
-              disabled={!checkSpeakerOrder(speakerName || {})}
-              onClick={updateSpeakerName}
-            >
-              Update
-            </Button>
-          </div>
+          <SpeakerManager 
+            orderDetails={orderDetails} 
+            quillRef={quillRef} 
+            onUpdateSpeakers={handleSpeakerManagerUpdate}
+            isDialog={true} 
+          />
         </DialogContent>
       </Dialog>
       <Dialog
@@ -1377,6 +1150,7 @@ export default memo(function Topbar({
         frequentTermsModalOpen={frequentTermsModalOpen}
         setFrequentTermsModalOpen={setFrequentTermsModalOpen}
         frequentTermsData={frequentTermsData}
+        isFrequentTermsLoading={buttonLoading.frequentTerms}
       />
       <EditorSettingsDialog
         isOpen={isSettingsModalOpen}
