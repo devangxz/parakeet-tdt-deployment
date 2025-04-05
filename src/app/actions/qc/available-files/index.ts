@@ -119,6 +119,14 @@ export async function getAvailableQCFiles(type?: string | null) {
       })
     }
 
+    qcFiles.sort((a, b) => {
+      const aHasTat12 = a.tat === 12
+      const bHasTat12 = b.tat === 12
+      if (aHasTat12 && !bHasTat12) return -1
+      if (!aHasTat12 && bHasTat12) return 1
+      return b.priority - a.priority
+    })
+
     logger.info(`Available QC files fetched successfully`)
     return {
       success: true,
