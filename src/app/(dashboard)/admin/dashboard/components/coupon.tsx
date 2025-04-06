@@ -83,7 +83,7 @@ export default function Coupon() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Coupon</CardTitle>
+          <CardTitle>Coupon (For Customers)</CardTitle>
           <CardDescription>
             Please enter the email address to issue a coupon. If the user
             already has an account, the link to the coupon will be shared.

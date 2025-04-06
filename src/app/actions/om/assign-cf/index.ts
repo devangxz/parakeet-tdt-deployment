@@ -1,13 +1,12 @@
 'use server'
 
-import { JobType, OrderStatus, InputFileType } from '@prisma/client'
+import { InputFileType } from '@prisma/client'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
-import assignFileToQC from '@/services/transcribe-service/assign-file-to-qc'
-import { fileExistsInS3 } from '@/utils/backend-helper'
+import assignFileToReviewer from '@/services/transcribe-service/assign-file-to-review'
 
-export async function assignQC(fileId: string, userEmail: string) {
+export async function assignCF(fileId: string, userEmail: string) {
   try {
     if (!fileId) {
       return {
@@ -34,32 +33,22 @@ export async function assignQC(fileId: string, userEmail: string) {
       return { success: false, message: 'User not found' }
     }
 
-    const asrOutputExists = await fileExistsInS3(`${fileId}.txt`)
-    if (!asrOutputExists) {
-      logger.error(`ASR output file ${fileId}.txt does not exist in S3`)
-      return {
-        success: false,
-        message: 'ASR output file does not exist in S3',
-      }
-    }
-
-    await assignFileToQC(
+    await assignFileToReviewer(
       orderInformation.id,
-      OrderStatus.QC_ASSIGNED,
+      orderInformation.fileId,
       user.id,
-      JobType.QC,
-      InputFileType.ASR_OUTPUT,
-      fileId,
-      'MANUAL'
+      InputFileType.LLM_OUTPUT,
+      'MANUAL',
+      true
     )
 
-    logger.info(`Successfully assigned qc for file ${fileId}`)
+    logger.info(`Successfully assigned cf for file ${fileId}`)
     return {
       success: true,
-      message: 'Successfully assigned qc file',
+      message: 'Successfully assigned cf file',
     }
   } catch (error) {
-    logger.error(`Failed to assign qc`, error)
+    logger.error(`Failed to assign cf`, error)
     return {
       success: false,
       message: 'An error occurred. Please try again after some time.',

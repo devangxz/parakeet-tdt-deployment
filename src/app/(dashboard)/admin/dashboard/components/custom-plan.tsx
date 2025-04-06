@@ -17,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -58,6 +59,7 @@ export default function CustomPlan() {
     orderType: 'TRANSCRIPTION',
     outputFormat: '',
     defaultOrderButtonLabel: 'Format',
+    skipAutoAssignment: false,
   })
   const [organizationName, setOrganizationName] = useState('')
   const [templateName, setTemplateName] = useState('')
@@ -139,6 +141,7 @@ export default function CustomPlan() {
               responseData.cfReviewHighDifficultyRate.toString(),
             outputFormat: responseData.outputFormat,
             defaultOrderButtonLabel: responseData.defaultOrderButtonLabel,
+            skipAutoAssignment: responseData.skipAutoAssignment,
           }
           setRates(mappedRates)
         }
@@ -215,7 +218,7 @@ export default function CustomPlan() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Custom Plan</CardTitle>
+          <CardTitle>Custom Plan (For Customers)</CardTitle>
           <CardDescription>
             Please enter the email address to search for customer.
           </CardDescription>
@@ -275,7 +278,7 @@ export default function CustomPlan() {
               <div className='grid gap-6 mt-5'>
                 <div className='grid gap-3'>
                   <Label htmlFor='manualTranscriptRate'>
-                    Manual transcript rate
+                    Manual transcript rate (/min)
                   </Label>
                   <Input
                     id='manualTranscriptRate'
@@ -288,7 +291,7 @@ export default function CustomPlan() {
                 </div>
                 <div className='grid gap-3'>
                   <Label htmlFor='strictVerbatiumRate'>
-                    Strict Verbatim rate
+                    Strict Verbatim rate (/min)
                   </Label>
                   <Input
                     id='strictVerbatiumRate'
@@ -301,7 +304,7 @@ export default function CustomPlan() {
                 </div>
                 <div className='grid gap-3'>
                   <Label htmlFor='additionalChargeRate'>
-                    Additional Charge rate
+                    Additional Charge rate (/min)
                   </Label>
                   <Input
                     id='additionalChargeRate'
@@ -314,7 +317,7 @@ export default function CustomPlan() {
                 </div>
                 <div className='grid gap-3'>
                   <Label htmlFor='audioTimeCodingRate'>
-                    Audio time coding rate
+                    Audio time coding rate (/min)
                   </Label>
                   <Input
                     id='audioTimeCodingRate'
@@ -326,7 +329,7 @@ export default function CustomPlan() {
                   />
                 </div>
                 <div className='grid gap-3'>
-                  <Label htmlFor='rushOrderRate'>Rush order rate</Label>
+                  <Label htmlFor='rushOrderRate'>Rush order rate (/min)</Label>
                   <Input
                     id='rushOrderRate'
                     type='number'
@@ -338,7 +341,7 @@ export default function CustomPlan() {
                 </div>
                 <div className='grid gap-3'>
                   <Label htmlFor='customFormattingRate'>
-                    Custom formatting rate
+                    Custom formatting rate (/min)
                   </Label>
                   <Input
                     id='customFormattingRate'
@@ -350,7 +353,7 @@ export default function CustomPlan() {
                   />
                 </div>
                 <div>
-                  <p>QC Rates</p>
+                  <p>QC Rates (/hour)</p>
                   <div className='border border-2 p-3 rounded-[10px]'>
                     {' '}
                     <div className='grid gap-3 mt-3 mb-2'>
@@ -395,7 +398,7 @@ export default function CustomPlan() {
                   </div>
                 </div>
                 <div>
-                  <p>Custom Formatting Editor Rates</p>
+                  <p>Custom Formatting Editor Rates (/hour)</p>
                   <div className='border border-2 p-3 rounded-[10px]'>
                     {' '}
                     <div className='grid gap-3 mt-3 mb-2'>
@@ -440,7 +443,7 @@ export default function CustomPlan() {
                   </div>
                 </div>
                 <div>
-                  <p>Custom Formatting Finalize Rates</p>
+                  <p>Custom Formatting Finalize Rates (/hour)</p>
                   <div className='border border-2 p-3 rounded-[10px]'>
                     {' '}
                     <div className='grid gap-3 mt-3 mb-2'>
@@ -572,6 +575,28 @@ export default function CustomPlan() {
                     value={rates.outputFormat}
                     onChange={handleInputChange}
                   />
+                </div>
+                <div className='grid gap-3'>
+                  <Label htmlFor='skipAutoAssignment'>
+                    Skip Auto Assignment (If checked, the CF will not be auto
+                    assigned to a transcriber)
+                  </Label>
+                  <div className='flex items-center space-x-2'>
+                    <Checkbox
+                      id='skipAutoAssignment'
+                      checked={rates.skipAutoAssignment}
+                      onCheckedChange={(checked) => {
+                        console.log('checked', checked)
+                        setRates((prevRates) => ({
+                          ...prevRates,
+                          skipAutoAssignment: checked === true,
+                        }))
+                      }}
+                    />
+                    <Label htmlFor='skipAutoAssignment'>
+                      {rates.skipAutoAssignment ? 'Enabled' : 'Disabled'}
+                    </Label>
+                  </div>
                 </div>
                 <div className='grid gap-3'>
                   <Label htmlFor='defaultOrderButtonLabel'>

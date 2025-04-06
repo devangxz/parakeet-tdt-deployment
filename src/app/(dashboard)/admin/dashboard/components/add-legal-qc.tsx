@@ -67,7 +67,7 @@ export default function AddLegalQC() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Add Legal Editor</CardTitle>
+          <CardTitle>Add Legal Editor (For QCs)</CardTitle>
           <CardDescription>
             Please enter the editor email address to add it to legal.
           </CardDescription>

@@ -76,7 +76,9 @@ export default function EnableCustomFormattingBonus() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Enable Custom Formatting Bonus</CardTitle>
+          <CardTitle>
+            Enable Custom Formatting Bonus (For Transcribers)
+          </CardTitle>
           <CardDescription>
             Please enter the user email address to enable custom formatting
             bonus.

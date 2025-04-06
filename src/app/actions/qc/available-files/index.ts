@@ -39,11 +39,6 @@ export async function getAvailableQCFiles(type?: string | null) {
       }
     }
 
-    const enabledCustomers =
-      verifier?.enabledCustomers
-        ?.split(',')
-        .map((customer) => customer.toLowerCase()) || []
-
     let qcFiles = await prisma.order.findMany({
       where: {
         status: {
@@ -109,11 +104,6 @@ export async function getAvailableQCFiles(type?: string | null) {
       file.isTestCustomer = isTestCustomer
       file.customFormatOption = customFormatOption
     }
-
-    qcFiles = qcFiles.filter((file: any) => {
-      if (!file.orgName) return true
-      return enabledCustomers.includes(file.orgName.toLowerCase())
-    })
 
     const isTranscriberICQCResult = await isTranscriberICQC(user.userId)
 

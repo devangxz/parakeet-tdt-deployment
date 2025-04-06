@@ -1229,7 +1229,7 @@ const getFrequentTermsHandler = async (
   setButtonLoading((prev) => ({ ...prev, frequentTerms: true }))
 
   try {
-    const response = await getFrequentTermsAction()
+    const response = await getFrequentTermsAction(userId)
     if (response.success) {
       const data = {
         edited: response.edited ?? '',
@@ -1238,16 +1238,10 @@ const getFrequentTermsHandler = async (
       setFrequentTermsData(data)
       setFrequentTermsModalOpen(true)
     } else {
-      throw new Error('No frequent terms data found')
+      toast.error(response.message)
     }
   } catch (error) {
-    const errorMessage = axios.isAxiosError(error)
-      ? error.response?.data.error
-        ? error.response.data.error
-        : 'Failed to get frequent terms'
-      : 'An unexpected error occurred'
-
-    toast.error(errorMessage)
+    toast.error('Failed to get frequent terms')
   } finally {
     setButtonLoading((prev) => ({ ...prev, frequentTerms: false }))
   }
@@ -1320,6 +1314,8 @@ const navigateAndPlayBlanks = (
   if (timestamp !== null) {
     playAudioAtTimestamp(audioPlayer, timestamp)
   }
+  
+  toast.success(`Playing blank number ${currentIndex + 1} of ${matches.length}`)
 }
 
 const adjustTimestamps = (
@@ -1657,6 +1653,12 @@ const insertTimestampBlankAtCursorPosition = (
 
   // Reset the text format so that new text is not red.
   quill.format('color', false)
+  
+  // Count total blanks in the transcript and show toast message with updated blank count
+  const text = quill.getText()
+  const regex = /\[\d{1,2}:\d{2}:\d{2}\.\d\] ____/g
+  const matches = Array.from(text.matchAll(regex))  
+  toast.success(`Blank added. Total blanks: ${matches.length}`)
 }
 
 const scrollEditorToPos = (quill: Quill, pos: number) => {

@@ -72,7 +72,7 @@ export default function ChangePaypalEmail() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Change Paypal Email</CardTitle>
+          <CardTitle>Change Paypal Email (For Transcribers)</CardTitle>
           <CardDescription>
             Please enter the transcriber and new paypal email address for
             changing the paypal email.

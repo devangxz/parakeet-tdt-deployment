@@ -327,6 +327,7 @@ model UserRate {
   orderType                              OrderType @default(TRANSCRIPTION) @map("order_type")
   outputFormat                           String?   @default("docx") @map("output_format")
   skipTranscription                      Boolean   @default(false) @map("skip_transcription")
+  skipAutoAssignment                     Boolean   @default(false) @map("skip_auto_assignment")
   defaultOrderButtonLabel                String?   @default("Format") @map("default_order_button_label")
   createdAt                              DateTime  @default(now()) @map("created_at")
   updatedAt                              DateTime  @default(now()) @map("updated_at")
@@ -598,7 +599,6 @@ model MiscJobsAttachments {
   fileExtension    String?  @map("file_extension")
   s3Bucket         String   @map("s3_bucket")
 
-  @@index([fileId])
   @@index([filename])
   @@map("scb_misc_jobs_attachments")
 }

@@ -70,7 +70,7 @@ export default function EnableACRReview() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Enable ACR Finalizer</CardTitle>
+          <CardTitle>Enable ACR Finalizer (For Transcribers)</CardTitle>
           <CardDescription>
             Please enter the user email address to enable ACR finalizer. After
             enabling only the transcribers will see ACR finalizer files.

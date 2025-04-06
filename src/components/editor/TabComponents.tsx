@@ -4,6 +4,7 @@ import ReactQuill from 'react-quill'
 import Diff from './Diff'
 import Editor, { EditorHandle } from './Editor'
 import { OrderDetails } from './EditorPage'
+import SpeakerManager from './SpeakerManager'
 import { TabsContent } from './Tabs'
 import { EditorSettings } from '@/types/editor'
 import {
@@ -155,5 +156,21 @@ export const InfoTabComponent = ({
         <p>{orderDetails.instructions || 'No customer instructions.'}</p>
       </div>
     </div>
+  </TabsContent>
+)
+
+export const SpeakersTabComponent = ({
+  orderDetails,
+  quillRef,
+}: {
+  orderDetails: OrderDetails
+  quillRef: React.RefObject<ReactQuill> | undefined
+}) => (
+  <TabsContent
+    forceMount
+    className='data-[state=inactive]:hidden h-full mt-0 overflow-hidden pb-[41px]'
+    value='speakers'
+  >
+    <SpeakerManager orderDetails={orderDetails} quillRef={quillRef} />
   </TabsContent>
 )
