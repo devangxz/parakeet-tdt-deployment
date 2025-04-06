@@ -3,8 +3,8 @@ import ReactQuill from 'react-quill'
 
 import Diff from './Diff'
 import Editor, { EditorHandle } from './Editor'
+import { OrderDetails } from './EditorPage'
 import { TabsContent } from './Tabs'
-import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { EditorSettings } from '@/types/editor'
 import {
   CTMType,

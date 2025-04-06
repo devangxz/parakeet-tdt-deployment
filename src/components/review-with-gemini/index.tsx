@@ -20,7 +20,7 @@ import {
 import { Progress } from "../ui/progress";
 import { geminiRequestAction } from "@/app/actions/editor/review-with-gemini";
 import { saveReviewWithGeminiStats } from "@/app/actions/editor/save-gemini-stats";
-import { OrderDetails } from "@/app/editor/[fileId]/page";
+import { OrderDetails } from "@/components/editor/EditorPage";
 import { FILE_CACHE_URL, GEMINI_PROMPT_OPTIONS } from "@/constants";
 import axios from "@/utils/axios";
 import {
@@ -98,7 +98,6 @@ export default memo(function ReviewTranscriptDialog({
       const chunkPoints = findOptimalChunkPoints(ctms);
       let chunkKey: string | null = null;
       let geminiTranscript = '';
-
       const transcriptChunks = chunkTranscript(newTranscript, chunkPoints);
       const totalChunks = (chunkPoints.length - 1) * 2;
       let progress = 0;

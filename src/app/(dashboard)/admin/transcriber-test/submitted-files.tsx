@@ -334,7 +334,7 @@ export default function SubmittedFilesPage({
                   setIsAccept(true)
                 }}
               >
-                Pass
+                Approve
               </DropdownMenuItem>
               <DropdownMenuItem
                 className='text-red-500'
@@ -344,13 +344,13 @@ export default function SubmittedFilesPage({
                   setIsAccept(false)
                 }}
               >
-                Fail
+                Reject
               </DropdownMenuItem>
               <DropdownMenuItem
                 className=''
                 onClick={() =>
                   window.open(
-                    `/editor/${row.original.fileId}`,
+                    `/editor/${row.original.fileId}?userId=${row.original.qc[0].id}`,
                     '_blank',
                     'toolbar=no,location=no,menubar=no,width=' +
                       window.screen.width +

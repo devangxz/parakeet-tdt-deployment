@@ -161,21 +161,23 @@ export async function submitQCFile(
         }
       )
 
-      if (!isQCValidationPassed) {
-        await prisma.$transaction(async (prisma) => {
-          await prisma.testAttempt.update({
-            where: {
-              id: assignment.id,
-            },
-            data: {
-              userId: transcriberId,
-              passed: false,
-              score: 0,
-              completedAt: new Date(),
-              fileId: order.fileId,
-            },
-          })
-        })
+      if (!isTestOrder && !qcValidation?.isValidationPassed) {
+        // await prisma.$transaction(async (prisma) => {
+        //   await prisma.testAttempt.update({
+        //     where: {
+        //       id: assignment.id,
+        //     },
+        //     data: {
+        //       userId: transcriberId,
+        //       passed: false,
+        //       score: 0,
+        //       completedAt: new Date(),
+        //       fileId: order.fileId,
+        //       status: TestStatus.COMPLETED
+        //     },
+        //   })
+        // })
+        logger.info('Test order, qc validation failed for order', order.id, transcriberId)
       } else {
         await prisma.testAttempt.update({
           where: {

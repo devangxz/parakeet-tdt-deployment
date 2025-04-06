@@ -680,5 +680,5 @@
     "max_speaker_change_percentage": 10
   },
   "max_blank_percentage": 2,
-  "transcriber_test_user": "test+transcriber+customer@scribie.com"
+  "transcriber_test_user": "test+b2c@scribie.com"
 }

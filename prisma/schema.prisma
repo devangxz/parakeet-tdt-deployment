@@ -151,11 +151,8 @@ model File {
   PlayStats                 PlayStats[]
   ProcessWithLLMStats       ProcessWithLLMStats[]
   ReviewWithGeminiStats     ReviewWithGeminiStats[]
-  <<<<<<< HEAD
   QCValidationStats         QCValidationStats[]
-  =======
   TestAttempt               TestAttempt[]
-  >>>>>>> ae3927f (added om side test system)
 
   @@index([userId])
   @@index([fileId])
@@ -883,6 +880,8 @@ model TestAttempt {
   startedAt   DateTime   @default(now()) @map("started_at")
   completedAt DateTime?  @map("completed_at")
   cancelledAt DateTime?  @map("cancelled_at")
+  TestFile    TestFile?  @relation(fields: [testFileId], references: [id])
+  testFileId  Int?
 
   @@index([userId])
   @@index([fileId])
@@ -1143,6 +1142,11 @@ enum FileTag {
   CF_OM_DELIVERED
   GEMINI
   TEST
+  TEST_MASTER
+  TEST_MODIFIED
+  TEST_EDIT
+  TEST_SUBMITTED
+
 }
 
 enum SharedFilePermission {

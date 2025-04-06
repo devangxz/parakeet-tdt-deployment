@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 function AlreadyQCNotice() {
   return (
-    <div className='border-l-4 border-green-500 flex items-start p-4 my-1 bg-green-500/10 border border-green-500 rounded-md shadow-sm'>
+    <div className='border-l-4 flex items-start p-4 my-1 bg-green-500/10 border border-green-500 rounded-md shadow-sm'>
       <div className='flex-shrink-0'>
         <svg
           xmlns='http://www.w3.org/2000/svg'

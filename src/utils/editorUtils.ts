@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import axios from 'axios'
-import { Session } from 'next-auth'
+import { Session, User } from 'next-auth'
 import Quill from 'quill'
 import { Delta, Op } from 'quill/core'
 import ReactQuill from 'react-quill'
@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 
 import axiosInstance from './axios'
 import { secondsToTs } from './secondsToTs'
+import createTestFile from '@/app/actions/admin/create-test-files'
 import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
 import { getFrequentTermsAction } from '@/app/actions/editor/frequent-terms'
 import { getPlayStatsAction } from '@/app/actions/editor/get-play-stats'
@@ -20,7 +21,7 @@ import { uploadDocxAction } from '@/app/actions/editor/upload-docx'
 import { uploadFormattingFilesAction } from '@/app/actions/editor/upload-formatting-files'
 import { uploadSubtitlesAction } from '@/app/actions/editor/upload-subtitles'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
-import { OrderDetails, UploadFilesType } from '@/app/editor/[fileId]/page'
+import { OrderDetails, UploadFilesType } from '@/components/editor/EditorPage'
 import {
   ALLOWED_META,
   BACKEND_URL,
@@ -31,6 +32,7 @@ import {
   FORMAT_FILES_EXCEPTION_LIST,
   QC_VALIDATION,
 } from '@/constants'
+import { getModifiedTranscript, getTranscriptVersion, setTranscriptVersion } from '@/services/editor-service/get-set-version-transcript'
 import { AlignmentType, CTMType, UndoRedoItem, QCValidation } from '@/types/editor'
 import {
   getEditorDataIDB,
@@ -38,7 +40,10 @@ import {
   deleteEditorDataIDB,
 } from '@/utils/indexedDB'
 import {
-  diff_match_patch,
+  createAlignments,
+  getFormattedTranscript,
+} from '@/utils/transcript'
+import {
   DIFF_INSERT,
   DIFF_DELETE,
   DIFF_EQUAL,
@@ -495,11 +500,14 @@ const regenDocx = async (
 
 type FetchFileDetailsParams = {
   params: Record<string, string | string[]> | null
+  transcriberId: number,
+  user: User,
   setOrderDetails: React.Dispatch<React.SetStateAction<OrderDetails>>
   setCfd: React.Dispatch<React.SetStateAction<string>>
   setStep: React.Dispatch<React.SetStateAction<string>>
   setCtms: React.Dispatch<React.SetStateAction<CTMType[]>>
   setListenCount: React.Dispatch<React.SetStateAction<number[]>>
+  setIsSettingTest: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 export interface EditorData {
@@ -516,13 +524,34 @@ type FetchFileDetailsReturn = {
   initialEditorData: EditorData
 }
 
+const createCtmsWithAlignment = (alignments: AlignmentType[]): CTMType[] => {
+  return alignments.filter(alignment => alignment.type === 'ctm').map(alignment => {
+    const ctm: CTMType = {
+      word: alignment.word.toLowerCase(),
+      start: alignment.start,
+      end: alignment.end,
+      conf: alignment.conf,
+      punct: alignment.punct,
+      source: alignment.source,
+      speaker: alignment.speaker,  
+    }
+    if(alignment.turn) {
+      ctm.turn = alignment.turn;
+    }
+    return ctm;
+  })
+}
+
 const fetchFileDetails = async ({
   params,
+  transcriberId,
+  user,
   setOrderDetails,
   setCfd,
   setStep,
   setCtms,
   setListenCount,
+  setIsSettingTest, 
 }: FetchFileDetailsParams): Promise<FetchFileDetailsReturn | undefined> => {
   try {
     const tokenRes = await fileCacheTokenAction()
@@ -550,10 +579,12 @@ const fetchFileDetails = async ({
       supportingDocuments: orderRes.orderDetails.supportingDocuments || [],
       email: orderRes.orderDetails.email,
       speakerOptions: orderRes.orderDetails.speakerOptions || [],
+      isTestOrder: orderRes.orderDetails.isTestOrder
     }
 
     setOrderDetails(orderDetailsFormatted)
     setCfd(orderRes.orderDetails.cfd)
+    const isTestOrder = orderRes.orderDetails.isTestOrder
     const cfStatus = [
       'FORMATTED',
       'REVIEWER_ASSIGNED',
@@ -582,8 +613,12 @@ const fetchFileDetails = async ({
       return { orderDetails: orderDetailsFormatted, initialEditorData: {} }
     }
 
+    let fetchTranscriptUrl = `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.orderDetails.fileId}&step=${step}&orderId=${orderRes.orderDetails.orderId}`
+    if(user.role == 'ADMIN' || user.role == 'OM' && isTestOrder) {
+      fetchTranscriptUrl += `&userId=${transcriberId}`
+    }
     const transcriptRes = await axios.get(
-      `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.orderDetails.fileId}&step=${step}&orderId=${orderRes.orderDetails.orderId}`, //step will be used later when cf editor is implemented
+      fetchTranscriptUrl, //step will be used later when cf editor is implemented
       {
         headers: {
           Authorization: `Bearer ${tokenRes.token}`,
@@ -591,12 +626,81 @@ const fetchFileDetails = async ({
       }
     )
 
+    let testTranscript = null;
+    if (isTestOrder && !transcriptRes.data.error && !transcriptRes.data.result.transcript) {
+      setIsSettingTest(true)
+      try {
+       
+        const transcriptVersionData = await getTranscriptVersion(orderRes.orderDetails.orderId, orderRes.orderDetails.fileId, transcriberId)
+        
+        if (transcriptVersionData.modified && transcriptVersionData.modifiedTranscript) {
+          testTranscript = transcriptVersionData.modifiedTranscript;
+        } 
+        else if (transcriptVersionData.transcript) {
+          const result = await createTestFile(transcriptVersionData.transcript, orderRes.orderDetails.fileId)
+          if (result.data?.modifiedTranscript) {
+            await setTranscriptVersion(
+              orderRes.orderDetails.fileId, 
+              result.data.modifiedTranscript, 
+              transcriberId
+            )
+            testTranscript = result.data.modifiedTranscript;
+          }
+        }
+      } catch (error) {
+        toast.error('Failed to generate test transcript');
+      } finally {
+        setIsSettingTest(false)
+      }
+    }
+
     // Retrieve editorData from IndexedDB once
+    
     const fileData = await getEditorDataIDB(orderRes.orderDetails.fileId)
-    const transcript = (fileData?.transcript ||
+    const transcript = (isTestOrder && testTranscript ? testTranscript : fileData?.transcript ||
       transcriptRes.data.result.transcript) as string
     await persistEditorDataIDB(orderRes.orderDetails.fileId, { transcript })
-    setCtms(transcriptRes.data.result.ctms)
+    
+    const originalCtms = transcriptRes.data.result.ctms
+    setCtms(originalCtms)
+    if (isTestOrder && transcript) {
+      try {
+        // Create a new worker
+        const alignmentWorker = new Worker(
+          new URL('@/utils/transcript/alignmentWorker.ts', import.meta.url)
+        )
+        
+        // Process the alignment worker response
+        await new Promise<void>((resolve, reject) => {
+          alignmentWorker.onmessage = (e) => {
+            try {
+              const { alignments: newAlignments } = e.data
+              const newCtms = createCtmsWithAlignment(newAlignments)
+              setCtms(newCtms)
+              resolve()
+            } catch (error) {
+              reject(error)
+            } finally {
+              alignmentWorker.terminate()
+            }
+          }
+          
+          alignmentWorker.onerror = (error) => {
+            alignmentWorker.terminate()
+            reject(error)
+          }
+          // Run the alignment worker with the modified transcript
+          alignmentWorker.postMessage({
+            newText: transcript,
+            currentAlignments: createAlignments(getFormattedTranscript(originalCtms), originalCtms),
+            ctms: originalCtms,
+          })
+        })
+      } catch (error) {
+        console.error('Error processing alignment:', error)
+        setCtms(originalCtms)
+      }
+    }
 
     const playStats = await getPlayStatsAction(params?.fileId as string)
 
@@ -622,7 +726,7 @@ const fetchFileDetails = async ({
 
     return { orderDetails: orderDetailsFormatted, initialEditorData }
   } catch (error) {
-    console.log(error)
+    console.log('error', error)
     if (
       error instanceof Error &&
       'response' in error &&
@@ -637,6 +741,24 @@ const fetchFileDetails = async ({
     }
     toast.error('Failed to fetch file details')
     return undefined
+  }
+}
+
+const getTestTranscript = async( fileId: string, userId: number) => {
+  try {
+    
+    if(!userId) {
+      throw new Error('User ID not found')
+    }
+    const modifiedTranscript = await getModifiedTranscript(fileId, userId)
+    
+    if (modifiedTranscript) {
+      return modifiedTranscript;
+    }
+    
+    throw new Error('Modified test transcript not found');
+  } catch (error) {
+    return null;
   }
 }
 
@@ -1064,7 +1186,11 @@ const handleSubmit = async ({
       `${submissionType} submitted successfully`
     )
     toast.dismiss(successToastId)
-    router.push(`/transcribe/${step === 'QC' ? 'qc' : 'legal-cf-reviewer'}`)
+    if(orderDetails.isTestOrder) {
+      router.push(`/transcribe/transcriber`);
+    } else {
+      router.push(`/transcribe/${step === 'QC' ? 'qc' : 'legal-cf-reviewer'}`)
+    }
   } catch (error) {
     setTimeout(() => {
       toast.dismiss(toastId)
@@ -1641,7 +1767,7 @@ export interface ChunkData {
 function parseTranscript(transcript: string): TranscriptSegment[] {
   const lines = transcript.split('\n').filter((line) => line.trim())
   return lines.map((line) => {
-    const match = line.match(/^(\d+:\d+:\d+\.\d+)\s+(S\d+)\s*:\s*(.+)$/)
+    const match = line.match(/^(\d{1,2}:\d{1,2}(?::\d{1,2}(?:\.\d+)?)?)\s+([A-Za-z][\w\s\.']*)\s*:\s*(.+)$/)
     if (!match) throw new Error(`Invalid line format: ${line}`)
     return {
       timestamp: match[1],
@@ -1693,10 +1819,11 @@ function findOptimalChunkPoints(segments: CTMType[]): number[] {
 }
 
 function chunkTranscript(transcript: string, chunkPoints: number[]): string[] {
-  const entries = parseTranscript(transcript)
-  const sortedPoints = [...chunkPoints].sort((a, b) => a - b)
-  const chunks: string[] = []
-  for (let i = 0; i < sortedPoints.length - 1; i++) {
+  try{
+    const entries = parseTranscript(transcript)
+    const sortedPoints = [...chunkPoints].sort((a, b) => a - b)
+    const chunks: string[] = []
+    for (let i = 0; i < sortedPoints.length - 1; i++) {
     const chunkStart = sortedPoints[i]
     const chunkEnd = sortedPoints[i + 1]
     const chunkEntries = entries.filter((entry) => {
@@ -1710,10 +1837,13 @@ function chunkTranscript(transcript: string, chunkPoints: number[]): string[] {
             (entry) => `${entry.timestamp} ${entry.speaker}: ${entry.content}`
           )
           .join('\n')
-      )
+        )
+      }
     }
+    return chunks
+  } catch (error) {
+    return []
   }
-  return chunks
 }
 
 function secondsToTimestamp(seconds: number): string {
@@ -2159,5 +2289,6 @@ export {
   calculateEditListenCorrelationPercentage,
   calculateSpeakerChangePercentage,
   calculateSpeakerMacroF1Score,
+  getTestTranscript
 }
 export type { CTMType }
