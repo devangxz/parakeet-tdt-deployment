@@ -19,6 +19,7 @@ import {
   DiffTabComponent,
   EditorTabComponent,
   InfoTabComponent,
+  SpeakersTabComponent
 } from '@/components/editor/TabComponents'
 import { Tabs, TabsList, TabsTrigger } from '@/components/editor/Tabs'
 import renderTitleInputs from '@/components/editor/TitleInputs'
@@ -145,7 +146,6 @@ function EditorPage() {
   const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null)
   const [step, setStep] = useState<string>('')
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
   const [buttonLoading, setButtonLoading] = useState({
     download: false,
     upload: false,
@@ -486,6 +486,18 @@ function EditorPage() {
     }
   }, [orderDetails.orderId, orderDetails.fileId, orderDetails.isTestOrder, initialEditorData, params, session?.user?.role, searchParams])
 
+  useEffect(() => {
+    const closeFindAndReplaceOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && findAndReplaceOpen) {
+        setFindAndReplaceOpen(false)
+      }
+    }
+    window.addEventListener('keydown', closeFindAndReplaceOnEscape)
+    return () => {
+      window.removeEventListener('keydown', closeFindAndReplaceOnEscape)
+    }
+  }, [findAndReplaceOpen])
+
   const handleTabsValueChange = async (value: string) => {
     if (value === 'diff') {
       const contentText = getEditorText()
@@ -751,9 +763,7 @@ function EditorPage() {
         editorMode={editorMode}
         notes={notes}
         orderDetails={orderDetails}
-        submitting={submitting}
         setIsSubmitModalOpen={setIsSubmitModalOpen}
-        setSubmitting={setSubmitting}
         setPdfUrl={setPdfUrl}
         setRegenCount={setRegenCount}
         setFileToUpload={setFileToUpload}
@@ -854,6 +864,12 @@ function EditorPage() {
                           >
                             Info
                           </TabsTrigger>
+                          <TabsTrigger
+                            className='text-base px-0 pt-2 pb-[6.5px]'
+                            value='speakers'
+                          >
+                            Speakers
+                          </TabsTrigger>
                         </TabsList>
                       </div>
 
@@ -887,6 +903,10 @@ function EditorPage() {
                       <DiffTabComponent diff={diff} />
 
                       <InfoTabComponent orderDetails={orderDetails} />
+                      <SpeakersTabComponent
+                        orderDetails={orderDetails}
+                        quillRef={quillRef}
+                      />
                     </Tabs>
                   ))}
                 {selectedSection === 'title' && (
@@ -922,7 +942,7 @@ function EditorPage() {
                           <Cross1Icon className='h-4 w-4' />
                         </button>
                       </div>
-                      <div className='space-y-3 px-2 py-[10px]'>
+                      <div className='space-y-3 px-2 py-[10px] h-[calc(100%-41px)] overflow-y-auto'>
                         <div className='relative'>
                           <Input
                             placeholder='Find...'
@@ -1035,12 +1055,7 @@ function EditorPage() {
 
         <Dialog
           open={isSubmitModalOpen}
-          onOpenChange={(open) => {
-            setIsSubmitModalOpen(open)
-            if (!open) {
-              setSubmitting(false)
-            }
-          }}
+          onOpenChange={(open) => setIsSubmitModalOpen(open)}
         >
           <DialogContent
             className={
@@ -1108,7 +1123,6 @@ function EditorPage() {
                 <Button
                   variant='outline'
                   onClick={() => {
-                    setSubmitting(false)
                     setIsSubmitModalOpen(false)
                   }}
                 >
@@ -1173,7 +1187,6 @@ function EditorPage() {
                           speakerMacroF1Score: getSpeakerMacroF1Score(),
                         },
                       })
-                      setSubmitting(false)
                       setIsSubmitModalOpen(false)
                     }
                   }}
