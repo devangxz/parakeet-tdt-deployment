@@ -15,6 +15,7 @@ declare module '@/utils/transcript/diff_match_patch' {
     diff_wordMode(text1: string, text2: string): DmpDiff[];
     diff_cleanupEfficiency(diffs: DmpDiff[]): void;
     diff_cleanupSemantic(diffs: DmpDiff[]): void;
+    diff_levenshtein(diffs: DmpDiff[]): number;
   }
 
   export default diff_match_patch;

@@ -12,6 +12,7 @@ export async function fetchReReviewOrders() {
       where: {
         status: OrderStatus.DELIVERED,
         reReview: true,
+        isTestOrder: false,
       },
       include: {
         File: true,

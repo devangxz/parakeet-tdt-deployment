@@ -164,7 +164,8 @@ export async function getOrderDetailsAction(fileId: string) {
       outputFormat: userRateInfo?.outputFormat || null,
       supportingDocuments: supportingDocuments,
       email: resultJson.email,
-      speakerOptions: speakers
+      speakerOptions: speakers,
+      isTestOrder: order.isTestOrder || false,
     }
 
     logger.info(`orderDetails fetched for file ${resultJson.file_id}`)

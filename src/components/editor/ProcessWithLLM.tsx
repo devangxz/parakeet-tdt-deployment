@@ -14,7 +14,7 @@ import { Progress } from "../ui/progress";
 import { Textarea } from "../ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { markTranscriptWithLLMServerAction, saveProcessWithLLMStats } from "@/app/actions/editor/process-with-llm";
-import { OrderDetails } from "@/app/editor/[fileId]/page";
+import { OrderDetails } from "@/components/editor/EditorPage";
 import breakTranscript from "@/utils/breakTranscript";
 import { acceptAllDiffs, DiffSegment, handleSave, rejectAllDiffs } from "@/utils/editorUtils";
 import { userPrompt } from "@/utils/processWithLLMUtils";

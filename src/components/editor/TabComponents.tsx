@@ -3,8 +3,9 @@ import ReactQuill from 'react-quill'
 
 import Diff from './Diff'
 import Editor, { EditorHandle } from './Editor'
+import { OrderDetails } from './EditorPage'
+import SpeakerManager from './SpeakerManager'
 import { TabsContent } from './Tabs'
-import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { EditorSettings } from '@/types/editor'
 import {
   CTMType,
@@ -155,5 +156,20 @@ export const InfoTabComponent = ({
         <p>{orderDetails.instructions || 'No customer instructions.'}</p>
       </div>
     </div>
+  </TabsContent>
+)
+
+export const SpeakersTabComponent = ({
+  orderDetails,
+  quillRef,
+}: {
+  orderDetails: OrderDetails
+  quillRef: React.RefObject<ReactQuill> | undefined
+}) => (
+  <TabsContent
+    className='h-full mt-0 overflow-hidden pb-[41px]'
+    value='speakers'
+  >
+    <SpeakerManager orderDetails={orderDetails} quillRef={quillRef} />
   </TabsContent>
 )

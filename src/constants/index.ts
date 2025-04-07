@@ -67,6 +67,7 @@ export const AUDIO_TIMECODING_PRICE = config.audio_timecoding_price
 export const ADMIN_EMAILS = config.adminEmails
 export const REVENUE_DASHBOARD_EMAILS = config.revenueDashboardEmails
 export const ONLY_REVENUE_DASHBOARD_EMAILS = config.onlyRevenueDashboardEmails
+export const TRANSCRIBER_TEST_USER = config.transcriber_test_user
 
 // Email
 export const EMAIL_IDS =
@@ -91,7 +92,8 @@ export const AFFILIATE_RATE = config.affiliate_rate
 //Editor
 export const COMMON_ABBREVIATIONS = new Set(config.common_abbreviations)
 export const MAX_FORMAT_FILES = config.max_format_files
-export const FORMAT_FILES_EXCEPTION_LIST: string[] = config.format_files_exception_list
+export const FORMAT_FILES_EXCEPTION_LIST: string[] =
+  config.format_files_exception_list
 export const QC_VALIDATION = config.qc_validation
 
 // Review with Gemini

@@ -29,6 +29,7 @@ export async function fetchPendingOrders() {
             OrderStatus.REFUNDED,
           ],
         },
+        isTestOrder: false,
       },
       include: {
         File: true,
