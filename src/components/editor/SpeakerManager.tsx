@@ -15,6 +15,12 @@ import { Button } from '@/components/ui/button'
 import { DialogClose } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from '@/components/ui/tooltip'
 
 interface SpeakerManagerProps {
   orderDetails: OrderDetails
@@ -179,60 +185,80 @@ export default function SpeakerManager({
         ) : (
           <>
             <div className='space-y-4'>
-              {speakers &&
-                Object.entries(speakers).map(([key, value], index) => (
-                  <div
-                    key={key}
-                    className='flex items-center justify-start space-x-2'
-                  >
-                    <Label htmlFor={key} className='w-8 text-left'>{key}:</Label>
-                    <Input
-                      id={key}
-                      value={value}
-                      onChange={(e) => handleSpeakerNameChange(e, key)}
-                      className='flex-1 max-w-md'
-                    />
-                    <div className='flex space-x-1'>
-                      {index > 0 && (
-                        <button
-                          onClick={() => handleSwapSpeakers(index)}
-                          title='Swap with previous speaker'
-                          className='p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors text-muted-foreground'
-                          type='button'
-                        >
-                          <ArrowUpIcon className='h-[18px] w-[18px]' />
-                        </button>
-                      )}
-                      {index > 0 && (
-                        <button
-                          onClick={() => {
-                            setSpeakers((prev) => {
-                              if (!prev) return prev
-                              const newSpeakerNames = { ...prev }
-                              delete newSpeakerNames[key]
-                              return newSpeakerNames
-                            })
-                          }}
-                          title='Delete Speaker'
-                          className='p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors text-red-600'
-                          type='button'
-                        >
-                          <Cross1Icon className='h-4 w-4' />
-                        </button>
-                      )}
-                      {index === Object.entries(speakers).length - 1 && (
-                        <button
-                          onClick={addSpeakerName}
-                          title='Add Speaker'
-                          className='p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors text-primary'
-                          type='button'
-                        >
-                          <PlusIcon className='h-5 w-5' />
-                        </button>
-                      )}
+              <TooltipProvider>
+                {speakers &&
+                  Object.entries(speakers).map(([key, value], index) => (
+                    <div
+                      key={key}
+                      className='flex items-center justify-start space-x-2'
+                    >
+                      <Label htmlFor={key} className='w-8 text-left'>{key}:</Label>
+                      <Input
+                        id={key}
+                        value={value}
+                        onChange={(e) => handleSpeakerNameChange(e, key)}
+                        className='flex-1 max-w-md'
+                      />
+                      <div className='flex space-x-1'>
+                        {index > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => handleSwapSpeakers(index)}
+                                className='p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors text-muted-foreground'
+                                type='button'
+                              >
+                                <ArrowUpIcon className='h-[18px] w-[18px]' />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Swap with previous speaker</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {index > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => {
+                                  setSpeakers((prev) => {
+                                    if (!prev) return prev
+                                    const newSpeakerNames = { ...prev }
+                                    delete newSpeakerNames[key]
+                                    return newSpeakerNames
+                                  })
+                                }}
+                                className='p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors text-red-600'
+                                type='button'
+                              >
+                                <Cross1Icon className='h-4 w-4' />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Delete speaker</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {index === Object.entries(speakers).length - 1 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={addSpeakerName}
+                                className='p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors text-primary'
+                                type='button'
+                              >
+                                <PlusIcon className='h-5 w-5' />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Add speaker</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+              </TooltipProvider>
             </div>
 
             <div className='bg-secondary/30 p-4 rounded-lg border border-customBorder'>

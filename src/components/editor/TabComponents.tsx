@@ -167,8 +167,7 @@ export const SpeakersTabComponent = ({
   quillRef: React.RefObject<ReactQuill> | undefined
 }) => (
   <TabsContent
-    forceMount
-    className='data-[state=inactive]:hidden h-full mt-0 overflow-hidden pb-[41px]'
+    className='h-full mt-0 overflow-hidden pb-[41px]'
     value='speakers'
   >
     <SpeakerManager orderDetails={orderDetails} quillRef={quillRef} />
