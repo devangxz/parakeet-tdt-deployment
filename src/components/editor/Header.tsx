@@ -19,8 +19,8 @@ import { toast } from 'sonner'
 import PlayerButton from './PlayerButton'
 import Toolbar from './Toolbar'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
-import { OrderDetails } from '@/app/editor/[fileId]/page'
 import { EditorHandle } from '@/components/editor/Editor'
+import { OrderDetails } from '@/components/editor/EditorPage'
 import {
   TooltipProvider,
   Tooltip,

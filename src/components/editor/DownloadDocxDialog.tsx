@@ -19,7 +19,7 @@ import { ScrollArea } from '../ui/scroll-area'
 import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
 import { downloadBlankDocxAction } from '@/app/actions/editor/download-docx'
 import { getCustomFormatFilesSignedUrl } from '@/app/actions/order/custom-format-files-signed-url'
-import { OrderDetails } from '@/app/editor/[fileId]/page'
+import { OrderDetails } from '@/components/editor/EditorPage'
 import { FILE_CACHE_URL } from '@/constants'
 
 type DownloadDocxDialogProps = {

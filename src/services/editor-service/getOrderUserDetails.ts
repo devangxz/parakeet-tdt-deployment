@@ -81,7 +81,7 @@ async function getOrderUserDetails(
         if (org) {
             orgName = org.name;
         } else {
-            logger.info(`'No organization name'}`);
+            logger.info(`No organization name found for ${order?.userId}`);
         }
 
         const llmFileVersion = await prisma.fileVersion.findFirst({
