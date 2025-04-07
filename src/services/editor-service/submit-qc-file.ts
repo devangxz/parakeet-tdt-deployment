@@ -195,7 +195,16 @@ export async function submitQCFile(
         //     },
         //   })
         // })
-        logger.info('Test order, qc validation failed for order', order.id, transcriberId)
+          await prisma.testAttempt.update({
+            where: {
+              id: assignment.id,
+            },
+            data: {
+              status: TestStatus.SUBMITTED_FOR_APPROVAL,
+              completedAt: new Date(),
+            },
+          })
+        logger.info('Test order, QC validation failed for order', order.id, transcriberId)
       } else {
         await prisma.testAttempt.update({
           where: {
@@ -207,6 +216,7 @@ export async function submitQCFile(
           },
         })
       }
+      logger.info('Test Order submitted for approval', order.id, transcriberId)
       return
     }
 

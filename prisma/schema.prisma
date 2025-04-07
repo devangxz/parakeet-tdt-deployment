@@ -838,22 +838,6 @@ model QCValidationStats {
   @@map("scb_qc_validation_stats")
 }
 
-model TestFile {
-  id           Int           @id @default(autoincrement())
-  filename     String
-  fileId       String        @map("file_id")
-  isActive     Boolean       @default(true) @map("is_active")
-  instructions String?       @map("instructions")
-  createdBy    Int           @map("created_by")
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  TestAttempt  TestAttempt[]
-
-  @@index([fileId])
-  @@index([createdBy])
-  @@map("scb_test_files")
-}
-
 model TestInvitation {
   id        Int      @id @default(autoincrement())
   userId    Int      @map("user_id")
@@ -880,9 +864,6 @@ model TestAttempt {
   startedAt   DateTime   @default(now()) @map("started_at")
   completedAt DateTime?  @map("completed_at")
   cancelledAt DateTime?  @map("cancelled_at")
-  TestFile    TestFile?  @relation(fields: [testFileId], references: [id])
-  testFileId  Int?
-
   @@index([userId])
   @@index([fileId])
   @@map("scb_test_attempts")
