@@ -13,6 +13,7 @@ import { CheckAndDownload } from './components/check-download'
 import { DataTable } from './components/data-table'
 import ShareFileDialog from './components/share-file'
 import { orderController } from './controllers'
+import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
 import { downloadMp3 } from '@/app/actions/file/download-mp3'
 import { refetchFiles } from '@/app/actions/files'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
@@ -40,6 +41,7 @@ import {
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
 import FileAudioPlayer from '@/components/utils/FileAudioPlayer'
+import { FILE_CACHE_URL } from '@/constants'
 import { User } from '@/types/files'
 import formatDateTime from '@/utils/formatDateTime'
 import formatDuration from '@/utils/formatDuration'
@@ -97,6 +99,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
         extension: string
       }[]
     >([])
+  const [isDotComOrder, setIsDotComOrder] = useState(false)
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -212,7 +215,12 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
         txtSignedUrl: txtRes.signedUrl || '',
         cfDocxSignedUrl: docxRes ? docxRes.signedUrl || '' : '',
       })
-      const customFormatRes = await getCustomFormatFilesSignedUrl(fileId)
+      const customFormatRes = await getCustomFormatFilesSignedUrl(
+        fileId,
+        false,
+        false,
+        true
+      )
       if (customFormatRes.success) {
         setCustomFormatFilesSignedUrls(customFormatRes.signedUrls || [])
       }
@@ -221,6 +229,23 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
     } catch (error) {
       toast.error('Error downloading files')
       setLoadingOrder((prev) => ({ ...prev, [fileId]: false }))
+    }
+  }
+
+  const handleTranscriptionDownload = async (fileId: string) => {
+    if (session?.user?.organizationName.toLowerCase() === 'remotelegal') {
+      controller(
+        {
+          fileId: fileId,
+          filename: '',
+          docType: 'CUSTOM_FORMATTING_DOC',
+        },
+        'downloadFile'
+      )
+    } else {
+      const tokenRes = await fileCacheTokenAction()
+      const url = `${FILE_CACHE_URL}/get-tr-docx/${fileId}?authToken=${tokenRes.token}`
+      window.open(url, '_blank')
     }
   }
 
@@ -327,18 +352,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
         <div className='font-medium cursor-pointer'>
           <p
             onClick={() => {
-              controller(
-                {
-                  fileId: row.original.id,
-                  filename: '',
-                  docType:
-                    session?.user?.organizationName.toLowerCase() ===
-                    'remotelegal'
-                      ? 'CUSTOM_FORMATTING_DOC'
-                      : 'TRANSCRIPTION_DOC',
-                },
-                'downloadFile'
-              )
+              handleTranscriptionDownload(row.original.id)
             }}
             className='underline text-primary'
           >
@@ -410,6 +424,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
                 orderId: row?.original?.orderId,
                 orderType: row?.original?.orderType,
               })
+              setIsDotComOrder(Number(row.original.orderId) < 1000000)
               handleCheckAndDownload(row.original.id)
             }}
           >
@@ -681,6 +696,7 @@ export default function DeliveredFilesPage({ files }: { files: File[] }) {
             txtSignedUrl={signedUrls.txtSignedUrl || ''}
             cfDocxSignedUrl={signedUrls.cfDocxSignedUrl || ''}
             customFormatFilesSignedUrls={customFormatFilesSignedUrls}
+            isDotComOrder={isDotComOrder}
           />
         )}
       </div>

@@ -14,7 +14,7 @@ import {
   DialogTrigger,
 } from '../ui/dialog'
 import { ScrollArea } from '../ui/scroll-area'
-import { OrderDetails } from '@/app/editor/[fileId]/page'
+import { OrderDetails } from '@/components/editor/EditorPage'
 import {
   ButtonLoading,
   getMaxFormatFiles,

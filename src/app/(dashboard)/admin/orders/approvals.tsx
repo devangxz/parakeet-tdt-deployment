@@ -4,7 +4,6 @@ import { ColumnDef } from '@tanstack/react-table'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
-import { DataTableColumnHeader } from './components/column-header'
 import { DataTable } from './components/data-table'
 import QCLink from './components/qc-link'
 import { getListenCountAndEditedSegmentAction } from '@/app/actions/admin/get-listen-count-and-edited-segment'
@@ -291,19 +290,6 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
                 <p>Difficulty</p>
               </TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger>
-                <Badge
-                  variant='outline'
-                  className='font-semibold text-[10px] text-blue-800'
-                >
-                  GB, NA
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Spellings</p>
-              </TooltipContent>
-            </Tooltip>
             {row.original.priority === 1 && (
               <Tooltip>
                 <TooltipTrigger>
@@ -365,6 +351,14 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
       ),
     },
     {
+      accessorKey: 'type',
+      header: 'Order Type',
+      cell: ({ row }) => (
+        <div className='capitalize font-medium'>{row.getValue('type')}</div>
+      ),
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    },
+    {
       accessorKey: 'qc',
       header: 'Editor',
       cell: ({ row }) => {
@@ -407,13 +401,7 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
       header: 'Customer Watch',
       enableHiding: true,
     },
-    {
-      accessorKey: 'type',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Order Type' />
-      ),
-      filterFn: (row, id, value) => value.includes(row.getValue(id)),
-    },
+
     {
       accessorKey: 'qcStats',
       header: 'QC Stats',
@@ -572,6 +560,14 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
     },
   ]
 
+  const removeOrder = (orderId: string) => {
+    setApprovalFiles((prevFiles) =>
+      prevFiles
+        ? prevFiles.filter((file) => file.orderId.toString() !== orderId)
+        : null
+    )
+  }
+
   return (
     <>
       <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
@@ -588,7 +584,6 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
           defaultColumnVisibility={{
             customerWatch: false,
             transcriberWatch: false,
-            type: false,
             status: false,
           }}
           renderWaveform={(row) => {
@@ -617,7 +612,7 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
         open={openDialog}
         onClose={() => setOpenDialog(false)}
         orderId={orderId || ''}
-        refetch={() => fetchOrders()}
+        refetch={() => removeOrder(orderId)}
         isAccept={isAccept}
       />
       <OpenDiffDialog

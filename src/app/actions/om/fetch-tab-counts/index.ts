@@ -29,6 +29,7 @@ export async function fetchTabCounts(): Promise<{
             OrderStatus.REFUNDED,
           ],
         },
+        isTestOrder: false,
       },
     })
 
@@ -36,6 +37,7 @@ export async function fetchTabCounts(): Promise<{
     const screenCount = await prisma.order.count({
       where: {
         status: OrderStatus.SUBMITTED_FOR_SCREENING,
+        isTestOrder: false,
       },
     })
 
@@ -43,6 +45,7 @@ export async function fetchTabCounts(): Promise<{
     const preDeliveryCount = await prisma.order.count({
       where: {
         status: OrderStatus.PRE_DELIVERED,
+        isTestOrder: false,
       },
     })
 
@@ -50,6 +53,7 @@ export async function fetchTabCounts(): Promise<{
     const approvalCount = await prisma.order.count({
       where: {
         status: OrderStatus.SUBMITTED_FOR_APPROVAL,
+        isTestOrder: false,
       },
     })
 
@@ -58,6 +62,7 @@ export async function fetchTabCounts(): Promise<{
       where: {
         status: OrderStatus.DELIVERED,
         reReview: true,
+        isTestOrder: false,
       },
     })
 

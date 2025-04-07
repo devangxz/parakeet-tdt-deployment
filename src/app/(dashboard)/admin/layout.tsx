@@ -10,6 +10,7 @@ import {
   CircleDollarSign,
   Building2,
   Loader2,
+  TestTubes,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import React, { useEffect, useRef } from 'react'
@@ -90,6 +91,12 @@ export default function FilesLayout({
       icon: Building2,
       isActive: false,
     },
+    {
+      href: '/admin/transcriber-test',
+      name: 'Transcriber Test',
+      icon: TestTubes,
+      isActive: false,
+    },
   ]
 
   const displayedSidebarItems =
@@ -109,23 +116,25 @@ export default function FilesLayout({
   ]
 
   React.useEffect(() => {
-    if(window.innerWidth < 1024) {
+    if (window.innerWidth < 1024) {
       setIsExpanded(false)
     }
   }, [])
 
   const toggleSidebar = () => {
-    setIsExpanded(prev => !prev)
+    setIsExpanded((prev) => !prev)
   }
- 
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       // Only handle click outside in mobile view
-      if (window.innerWidth < 1024 && 
-          isExpanded && 
-          sidebarRef.current && 
-          !sidebarRef.current.contains(event.target as Node) &&
-          !menuButtonRef.current?.contains(event.target as Node)) {
+      if (
+        window.innerWidth < 1024 &&
+        isExpanded &&
+        sidebarRef.current &&
+        !sidebarRef.current.contains(event.target as Node) &&
+        !menuButtonRef.current?.contains(event.target as Node)
+      ) {
         setIsExpanded(false)
       }
     }
@@ -138,22 +147,34 @@ export default function FilesLayout({
 
   return (
     <>
-      <PaymentsNavbar toggleSidebar={toggleSidebar} menuButtonRef={menuButtonRef}/>
-      <div className={cn(
-        'grid min-h-screen w-full relative',
-        'grid-cols-[1fr] lg:grid-cols-[auto_1fr]', // Fixed grid layout that doesn't change
-        'transition-all duration-300 ease-in-out'
-      )}>
-        <div 
+      <PaymentsNavbar
+        toggleSidebar={toggleSidebar}
+        menuButtonRef={menuButtonRef}
+      />
+      <div
+        className={cn(
+          'grid min-h-screen w-full relative',
+          'grid-cols-[1fr] lg:grid-cols-[auto_1fr]', // Fixed grid layout that doesn't change
+          'transition-all duration-300 ease-in-out'
+        )}
+      >
+        <div
           ref={sidebarRef}
           className={cn(
             'fixed lg:relative block bg-background z-50 lg:z-10',
             'transition-all duration-300 ease-in-out',
             'border-r border-customBorder',
             isExpanded ? 'w-[60vw] lg:w-72' : 'w-0 overflow-hidden'
-          )} 
+          )}
         >
-          <div className={cn('flex h-screen flex-col', isExpanded ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-full')}>
+          <div
+            className={cn(
+              'flex h-screen flex-col',
+              isExpanded
+                ? 'opacity-100 translate-x-0'
+                : 'opacity-0 -translate-x-full'
+            )}
+          >
             {session ? (
               <Sidebar
                 sidebarItems={
@@ -164,7 +185,7 @@ export default function FilesLayout({
                 showTeams={false}
                 heading='Dashboards'
                 setIsExpanded={setIsExpanded}
-            />
+              />
             ) : (
               <div className='flex h-full items-center justify-center'>
                 <Loader2 className='animate-spin text-gray-500' size={24} />

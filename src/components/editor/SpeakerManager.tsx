@@ -10,7 +10,7 @@ import { toast } from 'sonner'
 
 import { getSpeakerNamesAction } from '@/app/actions/editor/get-speaker-names'
 import { updateSpeakerNameAction } from '@/app/actions/editor/update-speaker-name'
-import { OrderDetails } from '@/app/editor/[fileId]/page'
+import { OrderDetails } from '@/components/editor/EditorPage'
 import { Button } from '@/components/ui/button'
 import { DialogClose } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'

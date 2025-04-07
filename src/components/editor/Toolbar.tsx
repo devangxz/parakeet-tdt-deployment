@@ -33,7 +33,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip'
-import { OrderDetails } from '@/app/editor/[fileId]/page'
+import { OrderDetails } from '@/components/editor/EditorPage'
 
 interface ToolbarProps {
   orderDetails: OrderDetails

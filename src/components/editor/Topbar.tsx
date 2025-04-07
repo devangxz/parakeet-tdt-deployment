@@ -62,8 +62,8 @@ import { getTextFile } from '@/app/actions/get-text-file'
 import { getCustomFormatFilesSignedUrl } from '@/app/actions/order/custom-format-files-signed-url'
 import { getFileDocxSignedUrl } from '@/app/actions/order/file-docx-signed-url'
 import { getFileTxtSignedUrl } from '@/app/actions/order/file-txt-signed-url'
-import { OrderDetails } from '@/app/editor/[fileId]/page'
 import TranscriberProfile from '@/app/transcribe/components/transcriberProfiles'
+import { OrderDetails } from '@/components/editor/EditorPage'
 import 'rc-slider/assets/index.css'
 import RestoreVersionDialog from '@/components/editor/RestoreVersionDialog'
 import Profile from '@/components/navbar/profile'
@@ -806,10 +806,10 @@ export default memo(function Topbar({
                     Revert Transcript
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onClick={toggleVideo}>
+                {session?.user?.role !== 'CUSTOMER' && !orderDetails.isTestOrder && <DropdownMenuItem onClick={toggleVideo}>
                   Toggle Video
-                </DropdownMenuItem>
-                {session?.user?.role !== 'CUSTOMER' && (
+                </DropdownMenuItem>}
+                {session?.user?.role !== 'CUSTOMER' && !orderDetails.isTestOrder && (
                   <DropdownMenuItem
                     onClick={downloadMP3.bind(null, orderDetails)}
                   >
@@ -818,12 +818,12 @@ export default memo(function Topbar({
                 )}
                 {!['CUSTOMER', 'OM', 'ADMIN'].includes(
                   session?.user?.role || ''
-                ) && (
+                ) && !orderDetails.isTestOrder && (
                   <DropdownMenuItem onClick={requestExtension}>
                     Request Extension
                   </DropdownMenuItem>
                 )}
-                {session?.user?.role !== 'CUSTOMER' && (
+                {session?.user?.role !== 'CUSTOMER' && !orderDetails.isTestOrder && (
                   <DropdownMenuItem onClick={() => setReportModalOpen(true)}>
                     Report
                   </DropdownMenuItem>
@@ -842,9 +842,9 @@ export default memo(function Topbar({
                     Frequent Terms
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onClick={() => setReviewModalOpen(true)}>
+                {!orderDetails.isTestOrder && <DropdownMenuItem onClick={() => setReviewModalOpen(true)}>
                   Review with Gemini
-                </DropdownMenuItem>
+                </DropdownMenuItem>}
                 {orderDetails.orderType === 'TRANSCRIPTION_FORMATTING' && (
                   <DropdownMenuItem
                     onClick={() => setProcessWithLLMModalOpen(true)}
@@ -1112,7 +1112,7 @@ export default memo(function Topbar({
         />
       )}
       {/* review with gemini */}
-      {reviewModalOpen && (
+      {reviewModalOpen && !orderDetails.isTestOrder && (
         <ReviewTranscriptDialog
           quillRef={quillRef}
           reviewModalOpen={reviewModalOpen}

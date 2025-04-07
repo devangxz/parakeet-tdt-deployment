@@ -568,20 +568,34 @@ const InvoicesDetailDialog = ({
       })
 
       if (response.responseData.invoice.type !== 'ADD_CREDITS') {
-        const files = response.responseData.files?.map((file: any) => ({
-          filename: file.File.filename,
-          delivery_date: file.createdAt.toISOString(),
-          duration: file.File.duration,
-          rate:
-            response.responseData.invoice.type === 'ADDL_FORMATTING'
-              ? response.responseData.customFormatRate
-              : file.price / (file.File.duration / 60),
-          amount:
-            response.responseData.invoice.type === 'ADDL_FORMATTING'
-              ? response.responseData.customFormatRate *
-                (file.File.duration / 60)
-              : file.price,
-        }))
+        const invoiceoOptions = JSON.parse(
+          response.responseData.invoice.options ?? '{}'
+        )
+        const isRushOrder = invoiceoOptions.exd === 1
+
+        const files = response.responseData.files?.map((file: any) => {
+          let fileRate = 0
+
+          if (response.responseData.invoice.type === 'ADDL_FORMATTING') {
+            fileRate = response.responseData.customFormatRate
+          } else {
+            const baseRate = file.price / (file.File.duration / 60)
+
+            fileRate = isRushOrder
+              ? baseRate + response.responseData.rates.rush_order
+              : baseRate
+          }
+
+          const fileAmount = fileRate * (file.File.duration / 60)
+
+          return {
+            filename: file.File.filename,
+            delivery_date: file.createdAt.toISOString(),
+            duration: file.File.duration,
+            rate: fileRate,
+            amount: fileAmount,
+          }
+        })
         setBillSummary({ total, files: files as any })
 
         const options = JSON.parse(

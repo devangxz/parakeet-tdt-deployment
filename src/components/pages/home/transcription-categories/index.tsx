@@ -34,7 +34,7 @@ const services = [
       'Legal Terminology Expert',
       'Court Documentation Ready',
       'Deposition Transcripts',
-      'AAERT Standards',
+      'AAERT',
     ],
     testimonial: {
       text: 'I am a court reporter and use Scribie for deposition transcripts. The accuracy and quick turnaround save me so much time. I will be a lifetime customer! 😊',

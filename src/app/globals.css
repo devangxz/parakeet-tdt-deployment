@@ -251,19 +251,23 @@ html {
 
 .added {
   background-color: #e6ffe6;
+  border: 1px solid #99c599; /* Soft green border */
 }
 
 .dark .added {
   background-color: #004000;
+  border: 1px solid #007000; /* Slightly lighter green for contrast */
 }
 
 .removed {
   background-color: #ffe6e6;
+  border: 1px solid #cc9999; /* Muted red border */
   text-decoration: line-through;
 }
 
 .dark .removed {
   background-color: #be0000;
+  border: 1px solid #ff4d4d; /* Brighter red for visibility in dark */
   text-decoration: line-through;
 }
 

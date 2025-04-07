@@ -48,6 +48,7 @@ interface File {
   templateId: string
   instructions: string
   cost: number
+  duration: number
 }
 
 interface Payment {
@@ -59,6 +60,8 @@ interface Payment {
   invoiceId: string
   creditsUsed: number
   customFormatDeadline?: number
+  rushOrderEnable: boolean
+  rushOrderPrice: number
 }
 
 interface PaymentSuccessData {
@@ -121,6 +124,7 @@ const CustomFormatOrder = ({
   >([])
   const [billingEnabled, setBillingEnabled] = useState<boolean>(false)
   const [customFormatDeadline, setCustomFormatDeadline] = useState<number>(0)
+  const [loadingOrderUpdate, setLoadingOrderUpdate] = useState<boolean>(false)
 
   useEffect(() => {
     const fetchOrderInformation = async () => {
@@ -163,6 +167,7 @@ const CustomFormatOrder = ({
               ? JSON.parse(file.File.customInstructions).instructions
               : '',
             cost: file.price,
+            duration: file.File.duration,
           }
         })
         setCreditsUsed(response.responseData.creditsUsed)
@@ -192,6 +197,8 @@ const CustomFormatOrder = ({
           invoiceId,
           creditsUsed: response.responseData.creditsUsed,
           customFormatDeadline: customFormatDeadline,
+          rushOrderEnable: rushOrderEnable,
+          rushOrderPrice: response.responseData.rates.rush_order,
         })
         const templateData = response.responseData.templates.map(
           (template: Template) => ({
@@ -491,6 +498,7 @@ const CustomFormatOrder = ({
   const handleRushOrder = async () => {
     setRushOrderEnable((prevRushOrderEnable) => !prevRushOrderEnable)
     try {
+      setLoadingOrderUpdate(true)
       const response = await updateOrderOptions(
         invoiceId,
         'exd',
@@ -513,8 +521,10 @@ const CustomFormatOrder = ({
       } else {
         toast.error(`Failed to update rush order option`)
       }
+      setLoadingOrderUpdate(false)
     } catch (error) {
       toast.error(`Failed to update rush order option`)
+      setLoadingOrderUpdate(false)
     }
   }
 
@@ -596,35 +606,35 @@ const CustomFormatOrder = ({
           {activeStep === 1 && (
             <div className='w-[100%] md:w-[50%] p-4'>
               <ScrollArea className='h-[62vh]'>
-                {/* {session?.user?.organizationName.toLocaleLowerCase() !==
+                {session?.user?.organizationName.toLocaleLowerCase() !==
                   'remotelegal' && (
-                    <>
-                      {' '}
-                      <div className='flex justify-between flex-wrap'>
-                        <div className='flex items-center gap-2'>
-                          <Switch
-                            id='exd-switch'
-                            checked={rushOrderEnable}
-                            onCheckedChange={handleRushOrder}
-                          />
-                          <div className='text-md font-medium ml-3'>
-                            Rush Order
-                          </div>
+                  <>
+                    {' '}
+                    <div className='flex justify-between flex-wrap'>
+                      <div className='flex items-center gap-2'>
+                        <Switch
+                          id='exd-switch'
+                          checked={rushOrderEnable}
+                          onCheckedChange={handleRushOrder}
+                        />
+                        <div className='text-md font-medium ml-3'>
+                          Rush Order
                         </div>
-                        <div className='text-md font-normal'>{`+${rushOrderPrice.toFixed(
-                          2
-                        )} / min`}</div>
                       </div>
-                      <div className='mt-3 mb-3 font-normal text-sm text-[#8A8A8A]'>
-                        All files are prioritised for completion. Get your files
-                        delivered up to 3x faster. Files exceeding a duration of 2
-                        hours will require more than 12 hours to process. The
-                        lengthier the file, the longer is the turnaround time.
-                        Also, files with audio issues may be delayed.
-                      </div>
-                      <Separator />
-                    </>
-                  )} */}
+                      <div className='text-md font-normal'>{`+${rushOrderPrice.toFixed(
+                        2
+                      )} / min`}</div>
+                    </div>
+                    <div className='mt-3 mb-3 font-normal text-sm text-[#8A8A8A]'>
+                      All files are prioritised for completion. Get your files
+                      delivered up to 3x faster. Files exceeding a duration of 2
+                      hours will require more than 12 hours to process. The
+                      lengthier the file, the longer is the turnaround time.
+                      Also, files with audio issues may be delayed.
+                    </div>
+                    <Separator />
+                  </>
+                )}
                 {files.map((file, index) => (
                   <CustomOrderOptions
                     fileId={file.fileId}
@@ -683,7 +693,14 @@ const CustomFormatOrder = ({
                             <div className='mt-2'>
                               Cost{' '}
                               <span className='font-medium'>
-                                ${file.cost.toFixed(2)}
+                                $
+                                {rushOrderEnable
+                                  ? (
+                                      file.cost +
+                                      (rushOrderPrice * (file.duration || 0)) /
+                                        60
+                                    ).toFixed(2)
+                                  : file.cost.toFixed(2)}
                               </span>
                             </div>
                           </div>
@@ -946,7 +963,12 @@ const CustomFormatOrder = ({
                 </ScrollArea>
               ) : (
                 <ScrollArea className='h-[57vh]'>
-                  <Bill paymentInfo={paymentInfo} />
+                  <Bill
+                    paymentInfo={paymentInfo}
+                    rushOrderEnable={rushOrderEnable}
+                    rushOrderPrice={rushOrderPrice}
+                    loadingAmount={loadingOrderUpdate}
+                  />
                   {/* <div className='border-2 mt-3 mb-5 p-2'>
                     <div className='text-md font-medium'>Coupon</div>
                     <div className='flex w-full max-w-sm items-center space-x-2'>

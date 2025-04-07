@@ -15,7 +15,7 @@ import React, {
 import ReactQuill from 'react-quill'
 import 'react-quill/dist/quill.snow.css'
 
-import { OrderDetails } from '@/app/editor/[fileId]/page'
+import { OrderDetails } from './EditorPage'
 import {
   EditorSettings,
   CTMType,
