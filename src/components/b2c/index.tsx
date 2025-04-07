@@ -32,6 +32,7 @@ import { saveDefaultInstructions } from '@/app/actions/user/default-instructions
 import BillBreakdownDialog from '@/components/bill-breakdown'
 import { Icons } from '@/components/icons'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -801,6 +802,20 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                     Please enter special instructions, terms, acronyms,
                     keywords, names of places, speaker names, etc.
                   </div>
+                  <div className='flex items-center space-x-2 mt-3'>
+                    <Checkbox
+                      onCheckedChange={() => handleDefaultInstruction()}
+                    />
+                    <Label
+                      htmlFor='saveAsDefault'
+                      className='text-sm font-medium text-muted-foreground'
+                    >
+                      Save as default instructions
+                    </Label>
+                    {loadingInstructions && (
+                      <ReloadIcon className='h-4 w-4 animate-spin ml-2' />
+                    )}
+                  </div>
                 </div>
                 <div className='flex-col lg:flex lg:flex-row justify-between mt-10 mr-5'>
                   <div className='flex items-center gap-2'>
@@ -1220,28 +1235,6 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
             >
               {activeStep === 1 ? 'Back to Dashboard' : 'Back'}
             </Button>
-            {activeStep === 2 && (
-              <>
-                {loadingInstructions ? (
-                  <Button
-                    disabled
-                    variant='outline'
-                    className='w-[170px] border-primary border-2 text-primary '
-                  >
-                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                    Save
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => handleDefaultInstruction()}
-                    variant='outline'
-                    className='w-[170px] border-primary border-2 text-primary '
-                  >
-                    Save As Default
-                  </Button>
-                )}
-              </>
-            )}
             {loadingPay ? (
               <Button disabled className='w-[170px]'>
                 Please wait

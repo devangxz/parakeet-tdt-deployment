@@ -1,10 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { InvoiceType, OrderStatus, OrderType } from '@prisma/client'
 
+import { RUSH_PRICE } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance, sendTemplateMail } from '@/lib/ses'
-import { getEmailDetails } from '@/utils/backend-helper'
+import {
+  getEmailDetails,
+  getUserRate,
+  getTeamAdminUserDetails,
+} from '@/utils/backend-helper'
 
 const addHours = (date: string | number | Date, hours: number) => {
   const result = new Date(date)
@@ -119,8 +124,29 @@ export const processPayment = async (
       })
       let body = ''
       let total = 0
+      const isRushOrderEnabled = invoiceOptions.exd == 1
+      let rushOrderPrice = 0.5
+
+      if (isRushOrderEnabled) {
+        const teamAdminUserId = await getTeamAdminUserDetails(invoice.userId)
+        const userId = teamAdminUserId ? teamAdminUserId.userId : invoice.userId
+        const customPlanRates = await getUserRate(userId)
+        if (!customPlanRates) {
+          rushOrderPrice = RUSH_PRICE
+        } else {
+          rushOrderPrice = customPlanRates.ro
+        }
+      }
+
       fileInfo.forEach((file, index) => {
-        total += file.price
+        let filePrice = file.price
+
+        if (isRushOrderEnabled && file.File.duration) {
+          const rushFee = rushOrderPrice * (file.File.duration / 60)
+          filePrice += rushFee
+        }
+
+        total += filePrice
         body += '<tr>'
         body += `<td style='text-align:center;border:1px solid #cccccc;padding:5px' align='center' border='1' cellpadding='5'>${
           index + 1
@@ -129,7 +155,7 @@ export const processPayment = async (
         body += `<td style='text-align:center;border:1px solid #cccccc;padding:5px' align='center' border='1' cellpadding='5'>${new Date(
           file.createdAt
         ).toLocaleDateString()}</td>`
-        body += `<td style='text-align:center;border:1px solid #cccccc;padding:5px' align='center' border='1' cellpadding='5'>$${file.price.toFixed(
+        body += `<td style='text-align:center;border:1px solid #cccccc;padding:5px' align='center' border='1' cellpadding='5'>$${filePrice.toFixed(
           2
         )}</td>`
         body += '</tr>'

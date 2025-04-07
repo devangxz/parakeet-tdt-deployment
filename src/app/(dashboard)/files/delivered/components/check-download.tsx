@@ -54,6 +54,7 @@ interface CheckAndDownloadProps {
     extension: string
   }[]
   isFromEditor?: boolean
+  isDotComOrder?: boolean
 }
 
 interface DownloadFileProps {
@@ -123,6 +124,7 @@ export function CheckAndDownload({
   cfDocxSignedUrl,
   customFormatFilesSignedUrls,
   isFromEditor = false,
+  isDotComOrder = false,
 }: CheckAndDownloadProps) {
   const storedrating = Number(localStorage.getItem('rating'))
   const [hover, setHover] = useState<null | number>(null)
@@ -234,8 +236,16 @@ export function CheckAndDownload({
 
   const fetchSubtitleUrls = async () => {
     try {
-      const srtResponse = await getSignedUrlAction(`${id}.srt`, 3600, `${filename}.srt`)
-      const vttResponse = await getSignedUrlAction(`${id}.vtt`, 3600, `${filename}.vtt`)
+      const srtResponse = await getSignedUrlAction(
+        `${id}.srt`,
+        3600,
+        `${filename}.srt`
+      )
+      const vttResponse = await getSignedUrlAction(
+        `${id}.vtt`,
+        3600,
+        `${filename}.vtt`
+      )
 
       setSubtitleUrls({
         srtUrl:
@@ -355,7 +365,46 @@ export function CheckAndDownload({
                 <h3 className='text-lg font-semibold'>Download Files</h3>
               </div>
 
-              {orderType == 'TRANSCRIPTION_FORMATTING' && (
+              {orderType == 'TRANSCRIPTION_FORMATTING' && isDotComOrder && (
+                <div className='space-y-6'>
+                  <div>
+                    <h4 className='text-base font-medium text-muted-foreground mb-4'>
+                      Custom Formatting Files
+                    </h4>
+
+                    <div className='space-y-4'>
+                      {customFormatFilesSignedUrls.map((file, index) => {
+                        const sameExtFiles = customFormatFilesSignedUrls.filter(
+                          (f) => f.extension === file.extension
+                        )
+
+                        let displayName = file.filename
+                        if (sameExtFiles.length > 1) {
+                          const fileIndex = sameExtFiles.findIndex(
+                            (f) =>
+                              f.filename === file.filename &&
+                              f.signedUrl === file.signedUrl
+                          )
+                          displayName = `${file.filename}(${fileIndex + 1})`
+                        }
+
+                        return (
+                          <DownloadFile
+                            key={`${file.filename}-${index}`}
+                            name={displayName}
+                            url={file.signedUrl}
+                            fileType={`.${file.extension}`}
+                            isUploading={isUploading}
+                            handleGDriveUpload={handleGDriveUpload}
+                          />
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {orderType == 'TRANSCRIPTION_FORMATTING' && !isDotComOrder && (
                 <div className='space-y-6'>
                   <div>
                     <h4 className='text-base font-medium text-muted-foreground mb-4'>

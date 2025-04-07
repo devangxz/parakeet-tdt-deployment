@@ -19,6 +19,7 @@ import DeliveredSection from './components/delivered-files'
 import PreDeliveryPage from './pre-delivery'
 import ReReviewPage from './re-review'
 import ScreenPage from './screen'
+import YouTubeImportsPage from './youtube-imports'
 const StatusPage = dynamic(() => import('./status'), {
   ssr: false,
   loading: () => <div>Loading...</div>,
@@ -27,6 +28,7 @@ import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { changeDeliveryDate } from '@/app/actions/om/change-delivery-date'
 import { fetchPendingOrders } from '@/app/actions/om/fetch-pending-orders'
 import { fetchTabCounts } from '@/app/actions/om/fetch-tab-counts'
+import { fetchYoutubeFilesForImport } from '@/app/actions/om/fetch-youtube-files'
 import { CancellationDetailsModal } from '@/components/cancellation-details-modal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -118,6 +120,7 @@ export default function OrdersPage() {
   const [preDeliveryFilesCount, setPreDeliveryFilesCount] = useState<number>(0)
   const [approvalFilesCount, setApprovalFilesCount] = useState<number>(0)
   const [reReviewFilesCount, setReReviewFilesCount] = useState<number>(0)
+  const [youtubeImportsCount, setYoutubeImportsCount] = useState<number>(0)
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -230,6 +233,11 @@ export default function OrdersPage() {
 
         if (!pendingOrders) {
           setPendingCount(pendingCount)
+        }
+
+        const youtubeResponse = await fetchYoutubeFilesForImport()
+        if (youtubeResponse.success && youtubeResponse.files) {
+          setYoutubeImportsCount(youtubeResponse.files.length)
         }
       } else {
         console.error('Failed to fetch tab counts:', response.message)
@@ -365,19 +373,6 @@ export default function OrdersPage() {
                 <p>Difficulty</p>
               </TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger>
-                <Badge
-                  variant='outline'
-                  className='font-semibold text-[10px] text-blue-800'
-                >
-                  GB, NA
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Spellings</p>
-              </TooltipContent>
-            </Tooltip>
             {row.original.priority === 1 && (
               <Tooltip>
                 <TooltipTrigger>
@@ -465,6 +460,16 @@ export default function OrdersPage() {
       filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
+      accessorKey: 'type',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Order Type' />
+      ),
+      cell: ({ row }) => (
+        <div className='capitalize font-medium'>{row.getValue('type')}</div>
+      ),
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
+    },
+    {
       accessorKey: 'qc',
       header: 'Editor',
       cell: ({ row }) => {
@@ -542,13 +547,6 @@ export default function OrdersPage() {
         </div>
       ),
     },
-    {
-      accessorKey: 'type',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Order Type' />
-      ),
-      filterFn: (row, id, value) => value.includes(row.getValue(id)),
-    },
   ]
 
   return (
@@ -561,7 +559,7 @@ export default function OrdersPage() {
           fetchAllTabCounts()
         }}
       >
-        <TabsList className='grid grid-cols-7 mt-5 ml-8 w-[1000px]'>
+        <TabsList className='grid grid-cols-8 mt-5 ml-8 w-[1150px]'>
           <TabsTrigger value='orders' className='relative'>
             Orders
             {pendingCount > 0 && (
@@ -608,6 +606,14 @@ export default function OrdersPage() {
           <TabsTrigger value='compare' className='relative ml-3'>
             <span>Compare</span>
           </TabsTrigger>
+          <TabsTrigger value='youtube-imports' className='relative ml-3'>
+            <span>YouTube Import</span>
+            {youtubeImportsCount > 0 && (
+              <span className='absolute -top-2 -right-2 inline-flex items-center justify-center min-w-5 h-5 px-1 bg-red-500 text-white rounded-full text-xs font-medium'>
+                {youtubeImportsCount}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
         <TabsContent value='orders'>
           <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
@@ -650,6 +656,9 @@ export default function OrdersPage() {
         </TabsContent>
         <TabsContent value='re-review'>
           <ReReviewPage onActionComplete={fetchAllTabCounts} />
+        </TabsContent>
+        <TabsContent value='youtube-imports'>
+          <YouTubeImportsPage />
         </TabsContent>
         <TabsContent value='compare'>
           <ComparePage />

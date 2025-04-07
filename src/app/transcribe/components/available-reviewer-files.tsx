@@ -11,6 +11,7 @@ import { determinePwerLevel } from './utils'
 import { assignFileToReviewer } from '@/app/actions/cf/assign'
 import { getAvailableFiles } from '@/app/actions/cf/available-files'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
+import { Alert, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -47,6 +48,8 @@ export default function AvailableFilesPage({ changeTab }: Props) {
   const [loadingFileOrder, setLoadingFileOrder] = useState<
     Record<string, boolean>
   >({})
+  const [isQCDisabled, setIsQCDisabled] = useState(false)
+
   const pathname = usePathname()
   const isLegalPage = pathname === '/transcribe/legal-cf-reviewer'
 
@@ -75,6 +78,10 @@ export default function AvailableFilesPage({ changeTab }: Props) {
 
       if (!response.success) {
         throw new Error('An error occurred')
+      }
+
+      if (response?.isQCDisabled) {
+        setIsQCDisabled(true)
       }
 
       if (response.cfFiles) {
@@ -192,19 +199,6 @@ export default function AvailableFilesPage({ changeTab }: Props) {
               </TooltipTrigger>
               <TooltipContent>
                 <p>Difficulty</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger>
-                <Badge
-                  variant='outline'
-                  className='font-semibold text-[10px] text-blue-800'
-                >
-                  GB, NA
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Spellings</p>
               </TooltipContent>
             </Tooltip>
             {row.original.priority === 1 && (
@@ -370,19 +364,30 @@ export default function AvailableFilesPage({ changeTab }: Props) {
 
   return (
     <>
-      <DataTable
-        showToolbar={true}
-        data={availableFiles ?? []}
-        columns={columns}
-        renderRowSubComponent={({ row }: { row: any }) =>
-          row.original.instructions ? (
-            <div className='p-2'>
-              <strong>Customer Instructions:</strong>
-              <p>{row.original.instructions}</p>
-            </div>
-          ) : null
-        }
-      />
+      {isQCDisabled ? (
+        <div className='mb-4 mt-4'>
+          <Alert variant='destructive'>
+            <AlertTitle>
+              QC is disabled for you. Please wait till the new test system roll
+              out.
+            </AlertTitle>
+          </Alert>
+        </div>
+      ) : (
+        <DataTable
+          showToolbar={true}
+          data={availableFiles ?? []}
+          columns={columns}
+          renderRowSubComponent={({ row }: { row: any }) =>
+            row.original.instructions ? (
+              <div className='p-2'>
+                <strong>Customer Instructions:</strong>
+                <p>{row.original.instructions}</p>
+              </div>
+            ) : null
+          }
+        />
+      )}
     </>
   )
 }

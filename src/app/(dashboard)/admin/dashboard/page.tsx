@@ -33,6 +33,7 @@ export default function AdminDashboard() {
       <div className='h-full flex-1 flex-col space-y-8 p-5 md:flex'>
         <h1 className='text-lg font-semibold md:text-lg'>Admin Dashboard</h1>
         <AccountAccess />
+        <TranscriberWatch />
         {session?.user?.role === 'ADMIN' && (
           <>
             <AddCredits />
@@ -55,7 +56,6 @@ export default function AdminDashboard() {
             <AddMiscEarnings />
             <TransferCredits />
             <OrderWatch />
-            <TranscriberWatch />
             <YouTubeVideoUploader />
             <UnsubscribeNewsletter />
           </>
