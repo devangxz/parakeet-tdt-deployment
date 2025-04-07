@@ -79,6 +79,20 @@ export async function startTest(
       }
     }
 
+    const testAttempt = await prisma.testAttempt.findFirst({
+      where: {
+        userId,
+        fileId,
+      },
+    })
+
+    if (testAttempt) {
+      return {
+        success: false,
+        error: 'You have already gave test on this file.',
+      }
+    }
+
     await prisma.testAttempt.create({
       data: {
         userId,
