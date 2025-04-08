@@ -614,7 +614,7 @@ const fetchFileDetails = async ({
     }
 
     let fetchTranscriptUrl = `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderRes.orderDetails.fileId}&step=${step}&orderId=${orderRes.orderDetails.orderId}`
-    if(user.role == 'ADMIN' || user.role == 'OM' && isTestOrder) {
+    if((user.role == 'ADMIN' || user.role == 'OM') && isTestOrder) {
       fetchTranscriptUrl += `&userId=${transcriberId}`
     }
     const transcriptRes = await axios.get(
