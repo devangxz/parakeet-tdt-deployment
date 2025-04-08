@@ -1212,7 +1212,8 @@ function EditorPage() {
                             speakerMacroF1Score: getSpeakerMacroF1Score(),
                           },
                         })                        
-                      }                      
+                      }
+                      setIsSubmitModalOpen(false)                     
                     } catch (error) {
                       setButtonLoading((prevButtonLoading) => ({
                         ...prevButtonLoading,
@@ -1223,7 +1224,6 @@ function EditorPage() {
                         ...prevButtonLoading,
                         submit: false,
                       }))
-                      setIsSubmitModalOpen(false)
                     }
                   }}
                   disabled={buttonLoading.submit}
