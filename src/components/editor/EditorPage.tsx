@@ -127,6 +127,7 @@ function EditorPage() {
   })
   const [cfd, setCfd] = useState('')
   const [notes, setNotes] = useState('')
+  const notesDebounceRef = useRef<NodeJS.Timeout | null>(null)
   const params = useParams()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -384,7 +385,7 @@ function EditorPage() {
           role: session?.user?.role || '',
         })
         updateFormattedTranscript()
-        
+
         if (highlightNumbersEnabled && editorRef.current != null) {
           setTimeout(() => {
             if(editorRef.current) {
@@ -635,11 +636,7 @@ function EditorPage() {
     if (step !== 'QC' && orderDetails.orderId) {
       getEditorModeOptions()
     }
-
-    if (orderDetails.fileId && initialEditorData?.notes) {
-      setNotes(initialEditorData.notes)
-    }
-  }, [orderDetails, initialEditorData])
+  }, [orderDetails])
 
   useEffect(() => {
     if (!orderDetails.orderId || !orderDetails.fileId) return
@@ -681,11 +678,35 @@ function EditorPage() {
     setQuillRef(quillRef)
   }
 
-  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const notes = e.target.value
-    setNotes(notes)
-    persistEditorDataIDB(orderDetails.fileId, { notes })
-  }
+  useEffect(() => {
+    if (initialEditorData?.notes && notes === '') {
+      setNotes(initialEditorData.notes)
+    }
+
+    return () => {
+      if (notesDebounceRef.current) {
+        clearTimeout(notesDebounceRef.current);
+      }
+    }
+  }, [initialEditorData?.notes])
+
+  const handleNotesChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newNotes = e.target.value
+      setNotes(newNotes)
+
+      if (notesDebounceRef.current) {
+        clearTimeout(notesDebounceRef.current)
+      }
+
+      notesDebounceRef.current = setTimeout(() => {
+        if (orderDetails.fileId) {
+          persistEditorDataIDB(orderDetails.fileId, { notes: newNotes })
+        }
+      }, 300)
+    },
+    [orderDetails.fileId]
+  )
 
   const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value

@@ -636,6 +636,72 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       }
     }
   }, [])
+  
+  const timestampSpeakerPattern =
+    /((?:^|\n)?(?:\d{1,2}:\d{2}:\d{2}\.\d(?:\s+(?:S\d+:|Speaker\s?\d+:|[A-Za-z][A-Za-z\s]*:))?|S\d+:|Speaker\s?\d+:|[A-Za-z][A-Za-z\s]*:))([^\n]*)/
+  useEffect(() => {
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
+
+    let lastProcessedIndex = -1
+    let formatTimer: NodeJS.Timeout | null = null
+
+    const cleanFormatting = (
+      delta: Delta,
+      oldContents: Delta,
+      source: string
+    ) => {
+      if (source !== 'user') return
+
+      if (!delta.ops?.some((op) => 'insert' in op)) return
+
+      const selection = quill.getSelection()
+      if (!selection) return
+
+      const cursorPos = selection.index
+
+      if (cursorPos === lastProcessedIndex) return
+      lastProcessedIndex = cursorPos
+
+      if (formatTimer) clearTimeout(formatTimer)
+
+      formatTimer = setTimeout(() => {
+        let lineStart = cursorPos
+        while (lineStart > 0 && quill.getText(lineStart - 1, 1) !== '\n') {
+          lineStart--
+        }
+
+        const currentLine = quill.getText(lineStart, 100)
+        const match = currentLine.match(timestampSpeakerPattern)
+
+        if (!match) return
+
+        const patternPos = lineStart + match.index!
+        const colonPos = patternPos + match[1].length
+
+        if (cursorPos >= colonPos) {
+          const textAfterColon = match[2].length
+          if (textAfterColon > 0) {
+            quill.formatText(
+              colonPos,
+              textAfterColon,
+              { bold: false },
+              'silent'
+            )
+          }
+
+          quill.setSelection(cursorPos, 0, 'silent')
+        }
+      }, 50)
+    }
+
+    quill.on('text-change', cleanFormatting)
+
+    return () => {
+      if (formatTimer) clearTimeout(formatTimer)
+      quill.off('text-change', cleanFormatting)
+    }
+  }, [quillRef])
 
   useEffect(() => {
     const quill = quillRef.current?.getEditor()
