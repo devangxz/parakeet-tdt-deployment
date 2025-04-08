@@ -136,10 +136,17 @@ export async function transferFiles({
 
 export async function transferCredit({ invd, em }: TransferCreditParams) {
   try {
-    const toUser = await prisma.user.findFirst({
+    const toUser = await prisma.user.findUnique({
       where: {
-        email: em,
-        OR: [{ role: Role.CUSTOMER }, { role: Role.ADMIN }],
+        email: em.toLowerCase(),
+        role: {
+          in: [
+            Role.CUSTOMER,
+            Role.ADMIN,
+            Role.SUPERADMIN,
+            Role.INTERNAL_TEAM_USER,
+          ],
+        },
       },
     })
 

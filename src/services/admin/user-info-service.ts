@@ -14,7 +14,7 @@ export async function getUserInfo({ id }: GetUserInfoParams) {
   if (!isNaN(id as number)) {
     filter = { id: parseInt(id.toString().trim()) }
   } else {
-    filter = { email: id.toString().trim() }
+    filter = { email: id.toString().trim().toLowerCase() }
   }
 
   try {

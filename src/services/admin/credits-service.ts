@@ -34,7 +34,12 @@ export async function addFreeCredits({
     where: {
       email: userEmail.toLowerCase(),
       role: {
-        in: [Role.CUSTOMER, Role.ADMIN, Role.SUPERADMIN],
+        in: [
+          Role.CUSTOMER,
+          Role.ADMIN,
+          Role.SUPERADMIN,
+          Role.INTERNAL_TEAM_USER,
+        ],
       },
     },
   })
