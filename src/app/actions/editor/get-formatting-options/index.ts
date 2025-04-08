@@ -54,9 +54,11 @@ export async function getFormattingOptionsAction(orderId: number) {
     const options = JSON.parse(invoice.options ?? '{}')
     const templateId = options.tmp || null
 
-    if (templateId === null || templateId === undefined || templateId !== 0) {
-      logger.error(`Template not found for file ${order.fileId}`)
-      return { success: false, error: 'Template not found' }
+    if (templateId !== 0) {
+      if (templateId === null || templateId === undefined) {
+        logger.error(`Template not found for file ${order.fileId}`)
+        return { success: false, error: 'Template not found' }
+      }
     }
 
     const allPublicTemplates = await prisma.template.findMany({
