@@ -33,7 +33,7 @@ export default function AdminDashboard() {
       return
     }
 
-    if (!isValidEmail(formData.userEmail)) {
+    if (!isValidEmail(formData.userEmail.trim())) {
       toast.error('Please enter a valid email address.')
       return
     }
