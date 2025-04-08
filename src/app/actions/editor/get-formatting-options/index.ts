@@ -52,7 +52,7 @@ export async function getFormattingOptionsAction(orderId: number) {
     }
 
     const options = JSON.parse(invoice.options ?? '{}')
-    const templateId = options.tmp || null
+    const templateId = options.tmp !== undefined ? options.tmp : null
 
     logger.info(
       `Template ID: ${templateId}, options: ${JSON.stringify(
