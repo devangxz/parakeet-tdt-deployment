@@ -123,8 +123,12 @@
       "link": "#re-reviews"
     },
     {
-      "name": "Folder Structure",
-      "link": "#folder-structure"
+      "name": "Teams",
+      "link": "#teams"
+    },
+    {
+      "name": "Folder Feature",
+      "link": "#folder-feature"
     },
     {
       "name": "Account Credits",
@@ -163,6 +167,10 @@
       "link": "#noisy-files"
     },
     {
+      "name": "Recording Tips",
+      "link": "#recording-tips"
+    },
+    {
       "name": "Best Practices",
       "link": "#best-practices"
     },
@@ -179,12 +187,8 @@
       "link": "#recommended-readings"
     },
     {
-      "name": "Recommended Readings",
-      "link": "#recommended-readings"
-    },
-    {
-      "name": "Custom Format",
-      "link": "#custom-format"
+      "name": "Order Options",
+      "link": "#order-options"
     },
     {
       "name": "Strict Verbatim",
@@ -199,8 +203,8 @@
       "link": "#subtitle-file"
     },
     {
-      "name": "Audiotime Encoding",
-      "link": "#subtitle-file"
+      "name": "Audio Timecoding",
+      "link": "#audio-timecoding"
     },
     {
       "name": "Speaker Tracking",
