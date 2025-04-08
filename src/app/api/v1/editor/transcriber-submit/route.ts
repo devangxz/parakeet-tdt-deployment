@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { submitQCFile } from '@/services/editor-service/submit-qc-file'
 
@@ -59,6 +60,8 @@ export async function POST(req: NextRequest) {
         updatedAt: new Date(),
       },
     })
+
+    logger.info(`--> submitQCFile ${order.fileId} ${transcriberId}`)
 
     await submitQCFile(order.id, transcriberId, transcript)
 

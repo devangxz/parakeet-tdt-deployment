@@ -32,6 +32,8 @@ export async function submitQCAction({
       throw new Error('File ID is required')
     }
 
+    logger.info(`--> submitQCAction ${fileId} ${orderId} ${transcriberId}`)
+
     await submitQCFile(orderId, transcriberId, transcript, qcValidation)
     logger.info(`QC submitted for file ${fileId} by ${transcriberId}`)
 
