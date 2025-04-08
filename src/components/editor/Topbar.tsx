@@ -485,14 +485,6 @@ export default memo(function Topbar({
       await updateSpeakerNameAction(orderDetails.fileId, updatedSpeakers)
       toast.success('Speaker names updated successfully')
       setIsSpeakerNameModalOpen(false)
-      if (
-        editorRef &&
-        typeof editorRef !== 'function' &&
-        editorRef.current &&
-        step === 'QC'
-      ) {
-        await editorRef.current.triggerAlignmentUpdate()
-      }
       setIsSubmitModalOpen(true)
     } catch (error) {
       toast.error('Failed to update speaker names')

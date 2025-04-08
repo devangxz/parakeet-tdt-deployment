@@ -1151,63 +1151,78 @@ function EditorPage() {
                 </Button>
                 <Button
                   onClick={async () => {
-                    if (orderDetails.orderType === 'FORMATTING') {
-                      handleSubmit({
-                        orderDetails,
-                        step,
-                        editorMode,
-                        fileToUpload,
-                        setButtonLoading,
-                        getPlayedPercentage,
-                        router,
-                        finalizerComment,
-                      })
-                    } else {
-                      if (!quillRef?.current) return
-                      const quill = quillRef.current.getEditor()
+                    try {
+                      setButtonLoading((prevButtonLoading) => ({
+                        ...prevButtonLoading,
+                        submit: true,
+                      }))
 
-                      let currentAlignments: AlignmentType[] = []
-                      if (editorRef.current && step === 'QC') {
-                        await editorRef.current.triggerAlignmentUpdate()
-                        currentAlignments = editorRef.current.getAlignments()
-                      }
-
-                      await handleSave(
-                        {
-                          getEditorText,
+                      if (orderDetails.orderType === 'FORMATTING') {
+                        await handleSubmit({
                           orderDetails,
-                          notes,
-                          cfd,
-                          setButtonLoading,
-                          listenCount,
-                          editedSegments,
-                          role: session?.user?.role || '',
-                        },
-                        false
-                      )
+                          step,
+                          editorMode,
+                          fileToUpload,
+                          getPlayedPercentage,
+                          router,
+                          finalizerComment,
+                        })
+                      } else {
+                        if (!quillRef?.current) return
+                        const quill = quillRef.current.getEditor()
 
-                      handleSubmit({
-                        orderDetails,
-                        step,
-                        editorMode,
-                        fileToUpload,
-                        setButtonLoading,
-                        getPlayedPercentage,
-                        router,
-                        quill,
-                        finalizerComment,
-                        currentAlignments,
-                        qcValidation: {
-                          isValidationPassed: isQCValidationPassed,
-                          playedPercentage: getPlayedPercentage(),
-                          werPercentage: getWerPercentage(),
-                          blankPercentage: getBlankPercentage(),
-                          editListenCorrelationPercentage:
-                            getEditListenCorrelationPercentage(),
-                          speakerChangePercentage: getSpeakerChangePercentage(),
-                          speakerMacroF1Score: getSpeakerMacroF1Score(),
-                        },
-                      })
+                        let currentAlignments: AlignmentType[] = []
+                        if (editorRef.current && step === 'QC') {
+                          await editorRef.current.triggerAlignmentUpdate()
+                          currentAlignments = editorRef.current.getAlignments()
+                        }
+
+                        await handleSave(
+                          {
+                            getEditorText,
+                            orderDetails,
+                            notes,
+                            cfd,
+                            setButtonLoading,
+                            listenCount,
+                            editedSegments,
+                            role: session?.user?.role || '',
+                          },
+                          false
+                        )
+
+                        await handleSubmit({
+                          orderDetails,
+                          step,
+                          editorMode,
+                          fileToUpload,
+                          getPlayedPercentage,
+                          router,
+                          quill,
+                          finalizerComment,
+                          currentAlignments,
+                          qcValidation: {
+                            isValidationPassed: isQCValidationPassed,
+                            playedPercentage: getPlayedPercentage(),
+                            werPercentage: getWerPercentage(),
+                            blankPercentage: getBlankPercentage(),
+                            editListenCorrelationPercentage:
+                              getEditListenCorrelationPercentage(),
+                            speakerChangePercentage: getSpeakerChangePercentage(),
+                            speakerMacroF1Score: getSpeakerMacroF1Score(),
+                          },
+                        })                        
+                      }                      
+                    } catch (error) {
+                      setButtonLoading((prevButtonLoading) => ({
+                        ...prevButtonLoading,
+                        submit: false,
+                      }))
+                    } finally {
+                      setButtonLoading((prevButtonLoading) => ({
+                        ...prevButtonLoading,
+                        submit: false,
+                      }))
                       setIsSubmitModalOpen(false)
                     }
                   }}
