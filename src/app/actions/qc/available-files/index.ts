@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use server'
 
-import { OrderStatus } from '@prisma/client'
+import { JobStatus, OrderStatus } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
@@ -44,6 +44,21 @@ export async function getAvailableQCFiles(type?: string | null) {
         ?.split(',')
         .map((customer) => customer.toLowerCase()) || []
 
+    const cancelledJobs = await prisma.jobAssignment.findMany({
+      where: {
+        transcriberId: user.userId,
+        status: {
+          in: [JobStatus.CANCELLED, JobStatus.REJECTED],
+        },
+        type: 'QC',
+      },
+      select: {
+        orderId: true,
+      },
+    })
+
+    const cancelledOrderIds = cancelledJobs.map((job) => job.orderId)
+
     let qcFiles = await prisma.order.findMany({
       where: {
         status: {
@@ -51,6 +66,9 @@ export async function getAvailableQCFiles(type?: string | null) {
         },
         updatedAt: {
           lte: new Date(Date.now() - 60 * 1000),
+        },
+        id: {
+          notIn: cancelledOrderIds,
         },
       },
       include: {
