@@ -1,7 +1,7 @@
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
@@ -79,6 +79,7 @@ export default function PreDeliveryPage({
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
+  const audioPlayer = useRef<HTMLAudioElement>(null)
   const [waveformUrls, setWaveformUrls] = useState<Record<string, string>>({})
   const [listenCounts, setListenCounts] = useState<Record<string, number[]>>({})
   const [editedSegments, setEditedSegments] = useState<
@@ -116,6 +117,15 @@ export default function PreDeliveryPage({
       }
     } catch (error) {
       console.error('Failed to load editor data:', error)
+    }
+  }
+
+  const seekTo = (value: number) => {
+    if (!audioPlayer.current) return
+    const duration = audioPlayer.current.duration
+    if (duration) {
+      const time = (value / 100) * duration
+      audioPlayer.current.currentTime = time
     }
   }
 
@@ -260,6 +270,7 @@ export default function PreDeliveryPage({
             playing={playing}
             setPlaying={setPlaying}
             url={currentlyPlayingFileUrl[row.original.fileId]}
+            audioPlayer={audioPlayer}
           />
         </div>
       ),
@@ -499,12 +510,22 @@ export default function PreDeliveryPage({
             if (!waveformUrls[fileId]) return null
 
             return (
-              <WaveformHeatmap
+              <div className='w-full h-full cursor-pointer'
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect()
+                const x = e.clientX - rect.left
+                const percentage = (x / rect.width) * 100
+                seekTo(percentage)
+                audioPlayer.current?.play()
+              }}
+              >
+                <WaveformHeatmap
                 waveformUrl={waveformUrls[fileId]}
                 listenCount={listenCounts[fileId] || []}
                 editedSegments={editedSegments[fileId] || new Set()}
                 duration={row.duration}
               />
+              </div>
             )
           }}
         />

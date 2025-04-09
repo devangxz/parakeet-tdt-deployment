@@ -1,7 +1,7 @@
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
@@ -69,7 +69,7 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
   const [diffDialogOpen, setDiffDialogOpen] = useState(false)
   const [fileId, setFileId] = useState('')
   const [playing, setPlaying] = useState<Record<string, boolean>>({})
-
+  const audioPlayer = useRef<HTMLAudioElement>(null);
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
@@ -126,6 +126,15 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
   useEffect(() => {
     setAudioUrl()
   }, [playing])
+
+  const seekTo = (value: number) => {
+    if (!audioPlayer.current) return
+    const duration = audioPlayer.current.duration
+    if (duration) {
+      const time = (value / 100) * duration
+      audioPlayer.current.currentTime = time
+    }
+  }
 
   const fetchOrders = async (showLoader = false) => {
     if (showLoader) {
@@ -258,6 +267,7 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
             playing={playing}
             setPlaying={setPlaying}
             url={currentlyPlayingFileUrl[row.original.fileId]}
+            audioPlayer={audioPlayer}
           />
         </div>
       ),
@@ -592,12 +602,23 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
             if (!waveformUrls[fileId]) return null
 
             return (
-              <WaveformHeatmap
-                waveformUrl={waveformUrls[fileId]}
-                listenCount={listenCounts[fileId] || []}
-                editedSegments={editedSegments[fileId] || new Set()}
-                duration={row.duration}
-              />
+              <div 
+              className='w-full h-full cursor-pointer'
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect()
+                const x = e.clientX - rect.left
+                const percentage = (x / rect.width) * 100
+                seekTo(percentage)
+                audioPlayer.current?.play()
+              }}
+              >
+                <WaveformHeatmap
+                  waveformUrl={waveformUrls[fileId]}
+                  listenCount={listenCounts[fileId] || []}
+                  editedSegments={editedSegments[fileId] || new Set()}
+                  duration={row.duration}
+                />
+              </div>
             )
           }}
         />
