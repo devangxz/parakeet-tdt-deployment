@@ -134,6 +134,7 @@ export const getUserRate = async (userId: number) => {
       cf: userRate.customFormat,
       cf_deadline: userRate.deadline,
       skipAutoAssignment: userRate.skipAutoAssignment,
+      custom_format_option: userRate.customFormatOption,
     }
   } catch (error) {
     logger.error('Failed to fetch user rates:', error)
