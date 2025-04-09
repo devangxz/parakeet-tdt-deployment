@@ -535,6 +535,27 @@ export default memo(function Header({
     }
   }, [isAudioInitialized])
 
+  // Generate time markers at 10-minute intervals
+  const timeMarkers = useMemo(() => {
+    if (!audioDuration) return [];
+    
+    const markers = [];
+    const intervalMinutes = 10;
+    const intervalSeconds = intervalMinutes * 60;
+    
+    // Start from 10 minutes (skip the 0 mark)
+    for (let time = intervalSeconds; time < audioDuration; time += intervalSeconds) {
+      const percentage = (time / audioDuration) * 100;
+      markers.push({
+        time,
+        percentage,
+        label: formatDuration(time)
+      });
+    }
+    
+    return markers;
+  }, [audioDuration]);
+
   // Update gain node when volume changes
   useEffect(() => {
     if (isAudioInitialized && gainNodeRef.current && audioPlayer.current) {
@@ -611,6 +632,24 @@ export default memo(function Header({
               transition: 'width 0.1s linear',
             }}
           />
+          
+          {/* Time markers at 10-minute intervals */}
+          {timeMarkers.map(marker => (
+            <div 
+              key={marker.time}
+              className="absolute top-0 h-full pointer-events-none flex flex-col items-center"
+              style={{ 
+                left: `${marker.percentage}%`,
+                transform: 'translateX(-50%)'
+              }}
+            >
+              <div className="h-full w-[1px] bg-primary"></div>
+              <span className="absolute top-0 bg-primary text-white px-1 py-0.5 rounded-sm text-[10px]">
+                {marker.label}
+              </span>
+            </div>
+          ))}
+          
           <span className='absolute top-0 left-0 bg-primary text-white px-1 py-0.5 rounded-md text-[11px]'>
             {currentTime}
           </span>

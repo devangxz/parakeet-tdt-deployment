@@ -13,7 +13,7 @@ import DeliveryPreDeliveryFile from '@/components/admin-components/deliver-pre-d
 import ReassignFinalizer from '@/components/admin-components/re-assign-finalizer-dialog'
 import ReassignPreDeliveryFile from '@/components/admin-components/re-assign-pre-delivery-file'
 import RejectFileDialog from '@/components/admin-components/reject-file-dialog'
-import WaveformHeatmap from '@/components/editor/WaveformHeatmap'
+import WaveformHeatmap, { WaveformHeatmapRef } from '@/components/editor/WaveformHeatmap'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -85,6 +85,7 @@ export default function PreDeliveryPage({
   const [editedSegments, setEditedSegments] = useState<
     Record<string, Set<number>>
   >({})
+  const waveformRefs = useRef<Record<string, WaveformHeatmapRef | null>>({});
 
   const fetchWaveformUrl = async (fileId: string) => {
     try {
@@ -141,6 +142,23 @@ export default function PreDeliveryPage({
   useEffect(() => {
     setAudioUrl()
   }, [playing])
+
+  useEffect(() => {
+    const player = audioPlayer.current
+    if (!player) return
+    
+    const updateTime = () => {
+      const fileId = Object.keys(playing)[0]
+      if (fileId && playing[fileId] && waveformRefs.current[fileId]) {
+        waveformRefs.current[fileId]?.updateProgress(player.currentTime)
+      }
+    }
+    
+    player.addEventListener('timeupdate', updateTime)
+    return () => {
+      player.removeEventListener('timeupdate', updateTime)
+    }
+  }, [audioPlayer.current?.currentTime])
 
   const getPreDeliveryOrders = async (showLoader = false) => {
     if (showLoader) {
@@ -491,6 +509,34 @@ export default function PreDeliveryPage({
     },
   ]
 
+  const renderWaveform = (row: File) => {
+    if (!('fileId' in row)) return null
+    const fileId = row.fileId as string
+    if (!waveformUrls[fileId]) return null
+
+    return (
+      <div className='w-full h-full cursor-pointer'
+        onClick={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect()
+          const x = e.clientX - rect.left
+          const percentage = (x / rect.width) * 100
+          seekTo(percentage)
+          audioPlayer.current?.play()
+        }}
+      >
+        <WaveformHeatmap
+          ref={(ref) => {
+            waveformRefs.current[fileId] = ref;
+          }}
+          waveformUrl={waveformUrls[fileId]}
+          listenCount={listenCounts[fileId] || []}
+          editedSegments={editedSegments[fileId] || new Set()}
+          duration={row.duration}
+        />
+      </div>
+    )
+  }
+
   return (
     <>
       <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
@@ -504,30 +550,7 @@ export default function PreDeliveryPage({
         <DataTable
           data={preDeliveryFiles ?? []}
           columns={columns}
-          renderWaveform={(row) => {
-            if (!('fileId' in row)) return null
-            const fileId = row.fileId as string
-            if (!waveformUrls[fileId]) return null
-
-            return (
-              <div className='w-full h-full cursor-pointer'
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect()
-                const x = e.clientX - rect.left
-                const percentage = (x / rect.width) * 100
-                seekTo(percentage)
-                audioPlayer.current?.play()
-              }}
-              >
-                <WaveformHeatmap
-                waveformUrl={waveformUrls[fileId]}
-                listenCount={listenCounts[fileId] || []}
-                editedSegments={editedSegments[fileId] || new Set()}
-                duration={row.duration}
-              />
-              </div>
-            )
-          }}
+          renderWaveform={renderWaveform}
         />
       </div>
       <DeliveryPreDeliveryFile

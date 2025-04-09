@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, forwardRef, useImperativeHandle } from 'react';
 
 import formatDuration from '@/utils/formatDuration';
 
@@ -9,14 +9,28 @@ interface WaveformHeatmapProps {
   duration: number;
 }
 
-export function WaveformHeatmap({
+export interface WaveformHeatmapRef {
+  updateProgress: (currentTime: number) => void;
+}
+
+export const WaveformHeatmap = forwardRef<WaveformHeatmapRef, WaveformHeatmapProps>(({
   waveformUrl,
   listenCount,
   editedSegments,
   duration
-}: WaveformHeatmapProps) {
+}, ref) => {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const tooltipRef = React.useRef<HTMLDivElement>(null);
+  const progressRef = React.useRef<HTMLDivElement>(null);
+  
+  useImperativeHandle(ref, () => ({
+    updateProgress: (currentTime: number) => {
+      if (progressRef.current) {
+        const percentage = (currentTime / duration) * 100;
+        progressRef.current.style.width = `${percentage}%`;
+      }
+    }
+  }));
 
   const getHeatmapColor = (count: number): string => {
     const colors = [
@@ -132,6 +146,8 @@ export function WaveformHeatmap({
     };
   }, [duration, listenCount, editedSegments]);
 
+  WaveformHeatmap.displayName = 'WaveformHeatmap'
+
   return (
     <div className="relative w-full">
       <div className="flex gap-2 mb-1 text-xs text-gray-500">
@@ -169,7 +185,13 @@ export function WaveformHeatmap({
           }}
         >
           <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
-
+          <div className="absolute left-0 right-0 bottom-0 h-1">
+            <div 
+              ref={progressRef}
+              className="h-full bg-primary rounded-full"
+              style={{ width: '0%' }}
+            ></div>
+          </div>
         </div>
         <div
           ref={tooltipRef}
@@ -206,6 +228,6 @@ export function WaveformHeatmap({
       </div>
     </div>
   );
-}
+});
 
 export default WaveformHeatmap;
