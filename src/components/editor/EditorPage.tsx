@@ -127,6 +127,7 @@ function EditorPage() {
   })
   const [cfd, setCfd] = useState('')
   const [notes, setNotes] = useState('')
+  const notesDebounceRef = useRef<NodeJS.Timeout | null>(null)
   const params = useParams()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -384,7 +385,7 @@ function EditorPage() {
           role: session?.user?.role || '',
         })
         updateFormattedTranscript()
-        
+
         if (highlightNumbersEnabled && editorRef.current != null) {
           setTimeout(() => {
             if(editorRef.current) {
@@ -635,11 +636,7 @@ function EditorPage() {
     if (step !== 'QC' && orderDetails.orderId) {
       getEditorModeOptions()
     }
-
-    if (orderDetails.fileId && initialEditorData?.notes) {
-      setNotes(initialEditorData.notes)
-    }
-  }, [orderDetails, initialEditorData])
+  }, [orderDetails])
 
   useEffect(() => {
     if (!orderDetails.orderId || !orderDetails.fileId) return
@@ -681,11 +678,35 @@ function EditorPage() {
     setQuillRef(quillRef)
   }
 
-  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const notes = e.target.value
-    setNotes(notes)
-    persistEditorDataIDB(orderDetails.fileId, { notes })
-  }
+  useEffect(() => {
+    if (initialEditorData?.notes && notes === '') {
+      setNotes(initialEditorData.notes)
+    }
+
+    return () => {
+      if (notesDebounceRef.current) {
+        clearTimeout(notesDebounceRef.current);
+      }
+    }
+  }, [initialEditorData?.notes])
+
+  const handleNotesChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newNotes = e.target.value
+      setNotes(newNotes)
+
+      if (notesDebounceRef.current) {
+        clearTimeout(notesDebounceRef.current)
+      }
+
+      notesDebounceRef.current = setTimeout(() => {
+        if (orderDetails.fileId) {
+          persistEditorDataIDB(orderDetails.fileId, { notes: newNotes })
+        }
+      }, 300)
+    },
+    [orderDetails.fileId]
+  )
 
   const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value
@@ -1130,64 +1151,79 @@ function EditorPage() {
                 </Button>
                 <Button
                   onClick={async () => {
-                    if (orderDetails.orderType === 'FORMATTING') {
-                      handleSubmit({
-                        orderDetails,
-                        step,
-                        editorMode,
-                        fileToUpload,
-                        setButtonLoading,
-                        getPlayedPercentage,
-                        router,
-                        finalizerComment,
-                      })
-                    } else {
-                      if (!quillRef?.current) return
-                      const quill = quillRef.current.getEditor()
+                    try {
+                      setButtonLoading((prevButtonLoading) => ({
+                        ...prevButtonLoading,
+                        submit: true,
+                      }))
 
-                      let currentAlignments: AlignmentType[] = []
-                      if (editorRef.current && step === 'QC') {
-                        await editorRef.current.triggerAlignmentUpdate()
-                        currentAlignments = editorRef.current.getAlignments()
-                      }
-
-                      await handleSave(
-                        {
-                          getEditorText,
+                      if (orderDetails.orderType === 'FORMATTING') {
+                        await handleSubmit({
                           orderDetails,
-                          notes,
-                          cfd,
-                          setButtonLoading,
-                          listenCount,
-                          editedSegments,
-                          role: session?.user?.role || '',
-                        },
-                        false
-                      )
+                          step,
+                          editorMode,
+                          fileToUpload,
+                          getPlayedPercentage,
+                          router,
+                          finalizerComment,
+                        })
+                      } else {
+                        if (!quillRef?.current) return
+                        const quill = quillRef.current.getEditor()
 
-                      handleSubmit({
-                        orderDetails,
-                        step,
-                        editorMode,
-                        fileToUpload,
-                        setButtonLoading,
-                        getPlayedPercentage,
-                        router,
-                        quill,
-                        finalizerComment,
-                        currentAlignments,
-                        qcValidation: {
-                          isValidationPassed: isQCValidationPassed,
-                          playedPercentage: getPlayedPercentage(),
-                          werPercentage: getWerPercentage(),
-                          blankPercentage: getBlankPercentage(),
-                          editListenCorrelationPercentage:
-                            getEditListenCorrelationPercentage(),
-                          speakerChangePercentage: getSpeakerChangePercentage(),
-                          speakerMacroF1Score: getSpeakerMacroF1Score(),
-                        },
-                      })
-                      setIsSubmitModalOpen(false)
+                        let currentAlignments: AlignmentType[] = []
+                        if (editorRef.current && step === 'QC') {
+                          await editorRef.current.triggerAlignmentUpdate()
+                          currentAlignments = editorRef.current.getAlignments()
+                        }
+
+                        await handleSave(
+                          {
+                            getEditorText,
+                            orderDetails,
+                            notes,
+                            cfd,
+                            setButtonLoading,
+                            listenCount,
+                            editedSegments,
+                            role: session?.user?.role || '',
+                          },
+                          false
+                        )
+
+                        await handleSubmit({
+                          orderDetails,
+                          step,
+                          editorMode,
+                          fileToUpload,
+                          getPlayedPercentage,
+                          router,
+                          quill,
+                          finalizerComment,
+                          currentAlignments,
+                          qcValidation: {
+                            isValidationPassed: isQCValidationPassed,
+                            playedPercentage: getPlayedPercentage(),
+                            werPercentage: getWerPercentage(),
+                            blankPercentage: getBlankPercentage(),
+                            editListenCorrelationPercentage:
+                              getEditListenCorrelationPercentage(),
+                            speakerChangePercentage: getSpeakerChangePercentage(),
+                            speakerMacroF1Score: getSpeakerMacroF1Score(),
+                          },
+                        })                        
+                      }
+                      setIsSubmitModalOpen(false)                     
+                    } catch (error) {
+                      setButtonLoading((prevButtonLoading) => ({
+                        ...prevButtonLoading,
+                        submit: false,
+                      }))
+                    } finally {
+                      setButtonLoading((prevButtonLoading) => ({
+                        ...prevButtonLoading,
+                        submit: false,
+                      }))
                     }
                   }}
                   disabled={buttonLoading.submit}

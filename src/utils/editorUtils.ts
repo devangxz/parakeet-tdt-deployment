@@ -1094,7 +1094,6 @@ type HandleSubmitParams = {
     originalFile: File | null
     isUploaded?: boolean
   }
-  setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
   getPlayedPercentage: () => number
   router: {
     push: (path: string) => void
@@ -1109,8 +1108,7 @@ const handleSubmit = async ({
   orderDetails,
   step,
   editorMode,
-  fileToUpload,
-  setButtonLoading,
+  fileToUpload,  
   getPlayedPercentage,
   router,
   quill,
@@ -1126,11 +1124,6 @@ const handleSubmit = async ({
   const transcript = quill?.getText() || ''
 
   try {
-    setButtonLoading((prevButtonLoading) => ({
-      ...prevButtonLoading,
-      submit: true,
-    }))
-
     if (orderDetails.orderType !== 'FORMATTING') {
       if (orderDetails.status === 'QC_ASSIGNED') {
         if (!quill) return
@@ -1210,11 +1203,6 @@ const handleSubmit = async ({
     }
     const errorToastId = toast.error(errorText)
     toast.dismiss(errorToastId)
-  } finally {
-    setButtonLoading((prevButtonLoading) => ({
-      ...prevButtonLoading,
-      submit: false,
-    }))
   }
 }
 
