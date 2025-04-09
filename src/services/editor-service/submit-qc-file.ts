@@ -195,16 +195,20 @@ export async function submitQCFile(
         //     },
         //   })
         // })
-          await prisma.testAttempt.update({
-            where: {
-              id: assignment.id,
-            },
-            data: {
-              status: TestStatus.SUBMITTED_FOR_APPROVAL,
-              completedAt: new Date(),
-            },
-          })
-        logger.info('Test order, QC validation failed for order', order.id, transcriberId)
+        await prisma.testAttempt.update({
+          where: {
+            id: assignment.id,
+          },
+          data: {
+            status: TestStatus.SUBMITTED_FOR_APPROVAL,
+            completedAt: new Date(),
+          },
+        })
+        logger.info(
+          'Test order, QC validation failed for order',
+          order.id,
+          transcriberId
+        )
       } else {
         await prisma.testAttempt.update({
           where: {
@@ -235,7 +239,7 @@ export async function submitQCFile(
     }
 
     logger.info(
-      `--> submitQCFile ${orderId} for transcriber ${transcriberId} and order type ${order.orderType}`
+      `--> submitQCFile ${orderId} ${order.fileId} for transcriber ${transcriberId} and order type ${order.orderType}`
     )
 
     await axios.post(

@@ -65,6 +65,7 @@ interface CustomOrderOptionsProps {
   templates: Template[]
   organizationName: string
   orderType: string
+  customFormatOption: string
 }
 
 export function CustomOrderOptions({
@@ -80,6 +81,7 @@ export function CustomOrderOptions({
   templates,
   organizationName,
   orderType,
+  customFormatOption,
 }: CustomOrderOptionsProps) {
   const [isOpen, setIsOpen] = React.useState(isInitiallyOpen)
 
@@ -129,7 +131,8 @@ export function CustomOrderOptions({
       </div>
       <CollapsibleContent className='mt-5 ml-5'>
         <div className='flex items-center justify-between gap-5'>
-          {orderType !== 'FORMATTING' ? (
+          {orderType !== 'FORMATTING' &&
+          customFormatOption.toLowerCase() === 'legal' ? (
             <div className='w-[229px]'>
               <div className='flex items-center gap-1'>
                 <Label>Select template</Label>

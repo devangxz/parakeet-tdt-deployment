@@ -46,6 +46,9 @@ export async function getInvoiceDetails(
   let isBillingEnabledForCustomer = false
   const customFormatDeadline = customPlanRates ? customPlanRates.cf_deadline : 0
   const customFormatRate = customPlanRates ? customPlanRates.cf : 0.5
+  const customFormatOption = customPlanRates
+    ? customPlanRates.custom_format_option
+    : 'default'
   try {
     const invoice = await prisma.invoice.findUnique({
       where: {
@@ -138,6 +141,7 @@ export async function getInvoiceDetails(
         isBillingEnabledForCustomer,
         customFormatDeadline,
         customFormatRate,
+        customFormatOption,
       }
 
       return {
@@ -165,6 +169,7 @@ export async function getInvoiceDetails(
         isBillingEnabledForCustomer,
         customFormatDeadline,
         customFormatRate,
+        customFormatOption,
       }
 
       return {
