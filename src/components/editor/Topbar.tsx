@@ -485,14 +485,6 @@ export default memo(function Topbar({
       await updateSpeakerNameAction(orderDetails.fileId, updatedSpeakers)
       toast.success('Speaker names updated successfully')
       setIsSpeakerNameModalOpen(false)
-      if (
-        editorRef &&
-        typeof editorRef !== 'function' &&
-        editorRef.current &&
-        step === 'QC'
-      ) {
-        await editorRef.current.triggerAlignmentUpdate()
-      }
       setIsSubmitModalOpen(true)
     } catch (error) {
       toast.error('Failed to update speaker names')
@@ -587,7 +579,7 @@ export default memo(function Topbar({
 
     try {
       const tokenRes = await fileCacheTokenAction()
-      await axios.post(
+      const transcriptRes = await axios.post(
         `${FILE_CACHE_URL}/revert-transcript`,
         {
           fileId: orderDetails.fileId,
@@ -599,13 +591,22 @@ export default memo(function Topbar({
           },
         }
       )
+      if(!transcriptRes.data.success) {
+        throw new Error('Failed to revert transcript')
+      }
+      const quill = quillRef?.current?.getEditor()
+      if(!quill) throw new Error('Failed to update transcript')
+      quill?.setContents(getFormattedContent(transcriptRes.data.transcript))
+
+      toast.dismiss(toastId)
       toast.success('Transcript reverted successfully')
-      localStorage.removeItem('transcript')
-      window.location.reload()
       return
     } catch (error) {
       toast.dismiss(toastId)
       toast.error('Failed to revert transcript')
+    }
+    finally {
+      setRevertTranscriptOpen(false)
     }
   }
 
@@ -985,34 +986,29 @@ export default memo(function Topbar({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Revert Transcript</DialogTitle>
-            <DialogDescription>
-              Please confirm that the transcript has to be reverted to the
-              original version.
-            </DialogDescription>
-            <div className='h-2'></div>
-            <div className='flex justify-center items-center text-center text-red-500'>
+          </DialogHeader>
+            <div className='flex justify-center items-center text-red-500'>
               All edits made will be discarded. This action is irreversible and
               cannot be un-done. If you have made any changes, then we recommend
-              that you save the current version by copy pasting it into a new
-              document before reverting.
+              you to save the current version by creating a copy at your local.
             </div>
-            <div className='h-2' />
-            <div className='flex justify-end'>
-              <Button
-                className='mr-2'
-                variant='destructive'
-                onClick={revertTranscript}
-              >
-                Revert
-              </Button>
+          <DialogFooter>
+          <div className='flex gap-2 justify-end'>
               <Button
                 variant='outline'
                 onClick={() => setRevertTranscriptOpen(false)}
               >
                 Cancel
               </Button>
+              <Button
+                className='bg-primary'
+                variant='default'
+                onClick={revertTranscript}
+              >
+                Revert
+              </Button>
             </div>
-          </DialogHeader>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       <FormattingOptionsDialog

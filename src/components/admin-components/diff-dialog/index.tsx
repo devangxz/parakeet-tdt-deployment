@@ -7,7 +7,7 @@ import { getTestDiffFilesAction } from '@/app/actions/files/get-test-diff-files'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogFooter, DialogContent, DialogHeader, DialogDescription, DialogTitle, DialogClose } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { diff_match_patch, DIFF_INSERT, DIFF_DELETE, DmpDiff } from '@/utils/transcript/diff_match_patch'
+import { diff_match_patch, DIFF_INSERT, DIFF_DELETE, DmpDiff, DIFF_EQUAL } from '@/utils/transcript/diff_match_patch'
 
 interface DialogProps {
   open: boolean
@@ -52,22 +52,6 @@ const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
     onClose()
   }, [onClose])
   
-  function sanitizeDiff(diff: DmpDiff[]): DmpDiff[] {
-    const result: DmpDiff[] = [];
-  
-    for (const [op, text] of diff) {
-      if (text.endsWith('\n')) {
-        const trimmed = text.slice(0, -1);
-        if (trimmed) result.push([op, trimmed]);
-        result.push([0, '\n']); // Always treat newlines as unchanged
-      } else {
-        result.push([op, text]);
-      }
-    }
-  
-    return result;
-  }
-
   const loadDiff = useCallback(async () => {
     if (!fileId || fileId.length === 0) return
     try {
@@ -97,6 +81,7 @@ const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
           modifiedContent = modifiedContent.replace(/\r\n|\r/g, '\n')
           submittedContent = submittedContent.replace(/\r\n|\r/g, '\n')
           const diff = dmp.diff_wordMode(modifiedContent, submittedContent)
+          dmp.diff_cleanupSemantic(diff)
           setIsFailed(diff.length > 0 ? false : true )
           setModifiedToSubmittedDiff(diff)
         }
@@ -138,11 +123,41 @@ const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
   }, [open, fileId, loadDiff])
 
   const renderDiff = (diff: DmpDiff[]) => {
-    const sanitizedDiff = sanitizeDiff(diff)
-    console.log(sanitizedDiff)
+      // Preprocess the diff to handle newlines better
+  const processedDiff = [];
+  
+  for (let i = 0; i < diff.length; i++) {
+    const [op, text] = diff[i];
+    
+    // Check if this is a deletion followed by an insertion and both end with newlines
+    if (op === DIFF_DELETE && 
+        i + 1 < diff.length && 
+        diff[i+1][0] === DIFF_INSERT &&
+        text.endsWith('\n') && 
+        diff[i+1][1].endsWith('\n')) {
+      
+      // Extract the text without the newline
+      const deleteText = text.slice(0, -1);
+      const insertText = diff[i+1][1].slice(0, -1);
+      
+      // Add the modified parts
+      processedDiff.push([DIFF_DELETE, deleteText]);
+      processedDiff.push([DIFF_INSERT, insertText]);
+      
+      // Add the newline as unchanged content
+      processedDiff.push([DIFF_EQUAL, '\n']);
+      
+      // Skip the next item since we've already processed it
+      i++;
+    } else {
+      // Add the original diff part
+      processedDiff.push(diff[i]);
+    }
+  }
+
     return (
-      <div className='diff whitespace-pre-wrap'>
-        {sanitizedDiff.map((part, index) => {
+      <div className=''>
+        {processedDiff.map((part, index) => {
           const [op, text] = part
           if (text === '\n') {
             return <br key={index} />;
