@@ -97,6 +97,7 @@ export default function AudioPlayer({
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [waveformUrl, setWaveformUrl] = useState('')
   const [isPlayerLoaded, setIsPlayerLoaded] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
   const [audioUrl, setAudioUrl] = useState('')
 
   const shortcutControls = useMemo(
@@ -148,6 +149,7 @@ export default function AudioPlayer({
       const time = (value / 100) * duration
       audioPlayer.current.currentTime = time
     }
+    setIsPlaying(true)
   }
 
   const formatTime = (seconds: number | undefined): string => {
@@ -194,12 +196,20 @@ export default function AudioPlayer({
         </div>
       )}
       <div className='h-[45%] bg-background rounded-t-2xl border border-customBorder border-b-0 overflow-hidden'>
-        <div id='waveform' className='relative h-full'>
+        <div id='waveform' className='relative h-full cursor-pointer' >
           <Image
             src={waveformUrl}
             alt='waveform'
             layout='fill'
             objectFit='contain'
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect()
+              const x = e.clientX - rect.left
+              const percentage = (x / rect.width) * 100
+              seekTo(percentage)
+              audioPlayer.current?.play()
+              
+            }}
             onError={() =>
               setWaveformUrl('/assets/images/fallback-waveform.png')
             }
@@ -209,7 +219,7 @@ export default function AudioPlayer({
       </div>
       <div className='h-[55%] bg-background border border-customBorder rounded-b-2xl px-3'>
         <div className='w-full mt-2'>
-          <audio ref={audioPlayer} className='hidden' src={audioUrl}></audio>
+          <audio ref={audioPlayer} className='' src={audioUrl}></audio>
           <Slider
             step={0.01}
             min={0}
@@ -218,11 +228,13 @@ export default function AudioPlayer({
             onChange={(value) => {
               setCurrentValue(value as number)
               seekTo(Number(value))
+              audioPlayer.current?.play()
             }}
+            className='cursor-pointer'
             styles={{
               rail: { height: '7px' },
               track: { backgroundColor: '#6442ED', height: '7px' },
-              handle: { display: 'none' },
+              handle: { display: 'none' }
             }}
           />
         </div>
@@ -249,26 +261,16 @@ export default function AudioPlayer({
               <Tooltip>
                 <TooltipTrigger>
                   <PlayerButton
-                    icon={<Play />}
-                    tooltip='Play'
-                    onClick={shortcutControls.togglePlay}
+                    icon={isPlaying ? <Pause /> : <Play />}
+                    tooltip={isPlaying ? 'Pause' : 'Play'}
+                    onClick={() => {
+                      shortcutControls.togglePlay?.()
+                      setIsPlaying(!isPlaying)
+                    }}
                   />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Play</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger>
-                  <PlayerButton
-                    icon={<Pause />}
-                    tooltip='Pause'
-                    onClick={shortcutControls.pause}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Pause</p>
                 </TooltipContent>
               </Tooltip>
 
