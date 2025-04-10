@@ -1118,9 +1118,6 @@ const handleSubmit = async ({
 }: HandleSubmitParams) => {
   if (!orderDetails || !orderDetails.orderId || !step) return
 
-  const submissionType =
-    orderDetails.orderType === 'FORMATTING' ? 'file(s)' : 'transcription'
-  const toastId = toast.loading(`Submitting ${submissionType}...`)
   const transcript = quill?.getText() || ''
 
   try {
@@ -1173,20 +1170,9 @@ const handleSubmit = async ({
       localStorage.removeItem('editorData')
       await deleteEditorDataIDB(orderDetails.fileId)
     }
-
-    toast.dismiss(toastId)
-    const successToastId = toast.success(
-      `${submissionType} submitted successfully`
-    )
-    toast.dismiss(successToastId)
-    if(orderDetails.isTestOrder) {
-      router.push(`/transcribe/transcriber`);
-    } else {
-      router.push(`/transcribe/${step === 'QC' ? 'qc' : 'legal-cf-reviewer'}`)
-    }
   } catch (error) {
     setTimeout(() => {
-      toast.dismiss(toastId)
+      toast.dismiss()
     }, 100) //Had to use this setTimeout because the minimum percentage check gives an error Immediately
 
     let errorText = 'Error while submitting transcript' // Default error message
@@ -1203,6 +1189,7 @@ const handleSubmit = async ({
     }
     const errorToastId = toast.error(errorText)
     toast.dismiss(errorToastId)
+    throw new Error(errorText)
   }
 }
 
