@@ -245,12 +245,14 @@ const MobileMenu = ({
 const Navbar = () => {
   const { data: session } = useSession()
   const [isScrolled, setIsScrolled] = useState(false)
+  const [showBanner, setShowBanner] = useState(true)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const pathname = usePathname()
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20)
+      setShowBanner(window.scrollY <= 20)
     }
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
@@ -282,10 +284,26 @@ const Navbar = () => {
 
   return (
     <>
-      <div className='h-20 w-full' />
+      <div
+        className={`fixed top-0 inset-x-0 z-50 transform transition-all duration-300 ease-out bg-primary/80 text-left ${
+          showBanner ? 'translate-y-0' : '-translate-y-full'
+        }`}
+        style={{ zIndex: 100 }}
+      >
+        <div className='mx-auto px-4 sm:px-10 py-2 flex items-start sm:items-center justify-start sm:justify-center'>
+          <span className='text-white text-xs sm:text-base'>
+            Scribie.com and scribie.ai are managed by the same team now. We will
+            be migrating users from scribie.com to scribie.ai soon to leverage
+            enhanced AI features and an improved experience.
+          </span>
+        </div>
+      </div>
+      <div className={`h-20 ${showBanner ? 'mt-10' : ''} w-full`} />
 
       <nav
-        className='fixed top-0 left-0 right-0 h-20 w-full'
+        className={`fixed ${
+          showBanner ? 'top-20 md:top-10' : 'top-0'
+        } left-0 right-0 h-20 w-full transition-all duration-300`}
         style={{ zIndex: 50 }}
       >
         <div

@@ -1,7 +1,7 @@
 'use client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 
 import AssignedFilesPage from '../components/assigned-files'
 import AvailableFilesPage from '../components/available-files'
@@ -10,11 +10,19 @@ import Motd from '@/components/transcriber-motd/review-with-gemini'
 import AgreementNotice from '@/components/transcriber-notice/aggrement'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-export default function QCPage() {
-  const [activeTab, setActiveTab] = useState('available')
+function QCPageContent() {
+  const searchParams = useSearchParams()
+  const tabParam = searchParams?.get('tab')
+  const [activeTab, setActiveTab] = useState(tabParam || 'available')
   const { data: session, status } = useSession()
   const router = useRouter()
   const allowedRoles = ['QC', 'REVIEWER']
+
+  useEffect(() => {
+    if (tabParam && ['available', 'assigned', 'history'].includes(tabParam)) {
+      setActiveTab(tabParam)
+    }
+  }, [tabParam])
 
   if (
     session?.user &&
@@ -26,6 +34,7 @@ export default function QCPage() {
 
   const changeTab = async (tab: string) => {
     setActiveTab(tab)
+    router.push(`/transcribe/qc?tab=${tab}`, { scroll: false })
   }
 
   return (
@@ -37,7 +46,7 @@ export default function QCPage() {
           key={activeTab}
           defaultValue={activeTab}
           onValueChange={(value) => {
-            setActiveTab(value)
+            changeTab(value)
           }}
         >
           <TabsList className='rounded-md'>
@@ -57,5 +66,19 @@ export default function QCPage() {
         </Tabs>
       </div>
     </div>
+  )
+}
+
+export default function QCPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className='flex items-center justify-center h-full'>
+          Loading...
+        </div>
+      }
+    >
+      <QCPageContent />
+    </Suspense>
   )
 }
