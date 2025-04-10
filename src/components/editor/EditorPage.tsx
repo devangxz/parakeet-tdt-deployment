@@ -1,6 +1,6 @@
 'use client'
 
-import { Cross1Icon, ReloadIcon } from '@radix-ui/react-icons'
+import { Cross1Icon, ReloadIcon, CheckIcon } from '@radix-ui/react-icons'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
@@ -31,6 +31,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -147,6 +148,9 @@ function EditorPage() {
   const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null)
   const [step, setStep] = useState<string>('')
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submissionStatus, setSubmissionStatus] = useState<'processing' | 'completed'>('processing')
+  const [submissionCountdown, setSubmissionCountdown] = useState(5)
   const [buttonLoading, setButtonLoading] = useState({
     download: false,
     upload: false,
@@ -775,6 +779,28 @@ function EditorPage() {
     setHighlightNumbersEnabled(prev => !prev)
   }, [])
 
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    
+    if (isSubmitting && submissionStatus === 'completed') {
+      timer = setInterval(() => {
+        setSubmissionCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            // Close the tab after countdown
+            window.close();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isSubmitting, submissionStatus]);
+  
   return (
     <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
       <Topbar
@@ -1157,6 +1183,10 @@ function EditorPage() {
                         submit: true,
                       }))
 
+                      setIsSubmitModalOpen(false)
+                      setIsSubmitting(true)
+                      setSubmissionStatus('processing')
+
                       if (orderDetails.orderType === 'FORMATTING') {
                         await handleSubmit({
                           orderDetails,
@@ -1213,17 +1243,20 @@ function EditorPage() {
                           },
                         })                        
                       }
-                      setIsSubmitModalOpen(false)                     
+                      
+                      setSubmissionStatus('completed')
                     } catch (error) {
                       setButtonLoading((prevButtonLoading) => ({
                         ...prevButtonLoading,
                         submit: false,
-                      }))
+                      }));
+                      setIsSubmitting(false);
+                      setSubmissionStatus('processing');
                     } finally {
                       setButtonLoading((prevButtonLoading) => ({
                         ...prevButtonLoading,
                         submit: false,
-                      }))
+                      }));
                     }
                   }}
                   disabled={buttonLoading.submit}
@@ -1248,6 +1281,37 @@ function EditorPage() {
                 Please wait while we prepare your test.
               </DialogDescription>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Update the Submission Processing Modal */}
+        <Dialog open={isSubmitting} modal>
+          <DialogContent className="max-w-md p-8 flex flex-col items-center justify-center [&>button]:hidden">
+            <div className="flex flex-col items-center space-y-4">
+              {submissionStatus === 'processing' ? (
+                <>
+                  <ReloadIcon className="h-8 w-8 animate-spin text-primary" />
+                  <DialogTitle className="text-center">Submitting Transcript</DialogTitle>
+                  <DialogDescription className="text-center">
+                    Please wait while we process your submission...
+                  </DialogDescription>
+                </>
+              ) : (
+                <>
+                  <div className="h-8 w-8 bg-green-500 rounded-full flex items-center justify-center">
+                    <CheckIcon className="h-5 w-5 text-white" />
+                  </div>
+                  <DialogTitle className="text-center">Submission Complete</DialogTitle>
+                  <DialogDescription className="text-center">
+                    Your transcript has been submitted successfully. 
+                    This window will close in {submissionCountdown} seconds.
+                  </DialogDescription>
+                </>
+              )}
+            </div>
+            <DialogFooter>
+              <Button onClick={() => window.close()} disabled={submissionStatus === 'processing'}>Close</Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

@@ -21,6 +21,7 @@ import Toolbar from './Toolbar'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { EditorHandle } from '@/components/editor/Editor'
 import { OrderDetails } from '@/components/editor/EditorPage'
+import Waveform from '@/components/editor/Waveform'
 import {
   TooltipProvider,
   Tooltip,
@@ -39,7 +40,6 @@ import {
   navigateAndPlayBlanks,
   playCurrentParagraphTimestamp,
 } from '@/utils/editorUtils'
-import formatDuration from '@/utils/formatDuration'
 
 const createShortcutControls = (
   audioPlayer: React.RefObject<HTMLAudioElement>,
@@ -164,8 +164,8 @@ export default memo(function Header({
   step,
   toggleHighlightNumerics,
 }: HeaderProps) {
-  const [currentValue, setCurrentValue] = useState(0)
-  const [currentTime, setCurrentTime] = useState('00:00')
+  // const [currentValue, setCurrentValue] = useState(0)
+  // const [currentTime, setCurrentTime] = useState('00:00')
   const [audioDuration, setAudioDuration] = useState(0)
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [isPlayerLoaded, setIsPlayerLoaded] = useState(false)
@@ -285,7 +285,6 @@ export default memo(function Header({
         throw new Error('Failed to fetch audio file')
       }
     } catch (error) {
-      console.error('Error fetching audio:', error)
       toast.error('Failed to fetch audio file')
     }
   }
@@ -343,56 +342,6 @@ export default memo(function Header({
       audio.removeEventListener('error', handleError)
     }
   }, [audioUrl, getAudioPlayer])
-
-  const seekTo = (value: number) => {
-    if (!audioPlayer.current) return
-    const duration = audioPlayer.current.duration
-    if (duration) {
-      const time = (value / 100) * duration
-      audioPlayer.current.currentTime = time
-      if (audioPlayer.current.paused) {
-        audioPlayer.current.play()
-      }
-    }
-  }
-
-  useEffect(() => {
-    const audio = audioPlayer.current
-    if (!audio) return
-
-    const handleTimeUpdate = () => {
-      const currentTime = formatDuration(audio.currentTime)
-      setCurrentTime(currentTime)
-      const playedPercentage = (audio.currentTime / audio.duration) * 100
-      setCurrentValue(playedPercentage)
-    }
-
-    audio.addEventListener('timeupdate', handleTimeUpdate)
-
-    return () => {
-      audio.removeEventListener('timeupdate', handleTimeUpdate)
-    }
-  }, [])
-
-  const handleMouseMoveOnWaveform = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (typeof document === 'undefined') return // Ensure code runs only in the browser
-
-    const rect = e.currentTarget.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const percentage = (x / rect.width) * 100
-    if (audioPlayer.current?.duration) {
-      const time = (percentage / 100) * audioPlayer.current.duration
-      const timeString = formatDuration(time)
-
-      const tooltip = document.getElementById('time-tooltip')
-      if (tooltip) {
-        tooltip.style.display = 'block'
-        tooltip.style.left = `${e.clientX}px`
-        tooltip.style.top = `${e.clientY - 25}px`
-        tooltip.textContent = timeString
-      }
-    }
-  }
 
   const editorShortcutControls = useMemo(() => {
     const controls: Partial<ShortcutControls> = {
@@ -535,27 +484,6 @@ export default memo(function Header({
     }
   }, [isAudioInitialized])
 
-  // Generate time markers at 10-minute intervals
-  const timeMarkers = useMemo(() => {
-    if (!audioDuration) return [];
-    
-    const markers = [];
-    const intervalMinutes = 10;
-    const intervalSeconds = intervalMinutes * 60;
-    
-    // Start from 10 minutes (skip the 0 mark)
-    for (let time = intervalSeconds; time < audioDuration; time += intervalSeconds) {
-      const percentage = (time / audioDuration) * 100;
-      markers.push({
-        time,
-        percentage,
-        label: formatDuration(time)
-      });
-    }
-    
-    return markers;
-  }, [audioDuration]);
-
   // Update gain node when volume changes
   useEffect(() => {
     if (isAudioInitialized && gainNodeRef.current && audioPlayer.current) {
@@ -594,69 +522,21 @@ export default memo(function Header({
         </div>
       )}
       <div className='h-12'>
-        <div
-          id='waveform'
-          className='relative h-full overflow-hidden cursor-pointer rounded-t-md'
-          onMouseMove={handleMouseMoveOnWaveform}
-          onMouseLeave={() => {
-            if (typeof document === 'undefined') return
-
-            const tooltip = document.getElementById('time-tooltip')
-            if (tooltip) {
-              tooltip.style.display = 'none'
+        <Waveform
+          waveformUrl={waveformUrl}
+          audioPlayer={audioPlayer}
+          className="rounded-t-md"
+          backgroundSize="100% 200%"
+          backgroundPosition="center top"
+          showCurrentTimeLabel={true}
+          showDurationLabel={true}
+          onSeek={(time) => {
+            if (audioPlayer.current) {
+              audioPlayer.current.currentTime = time
+              editorRef?.current?.scrollToCurrentWord()
             }
           }}
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect()
-            const x = e.clientX - rect.left
-            const percentage = (x / rect.width) * 100
-            seekTo(percentage)
-            editorRef?.current?.scrollToCurrentWord()
-          }}
-          style={{
-            backgroundImage: `url(${waveformUrl})`,
-            backgroundSize: '100% 200%',
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center top',
-          }}
-        >
-          <div
-            id='time-tooltip'
-            className='fixed hidden z-50 bg-primary text-white px-1 py-0.5 rounded-md text-[11px] pointer-events-none'
-            style={{ transform: 'translate(-50%, 200%)' }}
-          />
-          <div
-            className='absolute top-0 left-0 h-full bg-primary/20'
-            style={{
-              width: `${currentValue}%`,
-              transition: 'width 0.1s linear',
-            }}
-          />
-          
-          {/* Time markers at 10-minute intervals */}
-          {timeMarkers.map(marker => (
-            <div 
-              key={marker.time}
-              className="absolute top-0 h-full pointer-events-none flex flex-col items-center"
-              style={{ 
-                left: `${marker.percentage}%`,
-                transform: 'translateX(-50%)'
-              }}
-            >
-              <div className="h-full w-[1px] bg-primary"></div>
-              <span className="absolute top-0 bg-primary text-white px-1 py-0.5 rounded-sm text-[10px]">
-                {marker.label}
-              </span>
-            </div>
-          ))}
-          
-          <span className='absolute top-0 left-0 bg-primary text-white px-1 py-0.5 rounded-md text-[11px]'>
-            {currentTime}
-          </span>
-          <span className='absolute top-0 right-0 bg-primary text-white px-1 py-0.5 rounded-md text-[11px]'>
-            {formatDuration(audioDuration)}
-          </span>
-        </div>
+        />
       </div>
 
       <div className='flex flex-col justify-between p-2'>

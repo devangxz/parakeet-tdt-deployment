@@ -10,11 +10,12 @@ import {
   Volume1,
   Volume2,
 } from 'lucide-react'
-import Image from 'next/image'
 import Slider from 'rc-slider'
 import { useEffect, useRef, useState, useMemo } from 'react'
+import { toast } from 'sonner'
 
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
+import Waveform from '@/components/editor/Waveform'
 import {
   TooltipProvider,
   Tooltip,
@@ -92,9 +93,8 @@ export default function AudioPlayer({
   fileId: string
   getAudioPlayer?: (audioPlayer: HTMLAudioElement | null) => void
 }) {
-  const [currentValue, setCurrentValue] = useState(0)
   const [currentTime, setCurrentTime] = useState('00:00')
-  const [audioDuration, setAudioDuration] = useState(0)
+  const [currentValue, setCurrentValue] = useState(0)
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [waveformUrl, setWaveformUrl] = useState('')
   const [isPlayerLoaded, setIsPlayerLoaded] = useState(false)
@@ -109,17 +109,30 @@ export default function AudioPlayer({
   useShortcuts(shortcutControls as ShortcutControls)
 
   const fetchWaveform = async () => {
-    const res = await getSignedUrlAction(`${fileId}_wf.png`, 300)
-    if (res.success && res.signedUrl) {
-      setWaveformUrl(res.signedUrl)
+    try {
+      const res = await getSignedUrlAction(`${fileId}_wf.png`, 300)
+      if (res.success && res.signedUrl) {
+        setWaveformUrl(res.signedUrl)
+      } else {
+        throw new Error('Failed to fetch waveform')
+      }
+      setIsPlayerLoaded(true)
+    } catch (error) {
+      toast.error('Failed to load waveform visualization')
+      setIsPlayerLoaded(true)
     }
-    setIsPlayerLoaded(true)
   }
 
   const fetchAudioUrl = async () => {
-    const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
-    if (res.success && res.signedUrl) {
-      setAudioUrl(res.signedUrl)
+    try {
+      const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
+      if (res.success && res.signedUrl) {
+        setAudioUrl(res.signedUrl)
+      } else {
+        throw new Error('Failed to fetch audio file')
+      }
+    } catch (error) {
+      toast.error('Failed to fetch audio file')
     }
   }
 
@@ -131,47 +144,40 @@ export default function AudioPlayer({
 
   useEffect(() => {
     const audio = audioPlayer.current
-    if (!audio) return
+    if (!audio || !audioUrl) return
+    
+    // Initialize audio and set initial source if needed
+    if (!audio.src || audio.src !== audioUrl) {
+      audio.src = audioUrl
+      audio.preload = 'auto'
+    }
+    
     const handleLoadedMetadata = () => {
-      setAudioDuration(audio.duration)
       if (getAudioPlayer) getAudioPlayer(audio)
     }
+    
+    const handleTimeUpdate = () => {
+      setCurrentTime(formatDuration(audio.currentTime))
+      const playedPercentage = (audio.currentTime / audio.duration) * 100
+      setCurrentValue(playedPercentage)
+    }
+    
+    const handlePlayPause = () => {
+      setIsPlaying(!audio.paused)
+    }
+    
     audio.addEventListener('loadedmetadata', handleLoadedMetadata)
-
+    audio.addEventListener('timeupdate', handleTimeUpdate)
+    audio.addEventListener('play', handlePlayPause)
+    audio.addEventListener('pause', handlePlayPause)
+    
     return () => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      audio.removeEventListener('timeupdate', handleTimeUpdate)
+      audio.removeEventListener('play', handlePlayPause)
+      audio.removeEventListener('pause', handlePlayPause)
     }
-  }, [audioPlayer, getAudioPlayer])
-
-  const seekTo = (value: number) => {
-    if (!audioPlayer.current) return
-    const duration = audioPlayer.current.duration
-    if (duration) {
-      const time = (value / 100) * duration
-      audioPlayer.current.currentTime = time
-    }
-    setIsPlaying(true)
-  }
-
-  const timeMarkers = useMemo(() => {
-    if (!audioDuration) return [];
-    
-    const markers = [];
-    const intervalMinutes = 10;
-    const intervalSeconds = intervalMinutes * 60;
-    
-    // Start from 10 minutes (skip the 0 mark)
-    for (let time = intervalSeconds; time < audioDuration; time += intervalSeconds) {
-      const percentage = (time / audioDuration) * 100;
-      markers.push({
-        time,
-        percentage,
-        label: formatDuration(time)
-      });
-    }
-    
-    return markers;
-  }, [audioDuration]);
+  }, [audioUrl, getAudioPlayer])
 
   const formatTime = (seconds: number | undefined): string => {
     if (!seconds) return '00:00'
@@ -190,24 +196,6 @@ export default function AudioPlayer({
     }
   }
 
-  useEffect(() => {
-    const audio = audioPlayer.current
-    if (!audio) return
-
-    const handleTimeUpdate = () => {
-      const currentTime = formatTime(audio.currentTime)
-      setCurrentTime(currentTime)
-      const playedPercentage = (audio.currentTime / audio.duration) * 100
-      setCurrentValue(playedPercentage)
-    }
-
-    audio.addEventListener('timeupdate', handleTimeUpdate)
-
-    return () => {
-      audio.removeEventListener('timeupdate', handleTimeUpdate)
-    }
-  }, [])
-
   return (
     <div className='mb-3 h-60 relative overflow-hidden'>
       {!isPlayerLoaded && (
@@ -217,46 +205,15 @@ export default function AudioPlayer({
         </div>
       )}
       <div className='h-[45%] bg-background rounded-t-2xl border border-customBorder border-b-0 overflow-hidden'>
-        <div id='waveform' className='relative h-full cursor-pointer' >
-          <Image
-            src={waveformUrl}
-            alt='waveform'
-            layout='fill'
-            objectFit='contain'
-            onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect()
-              const x = e.clientX - rect.left
-              const percentage = (x / rect.width) * 100
-              seekTo(percentage)
-              audioPlayer.current?.play()
-              
-            }}
-            onError={() =>
-              setWaveformUrl('/assets/images/fallback-waveform.png')
-            }
-            unoptimized={true}
-          />
-          {/* Time markers at 10-minute intervals */}
-          {timeMarkers.map(marker => (
-            <div 
-              key={marker.time}
-              className="absolute top-0 h-full pointer-events-none flex flex-col items-center"
-              style={{ 
-                left: `${marker.percentage}%`,
-                transform: 'translateX(-50%)'
-              }}
-            >
-              <div className="h-full w-[1px] bg-primary"></div>
-              <span className="absolute top-0 bg-primary text-white px-1 py-0.5 rounded-sm text-[10px]">
-                {marker.label}
-              </span>
-            </div>
-          ))}
-        </div>
+        <Waveform
+          waveformUrl={waveformUrl}
+          audioPlayer={audioPlayer}
+          className="h-full"
+        />
       </div>
       <div className='h-[55%] bg-background border border-customBorder rounded-b-2xl px-3'>
         <div className='w-full mt-2'>
-          <audio ref={audioPlayer} className='' src={audioUrl}></audio>
+          <audio ref={audioPlayer} className='hidden' src={audioUrl}></audio>
           <Slider
             step={0.01}
             min={0}
@@ -264,8 +221,12 @@ export default function AudioPlayer({
             value={currentValue}
             onChange={(value) => {
               setCurrentValue(value as number)
-              seekTo(Number(value))
-              audioPlayer.current?.play()
+              if (audioPlayer.current) {
+                const time = (Number(value) / 100) * audioPlayer.current.duration
+                audioPlayer.current.currentTime = time
+                audioPlayer.current.play()
+                setIsPlaying(true)
+              }
             }}
             className='cursor-pointer'
             styles={{
@@ -378,7 +339,7 @@ export default function AudioPlayer({
             </TooltipProvider>
           </div>
           <span className='text-[#8C8C8C] text-sm w-[100px] text-right'>
-            {formatTime(audioDuration)}
+            {formatTime(audioPlayer.current?.duration)}
           </span>
         </div>
       </div>

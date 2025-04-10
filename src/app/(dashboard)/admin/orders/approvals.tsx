@@ -12,7 +12,7 @@ import { fetchApprovalOrders } from '@/app/actions/om/fetch-approval-orders'
 import AcceptRejectApprovalFileDialog from '@/components/admin-components/accept-reject-approval'
 import OpenDiffDialog from '@/components/admin-components/diff-dialog'
 import ReassignApprovalFile from '@/components/admin-components/re-assign-approval-file'
-import WaveformHeatmap, { WaveformHeatmapRef } from '@/components/editor/WaveformHeatmap'
+import WaveformHeatmap from '@/components/editor/WaveformHeatmap'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -78,7 +78,6 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
   const [editedSegments, setEditedSegments] = useState<
   Record<string, Set<number>>
   >({})
-  const waveformRefs = useRef<Record<string, WaveformHeatmapRef | null>>({});
 
   const fetchWaveformUrl = async (fileId: string) => {
     try {
@@ -127,32 +126,6 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
   useEffect(() => {
     setAudioUrl()
   }, [playing])
-
-  useEffect(() => {
-    const player = audioPlayer.current
-    if (!player) return
-    
-    const updateTime = () => {
-      const fileId = Object.keys(playing)[0]
-      if (fileId && playing[fileId] && waveformRefs.current[fileId]) {
-        waveformRefs.current[fileId]?.updateProgress(player.currentTime)
-      }
-    }
-    
-    player.addEventListener('timeupdate', updateTime)
-    return () => {
-      player.removeEventListener('timeupdate', updateTime)
-    }
-  }, [audioPlayer.current?.currentTime])
-
-  const seekTo = (value: number) => {
-    if (!audioPlayer.current) return
-    const duration = audioPlayer.current.duration
-    if (duration) {
-      const time = (value / 100) * duration
-      audioPlayer.current.currentTime = time
-    }
-  }
 
   const fetchOrders = async (showLoader = false) => {
     if (showLoader) {
@@ -603,18 +576,8 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
 
     return (
       <div className='w-full h-full cursor-pointer'
-        onClick={(e) => {
-          const rect = e.currentTarget.getBoundingClientRect()
-          const x = e.clientX - rect.left
-          const percentage = (x / rect.width) * 100
-          seekTo(percentage)
-          audioPlayer.current?.play()
-        }}
       >
         <WaveformHeatmap
-          ref={(ref) => {
-            waveformRefs.current[fileId] = ref;
-          }}
           waveformUrl={waveformUrls[fileId]}
           listenCount={listenCounts[fileId] || []}
           editedSegments={editedSegments[fileId] || new Set()}
