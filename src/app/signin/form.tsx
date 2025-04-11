@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 import { formSchema } from './controllers'
+import { checkTranscriberAssignments } from '@/app/actions/transcriber/check-assignments'
 import Recaptcha from '@/components/recaptcha'
 import SideImage from '@/components/side-image'
 import { Button } from '@/components/ui/button'
@@ -62,8 +63,20 @@ const Signin = () => {
       const session = await response.json()
       if (session && session.user) {
         if (session.user.status === 'VERIFIED') {
-          const redirectUrl =
+          let redirectUrl =
             callbackUrl || getRedirectPathByRole(session.user.role)
+
+          if (['QC', 'REVIEWER'].includes(session.user.role)) {
+            const assignmentResult = await checkTranscriberAssignments()
+
+            if (
+              assignmentResult.hasAssignedFiles &&
+              assignmentResult.redirectUrl
+            ) {
+              redirectUrl = assignmentResult.redirectUrl
+            }
+          }
+
           window.location.href = redirectUrl
         } else {
           window.location.href = '/verify-email'

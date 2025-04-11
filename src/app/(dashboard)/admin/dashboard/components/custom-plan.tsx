@@ -126,8 +126,7 @@ export default function CustomPlan() {
               responseData.customFormatHighDifficultyReviewRate.toString(),
             agreedMonthlyHours: responseData.agreedMonthlyHours.toString(),
             customFormatDeadline: responseData.deadline.toString(),
-            customFormattingOption:
-              responseData.customFormatOption.toLowerCase(),
+            customFormattingOption: responseData.customFormatOption,
             orderType: responseData.orderType,
             qcLowDifficultyRate: responseData.qcLowDifficultyRate.toString(),
             qcMediumDifficultyRate:

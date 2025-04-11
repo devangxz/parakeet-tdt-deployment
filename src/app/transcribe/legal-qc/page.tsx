@@ -1,7 +1,7 @@
 'use client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 
 import AssignedFilesPage from '../components/assigned-files'
 import AvailableFilesPage from '../components/available-files'
@@ -11,11 +11,19 @@ import AgreementNotice from '@/components/transcriber-notice/aggrement'
 import LlmProcessingNotice from '@/components/transcriber-notice/llm-processing'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-export default function LegalQCPage() {
-  const [activeTab, setActiveTab] = useState('available')
+function LegalQCPageContent() {
+  const searchParams = useSearchParams()
+  const tabParam = searchParams?.get('tab')
+  const [activeTab, setActiveTab] = useState(tabParam || 'available')
   const { data: session, status } = useSession()
   const router = useRouter()
   const allowedRoles = ['QC', 'REVIEWER']
+
+  useEffect(() => {
+    if (tabParam && ['available', 'assigned', 'history'].includes(tabParam)) {
+      setActiveTab(tabParam)
+    }
+  }, [])
 
   if (
     session?.user &&
@@ -27,6 +35,9 @@ export default function LegalQCPage() {
 
   const changeTab = async (tab: string) => {
     setActiveTab(tab)
+    router.push(`/transcribe/legal-qc?tab=${tab}`, {
+      scroll: false,
+    })
   }
 
   return (
@@ -40,7 +51,7 @@ export default function LegalQCPage() {
           key={activeTab}
           defaultValue={activeTab}
           onValueChange={(value) => {
-            setActiveTab(value)
+            changeTab(value)
           }}
           className='mt-1'
         >
@@ -61,5 +72,19 @@ export default function LegalQCPage() {
         </Tabs>
       </div>
     </div>
+  )
+}
+
+export default function LegalQCPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className='flex items-center justify-center h-full'>
+          Loading...
+        </div>
+      }
+    >
+      <LegalQCPageContent />
+    </Suspense>
   )
 }

@@ -1,0 +1,24 @@
+User-agent: *
+Disallow: 
+Disallow: /cgi-bin/
+Disallow: /docs/invoices/list
+Disallow: /docs/invoices/details
+Disallow: /payment-methods/list
+Disallow: /docs/files/transcripts
+Disallow: /docs/teams/create
+Disallow: /docs
+Disallow: /forgot-password
+Disallow: /docs/users/credits
+Disallow: /docs/users/earnings
+Disallow: /docs/users/preferences
+Disallow: /docs/users/profile
+Disallow: /docs/teams/invitations
+Disallow: /docs/teams/members
+Disallow: /docs/teams/rename
+Disallow: /docs/files/delete
+Disallow: /docs/files/list
+Disallow: /docs/files/upload
+Disallow: /docs/orders/create
+Disallow: /docs/orders/list
+Disallow: /docs/orders/options
+Sitemap: https://scribie.ai/sitemap.xml

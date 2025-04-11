@@ -87,33 +87,31 @@ const customerPreferences: preferencesOption[] = [
 const transcriberPreferences: preferencesOption[] = [
   {
     heading: 'New files available',
-    description: 'Whenever you or your team member add a payment method',
+    description: 'Whenever new files are available for transcription',
     controller: (callback: () => void) => callback(),
     orderKey: 'newFilesAvailability',
   },
   {
     heading: 'File assignment',
-    description:
-      'Whenever you or your team member place a human transcript order',
+    description: 'Whenever a new file is assigned to you',
     controller: (callback: () => void) => callback(),
     orderKey: 'fileAssignment',
   },
   {
     heading: 'File submission',
-    description: 'Whenever a human transcript order is delivered',
+    description: 'Whenever a file is submitted',
     controller: (callback: () => void) => callback(),
     orderKey: 'fileSubmission',
   },
   {
     heading: 'Earnings Credit',
-    description:
-      'Whenever you or your team member cancel a human transcript order',
+    description: 'Whenever you earn a credit',
     controller: (callback: () => void) => callback(),
     orderKey: 'earningsCredit',
   },
   {
     heading: 'Withdrawal Request',
-    description: 'Whenever a refund is issued for a human or automated order',
+    description: 'Whenever you request a withdrawal',
     controller: (callback: () => void) => callback(),
     orderKey: 'withdrawalRequest',
   },

@@ -362,5 +362,14 @@
     "SUBJECT": "Scribie.ai Test Invitation",
     "HTML": "TEST_INVITATION.html",
     "TEXT": ""
+  },
+  "QC_NEW_FILES_NOTIFICATION": {
+    "FROM": "$$SUPPORT_EMAIL_ID$$",
+    "TO": ["$$USER_EMAIL_ID$$"],
+    "CC": [],
+    "BCC": [],
+    "SUBJECT": "Scribie.ai New Files Available for Transcription",
+    "HTML": "QC_NEW_FILES_NOTIFICATION.html",
+    "TEXT": ""
   }
 }

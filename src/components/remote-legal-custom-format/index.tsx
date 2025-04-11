@@ -125,6 +125,8 @@ const CustomFormatOrder = ({
   const [billingEnabled, setBillingEnabled] = useState<boolean>(false)
   const [customFormatDeadline, setCustomFormatDeadline] = useState<number>(0)
   const [loadingOrderUpdate, setLoadingOrderUpdate] = useState<boolean>(false)
+  const [customFormatOption, setCustomFormatOption] =
+    useState<string>('default')
 
   useEffect(() => {
     const fetchOrderInformation = async () => {
@@ -141,6 +143,7 @@ const CustomFormatOrder = ({
         const responseData = response.responseData as any
         const customFormatDeadline = responseData.customFormatDeadline || 1
         setCustomFormatDeadline(customFormatDeadline)
+        setCustomFormatOption(responseData.customFormatOption)
 
         const defaultDueDate = new Date()
         defaultDueDate.setDate(defaultDueDate.getDate() + customFormatDeadline)
@@ -485,7 +488,10 @@ const CustomFormatOrder = ({
     }
     const fileMissingTemplateName = files.find((file) => !file.templateId)
     if (fileMissingTemplateName) {
-      if (orderType !== 'FORMATTING') {
+      if (
+        orderType !== 'FORMATTING' &&
+        customFormatOption.toLowerCase() === 'legal'
+      ) {
         toast.error('Please select a template for all files')
       } else {
         setActiveStep((prevStep) => prevStep + 1)
@@ -651,6 +657,7 @@ const CustomFormatOrder = ({
                     templates={templates}
                     organizationName={session?.user?.organizationName ?? 'none'}
                     orderType={orderType}
+                    customFormatOption={customFormatOption}
                   />
                 ))}
               </ScrollArea>

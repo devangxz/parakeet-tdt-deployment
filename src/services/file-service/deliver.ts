@@ -3,6 +3,7 @@ import { OrderStatus, Order } from '@prisma/client'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { sendTemplateMail, getAWSSesInstance } from '@/lib/ses'
+import { checkOrderWatch } from '@/utils/backend-helper'
 
 async function getPaidByUserId(fileId: string) {
   logger.info(`--> getPaidByUserId ${fileId}`)
@@ -25,18 +26,6 @@ async function getPaidByUserId(fileId: string) {
     logger.error((err as Error).message)
     throw new Error()
   }
-}
-
-const checkOrderWatch = async (userId: number) => {
-  const customer = await prisma.customer.findUnique({
-    where: { userId },
-  })
-
-  if (!customer) {
-    return false
-  }
-
-  return customer.watch
 }
 
 async function deliver(order: Order, transcriberId: number) {

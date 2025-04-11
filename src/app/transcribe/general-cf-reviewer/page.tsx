@@ -1,17 +1,25 @@
 'use client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 
 import AssignedFilesPage from '../components/assigned-reviewer-files'
 import AvailableFilesPage from '../components/available-reviewer-files'
 import HistoryFilesPage from '../components/history-reviewer-files'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-export default function GeneralCFReviewerPage() {
-  const [activeTab, setActiveTab] = useState('available')
+function GeneralCFReviewerPageContent() {
+  const searchParams = useSearchParams()
+  const tabParam = searchParams?.get('tab')
+  const [activeTab, setActiveTab] = useState(tabParam || 'available')
   const { data: session, status } = useSession()
   const router = useRouter()
+
+  useEffect(() => {
+    if (tabParam && ['available', 'assigned', 'history'].includes(tabParam)) {
+      setActiveTab(tabParam)
+    }
+  }, [tabParam])
 
   if (status === 'authenticated' && session?.user?.role !== 'REVIEWER') {
     router.replace('/transcribe/transcriber')
@@ -19,6 +27,7 @@ export default function GeneralCFReviewerPage() {
 
   const changeTab = async (tab: string) => {
     setActiveTab(tab)
+    router.push(`/transcribe/general-cf-reviewer?tab=${tab}`, { scroll: false })
   }
 
   return (
@@ -28,7 +37,7 @@ export default function GeneralCFReviewerPage() {
           key={activeTab}
           defaultValue={activeTab}
           onValueChange={(value) => {
-            setActiveTab(value)
+            changeTab(value)
           }}
         >
           <TabsList className='rounded-md'>
@@ -48,5 +57,19 @@ export default function GeneralCFReviewerPage() {
         </Tabs>
       </div>
     </div>
+  )
+}
+
+export default function GeneralCFReviewerPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className='flex items-center justify-center h-full'>
+          Loading...
+        </div>
+      }
+    >
+      <GeneralCFReviewerPageContent />
+    </Suspense>
   )
 }

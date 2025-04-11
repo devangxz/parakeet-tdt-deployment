@@ -134,6 +134,7 @@ export const getUserRate = async (userId: number) => {
       cf: userRate.customFormat,
       cf_deadline: userRate.deadline,
       skipAutoAssignment: userRate.skipAutoAssignment,
+      custom_format_option: userRate.customFormatOption,
     }
   } catch (error) {
     logger.error('Failed to fetch user rates:', error)
@@ -1207,4 +1208,16 @@ export const isNewCustomer = async (userId: number): Promise<boolean> => {
     logger.error(`Error checking if user ${userId} is new: ${String(error)}`)
     return false
   }
+}
+
+export const checkOrderWatch = async (userId: number) => {
+  const customer = await prisma.customer.findUnique({
+    where: { userId },
+  })
+
+  if (!customer) {
+    return false
+  }
+
+  return customer.watch
 }
