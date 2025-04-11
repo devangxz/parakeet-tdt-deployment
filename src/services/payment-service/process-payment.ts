@@ -9,6 +9,7 @@ import {
   getEmailDetails,
   getUserRate,
   getTeamAdminUserDetails,
+  checkOrderWatch,
 } from '@/utils/backend-helper'
 
 const addHours = (date: string | number | Date, hours: number) => {
@@ -192,6 +193,19 @@ export const processPayment = async (
           fileIds: invoice.itemNumber ?? '',
           invoiceId: invoice.invoiceId,
         })
+      }
+      const isCustomerOnWatchlist = await checkOrderWatch(invoice.userId)
+
+      if (isCustomerOnWatchlist) {
+        await ses.sendAlert(
+          `Watchlist Customer Order Placed`,
+          `${
+            getEmails.email ?? ''
+          } just placed an order for the following files: ${
+            invoice.itemNumber
+          }`,
+          'software'
+        )
       }
     }
     if (type === InvoiceType.ADD_CREDITS) {

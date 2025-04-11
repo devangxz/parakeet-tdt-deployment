@@ -1195,3 +1195,15 @@ export const isNewCustomer = async (userId: number): Promise<boolean> => {
     return false
   }
 }
+
+export const checkOrderWatch = async (userId: number) => {
+  const customer = await prisma.customer.findUnique({
+    where: { userId },
+  })
+
+  if (!customer) {
+    return false
+  }
+
+  return customer.watch
+}
