@@ -1089,20 +1089,33 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
   // Update handleFocus to preserve line highlight
   const handleFocus = () => {
     const quill = quillRef.current?.getEditor()
-    if (!quill || !selection) return
+    if (!quill) return
 
     // Only remove highlight from selected text
-    if (selection.length > 0) {
+    if (selection && selection.length > 0) {
       quill.formatText(selection.index, selection.length, {
         background: null,
       })
     }
 
-    // Remove search highlight if exists
+    // Remove search highlight if exists and selection doesn't overlap with it
     if (searchHighlight) {
-      quill.formatText(searchHighlight.index, searchHighlight.length, {
-        background: null,
-      })
+      // Check if the current selection overlaps with the search highlight
+      let shouldClearSearchHighlight = true;
+      if (selection && selection.length > 0) {
+        const selectionEnd = selection.index + selection.length;
+        const highlightEnd = searchHighlight.index + searchHighlight.length;
+        // Check for overlap
+        if (!(selectionEnd <= searchHighlight.index || selection.index >= highlightEnd)) {
+          shouldClearSearchHighlight = false; // Don't clear if there's overlap
+        }
+      }
+      
+      if (shouldClearSearchHighlight) {
+        quill.formatText(searchHighlight.index, searchHighlight.length, {
+          background: null,
+        });
+      }
     }
 
     setIsEditorFocused(true)
