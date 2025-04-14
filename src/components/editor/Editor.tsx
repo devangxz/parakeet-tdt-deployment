@@ -74,6 +74,8 @@ export interface EditorHandle {
   removeTimestamps: () => void
   highlightNumbers: () => void
   getWer: () => number
+  handleUndo: () => void
+  handleRedo: () => void
 }
 
 // Wrap the component in forwardRef so the parent can call exposed methods
@@ -770,125 +772,71 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     highlightNumbers, 
     highlightNumbersEnabled
   ])
-  useEffect(() => {
-    const originalExecCommand = document.execCommand
-    document.execCommand = function (command, ...args) {
-      if (command === 'undo' || command === 'redo') {
-        return false
-      }
-      return originalExecCommand.call(this, command, ...args)
-    }
+
+  const handleUndo = useCallback(() => {
+    if (undoStack.length === 0) return
 
     const quill = quillRef.current?.getEditor()
     if (!quill) return
 
-    const editorRoot = quill.root
-    const handleBeforeInput = (e: InputEvent) => {
-      if (
-        isEditorFocused &&
-        (e.inputType === 'historyUndo' || e.inputType === 'historyRedo')
-      ) {
-        e.preventDefault()
-      }
+    setIsTyping(true)
+    clearLastHighlight()
+
+    const item = undoStack[undoStack.length - 1]
+    setUndoStack((prev) => prev.slice(0, -1))
+
+    // Invert based on the old doc state
+    const revertDelta = item.delta.invert(item.oldDelta)
+    quill.updateContents(revertDelta)
+
+    setRedoStack((prev) => {
+      const newStack = [...prev]
+      if (newStack.length >= STACK_LIMIT) newStack.shift()
+      newStack.push(item)
+      return newStack
+    })
+
+    if (item.beforeSelection) {
+      quill.setSelection(
+        item.beforeSelection.index,
+        item.beforeSelection.length
+      )
     }
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isEditorFocused) return
+    scheduleAlignmentUpdate()
+  }, [undoStack, clearLastHighlight, scheduleAlignmentUpdate])
 
-      // Undo
-      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault()
-        e.stopImmediatePropagation()
-        setIsTyping(true)
-        clearLastHighlight()
+  const handleRedo = useCallback(() => {
+    if (redoStack.length === 0) return
 
-        if (undoStack.length === 0) return
-        const item = undoStack[undoStack.length - 1]
-        setUndoStack((prev) => prev.slice(0, -1))
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
 
-        // Invert based on the old doc state
-        const revertDelta = item.delta.invert(item.oldDelta)
-        quill.updateContents(revertDelta)
+    setIsTyping(true)
+    clearLastHighlight()
 
-        setRedoStack((prev) => {
-          const newStack = [...prev]
-          if (newStack.length >= STACK_LIMIT) newStack.shift()
-          newStack.push(item)
-          return newStack
-        })
+    const item = redoStack[redoStack.length - 1]
+    setRedoStack((prev) => prev.slice(0, -1))
 
-        if (item.beforeSelection) {
-          quill.setSelection(
-            item.beforeSelection.index,
-            item.beforeSelection.length
-          )
-        }
+    // Reapply original delta
+    quill.updateContents(item.delta)
 
-        scheduleAlignmentUpdate()
-      }
+    setUndoStack((prev) => {
+      const newStack = [...prev]
+      if (newStack.length >= STACK_LIMIT) newStack.shift()
+      newStack.push(item)
+      return newStack
+    })
 
-      // Redo
-      if (
-        ((e.metaKey || e.ctrlKey) && e.key === 'y') ||
-        ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z')
-      ) {
-        e.preventDefault()
-        e.stopImmediatePropagation()
-        setIsTyping(true)
-        clearLastHighlight()
-
-        if (redoStack.length === 0) return
-        const item = redoStack[redoStack.length - 1]
-        setRedoStack((prev) => prev.slice(0, -1))
-
-        // Reapply original delta
-        quill.updateContents(item.delta)
-
-        setUndoStack((prev) => {
-          const newStack = [...prev]
-          if (newStack.length >= STACK_LIMIT) newStack.shift()
-          newStack.push(item)
-          return newStack
-        })
-
-        if (item.afterSelection) {
-          quill.setSelection(
-            item.afterSelection.index,
-            item.afterSelection.length
-          )
-        }
-
-        scheduleAlignmentUpdate()
-      }
-
-      // If the Enter key is pressed, clear any line highlight
-      if (e.key === 'Enter') {
-        if (prevLineNodeRef.current) {
-          prevLineNodeRef.current.classList.remove('line-highlight')
-          prevLineNodeRef.current = null
-        }
-      }
-
-      if (quill) {
-        beforeSelectionRef.current = quill.getSelection()
-      }
+    if (item.afterSelection) {
+      quill.setSelection(
+        item.afterSelection.index,
+        item.afterSelection.length
+      )
     }
 
-    document.addEventListener('keydown', handleKeyDown, true)
-    editorRoot.addEventListener('beforeinput', handleBeforeInput, true)
-
-    return () => {
-      document.execCommand = originalExecCommand
-      document.removeEventListener('keydown', handleKeyDown, true)
-      editorRoot.removeEventListener('beforeinput', handleBeforeInput, true)
-    }
-  }, [
-    undoStack,
-    redoStack,
-    scheduleAlignmentUpdate,
-    clearLastHighlight,
-    isEditorFocused,
-  ])
+    scheduleAlignmentUpdate()
+  }, [redoStack, clearLastHighlight, scheduleAlignmentUpdate])
 
   useEffect(() => {
     if (!highlightWordsEnabled) {
@@ -1237,6 +1185,8 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     removeTimestamps: removeTimestampsToolbar,
     highlightNumbers,
     getWer: () => wer,
+    handleUndo,
+    handleRedo,
   }))
 
   useEffect(() => {
@@ -1244,6 +1194,75 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       localStorage.setItem(`highlight-numbers-${orderDetails.fileId}`, String(highlightNumbersEnabled))
     }
   }, [highlightNumbersEnabled, orderDetails.fileId])
+
+  useEffect(() => {
+    const originalExecCommand = document.execCommand
+    document.execCommand = function (command, ...args) {
+      if (command === 'undo' || command === 'redo') {
+        return false
+      }
+      return originalExecCommand.call(this, command, ...args)
+    }
+
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
+
+    const editorRoot = quill.root
+    const handleBeforeInput = (e: InputEvent) => {
+      if (
+        isEditorFocused &&
+        (e.inputType === 'historyUndo' || e.inputType === 'historyRedo')
+      ) {
+        e.preventDefault()
+      }
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isEditorFocused) return
+
+      // Undo
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        handleUndo()
+      }
+
+      // Redo
+      if (
+        ((e.metaKey || e.ctrlKey) && e.key === 'y') ||
+        ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z')
+      ) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        handleRedo()
+      }
+
+      // If the Enter key is pressed, clear any line highlight
+      if (e.key === 'Enter') {
+        if (prevLineNodeRef.current) {
+          prevLineNodeRef.current.classList.remove('line-highlight')
+          prevLineNodeRef.current = null
+        }
+      }
+
+      if (quill) {
+        beforeSelectionRef.current = quill.getSelection()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown, true)
+    editorRoot.addEventListener('beforeinput', handleBeforeInput, true)
+
+    return () => {
+      document.execCommand = originalExecCommand
+      document.removeEventListener('keydown', handleKeyDown, true)
+      editorRoot.removeEventListener('beforeinput', handleBeforeInput, true)
+    }
+  }, [
+    handleUndo,
+    handleRedo,
+    isEditorFocused,
+  ])
 
   return (
     <div className='relative w-full h-full'>

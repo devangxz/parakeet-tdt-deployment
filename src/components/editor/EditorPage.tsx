@@ -1,6 +1,6 @@
 'use client'
 
-import { Cross1Icon, ReloadIcon, CheckIcon } from '@radix-ui/react-icons'
+import { Cross1Icon, ReloadIcon, CheckIcon, ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
@@ -38,6 +38,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { RenderPDFDocument } from '@/components/utils'
 import { AUTOSAVE_INTERVAL } from '@/constants'
 import usePreventMultipleTabs from '@/hooks/usePreventMultipleTabs'
@@ -64,7 +65,8 @@ import {
   calculateSpeakerChangePercentage,
   calculateSpeakerMacroF1Score,
   getTestTranscript,
- 
+  highlightAllMatches,
+  clearAllHighlights,
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
@@ -173,6 +175,7 @@ function EditorPage() {
   const [matchCount, setMatchCount] = useState(0)
   const [matchSelection, setMatchSelection] = useState(false)
   const findInputRef = useRef<HTMLInputElement>(null)
+  const findDebounceRef = useRef<NodeJS.Timeout | null>(null)
   const [selection, setSelection] = useState<CustomerQuillSelection | null>(
     null
   )
@@ -204,6 +207,7 @@ function EditorPage() {
   const [isQCValidationPassed, setIsQCValidationPassed] = useState(false)
   const [testTranscript, setTestTranscript] = useState('')
   const [isSettingTest, setIsSettingTest] = useState(false)
+  const [toggleReplace, setToggleReplace] = useState(false);
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
     if (!quill) return
@@ -310,19 +314,92 @@ function EditorPage() {
     )
   }
 
-  const toggleFindAndReplace = useCallback(() => {
-    setFindAndReplaceOpen((prev) => !prev)
+  const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value
+    setFindText(text)    // Clear existing timeout
+    if (findDebounceRef.current) {
+      clearTimeout(findDebounceRef.current)
+    }
+    
+    // Use debounce to avoid excessive processing
+    if (text.length > 0) {
+      findDebounceRef.current = setTimeout(() => {
+        if (quillRef?.current) {
+          const quill = quillRef.current.getEditor()
+          
+          // Clear previous highlights before adding new ones
+          clearAllHighlights(quill)
+          
+          // Reset search state to prepare for fresh highlighting
+          setLastSearchIndex(-1)
+          
+          // Highlight all matches and get the count
+          const matchesFound = highlightAllMatches(
+            quill,
+            text,
+            matchCase,
+            matchSelection,
+            selection
+          )
+          setMatchCount(matchesFound)
+          
+          // If there are matches, select the first one
+          if (matchesFound > 0) {
+            searchAndSelectInstance(text, selection)
+          } else {
+            setSearchHighlight(null)
+          }
+        }
+      }, 250) // 250ms debounce
+    } else {
+      // Clear highlights if search text is empty
+      if (quillRef?.current) {
+        clearAllHighlights(quillRef.current.getEditor())
+        setSearchHighlight(null)
+      }
+      setMatchCount(0)
+      setLastSearchIndex(-1)
+    }
+  }
+
+  const handleReplaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value
+    setReplaceText(text)
+  }
+
+  const toggleOpenFindAndReplace = useCallback(() => {
+    setFindAndReplaceOpen((prev) => {
+      // When closing, clear highlights and reset state
+      if (prev && quillRef?.current) {
+        clearAllHighlights(quillRef.current.getEditor())
+        setFindText('')
+        setReplaceText('')
+        setMatchCount(0)
+        setLastSearchIndex(-1)
+        setSearchHighlight(null)
+      }
+      return true
+    })
     setSelectionHandler()
     setTimeout(() => {
       if (findInputRef.current) {
         findInputRef.current.focus()
       }
     }, 50)
-  }, [setSelectionHandler])
+  }, [setSelectionHandler, quillRef])
 
   const shortcutControls = useMemo(() => {
     const controls: Partial<ShortcutControls> = {
       findNextOccurrenceOfString: () => {
+        // Explicitly prevent the browser's default find behavior
+        window.addEventListener('keydown', function preventDefaultFind(e) {
+          if (e.key === 'f' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault()
+            e.stopPropagation()
+            window.removeEventListener('keydown', preventDefaultFind)
+          }
+        }, { capture: true, once: true })
+        
         if (!findAndReplaceOpen) {
           if (quillRef?.current) {
             const quill = quillRef.current.getEditor()
@@ -339,28 +416,29 @@ function EditorPage() {
               }
             }
           }
-          toggleFindAndReplace()
+          setToggleReplace(false)
+          toggleOpenFindAndReplace()
         } else if (findText) {
           searchAndSelectInstance(findText, selection)
         }
       },
       findThePreviousOccurrenceOfString: () => {
         if (!findAndReplaceOpen) {
-          toggleFindAndReplace()
+          toggleOpenFindAndReplace()
         } else if (findText) {
           searchAndSelectInstance(findText, selection)
         }
       },
       replaceNextOccurrenceOfString: () => {
         if (!findAndReplaceOpen) {
-          toggleFindAndReplace()
+          toggleOpenFindAndReplace()
         } else if (findText && replaceText) {
           replaceTextInstance(findText, replaceText, selection)
         }
       },
       replaceAllOccurrencesOfString: () => {
         if (!findAndReplaceOpen) {
-          toggleFindAndReplace()
+          toggleOpenFindAndReplace()
         } else if (findText && replaceText) {
           replaceTextInstance(findText, replaceText, selection, true)
         }
@@ -492,16 +570,39 @@ function EditorPage() {
   }, [orderDetails.orderId, orderDetails.fileId, orderDetails.isTestOrder, initialEditorData, params, session?.user?.role, searchParams])
 
   useEffect(() => {
+
     const closeFindAndReplaceOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && findAndReplaceOpen) {
         setFindAndReplaceOpen(false)
+        setFindText('')
+        setReplaceText('')
+        setMatchCount(0)
+        setLastSearchIndex(-1)
+        setSelection(null)
+        setSearchHighlight(null)
+        
+        if (quillRef?.current) {
+          clearAllHighlights(quillRef.current.getEditor())
+        }
       }
     }
     window.addEventListener('keydown', closeFindAndReplaceOnEscape)
     return () => {
       window.removeEventListener('keydown', closeFindAndReplaceOnEscape)
     }
-  }, [findAndReplaceOpen])
+  }, [findAndReplaceOpen, quillRef])
+
+  useEffect(() => {
+    if (!findAndReplaceOpen && quillRef?.current) {
+      clearAllHighlights(quillRef.current.getEditor())
+      setSearchHighlight(null)
+      setFindText('')
+      setReplaceText('')
+      setMatchCount(0)
+      setLastSearchIndex(-1)
+      setSelection(null)
+    }
+  }, [findAndReplaceOpen, quillRef])
 
   const handleTabsValueChange = async (value: string) => {
     if (value === 'diff') {
@@ -712,23 +813,50 @@ function EditorPage() {
     [orderDetails.fileId]
   )
 
-  const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const text = e.target.value
-    setFindText(text)
-    setMatchCount(countMatches(text))
-  }
-
-  const handleReplaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const text = e.target.value
-    setReplaceText(text)
-  }
-
   const findHandler = () => {
-    searchAndSelectInstance(findText, selection)
+    if (quillRef?.current && findText) {
+      if (matchCount === 0) {
+        // If no matches found yet, highlight all first
+        const quill = quillRef.current.getEditor()
+        console.log('next handler')
+        // Clear previous highlights before adding new ones
+        clearAllHighlights(quill)
+        
+        const matchesFound = highlightAllMatches(
+          quill,
+          findText,
+          matchCase,
+          matchSelection,
+          selection
+        )
+        setMatchCount(matchesFound)
+      }
+      // Then select the next match
+      searchAndSelectInstance(findText, selection)
+    }
   }
 
   const findPreviousHandler = () => {
-    searchAndSelectReverseInstance(findText, selection)
+    if (quillRef?.current && findText) {
+      if (matchCount === 0) {
+        // If no matches found yet, highlight all first
+        const quill = quillRef.current.getEditor()
+        
+        // Clear previous highlights before adding new ones
+        clearAllHighlights(quill)
+        
+        const matchesFound = highlightAllMatches(
+          quill,
+          findText,
+          matchCase,
+          matchSelection,
+          selection
+        )
+        setMatchCount(matchesFound)
+      }
+      // Then select the previous match
+      searchAndSelectReverseInstance(findText, selection)
+    }
   }
 
   const replaceOneHandler = () => {
@@ -801,6 +929,15 @@ function EditorPage() {
     };
   }, [isSubmitting, submissionStatus]);
   
+  useEffect(() => {
+    // Cleanup debounce timer on unmount
+    return () => {
+      if (findDebounceRef.current) {
+        clearTimeout(findDebounceRef.current)
+      }
+    }
+  }, [])
+
   return (
     <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
       <Topbar
@@ -834,7 +971,7 @@ function EditorPage() {
         getAudioPlayer={getAudioPlayer}
         quillRef={quillRef}
         orderDetails={orderDetails}
-        toggleFindAndReplace={toggleFindAndReplace}
+        toggleFindAndReplace={toggleOpenFindAndReplace}
         waveformUrl={waveformUrl}
         highlightWordsEnabled={highlightWordsEnabled}
         setHighlightWordsEnabled={setHighlightWordsEnabled}
@@ -981,13 +1118,31 @@ function EditorPage() {
                   {findAndReplaceOpen && (
                     <div className='bg-background border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out h-[50%]'>
                       <div className='font-medium text-md border-b border-customBorder flex justify-between items-center p-2'>
-                        <span>Find & Replace</span>
+                        <span>{toggleReplace ? 'Find & Replace': 'Find'}</span>
+
+                        <div className="flex gap-2">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => setToggleReplace(!toggleReplace)}
+                                className='p-1 rounded-md text-muted-foreground hover:bg-secondary transition-colors'
+                              >
+                                {toggleReplace ? <ChevronUpIcon className='h-4 w-4' /> : <ChevronDownIcon className='h-4 w-4' />}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {toggleReplace ? 'Hide replace options' : 'Show replace options'}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <button
                           onClick={() => setFindAndReplaceOpen(false)}
                           className='p-1 rounded-md text-muted-foreground hover:bg-secondary transition-colors'
                         >
                           <Cross1Icon className='h-4 w-4' />
                         </button>
+                        </div>
                       </div>
                       <div className='space-y-3 px-2 py-[10px] h-[calc(100%-41px)] overflow-y-auto'>
                         <div className='relative'>
@@ -1003,11 +1158,13 @@ function EditorPage() {
                             </span>
                           )}
                         </div>
-                        <Input
-                          placeholder='Replace with...'
+                        {toggleReplace &&<div className="flex gap-2">
+                          <Input
+                            placeholder='Replace with...'
                           value={replaceText}
-                          onChange={handleReplaceChange}
-                        />
+                            onChange={handleReplaceChange}
+                          />
+                        </div>}
                         <div className='flex gap-4'>
                           <Label className='flex items-center space-x-2'>
                             <Checkbox
@@ -1048,7 +1205,7 @@ function EditorPage() {
                               Next
                             </button>
                           </div>
-                          <div
+                          {toggleReplace && <div
                             className='inline-flex w-full rounded-md'
                             role='group'
                           >
@@ -1064,7 +1221,7 @@ function EditorPage() {
                             >
                               Replace All
                             </button>
-                          </div>
+                          </div>}
                         </div>
                       </div>
                     </div>
