@@ -524,6 +524,12 @@ export default memo(function Header({
       editorRef.current.handleRedo();
     }
   }
+
+  const generateTranscriptFromDiff = () => {
+    if (editorRef?.current) {
+      editorRef.current.generateTranscriptFromDiff();
+    }
+  }
   
   return (
     <div className='border bg-background border-customBorder rounded-md relative'>
@@ -709,6 +715,7 @@ export default memo(function Header({
                     toggleHighlightNumerics={toggleHighlightNumerics}
                     handleUndo={handleUndo}
                     handleRedo={handleRedo}
+                    generateTranscriptFromDiff={generateTranscriptFromDiff}
                   />
                 </div>
               </TooltipProvider>

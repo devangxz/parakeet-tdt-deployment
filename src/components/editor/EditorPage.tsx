@@ -209,6 +209,8 @@ function EditorPage() {
   const [testTranscript, setTestTranscript] = useState('')
   const [isSettingTest, setIsSettingTest] = useState(false)
   const [toggleReplace, setToggleReplace] = useState(false);
+  const [diffToggleEnabled, setDiffToggleEnabled] = useState(false);
+
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
     if (!quill) return
@@ -216,6 +218,7 @@ function EditorPage() {
     if (range) {
       setSelection({ index: range.index, length: range.length })
     }
+    setDiffToggleEnabled(false);
   }
 
   const isActive = usePreventMultipleTabs((params?.fileId as string) || '')
@@ -1009,6 +1012,14 @@ function EditorPage() {
     setLastSearchIndex
   ]);
 
+  useEffect(() => {
+    // Only trigger the diff calculation when toggling from false to true
+    if (diffToggleEnabled) {
+      handleTabsValueChange('diff');
+    }
+
+  }, [diffToggleEnabled]);
+
   return (
     <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
       <Topbar
@@ -1153,6 +1164,8 @@ function EditorPage() {
                         step={step}
                         highlightNumbersEnabled={highlightNumbersEnabled}
                         setHighlightNumbersEnabled={setHighlightNumbersEnabled}
+                        diffToggleEnabled={diffToggleEnabled}
+                        diff={diff}
                       />
 
                       <DiffTabComponent diff={diff} />
@@ -1425,6 +1438,7 @@ function EditorPage() {
                           router,
                           finalizerComment,
                         })
+                        setSubmissionStatus('completed')
                       } else {
                         if (!quillRef?.current) return
                         const quill = quillRef.current.getEditor()
@@ -1448,7 +1462,7 @@ function EditorPage() {
                           },
                           false
                         )
-
+                        console.log("submitting cf transcript");
                         await handleSubmit({
                           orderDetails,
                           step,
@@ -1478,6 +1492,7 @@ function EditorPage() {
                         ...prevButtonLoading,
                         submit: false,
                       }));
+                      console.log("ERROR:", error);
                       setIsSubmitting(false);
                       setSubmissionStatus('processing');
                     } finally {

@@ -40,6 +40,7 @@ import {
   getFormattedTranscript,
   getAlignmentIndexByTime,
 } from '@/utils/transcript'
+import { DIFF_DELETE, DIFF_INSERT, DmpDiff } from '@/utils/transcript/diff_match_patch'
 
 const TYPING_PAUSE = 500 // Half second pause indicates word completion
 const STACK_LIMIT = 100
@@ -61,6 +62,8 @@ interface EditorProps {
   step: string
   highlightNumbersEnabled?: boolean
   setHighlightNumbersEnabled: (enabled: boolean) => void
+  diffToggleEnabled: boolean
+  diff: DmpDiff[]
 }
 
 type Sources = 'user' | 'api' | 'silent'
@@ -76,6 +79,7 @@ export interface EditorHandle {
   getWer: () => number
   handleUndo: () => void
   handleRedo: () => void
+  generateTranscriptFromDiff: () => void
 }
 
 // Wrap the component in forwardRef so the parent can call exposed methods
@@ -96,6 +100,8 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     step,
     highlightNumbersEnabled,
     setHighlightNumbersEnabled,
+    diffToggleEnabled,
+    diff,
   } = props
 
   const ctms = initialCtms // Make CTMs constant
@@ -448,6 +454,25 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     )
   }, [alignments, ctms, typingTimer, quillRef, orderDetails.fileId])
 
+  const generateTranscriptFromDiff = useCallback(() => {
+    const delta = new Delta();
+    const insertProperty = { color: 'green' };
+    const deleteProperty = { color: 'red' };
+    diff.forEach(([op, text]: DmpDiff) => {
+      if(op === DIFF_INSERT) {
+        delta.insert(text, insertProperty);
+      } else if(op === DIFF_DELETE) {
+        delta.retain(text.length, deleteProperty);
+      }else{
+        delta.retain(text.length);
+      }
+    });
+    const quill = quillRef.current?.getEditor();
+    if (!quill) return;
+    console.log(delta);
+    quill.setContents(delta);
+  },[diff])
+
   // Create a function to update alignment immediately without debounce
   const updateAlignments = useCallback(() => {
     const quill = quillRef.current?.getEditor()
@@ -520,6 +545,10 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
         setIsLoading(false);      
     }, 0);
   }, [quillRef, highlightNumbersEnabled]);
+
+  useEffect(() => {
+    
+  }, [diff,diffToggleEnabled])
 
   // Add effect to highlight numbers when highlightNumbersEnabled changes
   useEffect(() => {
@@ -772,7 +801,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     highlightNumbers, 
     highlightNumbersEnabled
   ])
-
   const handleUndo = useCallback(() => {
     if (undoStack.length === 0) return
 
@@ -1200,6 +1228,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     getWer: () => wer,
     handleUndo,
     handleRedo,
+    generateTranscriptFromDiff
   }))
 
   useEffect(() => {
