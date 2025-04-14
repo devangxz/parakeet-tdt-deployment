@@ -2,7 +2,8 @@
 import axios from 'axios'
 import { Session, User } from 'next-auth'
 import Quill from 'quill'
-import { Delta, Op } from 'quill/core'
+const Delta = Quill.import('delta');
+import { Op } from 'quill/core'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
@@ -1459,7 +1460,6 @@ const highlightAllMatches = (
   
   return count;
 }
-
 // Helper function to escape special regex characters
 const escapeRegExp = (string: string): string => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
