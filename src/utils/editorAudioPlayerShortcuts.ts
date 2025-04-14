@@ -470,6 +470,9 @@ const useShortcuts = (shortcutControls: ShortcutControls) => {
                 return
               }
               event.preventDefault()
+              event.stopPropagation()
+              
+              // Execute the shortcut handler
               func()
             }
             return acc

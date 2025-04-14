@@ -2,7 +2,8 @@
 import axios from 'axios'
 import { Session, User } from 'next-auth'
 import Quill from 'quill'
-import { Delta, Op } from 'quill/core'
+const Delta = Quill.import('delta');
+import { Op } from 'quill/core'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
@@ -1118,9 +1119,6 @@ const handleSubmit = async ({
 }: HandleSubmitParams) => {
   if (!orderDetails || !orderDetails.orderId || !step) return
 
-  const submissionType =
-    orderDetails.orderType === 'FORMATTING' ? 'file(s)' : 'transcription'
-  const toastId = toast.loading(`Submitting ${submissionType}...`)
   const transcript = quill?.getText() || ''
 
   try {
@@ -1173,20 +1171,9 @@ const handleSubmit = async ({
       localStorage.removeItem('editorData')
       await deleteEditorDataIDB(orderDetails.fileId)
     }
-
-    toast.dismiss(toastId)
-    const successToastId = toast.success(
-      `${submissionType} submitted successfully`
-    )
-    toast.dismiss(successToastId)
-    if(orderDetails.isTestOrder) {
-      router.push(`/transcribe/transcriber`);
-    } else {
-      router.push(`/transcribe/${step === 'QC' ? 'qc' : 'legal-cf-reviewer'}`)
-    }
   } catch (error) {
     setTimeout(() => {
-      toast.dismiss(toastId)
+      toast.dismiss()
     }, 100) //Had to use this setTimeout because the minimum percentage check gives an error Immediately
 
     let errorText = 'Error while submitting transcript' // Default error message
@@ -1203,6 +1190,7 @@ const handleSubmit = async ({
     }
     const errorToastId = toast.error(errorText)
     toast.dismiss(errorToastId)
+    throw new Error(errorText)
   }
 }
 
@@ -1372,6 +1360,111 @@ export interface CustomerQuillSelection {
   length: number
 }
 
+/**
+ * Clears all search highlights from the Quill editor.
+ */
+const clearAllHighlights = (quill: Quill): void => {
+  if (!quill) return;
+  
+  const text = quill.getText();
+  quill.formatText(0, text.length, {
+    background: false,  // Remove background formatting from the entire document
+  });
+};
+
+/**
+ * Highlights all occurrences of a search term in the Quill editor.
+ * Returns the count of matches found.
+ */
+const highlightAllMatches = (
+  quill: Quill,
+  searchText: string,
+  matchCase: boolean,
+  matchSelection: boolean,
+  selection: { index: number; length: number } | null
+): number => {
+  if (!quill || !searchText) return 0;
+
+  // First clear any existing highlights
+  clearAllHighlights(quill);
+
+  const searchRange = {
+    start: 0,
+    end: quill.getText().length,
+  };
+
+  // If there's a selection and matchSelection is enabled, limit search to that range
+  if (selection && selection.length > 0 && matchSelection) {
+    searchRange.start = selection.index;
+    searchRange.end = selection.index + selection.length;
+  }
+
+  const text = quill.getText(
+    searchRange.start,
+    searchRange.end - searchRange.start
+  );
+  const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase();
+  const textToSearch = matchCase ? text : text.toLowerCase();
+
+  let count = 0;
+  const results: number[] = [];
+
+  // First, find all matches and collect their indices
+  // We'll use a regex with word boundaries to ensure exact matches
+  // This prevents matching partial words from previous searches
+  const searchRegex = matchCase 
+    ? new RegExp(`\\b${escapeRegExp(effectiveSearchText)}\\b|${escapeRegExp(effectiveSearchText)}`, 'g')
+    : new RegExp(`\\b${escapeRegExp(effectiveSearchText)}\\b|${escapeRegExp(effectiveSearchText)}`, 'gi');
+  
+  let match;
+  while ((match = searchRegex.exec(textToSearch)) !== null) {
+    // Store the absolute index
+    results.push(match.index + searchRange.start);
+    count++;
+  }
+
+  // Then highlight all matches using a single Delta operation
+  if (results.length > 0) {
+    // Create a delta that represents all the formatting operations
+    const delta = new Delta();
+    
+    // We need to sort the results to apply formatting in ascending order
+    results.sort((a, b) => a - b);
+    
+    let lastIndex = 0;
+    
+    // Build delta operations for the entire document
+    for (let i = 0; i < results.length; i++) {
+      const absoluteIndex = results[i];
+      
+      // Skip if this would go beyond text boundaries
+      if (absoluteIndex + searchText.length > quill.getText().length) {
+        continue;
+      }
+      
+      // Retain text up to the current match
+      if (absoluteIndex > lastIndex) {
+        delta.retain(absoluteIndex - lastIndex);
+      }
+      
+      // Apply formatting to the match
+      delta.retain(searchText.length, { background: '#ffeb3b' });
+      
+      // Update lastIndex for next iteration
+      lastIndex = absoluteIndex + searchText.length;
+    }
+    
+    // Apply the delta to the editor in a single operation
+    quill.updateContents(delta,'user');
+  }
+  
+  return count;
+}
+// Helper function to escape special regex characters
+const escapeRegExp = (string: string): string => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 const searchAndSelect = (
   quill: Quill,
   searchText: string,
@@ -1396,68 +1489,95 @@ const searchAndSelect = (
   if (selection && selection.length > 0 && matchSelection) {
     searchRange.start = selection.index
     searchRange.end = selection.index + selection.length
-
-    // Clear the previous highlight if it exists and is valid
-    if (lastSearchIndex >= 0 && lastSearchIndex < quill.getText().length) {
-      quill.formatText(selection.index, selection.length, {
-        background: '#D9D9D9',
-      })
-    }
   }
 
+  // Get the text content to search within
   const text = quill.getText(
     searchRange.start,
     searchRange.end - searchRange.start
   )
-  const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase()
-
-  let startIndex = searchBackwards
-    ? lastSearchIndex - 1 - searchRange.start
-    : lastSearchIndex + 1 - searchRange.start
-
-  if (startIndex < 0 || startIndex >= text.length) {
-    startIndex = searchBackwards ? text.length - 1 : 0
+   
+  // Reset previous active highlight if valid
+  if (lastSearchIndex >= 0 && lastSearchIndex < quill.getText().length) {
+    try {
+      // Only attempt to format if the index is in bounds
+      const docLength = quill.getText().length;
+      if (lastSearchIndex + searchText.length <= docLength) {
+        quill.formatText(lastSearchIndex, searchText.length, {
+          background: '#ffeb3b', // Change back to yellow for previous active match
+        });
+      }
+    } catch (e) {
+      console.error('Error formatting previous highlight:', e);
+    }
   }
 
-  let index = -1
+  const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase()
+  
+  // Create regex pattern for exact matching
+  const searchRegex = matchCase 
+    ? new RegExp(`\\b${escapeRegExp(effectiveSearchText)}\\b|${escapeRegExp(effectiveSearchText)}`, 'g')
+    : new RegExp(`\\b${escapeRegExp(effectiveSearchText)}\\b|${escapeRegExp(effectiveSearchText)}`, 'gi');
+  
+  // Find all matches
+  const matches: number[] = [];
+  let match;
+  const textToSearch = matchCase ? text : text.toLowerCase();
+  
+  // Get all matches first
+  while ((match = searchRegex.exec(textToSearch)) !== null) {
+    matches.push(match.index + searchRange.start);
+  }
+  
+  if (matches.length === 0) {
+    setLastSearchIndex(-1)
+    setSearchHighlight(null)
+    toastInstance.error('Text not found in selected range')
+    return;
+  }
+  
+  // Find the appropriate match based on the last position and direction
+  let nextMatchIndex = -1;
+  
   if (searchBackwards) {
-    index = matchCase
-      ? text.lastIndexOf(searchText, startIndex)
-      : text.toLowerCase().lastIndexOf(effectiveSearchText, startIndex)
-
-    // If not found searching backwards, wrap to end
-    if (index === -1 && startIndex !== text.length - 1) {
-      index = matchCase
-        ? text.lastIndexOf(searchText, text.length - 1)
-        : text.toLowerCase().lastIndexOf(effectiveSearchText, text.length - 1)
+    // When searching backwards, find the last match before lastSearchIndex
+    for (let i = matches.length - 1; i >= 0; i--) {
+      if (matches[i] < lastSearchIndex || lastSearchIndex === -1) {
+        nextMatchIndex = matches[i];
+        break;
+      }
+    }
+    
+    // If no match found, wrap around to the end
+    if (nextMatchIndex === -1 && matches.length > 0) {
+      nextMatchIndex = matches[matches.length - 1];
     }
   } else {
-    index = matchCase
-      ? text.indexOf(searchText, startIndex)
-      : text.toLowerCase().indexOf(effectiveSearchText, startIndex)
-
-    // If not found searching forwards, wrap to start
-    if (index === -1 && startIndex !== 0) {
-      index = matchCase
-        ? text.indexOf(searchText, 0)
-        : text.toLowerCase().indexOf(effectiveSearchText, 0)
+    // When searching forwards, find the first match after lastSearchIndex
+    for (let i = 0; i < matches.length; i++) {
+      if (matches[i] > lastSearchIndex || lastSearchIndex === -1) {
+        nextMatchIndex = matches[i];
+        break;
+      }
+    }
+    
+    // If no match found, wrap around to the beginning
+    if (nextMatchIndex === -1 && matches.length > 0) {
+      nextMatchIndex = matches[0];
     }
   }
-
-  if (index !== -1) {
-    // Adjust index relative to document start
-    const absoluteIndex = index + searchRange.start
-
-    // Apply new highlight
-    quill.formatText(absoluteIndex, searchText.length, {
+  
+  if (nextMatchIndex !== -1) {
+    // Apply active highlight (blue) for the current match
+    quill.formatText(nextMatchIndex, searchText.length, {
       background: '#b3d4fc',
     })
 
     // Store the current search highlight
-    setSearchHighlight({ index: absoluteIndex, length: searchText.length })
+    setSearchHighlight({ index: nextMatchIndex, length: searchText.length })
 
     // Scroll the highlighted text into view
-    const bounds = quill.getBounds(absoluteIndex)
+    const bounds = quill.getBounds(nextMatchIndex)
     const editorElement = quill.root
     const scrollingContainer = editorElement.closest('.ql-editor')
     if (scrollingContainer && bounds) {
@@ -1467,7 +1587,7 @@ const searchAndSelect = (
       scrollingContainer.scrollTop = scrollTop
     }
 
-    setLastSearchIndex(absoluteIndex)
+    setLastSearchIndex(nextMatchIndex)
   } else {
     setLastSearchIndex(-1)
     setSearchHighlight(null)
@@ -1487,79 +1607,79 @@ const replaceTextHandler = (
   selection: { index: number; length: number } | null,
   matchSelection: boolean
 ) => {
-  if (!quill) return
+  if (!quill || !searchText) return
 
-  let replaced = false
   const searchRange = {
     start: 0,
     end: quill.getText().length,
   }
 
-  // Limit search range to the selected text if applicable
+  // If there's a selection and matchSelection is enabled, limit search to that range
   if (selection && selection.length > 0 && matchSelection) {
     searchRange.start = selection.index
     searchRange.end = selection.index + selection.length
   }
 
+  const text = quill.getText(
+    searchRange.start,
+    searchRange.end - searchRange.start
+  )
   const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase()
+  const textToSearch = matchCase ? text : text.toLowerCase()
 
-  const replace = (index: number) => {
-    const absoluteIndex = index + searchRange.start
-    quill.deleteText(absoluteIndex, searchText.length, 'user')
-    quill.insertText(absoluteIndex, replaceWith, 'user')
-    replaced = true
+  // Find all matches
+  const matches: number[] = []
+  const searchRegex = matchCase
+    ? new RegExp(`\\b${escapeRegExp(effectiveSearchText)}\\b|${escapeRegExp(effectiveSearchText)}`, 'g')
+    : new RegExp(`\\b${escapeRegExp(effectiveSearchText)}\\b|${escapeRegExp(effectiveSearchText)}`, 'gi')
+
+  let match
+  while ((match = searchRegex.exec(textToSearch)) !== null) {
+    matches.push(match.index + searchRange.start)
+  }
+
+  if (matches.length === 0) {
+    toastInstance.error('Text not found')
+    return
   }
 
   if (replaceAll) {
-    // Process each replacement asynchronously using setTimeout
-    const processNext = (startIndex: number) => {
-      const text = quill.getText(
-        searchRange.start,
-        searchRange.end - searchRange.start
-      )
-      const textToSearch = matchCase ? text : text.toLowerCase()
-      const index = textToSearch.indexOf(effectiveSearchText, startIndex)
+    // Sort matches in reverse order to prevent index shifting
+    const sortedMatches = [...matches].sort((a, b) => b - a)
 
-      if (index !== -1) {
-        replace(index)
-        // Yield to the browser so UI stays responsive.
-        setTimeout(() => processNext(index + replaceWith.length), 0)
-      } else {
-        if (!replaced) {
-          toastInstance.error('Text not found in selected range')
-        }
-      }
+    // Replace all matches, starting from the end
+    for (const matchIndex of sortedMatches) {
+      quill.deleteText(matchIndex, searchText.length)
+      quill.insertText(matchIndex, replaceWith)
     }
 
-    processNext(0)
+    toastInstance.error(`Replaced ${matches.length} occurrences`)
   } else {
-    // Single-instance replacement (synchronous)
-    const currentSelection = quill.getSelection()
-    if (currentSelection && currentSelection.length > 0) {
-      const selectedText = quill.getText(
-        currentSelection.index,
-        currentSelection.length
-      )
-      if (
-        (matchCase && selectedText === searchText) ||
-        (!matchCase && selectedText.toLowerCase() === effectiveSearchText)
-      ) {
-        replace(currentSelection.index - searchRange.start)
-      }
-    } else {
-      const text = quill.getText(
-        searchRange.start,
-        searchRange.end - searchRange.start
-      )
-      const textToSearch = matchCase ? text : text.toLowerCase()
-      const index = textToSearch.indexOf(effectiveSearchText)
-      if (index !== -1) {
-        replace(index)
+    // Find next match after the current cursor position
+    const currentIndex = quill.getSelection()?.index || 0
+    let nextMatchIndex = -1
+
+    for (let i = 0; i < matches.length; i++) {
+      if (matches[i] >= currentIndex) {
+        nextMatchIndex = matches[i]
+        break
       }
     }
 
-    if (!replaced) {
-      toastInstance.error('Text not found in selected range')
+    // If no match found after cursor, wrap around to the beginning
+    if (nextMatchIndex === -1 && matches.length > 0) {
+      nextMatchIndex = matches[0]
+    }
+
+    if (nextMatchIndex !== -1) {
+      quill.deleteText(nextMatchIndex, searchText.length)
+      quill.insertText(nextMatchIndex, replaceWith)
+      quill.setSelection(nextMatchIndex + replaceWith.length, 0)
+      
+      // Clear all previous highlights and re-highlight remaining matches
+      clearAllHighlights(quill)
+      // Highlight all remaining matches
+      highlightAllMatches(quill, searchText, matchCase, matchSelection, selection)
     }
   }
 }
@@ -2241,7 +2361,6 @@ export {
   convertBlankToSeconds,
   convertTimestampToSeconds,
   updatePlayedPercentage,
-  scrollEditorToPos,
   convertSecondsToTimestamp,
   downloadMP3,
   handleTextFilesUpload,
@@ -2279,6 +2398,8 @@ export {
   calculateEditListenCorrelationPercentage,
   calculateSpeakerChangePercentage,
   calculateSpeakerMacroF1Score,
-  getTestTranscript
+  getTestTranscript,
+  clearAllHighlights,
+  highlightAllMatches
 }
 export type { CTMType }
