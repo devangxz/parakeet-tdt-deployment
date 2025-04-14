@@ -784,6 +784,14 @@ function EditorPage() {
     if(highlightNumbersEnabled && editorRef.current != null) {
       editorRef.current?.highlightNumbers()
     }
+    if(findAndReplaceOpen && findText) {
+      highlightAllMatches(
+        quill,
+        findText,
+        matchCase,
+        matchSelection,
+        selection)
+    }
     // Restore the original cursor position if it exists
     if (currentSelection) {
       quill.setSelection(currentSelection)
@@ -979,7 +987,7 @@ function EditorPage() {
           setLastSearchIndex(-1);
         }
       }
-    }, 500);
+    }, 700);
     
     const quill = quillRef.current.getEditor();
     quill.on('text-change', handleTextChange);

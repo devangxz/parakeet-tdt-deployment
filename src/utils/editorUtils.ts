@@ -1422,33 +1422,39 @@ const highlightAllMatches = (
     count++;
   }
 
-  // Then highlight all matches in batches to improve performance
+  // Then highlight all matches using a single Delta operation
   if (results.length > 0) {
-    const batchSize = 20;
-    let processedCount = 0;
+    // Create a delta that represents all the formatting operations
+    const delta = new Delta();
     
-    const applyHighlightBatch = () => {
-      const endIdx = Math.min(processedCount + batchSize, results.length);
+    // We need to sort the results to apply formatting in ascending order
+    results.sort((a, b) => a - b);
+    
+    let lastIndex = 0;
+    
+    // Build delta operations for the entire document
+    for (let i = 0; i < results.length; i++) {
+      const absoluteIndex = results[i];
       
-      for (let i = processedCount; i < endIdx; i++) {
-        const absoluteIndex = results[i];
-        
-        // Ensure we don't try to highlight beyond text boundaries
-        if (absoluteIndex + searchText.length <= quill.getText().length) {
-          quill.formatText(absoluteIndex, searchText.length, {
-            background: '#ffeb3b',  // Yellow highlight for all matches
-          });
-        }
+      // Skip if this would go beyond text boundaries
+      if (absoluteIndex + searchText.length > quill.getText().length) {
+        continue;
       }
       
-      processedCount = endIdx;
-      
-      if (processedCount < results.length) {
-        setTimeout(applyHighlightBatch, 0);
+      // Retain text up to the current match
+      if (absoluteIndex > lastIndex) {
+        delta.retain(absoluteIndex - lastIndex);
       }
-    };
+      
+      // Apply formatting to the match
+      delta.retain(searchText.length, { background: '#ffeb3b' });
+      
+      // Update lastIndex for next iteration
+      lastIndex = absoluteIndex + searchText.length;
+    }
     
-    applyHighlightBatch();
+    // Apply the delta to the editor in a single operation
+    quill.updateContents(delta,'user');
   }
   
   return count;
