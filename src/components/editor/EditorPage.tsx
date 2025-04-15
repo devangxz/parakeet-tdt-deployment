@@ -1,7 +1,6 @@
 'use client'
 
 import { Cross1Icon, ReloadIcon, CheckIcon, ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons'
-import { debounce } from 'lodash'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
@@ -317,17 +316,7 @@ function EditorPage() {
 
   const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value
-    const prevText = findText
-    setFindText(text)
-    
-    // Clear ALL previous search highlights immediately when text changes
-    if (text !== prevText && quillRef?.current) {
-      clearAllHighlights(quillRef.current.getEditor())
-      setSearchHighlight(null)
-      setLastSearchIndex(-1)
-    }
-    
-    // Clear existing timeout
+    setFindText(text)    // Clear existing timeout
     if (findDebounceRef.current) {
       clearTimeout(findDebounceRef.current)
     }
@@ -956,58 +945,6 @@ function EditorPage() {
       }
     }
   }, [])
-
-  // Add an effect to update search results when text content changes
-  useEffect(() => {
-    if (!findAndReplaceOpen || !findText || !quillRef?.current) return;
-    
-    // Set up a handler for text changes in the editor
-    const handleTextChange = debounce(() => {
-      if (!quillRef?.current) return;
-      const quill = quillRef.current.getEditor();
-      
-      // Update match count
-      setMatchCount(countMatches(findText));
-      
-      // Rehighlight all matches
-      clearAllHighlights(quill);
-      highlightAllMatches(
-        quill,
-        findText,
-        matchCase,
-        matchSelection,
-        selection
-      );
-      
-      // If the current search highlight is no longer valid, reset it
-      if (searchHighlight) {
-        const text = quill.getText();
-        if (searchHighlight.index >= text.length) {
-          setSearchHighlight(null);
-          setLastSearchIndex(-1);
-        }
-      }
-    }, 700);
-    
-    const quill = quillRef.current.getEditor();
-    quill.on('text-change', handleTextChange);
-    
-    return () => {
-      quill.off('text-change', handleTextChange);
-      handleTextChange.cancel();
-    };
-  }, [
-    findAndReplaceOpen, 
-    findText, 
-    quillRef, 
-    matchCase, 
-    matchSelection, 
-    selection, 
-    searchHighlight, 
-    countMatches, 
-    setMatchCount,
-    setLastSearchIndex
-  ]);
 
   return (
     <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
