@@ -1360,107 +1360,6 @@ export interface CustomerQuillSelection {
   length: number
 }
 
-/**
- * Clears all search highlights from the Quill editor.
- */
-const clearAllHighlights = (quill: Quill): void => {
-  if (!quill) return;
-  
-  const text = quill.getText();
-  quill.formatText(0, text.length, {
-    background: false,  // Remove background formatting from the entire document
-  });
-};
-
-/**
- * Highlights all occurrences of a search term in the Quill editor.
- * Returns the count of matches found.
- */
-const highlightAllMatches = (
-  quill: Quill,
-  searchText: string,
-  matchCase: boolean,
-  matchSelection: boolean,
-  selection: { index: number; length: number } | null
-): number => {
-  if (!quill || !searchText) return 0;
-
-  // First clear any existing highlights
-  clearAllHighlights(quill);
-
-  const searchRange = {
-    start: 0,
-    end: quill.getText().length,
-  };
-
-  // If there's a selection and matchSelection is enabled, limit search to that range
-  if (selection && selection.length > 0 && matchSelection) {
-    searchRange.start = selection.index;
-    searchRange.end = selection.index + selection.length;
-  }
-
-  const text = quill.getText(
-    searchRange.start,
-    searchRange.end - searchRange.start
-  );
-  const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase();
-  const textToSearch = matchCase ? text : text.toLowerCase();
-
-  let count = 0;
-  let lastIndex = 0;
-  const results: number[] = [];
-
-  // First, find all matches and collect their indices
-  while (lastIndex < textToSearch.length) {
-    const foundIndex = textToSearch.indexOf(effectiveSearchText, lastIndex);
-    if (foundIndex === -1) break;
-    
-    // Store the absolute index
-    results.push(foundIndex + searchRange.start);
-    
-    // Move past this match
-    lastIndex = foundIndex + effectiveSearchText.length;
-    count++;
-  }
-
-  // Then highlight all matches using a single Delta operation
-  if (results.length > 0) {
-    // Create a delta that represents all the formatting operations
-    const delta = new Delta();
-    
-    // We need to sort the results to apply formatting in ascending order
-    results.sort((a, b) => a - b);
-    
-    let lastIndex = 0;
-    
-    // Build delta operations for the entire document
-    for (let i = 0; i < results.length; i++) {
-      const absoluteIndex = results[i];
-      
-      // Skip if this would go beyond text boundaries
-      if (absoluteIndex + searchText.length > quill.getText().length) {
-        continue;
-      }
-      
-      // Retain text up to the current match
-      if (absoluteIndex > lastIndex) {
-        delta.retain(absoluteIndex - lastIndex);
-      }
-      
-      // Apply formatting to the match
-      delta.retain(searchText.length, { background: '#ffeb3b' });
-      
-      // Update lastIndex for next iteration
-      lastIndex = absoluteIndex + searchText.length;
-    }
-    
-    // Apply the delta to the editor in a single operation
-    quill.updateContents(delta,'user');
-  }
-  
-  return count;
-}
-
 const searchAndSelect = (
   quill: Quill,
   searchText: string,
@@ -1485,17 +1384,12 @@ const searchAndSelect = (
   if (selection && selection.length > 0 && matchSelection) {
     searchRange.start = selection.index
     searchRange.end = selection.index + selection.length
-  }
 
-  // Reset previous active highlight to yellow, if it exists and is valid
-  if (lastSearchIndex >= 0 && lastSearchIndex < quill.getText().length) {
-    // Only attempt to format if the index is in bounds
-    // Check to make sure we're not formatting beyond document boundaries
-    const docLength = quill.getText().length;
-    if (lastSearchIndex + searchText.length <= docLength) {
-      quill.formatText(lastSearchIndex, searchText.length, {
-        background: '#ffeb3b', // Change back to yellow for previous active match
-      });
+    // Clear the previous highlight if it exists and is valid
+    if (lastSearchIndex >= 0 && lastSearchIndex < quill.getText().length) {
+      quill.formatText(selection.index, selection.length, {
+        background: '#D9D9D9',
+      })
     }
   }
 
@@ -1504,12 +1398,12 @@ const searchAndSelect = (
     searchRange.end - searchRange.start
   )
   const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase()
+
   let startIndex = searchBackwards
     ? lastSearchIndex - 1 - searchRange.start
     : lastSearchIndex + 1 - searchRange.start
 
-  // Validate startIndex is within reasonable bounds
-  if (startIndex < 0 || startIndex >= text.length || lastSearchIndex === -1) {
+  if (startIndex < 0 || startIndex >= text.length) {
     startIndex = searchBackwards ? text.length - 1 : 0
   }
 
@@ -1542,7 +1436,7 @@ const searchAndSelect = (
     // Adjust index relative to document start
     const absoluteIndex = index + searchRange.start
 
-    // Apply active highlight (blue) for the current match
+    // Apply new highlight
     quill.formatText(absoluteIndex, searchText.length, {
       background: '#b3d4fc',
     })
@@ -2335,6 +2229,7 @@ export {
   convertBlankToSeconds,
   convertTimestampToSeconds,
   updatePlayedPercentage,
+  scrollEditorToPos,
   convertSecondsToTimestamp,
   downloadMP3,
   handleTextFilesUpload,
@@ -2372,8 +2267,6 @@ export {
   calculateEditListenCorrelationPercentage,
   calculateSpeakerChangePercentage,
   calculateSpeakerMacroF1Score,
-  getTestTranscript,
-  clearAllHighlights,
-  highlightAllMatches
+  getTestTranscript
 }
 export type { CTMType }
