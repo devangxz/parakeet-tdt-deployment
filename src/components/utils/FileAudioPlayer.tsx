@@ -8,13 +8,11 @@ const FileAudioPlayer = ({
   playing,
   setPlaying,
   url,
-  audioPlayer,
 }: {
   fileId: string
   playing: Record<string, boolean>
   setPlaying: Dispatch<SetStateAction<Record<string, boolean>>>
   url: string
-  audioPlayer?: React.RefObject<HTMLAudioElement>
 }) => {
   const [isAudioPlaying, setIsAudioPlaying] = useState(playing[fileId] || false)
 
@@ -38,7 +36,7 @@ const FileAudioPlayer = ({
       {!isAudioPlaying && <Play className='h-4 w-4' />}
       {isAudioPlaying && <Pause className='h-4 w-4' />}
       {isAudioPlaying && (
-        <audio ref={audioPlayer} src={url} autoPlay id='audio-player' className='hidden'></audio>
+        <audio src={url} autoPlay id='audio-player' className='hidden'></audio>
       )}
     </button>
   )

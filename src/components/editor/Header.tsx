@@ -21,7 +21,6 @@ import Toolbar from './Toolbar'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { EditorHandle } from '@/components/editor/Editor'
 import { OrderDetails } from '@/components/editor/EditorPage'
-import Waveform from '@/components/editor/Waveform'
 import {
   TooltipProvider,
   Tooltip,
@@ -40,6 +39,7 @@ import {
   navigateAndPlayBlanks,
   playCurrentParagraphTimestamp,
 } from '@/utils/editorUtils'
+import formatDuration from '@/utils/formatDuration'
 
 const createShortcutControls = (
   audioPlayer: React.RefObject<HTMLAudioElement>,
@@ -164,8 +164,8 @@ export default memo(function Header({
   step,
   toggleHighlightNumerics,
 }: HeaderProps) {
-  // const [currentValue, setCurrentValue] = useState(0)
-  // const [currentTime, setCurrentTime] = useState('00:00')
+  const [currentValue, setCurrentValue] = useState(0)
+  const [currentTime, setCurrentTime] = useState('00:00')
   const [audioDuration, setAudioDuration] = useState(0)
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [isPlayerLoaded, setIsPlayerLoaded] = useState(false)
@@ -285,6 +285,7 @@ export default memo(function Header({
         throw new Error('Failed to fetch audio file')
       }
     } catch (error) {
+      console.error('Error fetching audio:', error)
       toast.error('Failed to fetch audio file')
     }
   }
@@ -342,6 +343,56 @@ export default memo(function Header({
       audio.removeEventListener('error', handleError)
     }
   }, [audioUrl, getAudioPlayer])
+
+  const seekTo = (value: number) => {
+    if (!audioPlayer.current) return
+    const duration = audioPlayer.current.duration
+    if (duration) {
+      const time = (value / 100) * duration
+      audioPlayer.current.currentTime = time
+      if (audioPlayer.current.paused) {
+        audioPlayer.current.play()
+      }
+    }
+  }
+
+  useEffect(() => {
+    const audio = audioPlayer.current
+    if (!audio) return
+
+    const handleTimeUpdate = () => {
+      const currentTime = formatDuration(audio.currentTime)
+      setCurrentTime(currentTime)
+      const playedPercentage = (audio.currentTime / audio.duration) * 100
+      setCurrentValue(playedPercentage)
+    }
+
+    audio.addEventListener('timeupdate', handleTimeUpdate)
+
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate)
+    }
+  }, [])
+
+  const handleMouseMoveOnWaveform = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (typeof document === 'undefined') return // Ensure code runs only in the browser
+
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const percentage = (x / rect.width) * 100
+    if (audioPlayer.current?.duration) {
+      const time = (percentage / 100) * audioPlayer.current.duration
+      const timeString = formatDuration(time)
+
+      const tooltip = document.getElementById('time-tooltip')
+      if (tooltip) {
+        tooltip.style.display = 'block'
+        tooltip.style.left = `${e.clientX}px`
+        tooltip.style.top = `${e.clientY - 25}px`
+        tooltip.textContent = timeString
+      }
+    }
+  }
 
   const editorShortcutControls = useMemo(() => {
     const controls: Partial<ShortcutControls> = {
@@ -513,18 +564,6 @@ export default memo(function Header({
     }
   }, [editorRef]);
 
-  const handleUndo = () => {
-    if (editorRef?.current) {
-      editorRef.current.handleUndo();
-    }
-  }
-
-  const handleRedo = () => {
-    if (editorRef?.current) {
-      editorRef.current.handleRedo();
-    }
-  }
-  
   return (
     <div className='border bg-background border-customBorder rounded-md relative'>
       {!isPlayerLoaded && (
@@ -534,21 +573,51 @@ export default memo(function Header({
         </div>
       )}
       <div className='h-12'>
-        <Waveform
-          waveformUrl={waveformUrl}
-          audioPlayer={audioPlayer}
-          className="rounded-t-md"
-          backgroundSize="100% 200%"
-          backgroundPosition="center top"
-          showCurrentTimeLabel={true}
-          showDurationLabel={true}
-          onSeek={(time) => {
-            if (audioPlayer.current) {
-              audioPlayer.current.currentTime = time
-              editorRef?.current?.scrollToCurrentWord()
+        <div
+          id='waveform'
+          className='relative h-full overflow-hidden cursor-pointer rounded-t-md'
+          onMouseMove={handleMouseMoveOnWaveform}
+          onMouseLeave={() => {
+            if (typeof document === 'undefined') return
+
+            const tooltip = document.getElementById('time-tooltip')
+            if (tooltip) {
+              tooltip.style.display = 'none'
             }
           }}
-        />
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect()
+            const x = e.clientX - rect.left
+            const percentage = (x / rect.width) * 100
+            seekTo(percentage)
+            editorRef?.current?.scrollToCurrentWord()
+          }}
+          style={{
+            backgroundImage: `url(${waveformUrl})`,
+            backgroundSize: '100% 200%',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center top',
+          }}
+        >
+          <div
+            id='time-tooltip'
+            className='fixed hidden z-50 bg-primary text-white px-1 py-0.5 rounded-md text-[11px] pointer-events-none'
+            style={{ transform: 'translate(-50%, 200%)' }}
+          />
+          <div
+            className='absolute top-0 left-0 h-full bg-primary/20'
+            style={{
+              width: `${currentValue}%`,
+              transition: 'width 0.1s linear',
+            }}
+          />
+          <span className='absolute top-0 left-0 bg-primary text-white px-1 py-0.5 rounded-md text-[11px]'>
+            {currentTime}
+          </span>
+          <span className='absolute top-0 right-0 bg-primary text-white px-1 py-0.5 rounded-md text-[11px]'>
+            {formatDuration(audioDuration)}
+          </span>
+        </div>
       </div>
 
       <div className='flex flex-col justify-between p-2'>
@@ -707,8 +776,6 @@ export default memo(function Header({
                     step={step}
                     removeTimestamps={removeTimestamps}
                     toggleHighlightNumerics={toggleHighlightNumerics}
-                    handleUndo={handleUndo}
-                    handleRedo={handleRedo}
                   />
                 </div>
               </TooltipProvider>
