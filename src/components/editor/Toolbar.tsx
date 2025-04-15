@@ -60,6 +60,7 @@ interface ToolbarProps {
   handleUndo: () => void
   handleRedo: () => void
   generateTranscriptFromDiff: () => void
+  diffToggleEnabled: boolean
 }
 
 export default function Toolbar({
@@ -87,6 +88,7 @@ export default function Toolbar({
   handleUndo,
   handleRedo,
   generateTranscriptFromDiff,
+  diffToggleEnabled,
 }: ToolbarProps) {
   return (
     <TooltipProvider>
@@ -332,7 +334,7 @@ export default function Toolbar({
             <Tooltip>
               <TooltipTrigger>
                 <PlayerButton
-                  icon={<GitCompareArrowsIcon className='w-4 h-4' />}
+                  icon={<GitCompareArrowsIcon className={`w-4 h-4 ${diffToggleEnabled ? 'text-primary' : ''}`} />}
                   tooltip='Insert interpreter swear in line'
                   onClick={generateTranscriptFromDiff}
                 />

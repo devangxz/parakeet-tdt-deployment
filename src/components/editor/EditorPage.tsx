@@ -218,7 +218,6 @@ function EditorPage() {
     if (range) {
       setSelection({ index: range.index, length: range.length })
     }
-    setDiffToggleEnabled(false);
   }
 
   const isActive = usePreventMultipleTabs((params?.fileId as string) || '')
@@ -1063,6 +1062,8 @@ function EditorPage() {
         editorRef={editorRef}
         step={step}
         toggleHighlightNumerics={toggleHighlightNumerics}
+        diffToggleEnabled={diffToggleEnabled}
+        setDiffToggleEnabled={setDiffToggleEnabled}
       />
 
       <div className='flex h-full overflow-hidden'>

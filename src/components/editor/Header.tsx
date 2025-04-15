@@ -147,6 +147,8 @@ interface HeaderProps {
   editorRef?: React.RefObject<EditorHandle>
   step: string
   toggleHighlightNumerics: () => void
+  diffToggleEnabled: boolean
+  setDiffToggleEnabled: (enabled: boolean) => void
 }
 
 export default memo(function Header({
@@ -163,6 +165,8 @@ export default memo(function Header({
   editorRef,
   step,
   toggleHighlightNumerics,
+  diffToggleEnabled,
+  setDiffToggleEnabled,
 }: HeaderProps) {
   // const [currentValue, setCurrentValue] = useState(0)
   // const [currentTime, setCurrentTime] = useState('00:00')
@@ -526,8 +530,14 @@ export default memo(function Header({
   }
 
   const generateTranscriptFromDiff = () => {
-    if (editorRef?.current) {
-      editorRef.current.generateTranscriptFromDiff();
+    // Toggle the diff mode
+    setDiffToggleEnabled(!diffToggleEnabled);
+    
+    // If we're turning on diff mode, apply the diff
+    if (!diffToggleEnabled) {
+      if (editorRef?.current) {
+        editorRef.current.generateTranscriptFromDiff();
+      }
     }
   }
   
@@ -716,6 +726,7 @@ export default memo(function Header({
                     handleUndo={handleUndo}
                     handleRedo={handleRedo}
                     generateTranscriptFromDiff={generateTranscriptFromDiff}
+                    diffToggleEnabled={diffToggleEnabled}
                   />
                 </div>
               </TooltipProvider>

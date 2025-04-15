@@ -455,23 +455,33 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
   }, [alignments, ctms, typingTimer, quillRef, orderDetails.fileId])
 
   const generateTranscriptFromDiff = useCallback(() => {
-    const delta = new Delta();
-    const insertProperty = { color: 'green' };
-    const deleteProperty = { color: 'red' };
-    diff.forEach(([op, text]: DmpDiff) => {
-      if(op === DIFF_INSERT) {
-        delta.insert(text, insertProperty);
-      } else if(op === DIFF_DELETE) {
-        delta.retain(text.length, deleteProperty);
-      }else{
-        delta.retain(text.length);
-      }
-    });
+    console.log("diff", diff);
+    if (!diff || !diff.length) return;
+
     const quill = quillRef.current?.getEditor();
     if (!quill) return;
-    console.log(delta);
+    // Create a Delta object to apply the diff operations
+    const delta = new Delta();
+    
+    diff.forEach(([op, text]: DmpDiff) => {
+      if (op === DIFF_INSERT) {
+        // For inserts: add the text with green color
+        delta.insert(text, { color: 'green' });
+      } else if (op === DIFF_DELETE) {
+        // For deletes: add the text with red color and strike-through
+        delta.insert(text, { color: 'red', strike: true });
+      } else {
+        // For unchanged text: retain it as is
+        delta.insert(text);
+
+      }
+    });
+    
+    // Update the editor with our new delta
     quill.setContents(delta);
-  },[diff])
+    
+    console.log('Applied diff to editor content');
+  }, [diff, quillRef]);
 
   // Create a function to update alignment immediately without debounce
   const updateAlignments = useCallback(() => {
@@ -547,8 +557,16 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
   }, [quillRef, highlightNumbersEnabled]);
 
   useEffect(() => {
-    
-  }, [diff,diffToggleEnabled])
+    if (diffToggleEnabled) {
+      // Apply diff styling when diffToggleEnabled is true
+      generateTranscriptFromDiff();
+    } else if (quillRef.current && initialEditorData?.transcript) {
+      // Revert to normal text when diffToggleEnabled is false
+      const quill = quillRef.current.getEditor();
+      // Set content back to normal without diff styling
+      quill.setContents(getFormattedContent(initialEditorData.transcript));
+    }
+  }, [diffToggleEnabled, diff, generateTranscriptFromDiff, initialEditorData, quillRef]);
 
   // Add effect to highlight numbers when highlightNumbersEnabled changes
   useEffect(() => {
