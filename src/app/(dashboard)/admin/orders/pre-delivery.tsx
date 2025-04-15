@@ -1,7 +1,7 @@
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
@@ -79,7 +79,6 @@ export default function PreDeliveryPage({
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
-  const audioPlayer = useRef<HTMLAudioElement>(null)
   const [waveformUrls, setWaveformUrls] = useState<Record<string, string>>({})
   const [listenCounts, setListenCounts] = useState<Record<string, number[]>>({})
   const [editedSegments, setEditedSegments] = useState<
@@ -261,7 +260,6 @@ export default function PreDeliveryPage({
             playing={playing}
             setPlaying={setPlaying}
             url={currentlyPlayingFileUrl[row.original.fileId]}
-            audioPlayer={audioPlayer}
           />
         </div>
       ),
@@ -482,24 +480,6 @@ export default function PreDeliveryPage({
     },
   ]
 
-  const renderWaveform = (row: File) => {
-    if (!('fileId' in row)) return null
-    const fileId = row.fileId as string
-    if (!waveformUrls[fileId]) return null
-
-    return (
-      <div className='w-full h-full cursor-pointer'
-      >
-        <WaveformHeatmap
-          waveformUrl={waveformUrls[fileId]}
-          listenCount={listenCounts[fileId] || []}
-          editedSegments={editedSegments[fileId] || new Set()}
-          duration={row.duration}
-        />
-      </div>
-    )
-  }
-
   return (
     <>
       <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
@@ -513,7 +493,20 @@ export default function PreDeliveryPage({
         <DataTable
           data={preDeliveryFiles ?? []}
           columns={columns}
-          renderWaveform={renderWaveform}
+          renderWaveform={(row) => {
+            if (!('fileId' in row)) return null
+            const fileId = row.fileId as string
+            if (!waveformUrls[fileId]) return null
+
+            return (
+              <WaveformHeatmap
+                waveformUrl={waveformUrls[fileId]}
+                listenCount={listenCounts[fileId] || []}
+                editedSegments={editedSegments[fileId] || new Set()}
+                duration={row.duration}
+              />
+            )
+          }}
         />
       </div>
       <DeliveryPreDeliveryFile

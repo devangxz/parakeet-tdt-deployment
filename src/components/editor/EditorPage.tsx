@@ -1,7 +1,6 @@
 'use client'
 
-import { Cross1Icon, ReloadIcon, CheckIcon, ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons'
-import { debounce } from 'lodash'
+import { Cross1Icon, ReloadIcon } from '@radix-ui/react-icons'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
@@ -32,14 +31,12 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { RenderPDFDocument } from '@/components/utils'
 import { AUTOSAVE_INTERVAL } from '@/constants'
 import usePreventMultipleTabs from '@/hooks/usePreventMultipleTabs'
@@ -66,8 +63,7 @@ import {
   calculateSpeakerChangePercentage,
   calculateSpeakerMacroF1Score,
   getTestTranscript,
-  highlightAllMatches,
-  clearAllHighlights,
+ 
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
@@ -151,9 +147,6 @@ function EditorPage() {
   const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null)
   const [step, setStep] = useState<string>('')
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submissionStatus, setSubmissionStatus] = useState<'processing' | 'completed'>('processing')
-  const [submissionCountdown, setSubmissionCountdown] = useState(5)
   const [buttonLoading, setButtonLoading] = useState({
     download: false,
     upload: false,
@@ -176,7 +169,6 @@ function EditorPage() {
   const [matchCount, setMatchCount] = useState(0)
   const [matchSelection, setMatchSelection] = useState(false)
   const findInputRef = useRef<HTMLInputElement>(null)
-  const findDebounceRef = useRef<NodeJS.Timeout | null>(null)
   const [selection, setSelection] = useState<CustomerQuillSelection | null>(
     null
   )
@@ -208,7 +200,6 @@ function EditorPage() {
   const [isQCValidationPassed, setIsQCValidationPassed] = useState(false)
   const [testTranscript, setTestTranscript] = useState('')
   const [isSettingTest, setIsSettingTest] = useState(false)
-  const [toggleReplace, setToggleReplace] = useState(false);
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
     if (!quill) return
@@ -315,102 +306,19 @@ function EditorPage() {
     )
   }
 
-  const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const text = e.target.value
-    const prevText = findText
-    setFindText(text)
-    
-    // Clear ALL previous search highlights immediately when text changes
-    if (text !== prevText && quillRef?.current) {
-      clearAllHighlights(quillRef.current.getEditor())
-      setSearchHighlight(null)
-      setLastSearchIndex(-1)
-    }
-    
-    // Clear existing timeout
-    if (findDebounceRef.current) {
-      clearTimeout(findDebounceRef.current)
-    }
-    
-    // Use debounce to avoid excessive processing
-    if (text.length > 0) {
-      findDebounceRef.current = setTimeout(() => {
-        if (quillRef?.current) {
-          const quill = quillRef.current.getEditor()
-          
-          // Clear previous highlights before adding new ones
-          clearAllHighlights(quill)
-          
-          // Reset search state to prepare for fresh highlighting
-          setLastSearchIndex(-1)
-          
-          // Highlight all matches and get the count
-          const matchesFound = highlightAllMatches(
-            quill,
-            text,
-            matchCase,
-            matchSelection,
-            selection
-          )
-          setMatchCount(matchesFound)
-          
-          // If there are matches, select the first one
-          if (matchesFound > 0) {
-            searchAndSelectInstance(text, selection)
-          } else {
-            setSearchHighlight(null)
-          }
-        }
-      }, 250) // 250ms debounce
-    } else {
-      // Clear highlights if search text is empty
-      if (quillRef?.current) {
-        clearAllHighlights(quillRef.current.getEditor())
-        setSearchHighlight(null)
-      }
-      setMatchCount(0)
-      setLastSearchIndex(-1)
-    }
-  }
-
-  const handleReplaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const text = e.target.value
-    setReplaceText(text)
-  }
-
-  const toggleOpenFindAndReplace = useCallback(() => {
-    setFindAndReplaceOpen((prev) => {
-      // When closing, clear highlights and reset state
-      if (prev && quillRef?.current) {
-        clearAllHighlights(quillRef.current.getEditor())
-        setFindText('')
-        setReplaceText('')
-        setMatchCount(0)
-        setLastSearchIndex(-1)
-        setSearchHighlight(null)
-      }
-      return true
-    })
+  const toggleFindAndReplace = useCallback(() => {
+    setFindAndReplaceOpen((prev) => !prev)
     setSelectionHandler()
     setTimeout(() => {
       if (findInputRef.current) {
         findInputRef.current.focus()
       }
     }, 50)
-  }, [setSelectionHandler, quillRef])
+  }, [setSelectionHandler])
 
   const shortcutControls = useMemo(() => {
     const controls: Partial<ShortcutControls> = {
       findNextOccurrenceOfString: () => {
-        // Explicitly prevent the browser's default find behavior
-        window.addEventListener('keydown', function preventDefaultFind(e) {
-          if (e.key === 'f' && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault()
-            e.stopPropagation()
-            window.removeEventListener('keydown', preventDefaultFind)
-          }
-        }, { capture: true, once: true })
-        
         if (!findAndReplaceOpen) {
           if (quillRef?.current) {
             const quill = quillRef.current.getEditor()
@@ -427,29 +335,28 @@ function EditorPage() {
               }
             }
           }
-          setToggleReplace(false)
-          toggleOpenFindAndReplace()
+          toggleFindAndReplace()
         } else if (findText) {
           searchAndSelectInstance(findText, selection)
         }
       },
       findThePreviousOccurrenceOfString: () => {
         if (!findAndReplaceOpen) {
-          toggleOpenFindAndReplace()
+          toggleFindAndReplace()
         } else if (findText) {
           searchAndSelectInstance(findText, selection)
         }
       },
       replaceNextOccurrenceOfString: () => {
         if (!findAndReplaceOpen) {
-          toggleOpenFindAndReplace()
+          toggleFindAndReplace()
         } else if (findText && replaceText) {
           replaceTextInstance(findText, replaceText, selection)
         }
       },
       replaceAllOccurrencesOfString: () => {
         if (!findAndReplaceOpen) {
-          toggleOpenFindAndReplace()
+          toggleFindAndReplace()
         } else if (findText && replaceText) {
           replaceTextInstance(findText, replaceText, selection, true)
         }
@@ -581,39 +488,16 @@ function EditorPage() {
   }, [orderDetails.orderId, orderDetails.fileId, orderDetails.isTestOrder, initialEditorData, params, session?.user?.role, searchParams])
 
   useEffect(() => {
-
     const closeFindAndReplaceOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && findAndReplaceOpen) {
         setFindAndReplaceOpen(false)
-        setFindText('')
-        setReplaceText('')
-        setMatchCount(0)
-        setLastSearchIndex(-1)
-        setSelection(null)
-        setSearchHighlight(null)
-        
-        if (quillRef?.current) {
-          clearAllHighlights(quillRef.current.getEditor())
-        }
       }
     }
     window.addEventListener('keydown', closeFindAndReplaceOnEscape)
     return () => {
       window.removeEventListener('keydown', closeFindAndReplaceOnEscape)
     }
-  }, [findAndReplaceOpen, quillRef])
-
-  useEffect(() => {
-    if (!findAndReplaceOpen && quillRef?.current) {
-      clearAllHighlights(quillRef.current.getEditor())
-      setSearchHighlight(null)
-      setFindText('')
-      setReplaceText('')
-      setMatchCount(0)
-      setLastSearchIndex(-1)
-      setSelection(null)
-    }
-  }, [findAndReplaceOpen, quillRef])
+  }, [findAndReplaceOpen])
 
   const handleTabsValueChange = async (value: string) => {
     if (value === 'diff') {
@@ -784,14 +668,6 @@ function EditorPage() {
     if(highlightNumbersEnabled && editorRef.current != null) {
       editorRef.current?.highlightNumbers()
     }
-    if(findAndReplaceOpen && findText) {
-      highlightAllMatches(
-        quill,
-        findText,
-        matchCase,
-        matchSelection,
-        selection)
-    }
     // Restore the original cursor position if it exists
     if (currentSelection) {
       quill.setSelection(currentSelection)
@@ -832,50 +708,23 @@ function EditorPage() {
     [orderDetails.fileId]
   )
 
+  const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value
+    setFindText(text)
+    setMatchCount(countMatches(text))
+  }
+
+  const handleReplaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value
+    setReplaceText(text)
+  }
+
   const findHandler = () => {
-    if (quillRef?.current && findText) {
-      if (matchCount === 0) {
-        // If no matches found yet, highlight all first
-        const quill = quillRef.current.getEditor()
-        console.log('next handler')
-        // Clear previous highlights before adding new ones
-        clearAllHighlights(quill)
-        
-        const matchesFound = highlightAllMatches(
-          quill,
-          findText,
-          matchCase,
-          matchSelection,
-          selection
-        )
-        setMatchCount(matchesFound)
-      }
-      // Then select the next match
-      searchAndSelectInstance(findText, selection)
-    }
+    searchAndSelectInstance(findText, selection)
   }
 
   const findPreviousHandler = () => {
-    if (quillRef?.current && findText) {
-      if (matchCount === 0) {
-        // If no matches found yet, highlight all first
-        const quill = quillRef.current.getEditor()
-        
-        // Clear previous highlights before adding new ones
-        clearAllHighlights(quill)
-        
-        const matchesFound = highlightAllMatches(
-          quill,
-          findText,
-          matchCase,
-          matchSelection,
-          selection
-        )
-        setMatchCount(matchesFound)
-      }
-      // Then select the previous match
-      searchAndSelectReverseInstance(findText, selection)
-    }
+    searchAndSelectReverseInstance(findText, selection)
   }
 
   const replaceOneHandler = () => {
@@ -926,89 +775,6 @@ function EditorPage() {
     setHighlightNumbersEnabled(prev => !prev)
   }, [])
 
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    
-    if (isSubmitting && submissionStatus === 'completed') {
-      timer = setInterval(() => {
-        setSubmissionCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            // Close the tab after countdown
-            window.close();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [isSubmitting, submissionStatus]);
-  
-  useEffect(() => {
-    // Cleanup debounce timer on unmount
-    return () => {
-      if (findDebounceRef.current) {
-        clearTimeout(findDebounceRef.current)
-      }
-    }
-  }, [])
-
-  // Add an effect to update search results when text content changes
-  useEffect(() => {
-    if (!findAndReplaceOpen || !findText || !quillRef?.current) return;
-    
-    // Set up a handler for text changes in the editor
-    const handleTextChange = debounce(() => {
-      if (!quillRef?.current) return;
-      const quill = quillRef.current.getEditor();
-      
-      // Update match count
-      setMatchCount(countMatches(findText));
-      
-      // Rehighlight all matches
-      clearAllHighlights(quill);
-      highlightAllMatches(
-        quill,
-        findText,
-        matchCase,
-        matchSelection,
-        selection
-      );
-      
-      // If the current search highlight is no longer valid, reset it
-      if (searchHighlight) {
-        const text = quill.getText();
-        if (searchHighlight.index >= text.length) {
-          setSearchHighlight(null);
-          setLastSearchIndex(-1);
-        }
-      }
-    }, 700);
-    
-    const quill = quillRef.current.getEditor();
-    quill.on('text-change', handleTextChange);
-    
-    return () => {
-      quill.off('text-change', handleTextChange);
-      handleTextChange.cancel();
-    };
-  }, [
-    findAndReplaceOpen, 
-    findText, 
-    quillRef, 
-    matchCase, 
-    matchSelection, 
-    selection, 
-    searchHighlight, 
-    countMatches, 
-    setMatchCount,
-    setLastSearchIndex
-  ]);
-
   return (
     <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
       <Topbar
@@ -1042,7 +808,7 @@ function EditorPage() {
         getAudioPlayer={getAudioPlayer}
         quillRef={quillRef}
         orderDetails={orderDetails}
-        toggleFindAndReplace={toggleOpenFindAndReplace}
+        toggleFindAndReplace={toggleFindAndReplace}
         waveformUrl={waveformUrl}
         highlightWordsEnabled={highlightWordsEnabled}
         setHighlightWordsEnabled={setHighlightWordsEnabled}
@@ -1189,31 +955,13 @@ function EditorPage() {
                   {findAndReplaceOpen && (
                     <div className='bg-background border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out h-[50%]'>
                       <div className='font-medium text-md border-b border-customBorder flex justify-between items-center p-2'>
-                        <span>{toggleReplace ? 'Find & Replace': 'Find'}</span>
-
-                        <div className="flex gap-2">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={() => setToggleReplace(!toggleReplace)}
-                                className='p-1 rounded-md text-muted-foreground hover:bg-secondary transition-colors'
-                              >
-                                {toggleReplace ? <ChevronUpIcon className='h-4 w-4' /> : <ChevronDownIcon className='h-4 w-4' />}
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {toggleReplace ? 'Hide replace options' : 'Show replace options'}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <span>Find & Replace</span>
                         <button
                           onClick={() => setFindAndReplaceOpen(false)}
                           className='p-1 rounded-md text-muted-foreground hover:bg-secondary transition-colors'
                         >
                           <Cross1Icon className='h-4 w-4' />
                         </button>
-                        </div>
                       </div>
                       <div className='space-y-3 px-2 py-[10px] h-[calc(100%-41px)] overflow-y-auto'>
                         <div className='relative'>
@@ -1229,13 +977,11 @@ function EditorPage() {
                             </span>
                           )}
                         </div>
-                        {toggleReplace &&<div className="flex gap-2">
-                          <Input
-                            placeholder='Replace with...'
+                        <Input
+                          placeholder='Replace with...'
                           value={replaceText}
-                            onChange={handleReplaceChange}
-                          />
-                        </div>}
+                          onChange={handleReplaceChange}
+                        />
                         <div className='flex gap-4'>
                           <Label className='flex items-center space-x-2'>
                             <Checkbox
@@ -1276,7 +1022,7 @@ function EditorPage() {
                               Next
                             </button>
                           </div>
-                          {toggleReplace && <div
+                          <div
                             className='inline-flex w-full rounded-md'
                             role='group'
                           >
@@ -1292,7 +1038,7 @@ function EditorPage() {
                             >
                               Replace All
                             </button>
-                          </div>}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1411,10 +1157,6 @@ function EditorPage() {
                         submit: true,
                       }))
 
-                      setIsSubmitModalOpen(false)
-                      setIsSubmitting(true)
-                      setSubmissionStatus('processing')
-
                       if (orderDetails.orderType === 'FORMATTING') {
                         await handleSubmit({
                           orderDetails,
@@ -1471,20 +1213,17 @@ function EditorPage() {
                           },
                         })                        
                       }
-                      
-                      setSubmissionStatus('completed')
+                      setIsSubmitModalOpen(false)                     
                     } catch (error) {
                       setButtonLoading((prevButtonLoading) => ({
                         ...prevButtonLoading,
                         submit: false,
-                      }));
-                      setIsSubmitting(false);
-                      setSubmissionStatus('processing');
+                      }))
                     } finally {
                       setButtonLoading((prevButtonLoading) => ({
                         ...prevButtonLoading,
                         submit: false,
-                      }));
+                      }))
                     }
                   }}
                   disabled={buttonLoading.submit}
@@ -1509,37 +1248,6 @@ function EditorPage() {
                 Please wait while we prepare your test.
               </DialogDescription>
             </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Update the Submission Processing Modal */}
-        <Dialog open={isSubmitting} modal>
-          <DialogContent className="max-w-md p-8 flex flex-col items-center justify-center [&>button]:hidden">
-            <div className="flex flex-col items-center space-y-4">
-              {submissionStatus === 'processing' ? (
-                <>
-                  <ReloadIcon className="h-8 w-8 animate-spin text-primary" />
-                  <DialogTitle className="text-center">Submitting Transcript</DialogTitle>
-                  <DialogDescription className="text-center">
-                    Please wait while we process your submission...
-                  </DialogDescription>
-                </>
-              ) : (
-                <>
-                  <div className="h-8 w-8 bg-green-500 rounded-full flex items-center justify-center">
-                    <CheckIcon className="h-5 w-5 text-white" />
-                  </div>
-                  <DialogTitle className="text-center">Submission Complete</DialogTitle>
-                  <DialogDescription className="text-center">
-                    Your transcript has been submitted successfully. 
-                    This window will close in {submissionCountdown} seconds.
-                  </DialogDescription>
-                </>
-              )}
-            </div>
-            <DialogFooter>
-              <Button onClick={() => window.close()} disabled={submissionStatus === 'processing'}>Close</Button>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

@@ -215,7 +215,7 @@ export default memo(function Topbar({
   const [qcFileUrl, setQcFileUrl] = useState('')
   const [LLMFileUrl, setLLMFileUrl] = useState('')
   const [reReviewComment, setReReviewComment] = useState('')
-  const [videoUrl, setVideoUrl] = useState<string | null>(null)
+  const [videoUrl, setVideoUrl] = useState('')
   const [timeoutCount, setTimeoutCount] = useState('')
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
   const [isHeatmapModalOpen, setIsHeatmapModalOpen] = useState(false)
@@ -337,23 +337,19 @@ export default memo(function Topbar({
   const toggleVideo = async () => {
     try {
       if (!videoUrl) {
-        const { success, signedUrl, keyExists } = await getSignedUrlAction(
+        const { success, signedUrl } = await getSignedUrlAction(
           `${orderDetails.fileId}.mp4`,
           3600
         )
-        if (success && signedUrl && keyExists) {
+        if (success && signedUrl) {
           setVideoUrl(signedUrl)
-        }
-        else if(!keyExists) {
-          throw new Error('Video file does not exist')
-        }
-        else {
+        } else {
           throw new Error('Failed to fetch video file')
         }
       }
       setVideoPlayerOpen(!videoPlayerOpen)
     } catch (error) {
-      toast.error((error as Error).message || 'Failed to fetch video file')
+      toast.error('Failed to fetch video file')
     }
   }
 
@@ -811,7 +807,7 @@ export default memo(function Topbar({
                     Revert Transcript
                   </DropdownMenuItem>
                 )}
-                {session?.user?.role !== 'CUSTOMER' && !orderDetails.isTestOrder && <DropdownMenuItem onClick={toggleVideo} >
+                {session?.user?.role !== 'CUSTOMER' && !orderDetails.isTestOrder && <DropdownMenuItem onClick={toggleVideo}>
                   Toggle Video
                 </DropdownMenuItem>}
                 {session?.user?.role !== 'CUSTOMER' && !orderDetails.isTestOrder && (
@@ -1023,8 +1019,6 @@ export default memo(function Topbar({
         quillRef={quillRef}
         updateQuill={updateTranscript}
       />
-
-      {/* toggle video */}
       <div
         className={` ${
           !videoPlayerOpen ? 'hidden' : ''
@@ -1041,7 +1035,7 @@ export default memo(function Topbar({
             ref={videoRef}
             src={`${videoUrl}`}
             className='w-full h-full'
-            controls={true}
+            controls={false}
             onMouseDown={handleDragChange}
           ></video>
           <button
