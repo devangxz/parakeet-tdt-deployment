@@ -68,7 +68,7 @@ export async function getOrderDetailsAction(fileId: string) {
 
     let userRateInfo = null
     const supportingDocuments = []
-    if (order.orderType === OrderType.FORMATTING) {
+    if (order.orderType === OrderType.FORMATTING || order.orderType === OrderType.TRANSCRIPTION_FORMATTING) {
       userRateInfo = await prisma.userRate.findUnique({
         where: {
           userId: order?.userId,

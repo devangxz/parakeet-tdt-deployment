@@ -64,13 +64,15 @@ export async function getCustomFormatFilesSignedUrl(
         ? FileTag.CF_FINALIZER_SUBMITTED
         : FileTag.CF_CUSTOMER_DELIVERED,
     }
-
     if (!isReviewerSubmitted && !isFinalizerSubmitted && userId) {
       whereClause.userId = userId
     }
 
     const fileVersions = await prisma.fileVersion.findMany({
       where: whereClause,
+      orderBy: {
+        createdAt: 'desc',
+      },
     })
 
     if (!fileVersions || fileVersions.length === 0) {
