@@ -84,11 +84,11 @@ export default function Toolbar({
   removeTimestamps,
   toggleHighlightNumerics,
   handleUndo,
-  handleRedo,
+  handleRedo
 }: ToolbarProps) {
   return (
     <TooltipProvider>
-      <Tooltip>
+       <Tooltip>
         <TooltipTrigger>
           <PlayerButton
             icon={<Undo2 className='w-4 h-4' />}

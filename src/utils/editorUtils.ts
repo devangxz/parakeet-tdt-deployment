@@ -2,8 +2,7 @@
 import axios from 'axios'
 import { Session, User } from 'next-auth'
 import Quill from 'quill'
-const Delta = Quill.import('delta');
-import { Op } from 'quill/core'
+import { Delta, Op } from 'quill/core'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
@@ -538,8 +537,8 @@ type FetchFileDetailsReturn = {
   initialEditorData: EditorData
 }
 
-const createCtmsWithAlignment = (alignments: AlignmentType[]): CTMType[] => {
-  return alignments.filter(alignment => alignment.type === 'ctm').map(alignment => {
+const createCtmsWithAlignment = (alignments: AlignmentType[]): CTMType[] => (
+  alignments.filter(alignment => alignment.type === 'ctm').map(alignment => {
     const ctm: CTMType = {
       word: alignment.word.toLowerCase(),
       start: alignment.start,
@@ -554,7 +553,7 @@ const createCtmsWithAlignment = (alignments: AlignmentType[]): CTMType[] => {
     }
     return ctm;
   })
-}
+)
 
 const fetchFileDetails = async ({
   params,
@@ -1186,7 +1185,7 @@ const handleSubmit = async ({
     }
   } catch (error) {
     setTimeout(() => {
-      toast.dismiss()
+      // toast.dismiss()
     }, 100) //Had to use this setTimeout because the minimum percentage check gives an error Immediately
 
     let errorText = 'Error while submitting transcript' // Default error message
@@ -1368,14 +1367,6 @@ const playCurrentParagraphTimestamp = (
   }
 }
 
-export interface CustomerQuillSelection {
-  index: number
-  length: number
-}
-
-/**
- * Clears all search highlights from the Quill editor.
- */
 const clearAllHighlights = (quill: Quill): void => {
   if (!quill) return;
   
@@ -1385,98 +1376,14 @@ const clearAllHighlights = (quill: Quill): void => {
   });
 };
 
-/**
- * Highlights all occurrences of a search term in the Quill editor.
- * Returns the count of matches found.
- */
-const highlightAllMatches = (
-  quill: Quill,
-  searchText: string,
-  matchCase: boolean,
-  matchSelection: boolean,
-  selection: { index: number; length: number } | null
-): number => {
-  if (!quill || !searchText) return 0;
-
-  // First clear any existing highlights
-  clearAllHighlights(quill);
-
-  const searchRange = {
-    start: 0,
-    end: quill.getText().length,
-  };
-
-  // If there's a selection and matchSelection is enabled, limit search to that range
-  if (selection && selection.length > 0 && matchSelection) {
-    searchRange.start = selection.index;
-    searchRange.end = selection.index + selection.length;
-  }
-
-  const text = quill.getText(
-    searchRange.start,
-    searchRange.end - searchRange.start
-  );
-  const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase();
-  const textToSearch = matchCase ? text : text.toLowerCase();
-
-  let count = 0;
-  const results: number[] = [];
-
-  // First, find all matches and collect their indices
-  // We'll use a regex with word boundaries to ensure exact matches
-  // This prevents matching partial words from previous searches
-  const searchRegex = matchCase 
-    ? new RegExp(`\\b${escapeRegExp(effectiveSearchText)}\\b|${escapeRegExp(effectiveSearchText)}`, 'g')
-    : new RegExp(`\\b${escapeRegExp(effectiveSearchText)}\\b|${escapeRegExp(effectiveSearchText)}`, 'gi');
-  
-  let match;
-  while ((match = searchRegex.exec(textToSearch)) !== null) {
-    // Store the absolute index
-    results.push(match.index + searchRange.start);
-    count++;
-  }
-
-  // Then highlight all matches using a single Delta operation
-  if (results.length > 0) {
-    // Create a delta that represents all the formatting operations
-    const delta = new Delta();
-    
-    // We need to sort the results to apply formatting in ascending order
-    results.sort((a, b) => a - b);
-    
-    let lastIndex = 0;
-    
-    // Build delta operations for the entire document
-    for (let i = 0; i < results.length; i++) {
-      const absoluteIndex = results[i];
-      
-      // Skip if this would go beyond text boundaries
-      if (absoluteIndex + searchText.length > quill.getText().length) {
-        continue;
-      }
-      
-      // Retain text up to the current match
-      if (absoluteIndex > lastIndex) {
-        delta.retain(absoluteIndex - lastIndex);
-      }
-      
-      // Apply formatting to the match
-      delta.retain(searchText.length, { background: '#ffeb3b' });
-      
-      // Update lastIndex for next iteration
-      lastIndex = absoluteIndex + searchText.length;
-    }
-    
-    // Apply the delta to the editor in a single operation
-    quill.updateContents(delta,'user');
-  }
-  
-  return count;
+export interface CustomerQuillSelection {
+  index: number
+  length: number
 }
-// Helper function to escape special regex characters
-const escapeRegExp = (string: string): string => {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+
+const escapeRegExp = (string: string): string => (
+  string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+)
 
 const searchAndSelect = (
   quill: Quill,
@@ -1689,10 +1596,6 @@ const replaceTextHandler = (
       quill.insertText(nextMatchIndex, replaceWith)
       quill.setSelection(nextMatchIndex + replaceWith.length, 0)
       
-      // Clear all previous highlights and re-highlight remaining matches
-      clearAllHighlights(quill)
-      // Highlight all remaining matches
-      highlightAllMatches(quill, searchText, matchCase, matchSelection, selection)
     }
   }
 }
@@ -2412,7 +2315,7 @@ export {
   calculateSpeakerChangePercentage,
   calculateSpeakerMacroF1Score,
   getTestTranscript,
-  clearAllHighlights,
-  highlightAllMatches
+  escapeRegExp,
+  clearAllHighlights
 }
 export type { CTMType }
