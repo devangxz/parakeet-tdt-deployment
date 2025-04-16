@@ -22,9 +22,15 @@ interface DialogProps {
   open: boolean
   onClose: () => void
   fileId: string
+  refetch: () => void
 }
 
-const SetFileBonusDialog = ({ open, onClose, fileId }: DialogProps) => {
+const SetFileBonusDialog = ({
+  open,
+  onClose,
+  fileId,
+  refetch,
+}: DialogProps) => {
   const [rate, setRate] = useState(0)
   const [loading, setLoading] = useState(false)
 
@@ -39,6 +45,7 @@ const SetFileBonusDialog = ({ open, onClose, fileId }: DialogProps) => {
         const successToastId = toast.success(`Successfully updated file bonus`)
         toast.dismiss(successToastId)
         onClose()
+        refetch()
       } else {
         toast.error(result.message)
       }

@@ -63,9 +63,13 @@ interface File {
 
 interface StatusPageProps {
   selectedFileId: string
+  refetchPendingOrders: () => void
 }
 
-export default function StatusPage({ selectedFileId }: StatusPageProps) {
+export default function StatusPage({
+  selectedFileId,
+  refetchPendingOrders,
+}: StatusPageProps) {
   const [orderInformation, setOrderInformation] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isPrioritizing, setIsPrioritizing] = useState(false)
@@ -200,7 +204,8 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
   }, [selectedFileId])
 
   const refetch = () => {
-    console.log('Refetching')
+    handleSearch()
+    refetchPendingOrders()
   }
 
   return (
@@ -455,11 +460,13 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
         open={openRateDialog}
         onClose={() => setRateDialog(false)}
         fileId={orderInformation?.fileId || ''}
+        refetch={() => refetch()}
       />
       <SetFileBonusDialog
         open={openBonusDialog}
         onClose={() => setBonusDialog(false)}
         fileId={orderInformation?.fileId || ''}
+        refetch={() => refetch()}
       />
       <ReportBadAudioDialog
         open={openBadAudioDialog}
@@ -470,21 +477,25 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
         open={openAccentDialog}
         onClose={() => setAccentDialog(false)}
         fileId={orderInformation?.fileId || ''}
+        refetch={() => refetch()}
       />
       <SetFileDifficultyDialog
         open={openDifficultyDialog}
         onClose={() => setDifficultyDialog(false)}
         fileId={orderInformation?.fileId || ''}
+        refetch={() => refetch()}
       />
       <UnassignQcDialog
         open={openUnassignQcDialog}
         onClose={() => setUnassignQcDialog(false)}
         fileId={orderInformation?.fileId || ''}
+        refetch={() => refetch()}
       />
       <AssignQcDialog
         open={openAssignQcDialog}
         onClose={() => setAssignQcDialog(false)}
         fileId={orderInformation?.fileId || ''}
+        refetch={() => refetch()}
       />
       <SetInstructionsDialog
         open={openInstructionsDialog}
@@ -510,16 +521,19 @@ export default function StatusPage({ selectedFileId }: StatusPageProps) {
         open={openAssignFinalizerDialog}
         onClose={() => setAssignFinalizerDialog(false)}
         fileId={orderInformation?.fileId || ''}
+        refetch={() => refetch()}
       />
       <AssignCfDialog
         open={openAssignCfDialog}
         onClose={() => setAssignCfDialog(false)}
         fileId={orderInformation?.fileId || ''}
+        refetch={() => refetch()}
       />
       <UnassignCfDialog
         open={openUnassignCfDialog}
         onClose={() => setUnassignCfDialog(false)}
         fileId={orderInformation?.fileId || ''}
+        refetch={() => refetch()}
       />
     </>
   )

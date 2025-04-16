@@ -436,6 +436,7 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
         open={openAssignQcDialog}
         onClose={() => setAssignQcDialog(false)}
         fileId={selectedFileId || ''}
+        refetch={() => getScreeningOrders()}
       />
     </>
   )

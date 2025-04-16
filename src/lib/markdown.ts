@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import 'server-only'
 
 import rehypeSanitize from 'rehype-sanitize'
 import rehypeStringify from 'rehype-stringify'

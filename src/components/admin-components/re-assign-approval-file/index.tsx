@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { reassignApprovalOrder } from '@/app/actions/om/reassign-approval-order'
+import { QCReviewerSelect } from '@/components/admin-components/qc-reviewer-select'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -15,7 +16,6 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import isValidEmail from '@/utils/isValidEmail'
@@ -77,10 +77,10 @@ const ReassignApprovalFile = ({
           <AlertDialogDescription>
             <div className='grid items-center gap-1.5'>
               <Label>Please enter Finalizer email below.</Label>
-              <Input
+              <QCReviewerSelect
                 value={userEmail}
-                type='email'
-                onChange={(event) => setUserEmail(event.target.value)}
+                onChange={setUserEmail}
+                triggerOnLoad={open}
                 placeholder='Finalizer Email'
               />
             </div>

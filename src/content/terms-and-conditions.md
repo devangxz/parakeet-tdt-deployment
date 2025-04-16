@@ -42,7 +42,7 @@ You acknowledge and agree to our payment rules as stated on our website. We rese
 
 Scribie Techologies issues payments via PayPal. You are solely responsible to maintain the correct information regarding your PayPal account. In case of non receipt of payments you may ask for the transaction id for the payment and follow up with PayPal customer service.
 
-You acknowledge and agree that we may decline to process a payment request for any reason or withhold it for an indefinite time.
+You acknowledge and agree that we reserve the right to delay or withhold payment, partially or entirely, in cases of customer cancellation or refund requests, disputes related to job completion, suspected breach of agreement, suspected fraudulent activity, or due to technical, banking, or payment gateway issues outside our control. Decisions regarding withheld payments in such circumstances shall be final.
 
 ## Accounts, passwords and Security
 
