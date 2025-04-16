@@ -513,6 +513,18 @@ export default memo(function Header({
     }
   }, [editorRef]);
 
+  const handleUndo = () => {
+    if (editorRef?.current) {
+      editorRef.current.handleUndo();
+    }
+  }
+
+  const handleRedo = () => {
+    if (editorRef?.current) {
+      editorRef.current.handleRedo();
+    }
+  }
+  
   return (
     <div className='border bg-background border-customBorder rounded-md relative'>
       {!isPlayerLoaded && (
@@ -695,6 +707,8 @@ export default memo(function Header({
                     step={step}
                     removeTimestamps={removeTimestamps}
                     toggleHighlightNumerics={toggleHighlightNumerics}
+                    handleUndo={handleUndo}
+                    handleRedo={handleRedo}
                   />
                 </div>
               </TooltipProvider>

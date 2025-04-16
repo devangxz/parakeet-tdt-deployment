@@ -13,7 +13,7 @@ import {
   ZoomOutIcon,
   LightningBoltIcon,
 } from '@radix-ui/react-icons'
-import { BinaryIcon, TimerOff } from 'lucide-react'
+import { BinaryIcon, TimerOff, Undo2, Redo2 } from 'lucide-react'
 
 import PlayerButton from './PlayerButton'
 import { Button } from '../ui/button'
@@ -57,6 +57,8 @@ interface ToolbarProps {
   step: string
   removeTimestamps: () => void
   toggleHighlightNumerics: () => void
+  handleUndo: () => void
+  handleRedo: () => void
 }
 
 export default function Toolbar({
@@ -81,9 +83,37 @@ export default function Toolbar({
   step,
   removeTimestamps,
   toggleHighlightNumerics,
+  handleUndo,
+  handleRedo
 }: ToolbarProps) {
   return (
     <TooltipProvider>
+       <Tooltip>
+        <TooltipTrigger>
+          <PlayerButton
+            icon={<Undo2 className='w-4 h-4' />}
+            onClick={handleUndo}
+            tooltip='Undo'
+          />
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Undo (Ctrl+Z)</p>
+        </TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger>
+          <PlayerButton
+            icon={<Redo2 className='w-4 h-4' />}
+            onClick={handleRedo}
+            tooltip='Redo'
+          />
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Redo (Ctrl+Y)</p>
+        </TooltipContent>
+      </Tooltip>
+
       <Tooltip>
         <TooltipTrigger>
           <PlayerButton
@@ -93,7 +123,7 @@ export default function Toolbar({
           />
         </TooltipTrigger>
         <TooltipContent>
-          <p>Play next blank</p>
+          <p>Play next blank (Ctrl+B)</p>
         </TooltipContent>
       </Tooltip>
 
@@ -106,7 +136,7 @@ export default function Toolbar({
           />
         </TooltipTrigger>
         <TooltipContent>
-          <p>Play previous blank</p>
+          <p>Play previous blank (Ctrl+Shift+B)</p>
         </TooltipContent>
       </Tooltip>
 
@@ -119,7 +149,7 @@ export default function Toolbar({
           />
         </TooltipTrigger>
         <TooltipContent>
-          <p>Play audio from the start of current paragraph</p>
+          <p>Play audio from the start of current paragraph (Ctrl+N)</p>
         </TooltipContent>
       </Tooltip>
 
@@ -166,7 +196,7 @@ export default function Toolbar({
           />
         </TooltipTrigger>
         <TooltipContent>
-          <p>Increase font size</p>
+          <p>Increase font size (Ctrl+Shift+Up)</p>
         </TooltipContent>
       </Tooltip>
 
@@ -179,7 +209,7 @@ export default function Toolbar({
           />
         </TooltipTrigger>
         <TooltipContent>
-          <p>Decrease font size</p>
+          <p>Decrease font size (Ctrl+Shift+Down)</p>
         </TooltipContent>
       </Tooltip>
 
@@ -192,7 +222,7 @@ export default function Toolbar({
           />
         </TooltipTrigger>
         <TooltipContent>
-          <p>Insert Timestamps</p>
+          <p>Insert Timestamps (Shift+F12)</p>
         </TooltipContent>
       </Tooltip>
 
@@ -205,7 +235,7 @@ export default function Toolbar({
           />
         </TooltipTrigger>
         <TooltipContent>
-          <p>Find and Replace</p>
+          <p>Find and Replace (Ctrl+F)</p>
         </TooltipContent>
       </Tooltip>
 
@@ -237,7 +267,7 @@ export default function Toolbar({
           />
         </TooltipTrigger>
         <TooltipContent>
-          <p>Hightlight numerics</p>
+          <p>Highlight numerics</p>
         </TooltipContent>
       </Tooltip>
 
