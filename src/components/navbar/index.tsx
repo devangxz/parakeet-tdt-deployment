@@ -291,10 +291,11 @@ const Navbar = () => {
         style={{ zIndex: 100 }}
       >
         <div className='mx-auto px-4 sm:px-10 py-2 flex items-start sm:items-center justify-start sm:justify-center'>
-          <span className='text-white text-xs sm:text-base'>
-            Scribie.com and scribie.ai are managed by the same team now. We will
-            be migrating users from scribie.com to scribie.ai soon to leverage
-            enhanced AI features and an improved experience.
+          <span className='text-white text-center text-xs sm:text-base'>
+            Scribie.com and scribie.ai are managed by the same trusted team.
+            Enjoy the same seamless, human-verified transcripts, now enhanced by
+            smarter AI tools and services. Contact us on support@scribie.ai for
+            any assistance.
           </span>
         </div>
       </div>
