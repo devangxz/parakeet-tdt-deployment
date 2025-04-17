@@ -8,7 +8,10 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import getOrderUserDetails from '@/services/editor-service/getOrderUserDetails'
-import { getSignedURLFromS3 } from '@/utils/backend-helper'
+import {
+  getSignedURLFromS3,
+  getTeamAdminUserDetails,
+} from '@/utils/backend-helper'
 
 export async function getOrderDetailsAction(fileId: string) {
   const session = await getServerSession(authOptions)
@@ -36,21 +39,23 @@ export async function getOrderDetailsAction(fileId: string) {
         error: 'Order not found',
       }
     }
-    
+
     const invoiceFile = await prisma.invoiceFile.findFirst({
       where: {
         fileId,
-      }
-    });
+      },
+    })
 
     const invoice = await prisma.invoice.findUnique({
       where: {
         invoiceId: invoiceFile?.invoiceId,
-      }
-    });
+      },
+    })
 
-    const options = JSON.parse(invoice?.options ?? '{}');
-    const speakers: { fn: string, ln: string }[] = options.sn ? options.sn[fileId] : [];
+    const options = JSON.parse(invoice?.options ?? '{}')
+    const speakers: { fn: string; ln: string }[] = options.sn
+      ? options.sn[fileId]
+      : []
 
     const orderId = order?.id
 
@@ -68,10 +73,15 @@ export async function getOrderDetailsAction(fileId: string) {
 
     let userRateInfo = null
     const supportingDocuments = []
-    if (order.orderType === OrderType.FORMATTING || order.orderType === OrderType.TRANSCRIPTION_FORMATTING) {
+    if (
+      order.orderType === OrderType.FORMATTING ||
+      order.orderType === OrderType.TRANSCRIPTION_FORMATTING
+    ) {
+      const superAdminUser = await getTeamAdminUserDetails(order?.userId)
+      const customerId = superAdminUser ? superAdminUser.userId : order?.userId
       userRateInfo = await prisma.userRate.findUnique({
         where: {
-          userId: order?.userId,
+          userId: customerId,
         },
         select: {
           customFormatOption: true,
