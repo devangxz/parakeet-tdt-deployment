@@ -1063,6 +1063,20 @@ export async function getFileVersionFromS3(
   }
 }
 
+export async function objectExists(key: string): Promise<boolean> {
+  try {
+    await s3Client.send(new HeadObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+    }))
+
+    return true
+  } catch (error) {
+    logger.error(`Error: file doesn't exists in S3: ${key}, ${String(error)}`)
+    return false
+  }
+}
+
 export async function getSignedURLFromS3(
   key: string,
   expires: number = 900,

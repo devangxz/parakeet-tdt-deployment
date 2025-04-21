@@ -9,12 +9,12 @@ interface WaveformHeatmapProps {
   duration: number;
 }
 
-export function WaveformHeatmap({
+export const WaveformHeatmap = ({
   waveformUrl,
   listenCount,
   editedSegments,
   duration
-}: WaveformHeatmapProps) {
+}: WaveformHeatmapProps) => {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const tooltipRef = React.useRef<HTMLDivElement>(null);
 
@@ -169,7 +169,6 @@ export function WaveformHeatmap({
           }}
         >
           <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
-
         </div>
         <div
           ref={tooltipRef}
@@ -206,6 +205,6 @@ export function WaveformHeatmap({
       </div>
     </div>
   );
-}
+};
 
 export default WaveformHeatmap;

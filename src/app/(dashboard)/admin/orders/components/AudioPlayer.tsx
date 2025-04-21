@@ -10,11 +10,12 @@ import {
   Volume1,
   Volume2,
 } from 'lucide-react'
-import Image from 'next/image'
 import Slider from 'rc-slider'
 import { useEffect, useRef, useState, useMemo } from 'react'
+import { toast } from 'sonner'
 
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
+import Waveform from '@/components/editor/Waveform'
 import {
   TooltipProvider,
   Tooltip,
@@ -26,6 +27,7 @@ import {
   ShortcutControls,
   useShortcuts,
 } from '@/utils/editorAudioPlayerShortcuts'
+import formatDuration from '@/utils/formatDuration'
 
 type PlayerButtonProps = {
   icon: React.ReactNode
@@ -91,12 +93,12 @@ export default function AudioPlayer({
   fileId: string
   getAudioPlayer?: (audioPlayer: HTMLAudioElement | null) => void
 }) {
-  const [currentValue, setCurrentValue] = useState(0)
   const [currentTime, setCurrentTime] = useState('00:00')
-  const [audioDuration, setAudioDuration] = useState(0)
+  const [currentValue, setCurrentValue] = useState(0)
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [waveformUrl, setWaveformUrl] = useState('')
   const [isPlayerLoaded, setIsPlayerLoaded] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
   const [audioUrl, setAudioUrl] = useState('')
 
   const shortcutControls = useMemo(
@@ -107,17 +109,30 @@ export default function AudioPlayer({
   useShortcuts(shortcutControls as ShortcutControls)
 
   const fetchWaveform = async () => {
-    const res = await getSignedUrlAction(`${fileId}_wf.png`, 300)
-    if (res.success && res.signedUrl) {
-      setWaveformUrl(res.signedUrl)
+    try {
+      const res = await getSignedUrlAction(`${fileId}_wf.png`, 300)
+      if (res.success && res.signedUrl) {
+        setWaveformUrl(res.signedUrl)
+      } else {
+        throw new Error('Failed to fetch waveform')
+      }
+      setIsPlayerLoaded(true)
+    } catch (error) {
+      toast.error('Failed to load waveform visualization')
+      setIsPlayerLoaded(true)
     }
-    setIsPlayerLoaded(true)
   }
 
   const fetchAudioUrl = async () => {
-    const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
-    if (res.success && res.signedUrl) {
-      setAudioUrl(res.signedUrl)
+    try {
+      const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
+      if (res.success && res.signedUrl) {
+        setAudioUrl(res.signedUrl)
+      } else {
+        throw new Error('Failed to fetch audio file')
+      }
+    } catch (error) {
+      toast.error('Failed to fetch audio file')
     }
   }
 
@@ -129,26 +144,40 @@ export default function AudioPlayer({
 
   useEffect(() => {
     const audio = audioPlayer.current
-    if (!audio) return
+    if (!audio || !audioUrl) return
+    
+    // Initialize audio and set initial source if needed
+    if (!audio.src || audio.src !== audioUrl) {
+      audio.src = audioUrl
+      audio.preload = 'auto'
+    }
+    
     const handleLoadedMetadata = () => {
-      setAudioDuration(audio.duration)
       if (getAudioPlayer) getAudioPlayer(audio)
     }
+    
+    const handleTimeUpdate = () => {
+      setCurrentTime(formatDuration(audio.currentTime))
+      const playedPercentage = (audio.currentTime / audio.duration) * 100
+      setCurrentValue(playedPercentage)
+    }
+    
+    const handlePlayPause = () => {
+      setIsPlaying(!audio.paused)
+    }
+    
     audio.addEventListener('loadedmetadata', handleLoadedMetadata)
-
+    audio.addEventListener('timeupdate', handleTimeUpdate)
+    audio.addEventListener('play', handlePlayPause)
+    audio.addEventListener('pause', handlePlayPause)
+    
     return () => {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      audio.removeEventListener('timeupdate', handleTimeUpdate)
+      audio.removeEventListener('play', handlePlayPause)
+      audio.removeEventListener('pause', handlePlayPause)
     }
-  }, [audioPlayer, getAudioPlayer])
-
-  const seekTo = (value: number) => {
-    if (!audioPlayer.current) return
-    const duration = audioPlayer.current.duration
-    if (duration) {
-      const time = (value / 100) * duration
-      audioPlayer.current.currentTime = time
-    }
-  }
+  }, [audioUrl, getAudioPlayer])
 
   const formatTime = (seconds: number | undefined): string => {
     if (!seconds) return '00:00'
@@ -167,24 +196,6 @@ export default function AudioPlayer({
     }
   }
 
-  useEffect(() => {
-    const audio = audioPlayer.current
-    if (!audio) return
-
-    const handleTimeUpdate = () => {
-      const currentTime = formatTime(audio.currentTime)
-      setCurrentTime(currentTime)
-      const playedPercentage = (audio.currentTime / audio.duration) * 100
-      setCurrentValue(playedPercentage)
-    }
-
-    audio.addEventListener('timeupdate', handleTimeUpdate)
-
-    return () => {
-      audio.removeEventListener('timeupdate', handleTimeUpdate)
-    }
-  }, [])
-
   return (
     <div className='mb-3 h-60 relative overflow-hidden'>
       {!isPlayerLoaded && (
@@ -194,18 +205,11 @@ export default function AudioPlayer({
         </div>
       )}
       <div className='h-[45%] bg-background rounded-t-2xl border border-customBorder border-b-0 overflow-hidden'>
-        <div id='waveform' className='relative h-full'>
-          <Image
-            src={waveformUrl}
-            alt='waveform'
-            layout='fill'
-            objectFit='contain'
-            onError={() =>
-              setWaveformUrl('/assets/images/fallback-waveform.png')
-            }
-            unoptimized={true}
-          />
-        </div>
+        <Waveform
+          waveformUrl={waveformUrl}
+          audioPlayer={audioPlayer}
+          className="h-full"
+        />
       </div>
       <div className='h-[55%] bg-background border border-customBorder rounded-b-2xl px-3'>
         <div className='w-full mt-2'>
@@ -217,12 +221,18 @@ export default function AudioPlayer({
             value={currentValue}
             onChange={(value) => {
               setCurrentValue(value as number)
-              seekTo(Number(value))
+              if (audioPlayer.current) {
+                const time = (Number(value) / 100) * audioPlayer.current.duration
+                audioPlayer.current.currentTime = time
+                audioPlayer.current.play()
+                setIsPlaying(true)
+              }
             }}
+            className='cursor-pointer'
             styles={{
               rail: { height: '7px' },
               track: { backgroundColor: '#6442ED', height: '7px' },
-              handle: { display: 'none' },
+              handle: { display: 'none' }
             }}
           />
         </div>
@@ -249,26 +259,16 @@ export default function AudioPlayer({
               <Tooltip>
                 <TooltipTrigger>
                   <PlayerButton
-                    icon={<Play />}
-                    tooltip='Play'
-                    onClick={shortcutControls.togglePlay}
+                    icon={isPlaying ? <Pause /> : <Play />}
+                    tooltip={isPlaying ? 'Pause' : 'Play'}
+                    onClick={() => {
+                      shortcutControls.togglePlay?.()
+                      setIsPlaying(!isPlaying)
+                    }}
                   />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Play</p>
-                </TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger>
-                  <PlayerButton
-                    icon={<Pause />}
-                    tooltip='Pause'
-                    onClick={shortcutControls.pause}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Pause</p>
                 </TooltipContent>
               </Tooltip>
 
@@ -339,7 +339,7 @@ export default function AudioPlayer({
             </TooltipProvider>
           </div>
           <span className='text-[#8C8C8C] text-sm w-[100px] text-right'>
-            {formatTime(audioDuration)}
+            {formatTime(audioPlayer.current?.duration)}
           </span>
         </div>
       </div>
