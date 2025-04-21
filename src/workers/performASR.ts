@@ -596,11 +596,12 @@ export async function performASR(fileId: string): Promise<ASRResult> {
         )
         const ses = getAWSSesInstance()
         await ses.sendAlert(
-          `Negative Assembly AI Account Balance`,
-          `ASR failed for ${fileId} due to account balance being negative. Please add more credits.`,
+          `Negative AssemblyAI Account Balance`,
+          `ASR process failed for file ${fileId} because the AssemblyAI account has insufficient balance. Please add more credits to continue processing.`,
           'software'
         )
       }
+
       logger.error(`[${fileId}] Max retries reached (3/3), failing`)
       throw error
     }
