@@ -387,26 +387,39 @@ const handleFilesUpload = async (
       originalFile: File | null
       isUploaded?: boolean
     }>
-  >
+  >,
+  allowedFormats: string[]
 ) => {
   try {
     if (payload.files.length > 1) {
       toast.error('Only one file can be uploaded at a time.')
       return
     }
-
-    if (
-      payload.files[0].type !==
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ) {
-      toast.error('Only docx files can be uploaded.')
+    
+    const selectedFile = payload.files[0]
+    const fileExtension = selectedFile.name.split('.').pop()?.toLowerCase() || ''
+    
+    // Check if file format is allowed (either docx or one of the allowed formats)
+    const isDocx = selectedFile.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    const isAllowedFormat = allowedFormats.includes(fileExtension)
+    
+    if (!isDocx && !isAllowedFormat) {
+      const formatList = ['docx', ...allowedFormats].filter(Boolean).join(', ')
+      toast.error(`File format not allowed. Allowed formats: ${formatList}`)
       return
     }
-    const file = payload.files[0]
-    const renamedFile = new File([file], `${orderDetailsId}.docx`, {
-      type: file.type,
+    
+    // Keep the original extension when renaming the file
+    const renamedFile = new File(
+      [selectedFile], 
+      `${orderDetailsId}.${fileExtension}`, 
+      { type: selectedFile.type }
+    )
+    
+    setFileToUpload({ 
+      renamedFile, 
+      originalFile: selectedFile 
     })
-    setFileToUpload({ renamedFile, originalFile: file })
   } catch (error) {
     throw error
   }

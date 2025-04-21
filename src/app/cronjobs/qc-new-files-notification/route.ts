@@ -1,4 +1,4 @@
-import { OrderStatus, Role, Status } from '@prisma/client'
+import { JobStatus, OrderStatus, Role, Status } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
 import logger from '@/lib/logger'
@@ -31,7 +31,11 @@ export async function POST() {
     const ninetyDaysAgo = new Date()
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
 
-    const eligibleQCs = await prisma.user.findMany({
+    const tenDaysAgo = new Date()
+    tenDaysAgo.setDate(tenDaysAgo.getDate() - 10)
+
+    // Find QCs who have been active in the last 10 days (completed assignments)
+    const activeQCsWithRecentSubmissions = await prisma.user.findMany({
       where: {
         role: {
           in: [Role.QC, Role.REVIEWER],
@@ -46,6 +50,14 @@ export async function POST() {
         Verifier: {
           qcDisabled: false,
         },
+        Assignment: {
+          some: {
+            status: JobStatus.COMPLETED,
+            completedTs: {
+              gte: tenDaysAgo,
+            },
+          },
+        },
       },
       include: {
         TranscriberNotifyPrefs: true,
@@ -53,18 +65,21 @@ export async function POST() {
       },
     })
 
-    logger.info(`Found ${eligibleQCs.length} eligible QCs for notification`)
+    logger.info(
+      `Found ${activeQCsWithRecentSubmissions.length} eligible QCs with recent submissions for notification`
+    )
 
-    if (eligibleQCs.length === 0) {
+    if (activeQCsWithRecentSubmissions.length === 0) {
       return NextResponse.json({
         success: true,
-        message: 'No eligible QCs found for notification',
+        message:
+          'No eligible QCs with recent submissions found for notification',
       })
     }
 
     const ses = getAWSSesInstance()
     const emailSentCount = await Promise.all(
-      eligibleQCs.map(async (qc) => {
+      activeQCsWithRecentSubmissions.map(async (qc) => {
         try {
           const emailData = {
             userEmailId: qc.email,
@@ -83,7 +98,7 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
-      message: `Sent new files notifications to ${successCount} of ${eligibleQCs.length} QCs`,
+      message: `Sent new files notifications to ${successCount} of ${activeQCsWithRecentSubmissions.length} active QCs with recent submissions`,
     })
   } catch (error) {
     logger.error(`Error sending QC new files notification: ${error}`)
