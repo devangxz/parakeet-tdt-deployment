@@ -12,6 +12,7 @@ import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
 import { EditorHandle } from '@/components/editor/Editor'
+import FormatWarningDialog from '@/components/editor/FormatWarningDialog'
 import Header from '@/components/editor/Header'
 import SectionSelector from '@/components/editor/SectionSelector'
 import SubmissionValidation from '@/components/editor/SubmissionValidation'
@@ -41,7 +42,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { RenderPDFDocument } from '@/components/utils'
 import { AUTOSAVE_INTERVAL } from '@/constants'
 import usePreventMultipleTabs from '@/hooks/usePreventMultipleTabs'
-import { AlignmentType, EditorSettings } from '@/types/editor'
+import { AlignmentType, CombinedASRFormatError, EditorSettings } from '@/types/editor'
 import {
   ShortcutControls,
   useShortcuts,
@@ -63,8 +64,7 @@ import {
   calculateEditListenCorrelationPercentage,
   calculateSpeakerChangePercentage,
   calculateSpeakerMacroF1Score,
-  getTestTranscript,
- 
+  getTestTranscript, 
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
@@ -95,10 +95,14 @@ export type OrderDetails = {
   supportingDocuments?: SupportingDocument[]
   email: string
   speakerOptions: {
-    fn: string;
-    ln: string;
-  }[],
+    fn: string
+    ln: string
+  }[]
   isTestOrder: boolean
+  combinedASRFormatValidation?: {
+    isValid: boolean
+    errors: CombinedASRFormatError[]
+  }
 }
 
 export type UploadFilesType = {
@@ -204,6 +208,9 @@ function EditorPage() {
   const [isQCValidationPassed, setIsQCValidationPassed] = useState(false)
   const [testTranscript, setTestTranscript] = useState('')
   const [isSettingTest, setIsSettingTest] = useState(false)
+  const [isFormatWarningDialogOpen, setIsFormatWarningDialogOpen] = useState(false)
+  const formatWarningShown = useRef(false)
+
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
     if (!quill) return
@@ -800,6 +807,18 @@ function EditorPage() {
       if (timer) clearInterval(timer);
     };
   }, [isSubmitting, submissionStatus]);
+
+  useEffect(() => {
+    if (
+      !formatWarningShown.current &&
+      orderDetails.combinedASRFormatValidation &&
+      !orderDetails.combinedASRFormatValidation.isValid &&
+      step === 'QC'
+    ) {
+      setIsFormatWarningDialogOpen(true)
+      formatWarningShown.current = true
+    }
+  }, [orderDetails.combinedASRFormatValidation, step])
   
   return (
     <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
@@ -1241,9 +1260,9 @@ function EditorPage() {
                             speakerChangePercentage: getSpeakerChangePercentage(),
                             speakerMacroF1Score: getSpeakerMacroF1Score(),
                           },
-                        })                        
+                        })
                       }
-                      
+
                       setSubmissionStatus('completed')
                     } catch (error) {
                       setButtonLoading((prevButtonLoading) => ({
@@ -1314,6 +1333,11 @@ function EditorPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        <FormatWarningDialog
+          isOpen={isFormatWarningDialogOpen}
+          onOpenChange={setIsFormatWarningDialogOpen}
+          errors={orderDetails.combinedASRFormatValidation?.errors || []}
+        />
       </div>
     </div>
   )

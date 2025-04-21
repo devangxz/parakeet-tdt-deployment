@@ -8,6 +8,7 @@ import AvailableFilesPage from '../components/available-files'
 import HistoryFilesPage from '../components/history-files'
 import Motd from '@/components/transcriber-motd/review-with-gemini'
 import AgreementNotice from '@/components/transcriber-notice/aggrement'
+import ASRProcessingNotice from '@/components/transcriber-notice/asr-processing'
 import LlmProcessingNotice from '@/components/transcriber-notice/llm-processing'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -45,6 +46,7 @@ function LegalQCPageContent() {
       <Motd />
       <AgreementNotice />
       <LlmProcessingNotice />
+      <ASRProcessingNotice />
 
       <div>
         <Tabs

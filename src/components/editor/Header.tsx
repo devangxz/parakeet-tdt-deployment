@@ -183,6 +183,7 @@ export default memo(function Header({
   const gainNodeRef = useRef<GainNode | null>(null)
   const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null)
   const [isAudioInitialized, setIsAudioInitialized] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
 
   useEffect(() => {
     if (quillRef?.current) {
@@ -330,16 +331,28 @@ export default memo(function Header({
       setIsPlayerLoaded(false)
     }
 
+    const handlePlay = () => {
+      setIsPlaying(true)
+    }
+
+    const handlePause = () => {
+      setIsPlaying(false)
+    }
+
     audio.addEventListener('loadstart', handleLoadStart)
     audio.addEventListener('canplaythrough', handleCanPlayThrough)
     audio.addEventListener('loadedmetadata', handleLoadedMetadata)
     audio.addEventListener('error', handleError)
+    audio.addEventListener('play', handlePlay)
+    audio.addEventListener('pause', handlePause)
 
     return () => {
       audio.removeEventListener('loadstart', handleLoadStart)
       audio.removeEventListener('canplaythrough', handleCanPlayThrough)
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
       audio.removeEventListener('error', handleError)
+      audio.removeEventListener('play', handlePlay)
+      audio.removeEventListener('pause', handlePause)
     }
   }, [audioUrl, getAudioPlayer])
 
@@ -513,6 +526,22 @@ export default memo(function Header({
     }
   }, [editorRef]);
 
+  const togglePlay = () => {
+    if (!audioPlayer.current) return
+
+    if (audioPlayer.current.paused) {
+      if (editorSettings.audioRewindSeconds > 0) {
+        audioPlayer.current.currentTime = Math.max(
+          0,
+          audioPlayer.current.currentTime - editorSettings.audioRewindSeconds
+        )
+      }
+      audioPlayer.current.play()
+    } else {
+      audioPlayer.current.pause()
+    }
+  }
+
   return (
     <div className='border bg-background border-customBorder rounded-md relative'>
       {!isPlayerLoaded && (
@@ -575,26 +604,20 @@ export default memo(function Header({
                     <TooltipTrigger>
                       <PlayerButton
                         icon={
-                          !audioPlayer?.current?.paused ? (
+                          isPlaying ? (
                             <PauseIcon className='w-4 h-4' />
                           ) : (
                             <PlayIcon className='w-4 h-4' />
                           )
                         }
                         tooltip={
-                          !audioPlayer?.current?.paused ? 'Pause' : 'Play'
+                          isPlaying ? 'Pause' : 'Play'
                         }
-                        onClick={() => {
-                          if (!audioPlayer?.current?.paused) {
-                            shortcutControls.pause()
-                          } else {
-                            shortcutControls.togglePlay()
-                          }
-                        }}
+                        onClick={togglePlay}
                       />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{!audioPlayer?.current?.paused ? 'Pause' : 'Play'}</p>
+                      <p>{isPlaying ? 'Pause' : 'Play'}</p>
                     </TooltipContent>
                   </Tooltip>
 
