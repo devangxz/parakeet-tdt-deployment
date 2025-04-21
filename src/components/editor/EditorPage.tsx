@@ -169,7 +169,6 @@ function EditorPage() {
   const [audioDuration, setAudioDuration] = useState(1)
   const [quillRef, setQuillRef] = useState<React.RefObject<ReactQuill>>()
   const editorRef = useRef<EditorHandle>(null)
-  const findDebounceRef = useRef<NodeJS.Timeout | null>(null)
   const [findText, setFindText] = useState('')
   const [replaceText, setReplaceText] = useState('')
   const [matchCase, setMatchCase] = useState(false)
