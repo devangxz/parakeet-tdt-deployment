@@ -33,8 +33,6 @@ interface EditorTabComponentProps {
   step: string
   highlightNumbersEnabled: boolean
   setHighlightNumbersEnabled: (enabled: boolean) => void
-  diffToggleEnabled: boolean
-  diff: DmpDiff[]
 }
 
 export const EditorTabComponent = ({
@@ -56,8 +54,6 @@ export const EditorTabComponent = ({
   step,
   highlightNumbersEnabled,
   setHighlightNumbersEnabled,
-  diffToggleEnabled,
-  diff,
 }: EditorTabComponentProps) => (
   <TabsContent
     forceMount
@@ -90,8 +86,6 @@ export const EditorTabComponent = ({
             step={step}
             highlightNumbersEnabled={highlightNumbersEnabled}
             setHighlightNumbersEnabled={setHighlightNumbersEnabled}
-            diffToggleEnabled={diffToggleEnabled}
-            diff={diff}
           />
         </div>
       )}

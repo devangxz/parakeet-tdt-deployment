@@ -275,6 +275,19 @@ export default function Toolbar({
         </TooltipContent>
       </Tooltip>
 
+      <Tooltip>
+        <TooltipTrigger>
+          <PlayerButton
+            icon={<GitCompareArrowsIcon className={`w-4 h-4 ${diffToggleEnabled ? 'text-primary' : ''}`} />}
+            tooltip='Diff Mode'
+            onClick={generateTranscriptFromDiff}
+          />
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Diff Mode</p>
+        </TooltipContent>
+      </Tooltip>
+
       {orderDetails.orgName.toLowerCase() === 'remotelegal' &&
         orderDetails.orderType === 'TRANSCRIPTION_FORMATTING' &&
         step === 'CF' && (
@@ -328,19 +341,6 @@ export default function Toolbar({
               </TooltipTrigger>
               <TooltipContent>
                 <p>Insert interpreter swear in line</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger>
-                <PlayerButton
-                  icon={<GitCompareArrowsIcon className={`w-4 h-4 ${diffToggleEnabled ? 'text-primary' : ''}`} />}
-                  tooltip='Insert interpreter swear in line'
-                  onClick={generateTranscriptFromDiff}
-                />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Diff Mode</p>
               </TooltipContent>
             </Tooltip>
 

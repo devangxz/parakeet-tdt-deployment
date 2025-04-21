@@ -40,7 +40,6 @@ import {
   getFormattedTranscript,
   getAlignmentIndexByTime,
 } from '@/utils/transcript'
-import { DIFF_DELETE, DIFF_INSERT, DmpDiff } from '@/utils/transcript/diff_match_patch'
 
 const TYPING_PAUSE = 500 // Half second pause indicates word completion
 const STACK_LIMIT = 100
@@ -62,8 +61,6 @@ interface EditorProps {
   step: string
   highlightNumbersEnabled?: boolean
   setHighlightNumbersEnabled: (enabled: boolean) => void
-  diffToggleEnabled: boolean
-  diff: DmpDiff[]
 }
 
 type Sources = 'user' | 'api' | 'silent'
@@ -79,7 +76,6 @@ export interface EditorHandle {
   getWer: () => number
   handleUndo: () => void
   handleRedo: () => void
-  generateTranscriptFromDiff: () => void
 }
 
 // Wrap the component in forwardRef so the parent can call exposed methods
@@ -100,8 +96,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     step,
     highlightNumbersEnabled,
     setHighlightNumbersEnabled,
-    diffToggleEnabled,
-    diff,
   } = props
 
   const ctms = initialCtms // Make CTMs constant
@@ -454,35 +448,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     )
   }, [alignments, ctms, typingTimer, quillRef, orderDetails.fileId])
 
-  const generateTranscriptFromDiff = useCallback(() => {
-    console.log("diff", diff);
-    if (!diff || !diff.length) return;
-
-    const quill = quillRef.current?.getEditor();
-    if (!quill) return;
-    // Create a Delta object to apply the diff operations
-    const delta = new Delta();
-    
-    diff.forEach(([op, text]: DmpDiff) => {
-      if (op === DIFF_INSERT) {
-        // For inserts: add the text with green color
-        delta.insert(text, { color: 'green' });
-      } else if (op === DIFF_DELETE) {
-        // For deletes: add the text with red color and strike-through
-        delta.insert(text, { color: 'red', strike: true });
-      } else {
-        // For unchanged text: retain it as is
-        delta.insert(text);
-
-      }
-    });
-    
-    // Update the editor with our new delta
-    quill.setContents(delta);
-    
-    console.log('Applied diff to editor content');
-  }, [diff, quillRef]);
-
   // Create a function to update alignment immediately without debounce
   const updateAlignments = useCallback(() => {
     const quill = quillRef.current?.getEditor()
@@ -556,19 +521,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     }, 0);
   }, [quillRef, highlightNumbersEnabled]);
 
-  useEffect(() => {
-    if (diffToggleEnabled) {
-      // Apply diff styling when diffToggleEnabled is true
-      generateTranscriptFromDiff();
-    } else if (quillRef.current && initialEditorData?.transcript) {
-      // Revert to normal text when diffToggleEnabled is false
-      const quill = quillRef.current.getEditor();
-      // Set content back to normal without diff styling
-      quill.setContents(getFormattedContent(initialEditorData.transcript));
-    }
-  }, [diffToggleEnabled, diff, generateTranscriptFromDiff, initialEditorData, quillRef]);
-
-  // Add effect to highlight numbers when highlightNumbersEnabled changes
   useEffect(() => {
       highlightNumbers()
   }, [highlightNumbersEnabled, highlightNumbers, clearHighlights])
@@ -1245,8 +1197,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     highlightNumbers,
     getWer: () => wer,
     handleUndo,
-    handleRedo,
-    generateTranscriptFromDiff
+    handleRedo
   }))
 
   useEffect(() => {

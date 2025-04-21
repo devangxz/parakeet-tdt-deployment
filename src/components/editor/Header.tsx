@@ -12,7 +12,7 @@ import {
   TrackNextIcon,
 } from '@radix-ui/react-icons'
 import Quill from 'quill'
-import { useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
+import React, { useEffect, useRef, useState, useMemo, useCallback, memo } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
@@ -167,6 +167,7 @@ export default memo(function Header({
   toggleHighlightNumerics,
   diffToggleEnabled,
   setDiffToggleEnabled,
+
 }: HeaderProps) {
   // const [currentValue, setCurrentValue] = useState(0)
   // const [currentTime, setCurrentTime] = useState('00:00')
@@ -530,16 +531,12 @@ export default memo(function Header({
   }
 
   const generateTranscriptFromDiff = () => {
-    // Toggle the diff mode
-    setDiffToggleEnabled(!diffToggleEnabled);
-    
-    // If we're turning on diff mode, apply the diff
-    if (!diffToggleEnabled) {
-      if (editorRef?.current) {
-        editorRef.current.generateTranscriptFromDiff();
-      }
-    }
-  }
+    const newDiffToggleValue = !diffToggleEnabled;
+    setDiffToggleEnabled(newDiffToggleValue);
+    // if (editorRef?.current) {
+    //   editorRef.current.generateTranscriptFromDiff(newDiffToggleValue);
+    // }
+  };
   
   return (
     <div className='border bg-background border-customBorder rounded-md relative'>
