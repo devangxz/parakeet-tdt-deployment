@@ -5,6 +5,7 @@ import { Table } from '@tanstack/react-table'
 import * as React from 'react'
 
 import { DateFilter } from './date-filter'
+import { DateRangeFilter } from './date-range-filter'
 import { DataTableFacetedFilter } from './filter'
 import { DataTableViewOptions } from './view-options'
 import { Button } from '@/components/ui/button'
@@ -112,6 +113,12 @@ export function DataTableToolbar<TData>({
         )}
         {table.getColumn('deliveryTs') && (
           <DateFilter column={table.getColumn('deliveryTs')} />
+        )}
+        {table.getColumn('deliveryTs') && (
+          <DateRangeFilter
+            column={table.getColumn('deliveryTs')}
+            title='Delivery Date Range'
+          />
         )}
         {table.getColumn('type') && (
           <DataTableFacetedFilter

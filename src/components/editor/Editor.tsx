@@ -837,6 +837,75 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
   }, [redoStack, clearLastHighlight, scheduleAlignmentUpdate])
 
   useEffect(() => {
+    const originalExecCommand = document.execCommand
+    document.execCommand = function (command, ...args) {
+      if (command === 'undo' || command === 'redo') {
+        return false
+      }
+      return originalExecCommand.call(this, command, ...args)
+    }
+
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
+
+    const editorRoot = quill.root
+    const handleBeforeInput = (e: InputEvent) => {
+      if (
+        isEditorFocused &&
+        (e.inputType === 'historyUndo' || e.inputType === 'historyRedo')
+      ) {
+        e.preventDefault()
+      }
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isEditorFocused) return
+
+      // Undo
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        handleUndo()
+      }
+
+      // Redo
+      if (
+        ((e.metaKey || e.ctrlKey) && e.key === 'y') ||
+        ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z')
+      ) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        handleRedo()
+      }
+
+      // If the Enter key is pressed, clear any line highlight
+      if (e.key === 'Enter') {
+        if (prevLineNodeRef.current) {
+          prevLineNodeRef.current.classList.remove('line-highlight')
+          prevLineNodeRef.current = null
+        }
+      }
+
+      if (quill) {
+        beforeSelectionRef.current = quill.getSelection()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown, true)
+    editorRoot.addEventListener('beforeinput', handleBeforeInput, true)
+
+    return () => {
+      document.execCommand = originalExecCommand
+      document.removeEventListener('keydown', handleKeyDown, true)
+      editorRoot.removeEventListener('beforeinput', handleBeforeInput, true)
+    }
+  }, [
+    handleUndo,
+    handleRedo,
+    isEditorFocused,
+  ])
+
+  useEffect(() => {
     if (!highlightWordsEnabled) {
       clearHighlights()
       lastHighlightedRef.current = null
@@ -1084,7 +1153,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     setIsEditorFocused(false)
   }
 
-  // Update handleFocus to preserve line highlight
   const handleFocus = () => {
     const quill = quillRef.current?.getEditor()
     if (!quill) return
@@ -1205,75 +1273,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       localStorage.setItem(`highlight-numbers-${orderDetails.fileId}`, String(highlightNumbersEnabled))
     }
   }, [highlightNumbersEnabled, orderDetails.fileId])
-
-  useEffect(() => {
-    const originalExecCommand = document.execCommand
-    document.execCommand = function (command, ...args) {
-      if (command === 'undo' || command === 'redo') {
-        return false
-      }
-      return originalExecCommand.call(this, command, ...args)
-    }
-
-    const quill = quillRef.current?.getEditor()
-    if (!quill) return
-
-    const editorRoot = quill.root
-    const handleBeforeInput = (e: InputEvent) => {
-      if (
-        isEditorFocused &&
-        (e.inputType === 'historyUndo' || e.inputType === 'historyRedo')
-      ) {
-        e.preventDefault()
-      }
-    }
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isEditorFocused) return
-
-      // Undo
-      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault()
-        e.stopImmediatePropagation()
-        handleUndo()
-      }
-
-      // Redo
-      if (
-        ((e.metaKey || e.ctrlKey) && e.key === 'y') ||
-        ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z')
-      ) {
-        e.preventDefault()
-        e.stopImmediatePropagation()
-        handleRedo()
-      }
-
-      // If the Enter key is pressed, clear any line highlight
-      if (e.key === 'Enter') {
-        if (prevLineNodeRef.current) {
-          prevLineNodeRef.current.classList.remove('line-highlight')
-          prevLineNodeRef.current = null
-        }
-      }
-
-      if (quill) {
-        beforeSelectionRef.current = quill.getSelection()
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown, true)
-    editorRoot.addEventListener('beforeinput', handleBeforeInput, true)
-
-    return () => {
-      document.execCommand = originalExecCommand
-      document.removeEventListener('keydown', handleKeyDown, true)
-      editorRoot.removeEventListener('beforeinput', handleBeforeInput, true)
-    }
-  }, [
-    handleUndo,
-    handleRedo,
-    isEditorFocused,
-  ])
 
   return (
     <div className='relative w-full h-full'>

@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { assignCF } from '@/app/actions/om/assign-cf'
+import { QCReviewerSelect } from '@/components/admin-components/qc-reviewer-select'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -15,7 +16,6 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import isValidEmail from '@/utils/isValidEmail'
 
@@ -23,9 +23,10 @@ interface DialogProps {
   open: boolean
   onClose: () => void
   fileId: string
+  refetch: () => void
 }
 
-const AssignCfDialog = ({ open, onClose, fileId }: DialogProps) => {
+const AssignCfDialog = ({ open, onClose, fileId, refetch }: DialogProps) => {
   const [userEmail, setUserEmail] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -42,6 +43,7 @@ const AssignCfDialog = ({ open, onClose, fileId }: DialogProps) => {
         const successToastId = toast.success(`Successfully assigned CF`)
         toast.dismiss(successToastId)
         onClose()
+        refetch()
       } else {
         toast.error(result.message)
       }
@@ -60,10 +62,10 @@ const AssignCfDialog = ({ open, onClose, fileId }: DialogProps) => {
           <AlertDialogDescription>
             <div className='grid items-center gap-1.5'>
               <Label>Please enter transcriber email below.</Label>
-              <Input
+              <QCReviewerSelect
                 value={userEmail}
-                type='email'
-                onChange={(event) => setUserEmail(event.target.value)}
+                onChange={setUserEmail}
+                triggerOnLoad={open}
                 placeholder='Transcriber Email'
               />
             </div>

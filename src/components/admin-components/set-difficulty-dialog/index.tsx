@@ -28,9 +28,15 @@ interface DialogProps {
   open: boolean
   onClose: () => void
   fileId: string
+  refetch: () => void
 }
 
-const SetFileDifficultyDialog = ({ open, onClose, fileId }: DialogProps) => {
+const SetFileDifficultyDialog = ({
+  open,
+  onClose,
+  fileId,
+  refetch,
+}: DialogProps) => {
   const [difficulty, setDifficulty] = useState('medium')
   const [loading, setLoading] = useState(false)
 
@@ -47,6 +53,7 @@ const SetFileDifficultyDialog = ({ open, onClose, fileId }: DialogProps) => {
         )
         toast.dismiss(successToastId)
         onClose()
+        refetch()
       } else {
         toast.error(result.message)
       }

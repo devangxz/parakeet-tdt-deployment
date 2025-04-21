@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { reassignPreDeliveryOrder } from '@/app/actions/om/reassign-pre-delivery-order'
+import { QCReviewerSelect } from '@/components/admin-components/qc-reviewer-select'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -15,7 +16,6 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import isValidEmail from '@/utils/isValidEmail'
@@ -74,11 +74,11 @@ const ReassignPreDeliveryFile = ({
           <AlertDialogTitle>Re-assign Editor</AlertDialogTitle>
           <AlertDialogDescription>
             <div className='grid items-center gap-1.5'>
-              <Label>Please enter Editor email below.</Label>
-              <Input
+              <Label>Please select an Editor from the list below.</Label>
+              <QCReviewerSelect
                 value={userEmail}
-                type='email'
-                onChange={(event) => setUserEmail(event.target.value)}
+                onChange={setUserEmail}
+                triggerOnLoad={open}
                 placeholder='Editor Email'
               />
             </div>

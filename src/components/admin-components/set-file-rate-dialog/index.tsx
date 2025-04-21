@@ -22,9 +22,10 @@ interface DialogProps {
   open: boolean
   onClose: () => void
   fileId: string
+  refetch: () => void
 }
 
-const SetFileRateDialog = ({ open, onClose, fileId }: DialogProps) => {
+const SetFileRateDialog = ({ open, onClose, fileId, refetch }: DialogProps) => {
   const [rate, setRate] = useState(10)
   const [loading, setLoading] = useState(false)
 
@@ -39,6 +40,7 @@ const SetFileRateDialog = ({ open, onClose, fileId }: DialogProps) => {
         const successToastId = toast.success(`Successfully updated file rate`)
         toast.dismiss(successToastId)
         onClose()
+        refetch()
       } else {
         toast.error(result.message)
       }

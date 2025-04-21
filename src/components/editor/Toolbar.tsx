@@ -92,7 +92,7 @@ export default function Toolbar({
 }: ToolbarProps) {
   return (
     <TooltipProvider>
-      <Tooltip>
+       <Tooltip>
         <TooltipTrigger>
           <PlayerButton
             icon={<Undo2 className='w-4 h-4' />}

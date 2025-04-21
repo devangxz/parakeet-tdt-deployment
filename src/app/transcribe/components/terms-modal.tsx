@@ -18,12 +18,12 @@ import { Label } from '@/components/ui/label'
 
 interface TermsAndConditionsModalProps {
   open: boolean
-  termsContent: string
+  contentHtml: string
 }
 
 export function TermsAndConditionsModal({
   open,
-  termsContent,
+  contentHtml,
 }: TermsAndConditionsModalProps) {
   const [modalOpen, setModalOpen] = useState(open)
   const [initials, setInitials] = useState('')
@@ -50,7 +50,9 @@ export function TermsAndConditionsModal({
           </DialogDescription>
         </DialogHeader>
         <div className='max-h-[400px] overflow-y-auto my-6 prose prose-sm prose-slate'>
-          <div dangerouslySetInnerHTML={{ __html: termsContent }} />
+          <article className='markdown-content'>
+            <div dangerouslySetInnerHTML={{ __html: contentHtml }} />
+          </article>
         </div>
         <div className=''>
           <div className='grid gap-6'>

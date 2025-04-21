@@ -4,7 +4,7 @@ import { Cross1Icon, ReloadIcon, CheckIcon, ChevronDownIcon, ChevronUpIcon } fro
 import { debounce } from 'lodash'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { Op, Delta } from 'quill/core'
+import Quill, { Op, Delta } from 'quill/core'
 import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
@@ -69,8 +69,9 @@ import {
   calculateSpeakerChangePercentage,
   calculateSpeakerMacroF1Score,
   getTestTranscript,
-  highlightAllMatches,
+  escapeRegExp,
   clearAllHighlights,
+ 
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
@@ -170,7 +171,7 @@ function EditorPage() {
   const [audioDuration, setAudioDuration] = useState(1)
   const [quillRef, setQuillRef] = useState<React.RefObject<ReactQuill>>()
   const editorRef = useRef<EditorHandle>(null)
-
+  const findDebounceRef = useRef<NodeJS.Timeout | null>(null)
   const [findText, setFindText] = useState('')
   const [replaceText, setReplaceText] = useState('')
   const [matchCase, setMatchCase] = useState(false)
@@ -179,7 +180,6 @@ function EditorPage() {
   const [matchCount, setMatchCount] = useState(0)
   const [matchSelection, setMatchSelection] = useState(false)
   const findInputRef = useRef<HTMLInputElement>(null)
-  const findDebounceRef = useRef<NodeJS.Timeout | null>(null)
   const [selection, setSelection] = useState<CustomerQuillSelection | null>(
     null
   )
@@ -322,6 +322,95 @@ function EditorPage() {
     )
   }
 
+  /**
+   * Highlights all occurrences of a search term in the Quill editor.
+   * Returns the count of matches found.
+   */
+  const highlightAllMatches = (
+    quill: Quill,
+    searchText: string,
+    matchCase: boolean,
+    matchSelection: boolean,
+    selection: { index: number; length: number } | null
+  ): number => {
+    if (!quill || !searchText) return 0;
+  
+    // First clear any existing highlights
+    clearAllHighlights(quill);
+  
+    const searchRange = {
+      start: 0,
+      end: quill.getText().length,
+    };
+  
+    // If there's a selection and matchSelection is enabled, limit search to that range
+    if (selection && selection.length > 0 && matchSelection) {
+      searchRange.start = selection.index;
+      searchRange.end = selection.index + selection.length;
+    }
+  
+    const text = quill.getText(
+      searchRange.start,
+      searchRange.end - searchRange.start
+    );
+    const effectiveSearchText = matchCase ? searchText : searchText.toLowerCase();
+    const textToSearch = matchCase ? text : text.toLowerCase();
+  
+    let count = 0;
+    const results: number[] = [];
+  
+    // First, find all matches and collect their indices
+    // We'll use a regex with word boundaries to ensure exact matches
+    // This prevents matching partial words from previous searches
+    const searchRegex = matchCase 
+      ? new RegExp(`\\b${escapeRegExp(effectiveSearchText)}\\b|${escapeRegExp(effectiveSearchText)}`, 'g')
+      : new RegExp(`\\b${escapeRegExp(effectiveSearchText)}\\b|${escapeRegExp(effectiveSearchText)}`, 'gi');
+    
+    let match;
+    while ((match = searchRegex.exec(textToSearch)) !== null) {
+      // Store the absolute index
+      results.push(match.index + searchRange.start);
+      count++;
+    }
+  
+    // Then highlight all matches using a single Delta operation
+    if (results.length > 0) {
+      // Create a delta that represents all the formatting operations
+      const delta = new Delta();
+      
+      // We need to sort the results to apply formatting in ascending order
+      results.sort((a, b) => a - b);
+      
+      let lastIndex = 0;
+      
+      // Build delta operations for the entire document
+      for (let i = 0; i < results.length; i++) {
+        const absoluteIndex = results[i];
+        
+        // Skip if this would go beyond text boundaries
+        if (absoluteIndex + searchText.length > quill.getText().length) {
+          continue;
+        }
+        
+        // Retain text up to the current match
+        if (absoluteIndex > lastIndex) {
+          delta.retain(absoluteIndex - lastIndex);
+        }
+        
+        // Apply formatting to the match
+        delta.retain(searchText.length, { background: '#ffeb3b' });
+        
+        // Update lastIndex for next iteration
+        lastIndex = absoluteIndex + searchText.length;
+      }
+      
+      // Apply the delta to the editor in a single operation
+      quill.updateContents(delta,'user');
+    }
+    
+    return count;
+  }
+
   const handleFindChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value
     const prevText = findText
@@ -333,7 +422,6 @@ function EditorPage() {
       setSearchHighlight(null)
       setLastSearchIndex(-1)
     }
-    
     // Clear existing timeout
     if (findDebounceRef.current) {
       clearTimeout(findDebounceRef.current)
@@ -380,11 +468,6 @@ function EditorPage() {
     }
   }
 
-  const handleReplaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const text = e.target.value
-    setReplaceText(text)
-  }
-
   const toggleOpenFindAndReplace = useCallback(() => {
     setFindAndReplaceOpen((prev) => {
       // When closing, clear highlights and reset state
@@ -409,7 +492,6 @@ function EditorPage() {
   const shortcutControls = useMemo(() => {
     const controls: Partial<ShortcutControls> = {
       findNextOccurrenceOfString: () => {
-        // Explicitly prevent the browser's default find behavior
         window.addEventListener('keydown', function preventDefaultFind(e) {
           if (e.key === 'f' && (e.ctrlKey || e.metaKey)) {
             e.preventDefault()
@@ -417,7 +499,6 @@ function EditorPage() {
             window.removeEventListener('keydown', preventDefaultFind)
           }
         }, { capture: true, once: true })
-        
         if (!findAndReplaceOpen) {
           if (quillRef?.current) {
             const quill = quillRef.current.getEditor()
@@ -434,7 +515,6 @@ function EditorPage() {
               }
             }
           }
-          setToggleReplace(false)
           toggleOpenFindAndReplace()
         } else if (findText) {
           searchAndSelectInstance(findText, selection)
@@ -596,7 +676,6 @@ function EditorPage() {
   }, [orderDetails.orderId, orderDetails.fileId, orderDetails.isTestOrder, initialEditorData, params, session?.user?.role, searchParams])
 
   useEffect(() => {
-
     const closeFindAndReplaceOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && findAndReplaceOpen) {
         setFindAndReplaceOpen(false)
@@ -899,25 +978,13 @@ function EditorPage() {
     }
   }
 
-  const findPreviousHandler = () => {
+  const handleReplaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value
+    setReplaceText(text)
+  }
+
+    const findPreviousHandler = () => {
     if (quillRef?.current && findText) {
-      if (matchCount === 0) {
-        // If no matches found yet, highlight all first
-        const quill = quillRef.current.getEditor()
-        
-        // Clear previous highlights before adding new ones
-        clearAllHighlights(quill)
-        
-        const matchesFound = highlightAllMatches(
-          quill,
-          findText,
-          matchCase,
-          matchSelection,
-          selection
-        )
-        setMatchCount(matchesFound)
-      }
-      // Then select the previous match
       searchAndSelectReverseInstance(findText, selection)
     }
   }
@@ -991,7 +1058,7 @@ function EditorPage() {
       if (timer) clearInterval(timer);
     };
   }, [isSubmitting, submissionStatus]);
-  
+
   useEffect(() => {
     // Cleanup debounce timer on unmount
     return () => {
@@ -1001,7 +1068,6 @@ function EditorPage() {
     }
   }, [])
 
-  // Add an effect to update search results when text content changes
   useEffect(() => {
     if (!findAndReplaceOpen || !findText || !quillRef?.current) return;
     
@@ -1031,7 +1097,7 @@ function EditorPage() {
           setLastSearchIndex(-1);
         }
       }
-    }, 700);
+    }, 500);
     
     const quill = quillRef.current.getEditor();
     quill.on('text-change', handleTextChange);
