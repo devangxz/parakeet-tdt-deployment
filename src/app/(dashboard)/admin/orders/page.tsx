@@ -71,6 +71,7 @@ interface File {
   type: string
   orgName: string
   specialInstructions: string
+  containsMp4: boolean
   cancellations: {
     user: {
       firstname: string | null
@@ -177,6 +178,8 @@ export default function OrdersPage() {
             orgName: order.orgName,
             specialInstructions: order.specialInstructions,
             cancellations: order.cancellations,
+            containsMp4:
+              order.File?.fileKey?.split('.')?.pop()?.toLowerCase() === 'mp4',
           }
         })
 
@@ -396,6 +399,14 @@ export default function OrdersPage() {
                 {row.original.orgName}
               </Badge>
             )}
+            {row.original.containsMp4 && (
+              <Badge
+                variant='outline'
+                className='font-semibold text-[10px] text-green-600'
+              >
+                Contains Video
+              </Badge>
+            )}
           </div>
         </div>
       ),
@@ -498,8 +509,11 @@ export default function OrdersPage() {
       ),
       filterFn: (row, id, value: [string, string]) => {
         if (!value || !value[0] || !value[1]) return true
+
         const cellDate = new Date(row.getValue(id))
         const [start, end] = value.map((str) => new Date(str))
+
+        // Check if the date is within the range
         return cellDate >= start && cellDate <= end
       },
       cell: ({ row }) => (
@@ -643,7 +657,10 @@ export default function OrdersPage() {
           <DeliveredSection />
         </TabsContent>
         <TabsContent value='status'>
-          <StatusPage selectedFileId={fileId} />
+          <StatusPage
+            selectedFileId={fileId}
+            refetchPendingOrders={() => getPendingOrders()}
+          />
         </TabsContent>
         <TabsContent value='screen'>
           <ScreenPage onActionComplete={fetchAllTabCounts} />

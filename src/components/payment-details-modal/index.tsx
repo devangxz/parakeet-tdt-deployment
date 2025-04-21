@@ -64,6 +64,7 @@ const optionNames: Record<string, string> = {
   sub: 'Subtitle file',
   exd: 'Rush hour',
   vts: 'BITC',
+  sif: 'Speaker Tracking',
 }
 
 Font.register({

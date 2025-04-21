@@ -100,6 +100,44 @@ const DownloadDocxDialog = ({
     }
   }
 
+  const downloadCFFile = async () => {
+    setIsLoading(true)
+    try {
+      const result = await getCustomFormatFilesSignedUrl(
+        orderDetails.fileId,
+        orderDetails.status === 'FINALIZER_ASSIGNED',
+        orderDetails.status === 'PRE_DELIVERED'
+      )
+      
+      if (result.success && result.signedUrls && result.signedUrls.length > 0) {
+        // Get the first available file
+        const file = result.signedUrls[0]
+        
+        // Trigger download
+        window.open(file.signedUrl, '_blank')
+        
+        toast.success(`File downloaded in .${file.extension} format`)
+      } else {
+        // Fallback to docx if no CF files found
+        if (docxUrl) {
+          window.open(docxUrl, '_blank')
+          toast.success('CF file downloaded in .docx format')
+        } else {
+          toast.error('No files available for download')
+        }
+      }
+    } catch (error) {
+      toast.error('Error downloading CF file')
+      // Try docx fallback
+      if (docxUrl) {
+        window.open(docxUrl, '_blank')
+        toast.success('CF file downloaded in .docx format')
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (
       orderDetails.status === 'FINALIZER_ASSIGNED' ||
@@ -325,7 +363,6 @@ const DownloadDocxDialog = ({
                     orderDetails.status === 'PRE_DELIVERED') && (
                     <div className='flex items-center space-x-2'>
                       <RadioGroupItem
-                        disabled={!docxUrl}
                         value='cf-rev-submit'
                         id='cf-rev-submit'
                       />
@@ -356,10 +393,18 @@ const DownloadDocxDialog = ({
                   )}
 
                   {downloadableType === 'cf-rev-submit' && (
-                    <Button asChild>
-                      <a href={docxUrl} target='_blank'>
-                        Download File
-                      </a>
+                    <Button
+                      onClick={downloadCFFile}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                          Downloading File
+                        </>
+                      ) : (
+                        'Download File'
+                      )}
                     </Button>
                   )}
                 </>

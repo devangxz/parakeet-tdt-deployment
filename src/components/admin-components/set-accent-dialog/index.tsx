@@ -28,9 +28,15 @@ interface DialogProps {
   open: boolean
   onClose: () => void
   fileId: string
+  refetch: () => void
 }
 
-const SetFileAccentDialog = ({ open, onClose, fileId }: DialogProps) => {
+const SetFileAccentDialog = ({
+  open,
+  onClose,
+  fileId,
+  refetch,
+}: DialogProps) => {
   const [accent, setAccent] = useState('NA')
   const [loading, setLoading] = useState(false)
 
@@ -45,6 +51,7 @@ const SetFileAccentDialog = ({ open, onClose, fileId }: DialogProps) => {
         const successToastId = toast.success(`Successfully updated accent`)
         toast.dismiss(successToastId)
         onClose()
+        refetch()
       } else {
         toast.error(result.message)
       }

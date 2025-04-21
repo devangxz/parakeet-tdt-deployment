@@ -7,7 +7,6 @@ import AssignedFilesPage from '../components/assigned-files'
 import AvailableFilesPage from '../components/available-files'
 import HistoryFilesPage from '../components/history-files'
 import Motd from '@/components/transcriber-motd/review-with-gemini'
-import AgreementNotice from '@/components/transcriber-notice/aggrement'
 import ASRProcessingNotice from '@/components/transcriber-notice/asr-processing'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -41,7 +40,6 @@ function QCPageContent() {
   return (
     <div className='h-full flex-1 flex-col p-4 md:flex space-y-3'>
       <Motd />
-      <AgreementNotice />
       <ASRProcessingNotice />
       
       <div>

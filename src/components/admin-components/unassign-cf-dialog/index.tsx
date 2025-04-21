@@ -21,9 +21,10 @@ interface DialogProps {
   open: boolean
   onClose: () => void
   fileId: string
+  refetch: () => void
 }
 
-const UnassignCFDialog = ({ open, onClose, fileId }: DialogProps) => {
+const UnassignCFDialog = ({ open, onClose, fileId, refetch }: DialogProps) => {
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async () => {
@@ -36,6 +37,7 @@ const UnassignCFDialog = ({ open, onClose, fileId }: DialogProps) => {
         const successToastId = toast.success(`Successfully unassigned CF`)
         toast.dismiss(successToastId)
         onClose()
+        refetch()
       } else {
         toast.error(result.message)
       }

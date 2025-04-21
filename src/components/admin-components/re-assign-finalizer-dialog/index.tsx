@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { reassignFinalizer } from '@/app/actions/om/reassign-finalizer'
+import { QCReviewerSelect } from '@/components/admin-components/qc-reviewer-select'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -15,7 +16,6 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import isValidEmail from '@/utils/isValidEmail'
@@ -77,12 +77,13 @@ const ReassignFinalizer = ({
           <AlertDialogTitle>Re-assign Finalizer</AlertDialogTitle>
           <AlertDialogDescription>
             <div className='grid items-center gap-1.5'>
-              <Label>Please enter Finalizer email below.</Label>
-              <Input
+              <Label>Please select a Finalizer from the list below.</Label>
+              <QCReviewerSelect
                 value={userEmail}
-                type='email'
-                onChange={(event) => setUserEmail(event.target.value)}
+                onChange={setUserEmail}
+                triggerOnLoad={open}
                 placeholder='Finalizer Email'
+                onlyReviewers={true}
               />
             </div>
             <div className='grid items-center gap-1.5 mt-5 mb-5'>

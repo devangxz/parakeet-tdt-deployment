@@ -65,7 +65,7 @@ const UploadDocxDialog = ({
   useEffect(() => {
     setIsFormattingOrder(orderDetails.orderType === 'FORMATTING')
 
-    if (orderDetails.orderType === 'FORMATTING' && orderDetails.outputFormat) {
+    if ((orderDetails.orderType === 'FORMATTING' || orderDetails.orderType === 'TRANSCRIPTION_FORMATTING') && orderDetails.outputFormat) {
       const formats = orderDetails.outputFormat
         .split(',')
         .map((format) => format.trim().toLowerCase())
@@ -170,10 +170,12 @@ const UploadDocxDialog = ({
       setUploadedFiles(files)
       setUploadedExtensions(extensions)
     } else {
+
       handleFilesUpload(
         { files: event.target.files, type: 'files' },
         orderDetails.fileId,
-        setFileToUpload
+        setFileToUpload,
+        allowedFormats
       )
     }
   }
@@ -317,7 +319,7 @@ const UploadDocxDialog = ({
                 accept={
                   isFormattingOrder
                     ? allowedFormats.map((format) => `.${format}`).join(',')
-                    : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                    : '.docx' + (allowedFormats.length > 0 ? ',' + allowedFormats.map((format) => `.${format}`).join(',') : '')
                 }
               />
               <label
