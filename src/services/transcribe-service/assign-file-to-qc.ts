@@ -12,7 +12,8 @@ const assignFileToQC = async (
   jobType: JobType,
   inputFile: InputFileType,
   fileId: string,
-  assignMode: AssignMode
+  assignMode: AssignMode,
+  comment?: string
 ) => {
   logger.info(`--> assignFileToQC ${orderId} ${transcriberId}`)
   try {
@@ -22,7 +23,8 @@ const assignFileToQC = async (
       transcriberId,
       jobType,
       inputFile,
-      assignMode
+      assignMode,
+      comment
     )
 
     const { cost, rate } = await calculateAssignmentAmount(

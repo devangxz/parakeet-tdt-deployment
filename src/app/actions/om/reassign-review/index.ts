@@ -11,9 +11,11 @@ export async function reassignReview(formData: {
   userEmail: string
   retainEarnings: boolean
   isCompleted: boolean
+  comment: string
 }) {
   try {
-    const { orderId, userEmail, retainEarnings, isCompleted } = formData
+    const { orderId, userEmail, retainEarnings, isCompleted, comment } =
+      formData
 
     if (!orderId) {
       return {
@@ -61,7 +63,9 @@ export async function reassignReview(formData: {
       orderInformation.fileId,
       user.id,
       retainEarnings ? InputFileType.REVIEW_OUTPUT : InputFileType.LLM_OUTPUT,
-      'MANUAL'
+      'MANUAL',
+      true,
+      comment
     )
 
     await prisma.jobAssignment.update({

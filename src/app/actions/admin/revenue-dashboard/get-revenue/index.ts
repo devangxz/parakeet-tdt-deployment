@@ -144,6 +144,11 @@ export async function getRevenue(
               gte: start,
               lte: end,
             },
+            user: {
+              Customer: {
+                isTestCustomer: false,
+              },
+            },
           },
           include: {
             File: true,
@@ -176,6 +181,11 @@ export async function getRevenue(
               lte: end,
             },
             status: 'PAID',
+            user: {
+              Customer: {
+                isTestCustomer: false,
+              },
+            },
           },
         })
 

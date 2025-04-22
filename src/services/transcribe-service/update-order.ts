@@ -52,7 +52,8 @@ export const updateOrderAndCreateJobAssignment = async (
   transcriberId: number,
   jobType: JobType,
   inputFile: InputFileType,
-  assignMode: AssignMode
+  assignMode: AssignMode,
+  comment?: string
 ) => {
   logger.info(`--> updateOrderAndCreateJobAssignment ${orderId}`)
   try {
@@ -72,6 +73,7 @@ export const updateOrderAndCreateJobAssignment = async (
           transcriberId: transcriberId,
           inputFile: inputFile,
           assignMode,
+          ...(comment && { comment }),
         },
       })
     })
