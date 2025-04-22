@@ -17,12 +17,12 @@ function ASRProcessingNotice() {
       </div>
       <div className='ml-3'>
         <p className='text-sm font-medium text-primary'>
-          New Feature: Once transcripts are processed by AssemblyAI, they’re
-          automatically sent to 4oTranscribe for necessary corrections .The
-          transcript you see the first time you open it in the editor is the one
-          corrected by 4oTranscribe. If you feel the final transcript isn’t
-          satisfactory, you can revert to the original AssemblyAI transcript
-          using the dropdown menu within the editor.
+          {`New Feature: Once transcripts are processed by AssemblyAI, they're
+          automatically sent to GPT-4o Transcribe for necessary corrections.
+          The transcript you see the first time you open it in the editor is the
+          one corrected by GPT-4o Transcribe. If you feel the final transcript
+          isn't satisfactory, you can use the "Restore Version" option available
+          in the dropdown where you'll find the AssemblyAI version.`}
         </p>
       </div>
     </div>

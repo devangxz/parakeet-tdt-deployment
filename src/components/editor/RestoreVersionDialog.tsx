@@ -170,8 +170,8 @@ const RestoreVersionDialog = ({
                           <span className='ml-2 text-primary font-medium'>
                             {`(${
                               version.tag === 'ASSEMBLY_AI'
-                                ? 'Assembly AI'
-                                : 'Assembly AI + GPT 4o Transcribe'
+                                ? 'AssemblyAI'
+                                : 'AssemblyAI + GPT-4o Transcribe'
                             })`}
                           </span>
                         )}

@@ -55,7 +55,7 @@ const FormatWarningDialog: React.FC<FormatWarningDialogProps> = ({
         <p className='text-sm text-primary dark:text-white ml-3'>
           You can manually correct these issues in the editor. Alternatively,
           you can use the &quot;Restore Version&quot; option available in the
-          dropdown where you&apos;ll find the Assembly AI version.
+          dropdown where you&apos;ll find the AssemblyAI version.
         </p>
       </div>
 
