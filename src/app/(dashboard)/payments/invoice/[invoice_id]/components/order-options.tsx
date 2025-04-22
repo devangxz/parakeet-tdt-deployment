@@ -17,6 +17,8 @@ interface OrderOptionProps {
   rate: number
   description: string
   onEnabledChange: (isEnabled: boolean) => void
+  addMargin?: boolean
+  disableToggle?: boolean
 }
 
 export function OrderOptions({
@@ -26,6 +28,8 @@ export function OrderOptions({
   rate,
   description,
   onEnabledChange,
+  addMargin = true,
+  disableToggle = false,
 }: OrderOptionProps) {
   const [isOpen, setIsOpen] = React.useState(false)
 
@@ -34,13 +38,18 @@ export function OrderOptions({
   }
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className='mb-6 mr-5'>
+    <Collapsible
+      open={isOpen}
+      onOpenChange={setIsOpen}
+      className={`mb-6 ${addMargin ? 'mr-5' : ''}`}
+    >
       <div className='flex justify-between flex-wrap'>
         <div className='flex items-center gap-2'>
           <Switch
             id={`${id}-switch`}
             checked={isEnabled}
             onCheckedChange={toggleEnabled}
+            disabled={disableToggle}
           />
           <div className='text-md font-medium ml-3'>{name}</div>
           <CollapsibleTrigger>
@@ -51,7 +60,9 @@ export function OrderOptions({
             )}
           </CollapsibleTrigger>
         </div>
-        <div className='text-md font-normal'>{`+$${rate.toFixed(2)} / min`}</div>
+        <div className='text-md font-normal'>{`+$${rate.toFixed(
+          2
+        )} / min`}</div>
       </div>
       <CollapsibleContent className='mt-3 font-normal text-sm text-muted-foreground'>
         {description}
