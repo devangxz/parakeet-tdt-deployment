@@ -1344,6 +1344,8 @@ function EditorPage() {
         editorRef={editorRef}
         step={step}
         cfd={cfd}
+        diffToggleEnabled={diffToggleEnabled}
+        handleDiffToggle={handleDiffToggle}
       />
 
       <Header
