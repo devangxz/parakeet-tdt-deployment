@@ -27,8 +27,7 @@ async function processConversionResult(result: ConversionResult) {
         })
         .catch((error) => {
           logger.error(
-            `Failed to update conversion status in database: ${fileId}`,
-            error
+            `Failed to update conversion status in database: ${fileId} - ${error}`
           )
         })
 
@@ -97,8 +96,7 @@ async function processConversionResult(result: ConversionResult) {
     }
   } catch (error) {
     logger.error(
-      `Error processing conversion-worker result for fileId ${fileId}:`,
-      error
+      `Error processing conversion-worker result for fileId ${fileId}: ${error}`
     )
     throw error
   }
@@ -127,8 +125,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(null, { status: 200 })
   } catch (error) {
     logger.error(
-      `Error processing conversion-worker webhook for file ID ${conversionResult?.fileId} and user ID ${conversionResult?.userId}:`,
-      error
+      `Error processing conversion-worker webhook for file ID ${conversionResult?.fileId} and user ID ${conversionResult?.userId}: ${error}`
     )
     return NextResponse.json(
       {

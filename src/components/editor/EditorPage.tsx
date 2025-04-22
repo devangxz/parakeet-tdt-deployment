@@ -15,6 +15,7 @@ import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import renderCaseDetailsInputs from '@/components/editor/CaseDetailsInput'
 import renderCertificationInputs from '@/components/editor/CertificationInputs'
 import { EditorHandle } from '@/components/editor/Editor'
+import FormatWarningDialog from '@/components/editor/FormatWarningDialog'
 import Header from '@/components/editor/Header'
 import SectionSelector from '@/components/editor/SectionSelector'
 import SubmissionValidation from '@/components/editor/SubmissionValidation'
@@ -46,7 +47,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { RenderPDFDocument } from '@/components/utils'
 import { AUTOSAVE_INTERVAL } from '@/constants'
 import usePreventMultipleTabs from '@/hooks/usePreventMultipleTabs'
-import { AlignmentType, EditorSettings } from '@/types/editor'
+import { AlignmentType, CombinedASRFormatError, EditorSettings } from '@/types/editor'
 import {
   ShortcutControls,
   useShortcuts,
@@ -102,10 +103,14 @@ export type OrderDetails = {
   supportingDocuments?: SupportingDocument[]
   email: string
   speakerOptions: {
-    fn: string;
-    ln: string;
-  }[],
+    fn: string
+    ln: string
+  }[]
   isTestOrder: boolean
+  combinedASRFormatValidation?: {
+    isValid: boolean
+    errors: CombinedASRFormatError[]
+  }
 }
 
 export type UploadFilesType = {
@@ -212,6 +217,8 @@ function EditorPage() {
   const [testTranscript, setTestTranscript] = useState('')
   const [isSettingTest, setIsSettingTest] = useState(false)
   const [toggleReplace, setToggleReplace] = useState(false);
+  const [isFormatWarningDialogOpen, setIsFormatWarningDialogOpen] = useState(false)
+  const formatWarningShown = useRef(false)
   const [diffToggleEnabled, setDiffToggleEnabled] = useState(false);
   const [editorContent, setEditorContent] = useState('')
 
@@ -1132,6 +1139,18 @@ function EditorPage() {
     setMatchCount,
     setLastSearchIndex
   ]);
+
+  useEffect(() => {
+    if (
+      !formatWarningShown.current &&
+      orderDetails.combinedASRFormatValidation &&
+      !orderDetails.combinedASRFormatValidation.isValid &&
+      step === 'QC'
+    ) {
+      setIsFormatWarningDialogOpen(true)
+      formatWarningShown.current = true
+    }
+  }, [orderDetails.combinedASRFormatValidation, step])
  
   const generateDiff = useCallback((originalTranscript: string, currentTranscript: string) => {
     const dmp = new diff_match_patch()
@@ -1850,6 +1869,12 @@ function EditorPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        <FormatWarningDialog
+          isOpen={isFormatWarningDialogOpen}
+          onOpenChange={setIsFormatWarningDialogOpen}
+          errors={orderDetails.combinedASRFormatValidation?.errors || []}
+        />
 
         {diffToggleEnabled && <VersionCompareDialog
           isOpen={diffToggleEnabled}
