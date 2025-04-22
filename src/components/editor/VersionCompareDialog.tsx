@@ -19,7 +19,12 @@ interface VersionCompareDialogProps {
   isOpen: boolean
   onClose: () => void
   fileId: string
-  onCompare: (fromVersion: string, toVersion: string) => void
+  onCompare: (fromVersion: Options, toVersion: Options) => void
+}
+
+export interface Options {
+  versionKey: string
+  isCommitHash: boolean
 }
 
 export default function VersionCompareDialog({
@@ -29,11 +34,11 @@ export default function VersionCompareDialog({
   onCompare,
 }: VersionCompareDialogProps) {
   const [versions, setVersions] = useState<VersionInfo[]>([])
-  const [fromVersion, setFromVersion] = useState('')
-  const [toVersion, setToVersion] = useState('')
+  const [fromVersion, setFromVersion] = useState<Options>({ versionKey: '', isCommitHash: false })
+  const [toVersion, setToVersion] = useState<Options>({ versionKey: '', isCommitHash: false })
   const [isFetchingVersions, setIsFetchingVersions] = useState(false)
   const [isComparing, setIsComparing] = useState(false)
-  const [position, setPosition] = useState({ x: -500, y: 100 })
+  const [position, setPosition] = useState({ x: 10, y: 100 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -49,8 +54,10 @@ export default function VersionCompareDialog({
           
           // Set default selections if versions are available
           if (result.versions.length >= 2) {
-            setFromVersion(result.versions[0].commitHash)
-            setToVersion(result.versions[result.versions.length - 1].commitHash)
+            const getFromVersion = getVersionIdentifier(result.versions[0])
+            const getToVersion = getVersionIdentifier(result.versions[result.versions.length - 1])
+            setFromVersion(getFromVersion)
+            setToVersion(getToVersion)
           }
         } else {
           toast.error(result.message || 'No versions found')
@@ -68,6 +75,13 @@ export default function VersionCompareDialog({
       fetchVersions()
     }
   }, [isOpen, fileId])
+
+  const getVersionIdentifier = (version: VersionInfo): Options => {
+    if (version.tag && version.s3VersionId) {
+      return {versionKey: version.s3VersionId, isCommitHash: false};
+    }
+    return {versionKey: version.commitHash, isCommitHash: true};
+  }
 
   // Set up drag handlers
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -90,7 +104,6 @@ export default function VersionCompareDialog({
         x: e.clientX - rect.left,
         y: e.clientY - rect.top
       });
-      console.log(position)
     }
   };
 
@@ -127,22 +140,6 @@ export default function VersionCompareDialog({
       };
     }
   }, [isOpen, isDragging]);
-
-  // Add useEffect to position the dialog within the viewport when it opens
-  useEffect(() => {
-    if (isOpen && dialogRef.current) {
-      // Set initial position to be centered within the viewport
-      const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
-      
-      const dialogWidth = dialogRef.current.offsetWidth;
-      
-      // Position in the top right area of the editor
-      setPosition({
-        x: Math.max(20, vw - dialogWidth - 40),
-        y: 100
-      });
-    }
-  }, [isOpen]);
 
   const handleCompare = async () => {
     if (!fromVersion || !toVersion) {
@@ -204,8 +201,15 @@ export default function VersionCompareDialog({
             </div>
           ) : (
             <Select
-              value={fromVersion}
-              onValueChange={setFromVersion}
+              value={fromVersion.versionKey}
+              onValueChange={(value) => {
+                const foundVersion = versions.find(v => 
+                  (v.s3VersionId === value) || (v.commitHash === value)
+                );
+                if (foundVersion) {
+                  setFromVersion(getVersionIdentifier(foundVersion));
+                }
+              }}
               disabled={isFetchingVersions}
             >
               <SelectTrigger id="from-version" className="cursor-pointer">
@@ -214,8 +218,8 @@ export default function VersionCompareDialog({
               <SelectContent>
                 {versions.map((version) => (
                   <SelectItem
-                    key={`from-${version.commitHash}`}
-                    value={version.commitHash}
+                    key={`from-${getVersionIdentifier(version).versionKey}`}
+                    value={getVersionIdentifier(version).versionKey}
                   >
                     {formatVersionLabel(version)}
                   </SelectItem>
@@ -244,8 +248,15 @@ export default function VersionCompareDialog({
             </div>
           ) : (
             <Select 
-              value={toVersion} 
-              onValueChange={setToVersion}
+              value={toVersion.versionKey} 
+              onValueChange={(value) => {
+                const foundVersion = versions.find(v => 
+                  (v.s3VersionId === value) || (v.commitHash === value)
+                );
+                if (foundVersion) {
+                  setToVersion(getVersionIdentifier(foundVersion));
+                }
+              }}
               disabled={isFetchingVersions}
             >
               <SelectTrigger id="to-version" className="cursor-pointer">
@@ -254,8 +265,8 @@ export default function VersionCompareDialog({
               <SelectContent>
                 {versions.map((version) => (
                   <SelectItem
-                    key={`to-${version.commitHash}`}
-                    value={version.commitHash}
+                    key={`to-${getVersionIdentifier(version).versionKey}`}
+                    value={getVersionIdentifier(version).versionKey}
                   >
                     {formatVersionLabel(version)}
                   </SelectItem>

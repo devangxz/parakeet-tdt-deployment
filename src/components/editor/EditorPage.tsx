@@ -27,7 +27,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/editor/Tabs'
 import renderTitleInputs from '@/components/editor/TitleInputs'
 import Topbar from '@/components/editor/Topbar'
-import VersionCompareDialog from '@/components/editor/VersionCompareDialog'
+import VersionCompareDialog, { Options } from '@/components/editor/VersionCompareDialog'
 import WaveformHeatmap from '@/components/editor/WaveformHeatmap'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -214,7 +214,6 @@ function EditorPage() {
   const [toggleReplace, setToggleReplace] = useState(false);
   const [diffToggleEnabled, setDiffToggleEnabled] = useState(false);
   const [editorContent, setEditorContent] = useState('')
-  const [isLoading, setIsLoading] = useState(false);
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -554,9 +553,18 @@ function EditorPage() {
           editorRef.current.triggerAlignmentUpdate();
         }
         autoCapitalizeSentences(quillRef, autoCapitalize)
+        
         let transcript: string | null = null;
         if (orderDetails.fileId && diffToggleEnabled) {
-          transcript = saveTranscriptInDiffMode() || ''
+          transcript = saveTranscriptInDiffMode()
+          if (transcript) {
+            setEditorContent(transcript)
+            persistEditorDataIDB(orderDetails.fileId, { 
+              transcript: transcript,
+              listenCount,
+              editedSegments: Array.from(editedSegments)
+            });
+          }
         }
 
         await handleSave({
@@ -747,7 +755,7 @@ function EditorPage() {
     const isDarkMode = document.documentElement.classList.contains('dark')
     const deleteColor = isDarkMode ? 'rgba(128, 0, 0, 0.5)' : 'rgba(255, 0, 0, 0.3)'
     const quill = quillRef?.current?.getEditor()
-    if (!quill) return
+    if (!quill) return null
     const currentContent = quill.getContents()
     const transcript = currentContent.ops.reduce((result: string, op: Op) => {
       const isDeletedText = op.attributes?.background && 
@@ -759,12 +767,6 @@ function EditorPage() {
       return result
     }, '')
 
-    persistEditorDataIDB(orderDetails.fileId, { 
-      transcript: transcript,
-      listenCount,
-      editedSegments: Array.from(editedSegments)
-    });
-
     return transcript
   }, [quillRef])
 
@@ -772,7 +774,16 @@ function EditorPage() {
     const interval = setInterval(async () => {
       let transcript: string | null = null;
       if (orderDetails.fileId && diffToggleEnabled) {
-        transcript = saveTranscriptInDiffMode() || null
+
+        transcript = saveTranscriptInDiffMode()
+        if (transcript) {  
+          setEditorContent(transcript)
+          persistEditorDataIDB(orderDetails.fileId, { 
+            transcript: transcript,
+            listenCount,
+            editedSegments: Array.from(editedSegments)
+          });
+        }
       }
 
       await handleSave(
@@ -788,6 +799,7 @@ function EditorPage() {
         },
         false
       )
+      
       if(!diffToggleEnabled) {
         updateFormattedTranscript()
       }
@@ -798,10 +810,12 @@ function EditorPage() {
     getEditorText,
     orderDetails,
     notes,
-    step,
     cfd,
     listenCount,
     editedSegments,
+    diffToggleEnabled,
+    saveTranscriptInDiffMode,
+    setEditorContent
   ])
 
   useEffect(() => {
@@ -851,13 +865,13 @@ function EditorPage() {
 
   const getSpeakerChangePercentage = (): number =>
     calculateSpeakerChangePercentage(
-      getFormattedTranscript(ctms),
+      orderDetails.isTestOrder ? testTranscript : getFormattedTranscript(ctms),
       getEditorText()
     )
 
   const getSpeakerMacroF1Score = (): number =>
     calculateSpeakerMacroF1Score(
-      getFormattedTranscript(ctms),
+      orderDetails.isTestOrder ? testTranscript : getFormattedTranscript(ctms),
       getEditorText()
     )
   
@@ -1130,30 +1144,37 @@ function EditorPage() {
       console.warn('Diff generation prerequisites not met.', { quill })
       return
     }
-    
-    setIsLoading(true)
 
     setTimeout(() => {
       try {
         if (!newDiffToggleValue) {
-          const transcript = editorContent == '' ? saveTranscriptInDiffMode() as string : editorContent;
-          console.log('transcript', transcript)
+          // When exiting diff mode, use the saved clean transcript 
+          const savedTranscript = saveTranscriptInDiffMode()
+          const transcript = editorContent || (savedTranscript || '');
           quill.setContents(getFormattedContent(transcript), 'silent')
         } else {
           const currentText = quill.getText()
           
-          const originalTranscript = getFormattedTranscript(ctms)
+          const originalTranscript = orderDetails.isTestOrder ? testTranscript : getFormattedTranscript(ctms)
           const diff = generateDiff(originalTranscript, currentText) || []
           renderDiff(diff)
+          
+          // Save the clean transcript immediately when entering diff mode
+          const cleanTranscript = saveTranscriptInDiffMode()
+          if (cleanTranscript) {
+            setEditorContent(cleanTranscript)
+            persistEditorDataIDB(orderDetails.fileId, { 
+              transcript: cleanTranscript,
+              listenCount,
+              editedSegments: Array.from(editedSegments)
+            });
+          }
         }
       } catch (error) {
         console.error("Error generating diff transcript:", error)
-      } finally {
-        console.log('isLoading', isLoading)
-        setIsLoading(false)
       }
     }, 0)
-  }, [quillRef, ctms, diffToggleEnabled, generateDiff])
+  }, [quillRef, ctms, diffToggleEnabled, generateDiff, saveTranscriptInDiffMode, editorContent, orderDetails.fileId, orderDetails.isTestOrder, testTranscript, listenCount, editedSegments])
 
   const renderDiff = useCallback((diffs: [number, string][]) => {
     const isDarkMode = document.documentElement.classList.contains('dark')
@@ -1197,39 +1218,31 @@ function EditorPage() {
          currentText.slice(-20) === prevText.slice(-20))) {
       return;
     }
-    const sanitizedTranscript = saveTranscriptInDiffMode()
-    const originalTranscript = getFormattedTranscript(ctms)
-    console.log('sanitizedTranscript', sanitizedTranscript)
-    const diffs = generateDiff(originalTranscript, sanitizedTranscript || '')
-    console.log('diffs', diffs)
-    const isDarkMode = document.documentElement.classList.contains('dark')
-    const insertColor = isDarkMode ? 'rgba(0, 128, 0, 0.4)' : 'rgba(0, 255, 0, 0.2)'
-    const deleteColor = isDarkMode ? 'rgba(128, 0, 0, 0.5)' : 'rgba(255, 0, 0, 0.3)'
-    
-    // Create a new Delta with the proper formatting
-    const delta = new Delta()
-    diffs.forEach(([op, text]) => {
-      if (!text || text.length === 0) return; // Skip empty segments
+    try {
+      const sanitizedTranscript = saveTranscriptInDiffMode()
+      const originalTranscript = orderDetails.isTestOrder ? testTranscript : getFormattedTranscript(ctms)
       
-      if (op === DIFF_INSERT) {
-        delta.insert(text, { background: insertColor })
-      } else if (op === DIFF_DELETE) {
-        delta.insert(text, { background: deleteColor, deleted: true })
-      } else if (op === DIFF_EQUAL) {
-        delta.insert(text)
+      if (!sanitizedTranscript || !originalTranscript) {
+        console.warn('Missing required transcripts for diff generation');
+        return;
       }
-    })
-    
-    // Apply the new delta to the editor
-    console.log('delta', delta)
-    quill.setContents(delta, 'silent')
-    
-    // Save the transcript without deleted text
-    const transcript = saveTranscriptInDiffMode()
-    if (transcript) {
-      setEditorContent(transcript)
+      const diffs = generateDiff(originalTranscript, sanitizedTranscript)
+      renderDiff(diffs)
+
+      if (sanitizedTranscript !== editorContent) {
+        setEditorContent(sanitizedTranscript)
+        
+        // Also save to IndexedDB to ensure persistence
+        persistEditorDataIDB(orderDetails.fileId, { 
+          transcript: sanitizedTranscript,
+          listenCount,
+          editedSegments: Array.from(editedSegments)
+        });
+      }
+    } catch (error) {
+      console.error('Error in markInsertedWords:', error);
     }
-  }, [quillRef, generateDiff, saveTranscriptInDiffMode, diffToggleEnabled, ctms])
+  }, [quillRef, generateDiff, saveTranscriptInDiffMode, diffToggleEnabled, ctms, editorContent, orderDetails.fileId, orderDetails.isTestOrder, testTranscript, listenCount, editedSegments])
 
   // Handle text changes in diff mode
   useEffect(() => {
@@ -1279,34 +1292,26 @@ function EditorPage() {
   }, [setDiffToggleEnabled, toggleDiffView])
 
   // Add the version comparison handler
-  const handleVersionCompare = async (fromVersion: string, toVersion: string) => {
+  const handleVersionCompare = async (fromVersion: Options, toVersion: Options) => {
     try {
-      setIsLoading(true)
-      toast.info('Comparing versions...')
-      
       const result = await getVersionComparisonAction(orderDetails.fileId, fromVersion, toVersion)
       
       if (!result.success || !result.fromText || !result.toText) {
         toast.error(result.message || 'Failed to compare versions')
         return
       }
-
-      // Generate the diff between the two versions
       const diffs = generateDiff(result.fromText, result.toText)
       setDiff(diffs)
       renderDiff(diffs)
-      // Set diff tab as active
       const tabsTrigger = document.querySelector('[data-state="inactive"][value="diff"]') as HTMLElement
       if (tabsTrigger) {
         tabsTrigger.click()
       }
-      toast.dismiss();
+
       toast.success('Version comparison loaded')
     } catch (error) {
       console.error('Error comparing versions:', error)
       toast.error('Failed to compare versions')
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -1409,12 +1414,6 @@ function EditorPage() {
                             value='transcribe'
                           >
                             Transcribe
-                          </TabsTrigger>
-                          <TabsTrigger
-                            className='text-base px-0 pt-2 pb-[6.5px]'
-                            value='diff'
-                          >
-                            Diff
                           </TabsTrigger>
                           <TabsTrigger
                             className='text-base px-0 pt-2 pb-[6.5px]'
@@ -1752,7 +1751,7 @@ function EditorPage() {
                           },
                           false
                         )
-                        console.log("submitting cf transcript");
+
                         await handleSubmit({
                           orderDetails,
                           step,
@@ -1782,7 +1781,7 @@ function EditorPage() {
                         ...prevButtonLoading,
                         submit: false,
                       }));
-                      console.log("ERROR:", error);
+
                       setIsSubmitting(false);
                       setSubmissionStatus('processing');
                     } finally {
@@ -1848,13 +1847,12 @@ function EditorPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Version Compare Dialog */}
-        <VersionCompareDialog
+        {diffToggleEnabled && <VersionCompareDialog
           isOpen={diffToggleEnabled}
-          onClose={() => {console.log('closing version compare dialog')}}
+          onClose={() => {}}
           fileId={orderDetails.fileId}
           onCompare={handleVersionCompare}
-        />
+        />}
       </div>
     </div>
   )
