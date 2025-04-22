@@ -27,13 +27,13 @@ const getTranscriptFromCommitHash = async (fileId: string, commitHash: string, t
     )
     
     if (!response.data.success) {
-      logger.error(`Failed to get transcript from commit hash: ${commitHash}`)
+      logger.error(`Failed to get transcript for file: ${fileId} from commit hash: ${commitHash}`)
       return null
     }
     
     return response.data.transcript
   } catch (error) {
-    logger.error(`Error fetching transcript from commit hash: ${commitHash}`, error)
+    logger.error(`Error fetching transcript for file: ${fileId} from commit hash: ${commitHash}`, error)
     return null
   }
 }
@@ -43,7 +43,7 @@ const getTranscriptFromS3VersionId = async (fileId: string, s3VersionId: string)
     const transcript = await getFileVersionFromS3(`${fileId}.txt`, s3VersionId)
     return transcript.toString()
   } catch (error) {
-    logger.error(`Error fetching transcript from S3 version ID: ${s3VersionId}`, error)
+    logger.error(`Error fetching transcript for file: ${fileId} from S3 version ID: ${s3VersionId}`, error)
     return null
   }
 }
@@ -78,6 +78,7 @@ export async function getVersionComparisonAction(
     }
 
     if (!fromText || !toText) {
+      logger.info(`Failed to retrieve one or both version transcripts for file: ${fileId}, from version: ${fromVersion}, to version: ${toVersion}`)
       return {
         success: false,
         message: 'Failed to retrieve one or both version transcripts',
@@ -90,7 +91,7 @@ export async function getVersionComparisonAction(
       toText,
     }
   } catch (error) {
-    logger.error('Error getting version comparison:', error)
+    logger.error(`Error getting version comparison for file: ${fileId}, from version: ${fromVersion}, to version: ${toVersion}, error: ${error}`)
     return {
       success: false,
       message: 'Failed to retrieve version comparison',
@@ -168,7 +169,7 @@ export async function getFileVersionsAction(fileId: string): Promise<VersionsRes
       versions,
     }
   } catch (error) {
-    logger.error('Error getting file versions:', error)
+    logger.error(`Error getting file versions for file: ${fileId}, error: ${error}`)
     return {
       success: false,
       message: 'Failed to retrieve file versions',

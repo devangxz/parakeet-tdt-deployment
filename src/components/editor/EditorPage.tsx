@@ -1218,7 +1218,9 @@ function EditorPage() {
          currentText.slice(-20) === prevText.slice(-20))) {
       return;
     }
+    
     try {
+      // First get the clean text without diff formatting (sanitized)
       const sanitizedTranscript = saveTranscriptInDiffMode()
       const originalTranscript = orderDetails.isTestOrder ? testTranscript : getFormattedTranscript(ctms)
       
