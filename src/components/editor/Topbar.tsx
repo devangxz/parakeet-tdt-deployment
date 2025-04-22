@@ -125,6 +125,8 @@ interface TopbarProps {
   editorRef: React.Ref<EditorHandle>
   step: string
   cfd: string
+  diffToggleEnabled: boolean
+  handleDiffToggle: () => void
 }
 
 export default memo(function Topbar({
@@ -152,6 +154,8 @@ export default memo(function Topbar({
   editorRef,
   step,
   cfd,
+  diffToggleEnabled,
+  handleDiffToggle
 }: TopbarProps) {
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
@@ -570,6 +574,9 @@ export default memo(function Topbar({
       const LLMFileUrl = await getTextFile(orderDetails.fileId, 'LLM')
       setLLMFileUrl(LLMFileUrl?.signedUrl || '')
     }
+    if (diffToggleEnabled) {
+      handleDiffToggle()
+    }
   }
 
   const revertTranscript = async () => {
@@ -741,7 +748,12 @@ export default memo(function Topbar({
             {['CUSTOMER'].includes(session?.user?.role ?? '') ? (
               <Button
                 disabled={isCheckAndDownloadLoading}
-                onClick={() => handleCheckAndDownload(orderDetails.fileId)}
+                onClick={() => {
+                  handleCheckAndDownload(orderDetails.fileId)
+                  if (diffToggleEnabled) {
+                    handleDiffToggle()
+                  }
+                }}
                 className='format-button border-r-[1.5px] border-white/70'
               >
                 {isCheckAndDownloadLoading ? (
@@ -758,8 +770,14 @@ export default memo(function Topbar({
                 onClick={() => {
                   if (orderDetails.status === 'QC_ASSIGNED') {
                     setIsSpeakerNameModalOpen(true)
+                    if (diffToggleEnabled) {
+                      handleDiffToggle()
+                    }
                   } else {
                     setIsSubmitModalOpen(true)
+                    if (diffToggleEnabled) {
+                      handleDiffToggle()
+                    }
                   }
                 }}
                 className='format-button border-r-[1.5px] border-white/70'

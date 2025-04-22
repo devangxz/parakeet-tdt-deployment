@@ -521,7 +521,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     }, 0);
   }, [quillRef, highlightNumbersEnabled]);
 
-  // Add effect to highlight numbers when highlightNumbersEnabled changes
   useEffect(() => {
       highlightNumbers()
   }, [highlightNumbersEnabled, highlightNumbers, clearHighlights])
@@ -772,7 +771,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     highlightNumbers, 
     highlightNumbersEnabled
   ])
-
   const handleUndo = useCallback(() => {
     if (undoStack.length === 0) return
 

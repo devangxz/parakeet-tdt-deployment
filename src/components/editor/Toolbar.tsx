@@ -13,7 +13,7 @@ import {
   ZoomOutIcon,
   LightningBoltIcon,
 } from '@radix-ui/react-icons'
-import { BinaryIcon, TimerOff, Undo2, Redo2 } from 'lucide-react'
+import { BinaryIcon, TimerOff, Undo2, Redo2, GitCompareArrowsIcon } from 'lucide-react'
 
 import PlayerButton from './PlayerButton'
 import { Button } from '../ui/button'
@@ -59,6 +59,8 @@ interface ToolbarProps {
   toggleHighlightNumerics: () => void
   handleUndo: () => void
   handleRedo: () => void
+  generateTranscriptFromDiff: () => void
+  diffToggleEnabled: boolean
 }
 
 export default function Toolbar({
@@ -84,7 +86,9 @@ export default function Toolbar({
   removeTimestamps,
   toggleHighlightNumerics,
   handleUndo,
-  handleRedo
+  handleRedo,
+  generateTranscriptFromDiff,
+  diffToggleEnabled,
 }: ToolbarProps) {
   return (
     <TooltipProvider>
@@ -268,6 +272,19 @@ export default function Toolbar({
         </TooltipTrigger>
         <TooltipContent>
           <p>Highlight numerics</p>
+        </TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger>
+          <PlayerButton
+            icon={<GitCompareArrowsIcon className={`w-4 h-4 ${diffToggleEnabled ? 'text-primary' : ''}`} />}
+            tooltip='Diff Mode'
+            onClick={generateTranscriptFromDiff}
+          />
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Diff Mode</p>
         </TooltipContent>
       </Tooltip>
 
