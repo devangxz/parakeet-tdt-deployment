@@ -247,8 +247,12 @@ export function CheckAndDownload({
         `${filename}.vtt`
       )
 
-      setSubtitleUrls({
-        srtUrl:
+      if(srtResponse.success && !srtResponse.keyExists){
+        toast.error('Subtitle file not found. Please download subtitles from Editor.')
+      }
+      else{
+        setSubtitleUrls({
+          srtUrl:
           srtResponse.success && srtResponse.signedUrl
             ? srtResponse.signedUrl
             : '',
@@ -256,7 +260,8 @@ export function CheckAndDownload({
           vttResponse.success && vttResponse.signedUrl
             ? vttResponse.signedUrl
             : '',
-      })
+        })
+      }
     } catch (error) {
       toast.error('Failed to fetch subtitle files')
     }
