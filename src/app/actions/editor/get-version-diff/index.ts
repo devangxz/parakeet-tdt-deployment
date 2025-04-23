@@ -141,7 +141,7 @@ export async function getFileVersionsAction(fileId: string): Promise<VersionsRes
     const versions: VersionInfo[] = []
     
     // Handle case when versionResponse has versions
-    if (versionsResponse.data?.versions?.length) {
+    if (versionsResponse.data?.versions?.length > 0) {
       versionsResponse.data.versions.forEach((version: VersionInfo) => {
         versions.push({
           ...version,

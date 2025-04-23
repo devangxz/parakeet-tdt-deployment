@@ -53,7 +53,7 @@ export default function VersionCompareDialog({
           setVersions(result.versions)
           
           // Set default selections if versions are available
-          if (result.versions.length >= 2) {
+          if (result.versions.length >= 1) {
             const getFromVersion = getVersionIdentifier(result.versions[0])
             const getToVersion = getVersionIdentifier(result.versions[result.versions.length - 1])
             setFromVersion(getFromVersion)

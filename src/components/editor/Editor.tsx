@@ -1281,7 +1281,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
         theme='snow'
         modules={quillModules}
         defaultValue={{ ops: initialContent }}
-        formats={['size', 'background', 'font', 'color', 'bold', 'italics']}
+        formats={['size', 'background', 'font', 'color', 'bold', 'italics','strike', 'underline']}
         className='h-full'
         onChangeSelection={handleSelectionChange}
         onBlur={handleBlur}

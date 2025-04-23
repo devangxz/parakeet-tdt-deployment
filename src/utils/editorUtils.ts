@@ -1206,6 +1206,27 @@ const handleSubmit = async ({
   }
 }
 
+const generateSubtitles = async(orderDetails: OrderDetails, currentAlignments: AlignmentType[]) => {
+  if (!orderDetails || !orderDetails.fileId || !currentAlignments) return
+
+  if (
+    currentAlignments &&
+    Array.isArray(currentAlignments) &&
+    currentAlignments.length > 0
+  ) {
+    const filteredAlignments = currentAlignments.filter(
+      (alignment) => 'type' in alignment && alignment.type !== 'meta'
+    )
+
+    const subtitles = getSRTVTT(filteredAlignments)
+    if (subtitles) {
+      await uploadSubtitlesAction(orderDetails.fileId, subtitles)
+    }
+    return true
+  }
+  return false
+}
+
 const getFrequentTermsHandler = async (
   userId: string,
   setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>,
@@ -2317,6 +2338,7 @@ export {
   calculateSpeakerMacroF1Score,
   getTestTranscript,
   escapeRegExp,
-  clearAllHighlights
+  clearAllHighlights,
+  generateSubtitles
 }
 export type { CTMType }

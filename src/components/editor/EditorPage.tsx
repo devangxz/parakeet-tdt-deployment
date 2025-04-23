@@ -1190,7 +1190,7 @@ function EditorPage() {
           delta.insert(text, { background: insertColor })
           break
         case DIFF_DELETE:
-          delta.insert(text, { background: deleteColor, deleted: true })
+          delta.insert(text, { background: deleteColor, strike: true })
           break
         case DIFF_EQUAL:
           delta.insert(text)
