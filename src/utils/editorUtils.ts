@@ -33,7 +33,7 @@ import {
   QC_VALIDATION,
 } from '@/constants'
 import { getModifiedTranscript, getTranscriptVersion, setTranscriptVersion } from '@/services/editor-service/get-set-version-transcript'
-import { AlignmentType, CTMType, UndoRedoItem, QCValidation } from '@/types/editor'
+import { AlignmentType, CTMType, UndoRedoItem, QCValidation, CombinedASRFormatError } from '@/types/editor'
 import {
   getEditorDataIDB,
   persistEditorDataIDB,
@@ -592,7 +592,12 @@ const fetchFileDetails = async ({
       supportingDocuments: orderRes.orderDetails.supportingDocuments || [],
       email: orderRes.orderDetails.email,
       speakerOptions: orderRes.orderDetails.speakerOptions || [],
-      isTestOrder: orderRes.orderDetails.isTestOrder
+      isTestOrder: orderRes.orderDetails.isTestOrder,
+      combinedASRFormatValidation: orderRes.orderDetails
+        .combinedASRFormatValidation as {
+        isValid: boolean
+        errors: CombinedASRFormatError[]
+      },
     }
 
     setOrderDetails(orderDetailsFormatted)
@@ -1787,7 +1792,21 @@ function getFormattedContent(text: string): Op[] {
   }
 
   if (lastIndex < text.length) {
-    formattedContent.push({ insert: text.slice(lastIndex) })
+    const remainingText = text.slice(lastIndex)
+    if (remainingText.trim().length > 0 && !remainingText.endsWith('\n')) {
+      formattedContent.push({ insert: remainingText + '\n' })
+    } else {
+      formattedContent.push({ insert: remainingText })
+    }
+  } else if (formattedContent.length > 0) {
+    const lastOperation = formattedContent[formattedContent.length - 1]
+    if (
+      typeof lastOperation.insert === 'string' &&
+      lastOperation.insert.trim().length > 0 &&
+      !lastOperation.insert.endsWith('\n')
+    ) {
+      lastOperation.insert += '\n'
+    }
   }
 
   return formattedContent

@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     logger.info(`LLM webhook processed successfully for file ID ${fileId}`)
     return NextResponse.json(null, { status: 200 })
   } catch (error) {
-    logger.error(`Error processing LLM webhook for file ID ${fileId}:`, error)
+    logger.error(`Error processing LLM webhook for file ID ${fileId}: ${error}`)
     return NextResponse.json(
       { error: `Error processing LLM webhook for file ID ${fileId}` },
       { status: 500 }

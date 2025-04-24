@@ -35,8 +35,7 @@ export async function POST(req: NextRequest) {
         )
       } catch (error) {
         logger.error(
-          `Error creating audio/video conversion job - userId: ${metadata.userId}, fileId: ${metadata.fileId}, fileKey: ${metadata.fileKey}:`,
-          error
+          `Error creating audio/video conversion job - userId: ${metadata.userId}, fileId: ${metadata.fileId}, fileKey: ${metadata.fileKey}: ${error}`
         )
       }
     }
@@ -56,8 +55,7 @@ export async function POST(req: NextRequest) {
     return new Response(null, { status: 200 })
   } catch (error) {
     logger.error(
-      `Error processing lambda-metadata-extractor webhook for file ID ${metadata.fileId}:`,
-      error
+      `Error processing lambda-metadata-extractor webhook for file ID ${metadata.fileId}: ${error}`
     )
     return NextResponse.json(
       {
