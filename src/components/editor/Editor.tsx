@@ -382,9 +382,12 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
 
     const oldAl = alignments[lastHighlightedRef.current]
     if (oldAl.startPos !== undefined && oldAl.endPos !== undefined) {
-      quill.formatText(oldAl.startPos, oldAl.endPos - oldAl.startPos, {
-        background: null,
-      })
+      const format = quill.getFormat(oldAl.startPos, oldAl.endPos - oldAl.startPos)
+      if(format.background === 'var(--highlight-color)'){
+        quill.formatText(oldAl.startPos, oldAl.endPos - oldAl.startPos, {
+          background: null,
+        })
+      }
     }
     lastHighlightedRef.current = null
   }, [alignments])
@@ -938,9 +941,13 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       const newAl = alignments[currentWordIndex]
       if (newAl?.startPos !== undefined && newAl?.endPos !== undefined) {
         // Highlight the new word
-        quill.formatText(newAl.startPos, newAl.endPos - newAl.startPos, {
-          background: 'var(--highlight-color)',
-        })
+        const format = quill.getFormat(newAl.startPos, newAl.endPos - newAl.startPos)
+        console.log(!format.background, format.background)
+        if(!format.background){
+          quill.formatText(newAl.startPos, newAl.endPos - newAl.startPos, {
+            background: 'var(--highlight-color)',
+          })
+        }
 
         if (!isTyping) {
           lastHighlightedRef.current = currentWordIndex
@@ -1281,7 +1288,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
         theme='snow'
         modules={quillModules}
         defaultValue={{ ops: initialContent }}
-        formats={['size', 'background', 'font', 'color', 'bold', 'italics','strike', 'underline']}
+        formats={['size', 'background', 'font', 'color', 'bold', 'italics','strike']}
         className='h-full'
         onChangeSelection={handleSelectionChange}
         onBlur={handleBlur}
