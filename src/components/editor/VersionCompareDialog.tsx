@@ -24,6 +24,7 @@ interface VersionCompareDialogProps {
 
 export interface Options {
   versionKey: string
+  tag: string
   isCommitHash: boolean
 }
 
@@ -34,8 +35,8 @@ export default function VersionCompareDialog({
   onCompare,
 }: VersionCompareDialogProps) {
   const [versions, setVersions] = useState<VersionInfo[]>([])
-  const [fromVersion, setFromVersion] = useState<Options>({ versionKey: '', isCommitHash: false })
-  const [toVersion, setToVersion] = useState<Options>({ versionKey: '', isCommitHash: false })
+  const [fromVersion, setFromVersion] = useState<Options>({ versionKey: '', tag: '', isCommitHash: false })
+  const [toVersion, setToVersion] = useState<Options>({ versionKey: '', tag: '', isCommitHash: false })
   const [isFetchingVersions, setIsFetchingVersions] = useState(false)
   const [isComparing, setIsComparing] = useState(false)
   const [position, setPosition] = useState({ x: 10, y: 100 })
@@ -78,9 +79,9 @@ export default function VersionCompareDialog({
 
   const getVersionIdentifier = (version: VersionInfo): Options => {
     if (version.tag && version.s3VersionId) {
-      return {versionKey: version.s3VersionId, isCommitHash: false};
+      return {versionKey: version.s3VersionId, tag: version.tag, isCommitHash: false};
     }
-    return {versionKey: version.commitHash, isCommitHash: true};
+    return {versionKey: version.commitHash, tag: version.tag as string, isCommitHash: true};
   }
 
   // Set up drag handlers

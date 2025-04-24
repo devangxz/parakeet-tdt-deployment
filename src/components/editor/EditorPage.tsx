@@ -1154,7 +1154,8 @@ function EditorPage() {
  
   const generateDiff = useCallback((originalTranscript: string, currentTranscript: string) => {
     const dmp = new diff_match_patch()
-    return dmp.diff_wordMode(originalTranscript, currentTranscript)
+    const diff = dmp.diff_wordMode(originalTranscript, currentTranscript)
+    return diff
   }, [])
 
   const toggleDiffView = useCallback((newDiffToggleValue = diffToggleEnabled) => {
@@ -1175,7 +1176,7 @@ function EditorPage() {
           const currentText = quill.getText()
           
           const originalTranscript = orderDetails.isTestOrder ? testTranscript : getFormattedTranscript(ctms)
-          const diff = generateDiff(originalTranscript, currentText) || []
+          const diff = generateDiff(originalTranscript, currentText.trim()) || []
           renderDiff(diff)
           
           // Save the clean transcript immediately when entering diff mode
@@ -1209,7 +1210,7 @@ function EditorPage() {
           delta.insert(text, { background: insertColor })
           break
         case DIFF_DELETE:
-          delta.insert(text, { background: deleteColor, strike: true })
+          delta.insert(text.trim(), { background: deleteColor, strike: true })
           break
         case DIFF_EQUAL:
           delta.insert(text)
@@ -1230,11 +1231,7 @@ function EditorPage() {
     const quill = quillRef?.current?.getEditor()
     if (!quill) return
     
-    // Skip if texts are identical or nearly identical to improve performance
-    if (prevText === currentText || 
-        (Math.abs(currentText.length - prevText.length) < 3 && 
-         currentText.slice(0, 20) === prevText.slice(0, 20) &&
-         currentText.slice(-20) === prevText.slice(-20))) {
+    if (prevText === currentText) {
       return;
     }
     
@@ -1291,7 +1288,7 @@ function EditorPage() {
         const currentText = quill.getText()
         markInsertedWords(prevText, currentText)
         prevText = currentText
-      }, 500) // 500ms debounce for better performance
+      }, 700) // 500ms debounce for better performance
     }
     
     quill.on('text-change', handleTextChange)
@@ -1877,7 +1874,7 @@ function EditorPage() {
         />
 
         {diffToggleEnabled && <VersionCompareDialog
-          isOpen={diffToggleEnabled}
+          isOpen={false && diffToggleEnabled}
           onClose={() => {}}
           fileId={orderDetails.fileId}
           onCompare={handleVersionCompare}
