@@ -81,7 +81,8 @@ import {
   calculateSpeakerMacroF1Score,
   getTestTranscript,
   escapeRegExp,
-  clearAllHighlights, 
+  clearAllHighlights,
+  generateSubtitles,
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
@@ -1394,6 +1395,38 @@ function EditorPage() {
       toast.error('Failed to compare versions')
     }
   }
+
+  useEffect(() => {
+    // only once, when the editor mounts with a valid fileId
+    const shouldRegen = localStorage.getItem('shouldRegenerateSubtitles') === 'true'
+    if (!shouldRegen || !orderDetails.fileId || !editorRef.current) return
+
+    // clear the flag immediately so it won't rerun
+    localStorage.setItem('shouldRegenerateSubtitles', 'false')
+
+    const doRegen = async () => {
+      const toastId = toast.loading('Generating subtitles…')
+      try {
+        await editorRef.current?.triggerAlignmentUpdate()
+        const alignments = editorRef.current!.getAlignments()
+        const ok = await generateSubtitles(orderDetails, alignments)
+        toast.dismiss(toastId)
+        ok
+          ? toast.success('Subtitles generated successfully')
+          : toast.error('Failed to generate subtitles')
+      } catch (e) {
+        toast.dismiss(toastId)
+        console.error(e)
+        toast.error('Error generating subtitles')
+      }
+    }
+
+    doRegen()
+  }, [orderDetails, initialEditorData])
+
+  useEffect(() => {
+    console.log('editorRef', editorRef)
+  }, [initialEditorData])
 
   return (
     <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
