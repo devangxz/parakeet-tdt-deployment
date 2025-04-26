@@ -1,8 +1,44 @@
 import config from '../../../config.json'
 import logger from '@/lib/logger'
+import { CTMType } from '@/types/editor'
+import { secondsToTs } from '@/utils/secondsToTs'
+import { applyTextReplacements } from '@/utils/transcript'
 import { diff_match_patch } from '@/utils/transcript/diff_match_patch'
 
-const TIMESTAMP_SPEAKER_PATTERN = new RegExp(config.asr.timestamp_speaker_pattern)
+const TIMESTAMP_SPEAKER_PATTERN = new RegExp(
+  config.asr.timestamp_speaker_pattern
+)
+
+export function getAssemblyAITranscript(ctms: CTMType[]): string {
+  const paragraphs: string[] = []
+  let currentWords: [number, string][] = []
+
+  ctms.forEach((ctm, index) => {
+    const word = ctm.punct ?? ctm.word
+    currentWords.push([index, word])
+
+    const isEndOfSentence = currentWords.length > 200 && /[.!?]$/.test(word)
+    const isLastWord = index === ctms.length - 1
+    const isSpeakerTurn = 'turn' in ctm
+
+    if (isSpeakerTurn || isLastWord || isEndOfSentence) {
+      let sentence = currentWords.map(([, w]) => w).join(' ')
+      const startCtm = ctms[currentWords[0][0]]
+
+      if (startCtm.speaker) {
+        sentence = `${secondsToTs(startCtm.start, true)} ${
+          startCtm.speaker
+        }: ${sentence}`
+      }
+
+      paragraphs.push(sentence)
+      currentWords = []
+    }
+  })
+
+  const transcript = paragraphs.join('\n\n')
+  return applyTextReplacements(transcript)
+}
 
 function formatCombinedTranscript(
   rawCombinedTranscript: string,
@@ -92,7 +128,7 @@ export function createCombinedTranscript(
   assemblyAITranscript: string,
   gptTranscript: string,
   fileId: string
-): string {
+): string | null {
   logger.info(
     `[${fileId}] Creating combined transcript using word-level diff processing`
   )
@@ -102,7 +138,7 @@ export function createCombinedTranscript(
       logger.error(
         `[${fileId}] One or both transcripts are empty, returning AssemblyAI transcript`
       )
-      return assemblyAITranscript
+      return null
     }
 
     logger.info(`[${fileId}] Generating word-level diff between transcripts`)
@@ -204,6 +240,6 @@ export function createCombinedTranscript(
     return finalCombinedTranscript
   } catch (error) {
     logger.error(`[${fileId}] Error creating combined transcript: ${error}`)
-    return assemblyAITranscript
+    return null
   }
 }

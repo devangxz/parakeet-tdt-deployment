@@ -171,7 +171,7 @@
   },
   "asr": {
     "low_confidence_threshold": 0.9,
-    "pwer_threshold": 0.3,
+    "pwer_threshold": 0.2,
     "difficulty": {
       "low": 0.1,
       "medium": 0.15,
