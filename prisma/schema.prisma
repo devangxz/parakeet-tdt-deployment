@@ -785,11 +785,11 @@ model ReviewWithGeminiStats {
   options      String[] @map("options") // selected prompt options
   instructions String   @map("instructions")
   temperature  Float    @map("temperature")
-  startTime    DateTime @map("start_time")
-  endTime      DateTime @map("end_time")
-  duration     Int      @default(0) @map("duration")
-  savedTime    DateTime @map("saved_time")
-  createdAt    DateTime @default(now()) @map("created_at")
+  startTime    DateTime? @map("start_time")
+  endTime      DateTime? @map("end_time")
+  duration     Int?      @default(0) @map("duration")
+  savedTime    DateTime? @map("saved_time")
+  createdAt    DateTime? @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id])
   file File @relation(fields: [fileId], references: [fileId])
