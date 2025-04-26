@@ -12,6 +12,7 @@ export async function fetchScreeningOrders() {
       where: {
         status: OrderStatus.SUBMITTED_FOR_SCREENING,
       },
+      orderBy: { id: 'desc' },
       include: {
         File: true,
         Assignment: {

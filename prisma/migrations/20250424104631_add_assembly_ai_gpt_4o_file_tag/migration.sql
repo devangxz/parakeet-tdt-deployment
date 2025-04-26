@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "FileTag" ADD VALUE 'ASSEMBLY_AI_GPT_4O';

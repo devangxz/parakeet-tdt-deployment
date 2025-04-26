@@ -11,6 +11,7 @@ import { fetchScreeningOrders } from '@/app/actions/om/fetch-screening-orders'
 import AcceptRejectScreenFileDialog from '@/components/admin-components/accept-reject-screen-file'
 import AssignQcDialog from '@/components/admin-components/assign-qc-dialog'
 import FlagHighDifficulyDialog from '@/components/admin-components/flag-high-difficulty-dialog'
+import RevertToAssemblyAITranscriptDialog from '@/components/admin-components/revert-to-assembly-ai-transcript-dialog'
 import WaveformHeatmap from '@/components/editor/WaveformHeatmap'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -79,10 +80,12 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [orderId, setOrderId] = useState<string>('')
+  const [orderData, setOrderData] = useState<{ fileId: string; orderId: number; currentPwer: number } | null>(null)
   const [selectedFileId, setSelectedFileId] = useState<string>('')
   const [openDialog, setOpenDialog] = useState(false)
   const [isAccept, setIsAccept] = useState(true)
   const [highDifficultyDialog, setHighDifficultyDialog] = useState(false)
+  const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false)
   const [playing, setPlaying] = useState<Record<string, boolean>>({})
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
@@ -392,6 +395,15 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
       ),
     },
     {
+      accessorKey: 'pwer',
+      header: 'PWER',
+      cell: ({ row }) => (
+        <div className='font-medium'>
+          {row.getValue('pwer')}
+        </div>
+      ),
+    },
+    {
       id: 'actions',
       header: 'Actions',
       enableHiding: false,
@@ -435,6 +447,18 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
                 }}
               >
                 Flag High Difficulty
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setOrderData({
+                    fileId: row.original.fileId,
+                    orderId: row.original.orderId,
+                    currentPwer: row.original.pwer,
+                  })
+                  setIsRevertDialogOpen(true)
+                }}
+              >
+                Revert to AssemblyAI Transcript
               </DropdownMenuItem>
               <DropdownMenuItem
                 className='text-red-500'
@@ -505,6 +529,12 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
         open={openAssignQcDialog}
         onClose={() => setAssignQcDialog(false)}
         fileId={selectedFileId || ''}
+        refetch={() => getScreeningOrders()}
+      />
+      <RevertToAssemblyAITranscriptDialog
+        open={isRevertDialogOpen}
+        onClose={() => setIsRevertDialogOpen(false)}
+        orderData={orderData}
         refetch={() => getScreeningOrders()}
       />
     </>

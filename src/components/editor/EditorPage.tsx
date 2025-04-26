@@ -1,14 +1,22 @@
 'use client'
 
+import { FileTag } from '@prisma/client'
 import { Cross1Icon, ReloadIcon, CheckIcon, ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons'
 import { debounce } from 'lodash'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Quill, { Op, Delta } from 'quill/core'
-import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+  useMemo,
+  useRef,
+} from 'react'
 import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
+import { getTranscriptByTagAction } from '@/app/actions/editor/get-transcript-by-tag'
 import { getVersionComparisonAction } from '@/app/actions/editor/get-version-diff'
 import { getUserEditorSettingsAction } from '@/app/actions/editor/settings'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
@@ -48,6 +56,7 @@ import { RenderPDFDocument } from '@/components/utils'
 import { AUTOSAVE_INTERVAL } from '@/constants'
 import usePreventMultipleTabs from '@/hooks/usePreventMultipleTabs'
 import { AlignmentType, CombinedASRFormatError, EditorSettings } from '@/types/editor'
+import { calculateWER } from '@/utils/calculateWER'
 import {
   ShortcutControls,
   useShortcuts,
@@ -71,8 +80,7 @@ import {
   calculateSpeakerMacroF1Score,
   getTestTranscript,
   escapeRegExp,
-  clearAllHighlights,
- 
+  clearAllHighlights, 
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
@@ -213,6 +221,8 @@ function EditorPage() {
   })
   const [autoCapitalize, setAutoCapitalize] = useState(true)
   const [highlightNumbersEnabled, setHighlightNumbersEnabled] = useState(false)
+  const [speakerChangePercentage, setSpeakerChangePercentage] = useState(0)
+  const [werPercentage, setWerPercentage] = useState<number>(0)
   const [isQCValidationPassed, setIsQCValidationPassed] = useState(false)
   const [testTranscript, setTestTranscript] = useState('')
   const [isSettingTest, setIsSettingTest] = useState(false)
@@ -727,7 +737,7 @@ function EditorPage() {
   const handleTabsValueChange = async (value: string) => {
     if (value === 'diff') {
       const contentText = getEditorText()
-      const diffBaseTranscript = orderDetails.isTestOrder ? testTranscript : getFormattedTranscript(ctms)
+      const diffBaseTranscript = orderDetails.isTestOrder ? testTranscript : await getFormattedTranscript(ctms, orderDetails.fileId)
       const diffs = generateDiff(diffBaseTranscript, contentText)
       setDiff(diffs)
     }
@@ -856,10 +866,44 @@ function EditorPage() {
     return Math.round((playedSections / listenCount.length) * 100)
   }
 
-  const getWerPercentage = (): number => {
-    const werValue = editorRef.current?.getWer() || 0
-    return werValue > 0 && Math.round(werValue * 100) === 0 ? 1 : Math.round(werValue * 100)
-  }
+  const getWerPercentage = useCallback(async () => {
+    try {
+      const originalTranscript = await getTranscriptByTagAction(
+        orderDetails.fileId,
+        FileTag.AUTO
+      )
+      const editorTranscript = getEditorText()
+
+      const werValue = calculateWER(
+        originalTranscript || '',
+        editorTranscript,
+      )
+      const rounded =
+        werValue > 0 && Math.round(werValue * 100) === 0
+          ? 1
+          : Math.round(werValue * 100)
+      return rounded
+    } catch (error) {
+      return 0
+    }
+  }, [
+    orderDetails.fileId,
+    orderDetails.isTestOrder,
+    getEditorText,
+    testTranscript,
+    ctms,
+  ])
+
+  useEffect(() => {
+    if (isSubmitModalOpen || step === 'QC') {
+      const updateWerPercentage = async () => {
+        const werValue = await getWerPercentage()
+        setWerPercentage(werValue)
+      }
+      
+      updateWerPercentage()
+    }
+  }, [isSubmitModalOpen, step, getWerPercentage])
 
   const getBlankPercentage = (): number => {
     const transcript = getEditorText()
@@ -870,15 +914,26 @@ function EditorPage() {
   const getEditListenCorrelationPercentage = (): number =>
     calculateEditListenCorrelationPercentage(listenCount, editedSegments)
 
-  const getSpeakerChangePercentage = (): number =>
+  const getSpeakerChangePercentage = async (): Promise<number> =>
     calculateSpeakerChangePercentage(
-      orderDetails.isTestOrder ? testTranscript : getFormattedTranscript(ctms),
+      orderDetails.isTestOrder ? testTranscript : await getFormattedTranscript(ctms, orderDetails.fileId),
       getEditorText()
     )
 
-  const getSpeakerMacroF1Score = (): number =>
+  useEffect(() => {
+    if (isSubmitModalOpen && step === 'QC') {
+      const updateSpeakerChangePercentage = async () => {
+        const speakerChangeValue = await getSpeakerChangePercentage()
+        setSpeakerChangePercentage(speakerChangeValue)
+      }
+
+      updateSpeakerChangePercentage()
+    }
+  }, [isSubmitModalOpen, step])
+  
+  const getSpeakerMacroF1Score = async (): Promise<number> =>
     calculateSpeakerMacroF1Score(
-      orderDetails.isTestOrder ? testTranscript : getFormattedTranscript(ctms),
+      orderDetails.isTestOrder ? testTranscript : await getFormattedTranscript(ctms, orderDetails.fileId),
       getEditorText()
     )
   
@@ -1164,7 +1219,7 @@ function EditorPage() {
       return
     }
 
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         if (!newDiffToggleValue) {
           // When exiting diff mode, use the saved clean transcript 
@@ -1173,8 +1228,8 @@ function EditorPage() {
           quill.setContents(getFormattedContent(transcript), 'silent')
         } else {
           const currentText = quill.getText()
-          
-          const originalTranscript = orderDetails.isTestOrder ? testTranscript : getFormattedTranscript(ctms)
+          const originalTranscript = orderDetails.isTestOrder ? testTranscript : 
+            await getFormattedTranscript(ctms, orderDetails.fileId)
           const diff = generateDiff(originalTranscript, currentText) || []
           renderDiff(diff)
           
@@ -1223,7 +1278,7 @@ function EditorPage() {
     quill.setContents(delta, 'silent')
   }, [quillRef])
 
-  const markInsertedWords = useCallback((prevText: string, currentText: string) => {
+  const markInsertedWords = useCallback(async (prevText: string, currentText: string) => {
     // Skip processing if not in diff mode
     if (!diffToggleEnabled) return;
     
@@ -1241,7 +1296,7 @@ function EditorPage() {
     try {
       // First get the clean text without diff formatting (sanitized)
       const sanitizedTranscript = saveTranscriptInDiffMode()
-      const originalTranscript = orderDetails.isTestOrder ? testTranscript : getFormattedTranscript(ctms)
+      const originalTranscript = orderDetails.isTestOrder ? testTranscript : await getFormattedTranscript(ctms, orderDetails.fileId)
       
       if (!sanitizedTranscript || !originalTranscript) {
         console.warn('Missing required transcripts for diff generation');
@@ -1284,12 +1339,12 @@ function EditorPage() {
         clearTimeout(changeTimeout)
       }
       
-      changeTimeout = setTimeout(() => {
+      changeTimeout = setTimeout(async () => {
         // Final check before applying changes
         if (!diffToggleEnabled) return;
         
         const currentText = quill.getText()
-        markInsertedWords(prevText, currentText)
+        await markInsertedWords(prevText, currentText)
         prevText = currentText
       }, 500) // 500ms debounce for better performance
     }
@@ -1360,6 +1415,7 @@ function EditorPage() {
         onAutoCapitalizeChange={setAutoCapitalize}
         transcript={initialEditorData?.transcript || ''}
         ctms={ctms}
+        setCtms={setCtms}
         editorRef={editorRef}
         step={step}
         cfd={cfd}
@@ -1710,10 +1766,10 @@ function EditorPage() {
                   <div className='pt-4'>
                     <SubmissionValidation
                       playedPercentage={getPlayedPercentage()}
-                      werPercentage={getWerPercentage()}
+                      werPercentage={werPercentage}
                       blankPercentage={getBlankPercentage()}
                       editListenCorrelationPercentage={getEditListenCorrelationPercentage()}
-                      speakerChangePercentage={getSpeakerChangePercentage()}
+                      speakerChangePercentage={speakerChangePercentage}
                       setIsQCValidationPassed={setIsQCValidationPassed}
                     />
                   </div>
@@ -1788,12 +1844,12 @@ function EditorPage() {
                           qcValidation: {
                             isValidationPassed: isQCValidationPassed,
                             playedPercentage: getPlayedPercentage(),
-                            werPercentage: getWerPercentage(),
+                            werPercentage,
                             blankPercentage: getBlankPercentage(),
                             editListenCorrelationPercentage:
                               getEditListenCorrelationPercentage(),
-                            speakerChangePercentage: getSpeakerChangePercentage(),
-                            speakerMacroF1Score: getSpeakerMacroF1Score(),
+                            speakerChangePercentage,
+                            speakerMacroF1Score: await getSpeakerMacroF1Score(),
                           },
                         })                        
                       }

@@ -708,11 +708,21 @@ const fetchFileDetails = async ({
             reject(error)
           }
           // Run the alignment worker with the modified transcript
-          alignmentWorker.postMessage({
-            newText: transcript,
-            currentAlignments: createAlignments(getFormattedTranscript(originalCtms), originalCtms),
-            ctms: originalCtms,
-          })
+          const prepareAndSendData = async () => {
+            try {
+              const formattedTranscript = await getFormattedTranscript(originalCtms, orderRes.orderDetails.fileId)
+              alignmentWorker.postMessage({
+                newText: transcript,
+                currentAlignments: createAlignments(formattedTranscript, originalCtms),
+                ctms: originalCtms,
+              })
+            } catch (error) {
+              alignmentWorker.terminate()
+              reject(error)
+            }
+          }
+          
+          prepareAndSendData()
         })
       } catch (error) {
         console.error('Error processing alignment:', error)

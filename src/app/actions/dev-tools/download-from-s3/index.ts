@@ -31,7 +31,35 @@ export async function downloadFromS3(fileId: string, suffix: string) {
     } else if (suffix === 'ris') {
       key = `${fileId}_ris.docx`
     } else if (suffix === 'ctms') {
-      key = `${fileId}_ctms.json`
+      const versionRecs = await prisma.fileVersion.findMany({
+        where: {
+          fileId,
+          tag: {
+            in: [FileTag.AUTO, FileTag.ASSEMBLY_AI, FileTag.ASSEMBLY_AI_GPT_4O],
+          },
+          s3VersionId: { not: null },
+        },
+        select: { tag: true, s3VersionId: true },
+        orderBy: { createdAt: 'desc' },
+      })
+      const autoRec = versionRecs.find((v) => v.tag === FileTag.AUTO)
+      if (autoRec?.s3VersionId) {
+        const autoS3VersionId = autoRec.s3VersionId
+        const assemblyMatch = versionRecs.find(
+          (v) =>
+            v.tag === FileTag.ASSEMBLY_AI && v.s3VersionId === autoS3VersionId
+        )
+        const combinedMatch = versionRecs.find(
+          (v) =>
+            v.tag === FileTag.ASSEMBLY_AI_GPT_4O &&
+            v.s3VersionId === autoS3VersionId
+        )
+        if (assemblyMatch) {
+          key = `${fileId}_assembly_ai_ctms.json`
+        } else if (combinedMatch) {
+          key = `${fileId}_assembly_ai_gpt_4o_ctms.json`
+        }
+      }
     } else if (suffix === 'mp3' || suffix === 'mp4') {
       key = `${fileId}.${suffix}`
     }
@@ -43,8 +71,8 @@ export async function downloadFromS3(fileId: string, suffix: string) {
           tag: fileTagMap[suffix as keyof typeof fileTagMap],
         },
         orderBy: {
-          updatedAt: 'desc'
-        }
+          updatedAt: 'desc',
+        },
       })
 
       if (fileVersion && fileVersion.s3VersionId) {

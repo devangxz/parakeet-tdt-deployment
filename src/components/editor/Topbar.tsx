@@ -52,6 +52,12 @@ import {
 import { Label } from '../ui/label'
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group'
 import { Textarea } from '../ui/textarea'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip'
 import { CheckAndDownload } from '@/app/(dashboard)/files/delivered/components/check-download'
 import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
 import { requestReReviewAction } from '@/app/actions/editor/re-review'
@@ -68,7 +74,6 @@ import 'rc-slider/assets/index.css'
 import RestoreVersionDialog from '@/components/editor/RestoreVersionDialog'
 import Profile from '@/components/navbar/profile'
 import { ThemeSwitcher } from '@/components/theme-switcher'
-import { TooltipProvider } from '@/components/ui/tooltip'
 import { FILE_CACHE_URL, COMMON_ABBREVIATIONS } from '@/constants'
 import { AlignmentType, EditorSettings } from '@/types/editor'
 import DefaultShortcuts, {
@@ -122,6 +127,7 @@ interface TopbarProps {
   onAutoCapitalizeChange: (value: boolean) => void
   transcript: string
   ctms: CTMType[]
+  setCtms: (ctms: CTMType[]) => void
   editorRef: React.Ref<EditorHandle>
   step: string
   cfd: string
@@ -151,6 +157,7 @@ export default memo(function Topbar({
   onAutoCapitalizeChange,
   transcript,
   ctms,
+  setCtms,
   editorRef,
   step,
   cfd,
@@ -679,7 +686,18 @@ export default memo(function Topbar({
   return (
     <div className='bg-background border border-customBorder rounded-md p-2'>
       <div className='flex items-center justify-between'>
-        <p className='font-semibold'>{orderDetails.filename}</p>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <p className='font-semibold truncate max-w-[300px] md:max-w-[400px] lg:max-w-[500px] overflow-hidden text-ellipsis'>
+                {orderDetails.filename}
+              </p>
+            </TooltipTrigger>
+            <TooltipContent>
+              {orderDetails.filename}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         {orderDetails.status === 'QC_ASSIGNED' && (
           <span
@@ -1192,6 +1210,7 @@ export default memo(function Topbar({
         fileId={orderDetails.fileId}
         quillRef={quillRef}
         updateQuill={updateTranscript}
+        setCtms={setCtms}
       />
     </div>
   )
