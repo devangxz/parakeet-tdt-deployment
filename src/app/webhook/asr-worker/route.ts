@@ -6,15 +6,13 @@ import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { calculatePWER, isPwerAboveThreshold } from '@/utils/asr/quality'
-import { createCombinedTranscript } from '@/utils/asr/transcript'
+import {
+  getAssemblyAITranscript,
+  createCombinedTranscript,
+} from '@/utils/asr/transcript'
 import { checkCombinedASRFormat } from '@/utils/asr/validation'
 import authenticateWebhook from '@/utils/authenticateWebhook'
-import {
-  getCTMs,
-  getFormattedTranscript,
-  createAlignments,
-  updateAlignments,
-} from '@/utils/transcript'
+import { getCTMs, createAlignments, updateAlignments } from '@/utils/transcript'
 
 export async function POST(req: NextRequest) {
   // Authenticate webhook and check rate limit
@@ -38,10 +36,12 @@ export async function POST(req: NextRequest) {
     }
 
     const assemblyAICTMs = getCTMs(words)
-    const assemblyAITranscript = getFormattedTranscript(assemblyAICTMs)
-    let ctms = assemblyAICTMs
+    const assemblyAITranscript = getAssemblyAITranscript(assemblyAICTMs)
 
-    let combinedTranscript = assemblyAITranscript
+    let combinedTranscript = null
+    let combinedCTMs = null
+    let formattingCheckResult = null
+
     if (gptTranscript) {
       logger.info(
         `[${fileId}] GPT transcript available, creating combined transcript`
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
         fileId
       )
 
-      if (combinedTranscript !== assemblyAITranscript) {
+      if (combinedTranscript) {
         const assemblyAIAlignments = createAlignments(
           assemblyAITranscript,
           assemblyAICTMs
@@ -63,21 +63,23 @@ export async function POST(req: NextRequest) {
           assemblyAICTMs
         )
 
-        ctms = alignments
+        combinedCTMs = alignments
           .filter((alignment) => alignment.type === 'ctm')
-          .map((alignment) => {
-            const ctm = {
-              start: alignment.start,
-              end: alignment.end,
-              word: alignment.word.toLowerCase().replace(/[^\w\s]/g, ''),
-              conf: alignment.conf,
-              punct: alignment.punct,
-              source: 'assembly_ai',
-              speaker: alignment.speaker,
-              ...(alignment.turn && { turn: alignment.turn }),
-            }
-            return ctm
-          })
+          .map((alignment) => ({
+            start: alignment.start,
+            end: alignment.end,
+            word: alignment.word.toLowerCase().replace(/[^\w\s]/g, ''),
+            conf: alignment.conf,
+            punct: alignment.punct,
+            source: 'assembly_ai',
+            speaker: alignment.speaker,
+            ...(alignment.turn && { turn: alignment.turn }),
+          }))
+
+        formattingCheckResult = checkCombinedASRFormat(
+          combinedTranscript,
+          fileId
+        )
       }
     } else {
       logger.info(
@@ -85,55 +87,72 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const formattingCheckResult = checkCombinedASRFormat(
-      combinedTranscript,
-      fileId
-    )
+    const transcriptPayload: {
+      fileId: string
+      userId: number
+      assemblyAITranscript: string
+      assemblyAICTMs: ReturnType<typeof getCTMs>
+      gptTranscript?: string
+      combinedTranscript?: string
+      combinedCTMs?: ReturnType<typeof getCTMs>
+      transcript: string
+    } = {
+      fileId,
+      userId: order.userId,
+      assemblyAITranscript,
+      assemblyAICTMs,
+      transcript: combinedTranscript || assemblyAITranscript,
+    }
 
-    await axios.post(
-      `${FILE_CACHE_URL}/save-transcript`,
-      {
-        fileId: fileId,
-        transcript: combinedTranscript,
-        ctms: ctms,
-        userId: order.userId,
-        assemblyAITranscript: assemblyAITranscript,
-        gptTranscript: gptTranscript,
+    if (gptTranscript) {
+      transcriptPayload.gptTranscript = gptTranscript
+    }
+    if (combinedTranscript) {
+      transcriptPayload.combinedTranscript = combinedTranscript
+    }
+    if (combinedCTMs) {
+      transcriptPayload.combinedCTMs = combinedCTMs
+    }
+
+    await axios.post(`${FILE_CACHE_URL}/save-transcript`, transcriptPayload, {
+      headers: {
+        'x-api-key': process.env.SCRIBIE_API_KEY,
       },
-      {
-        headers: {
-          'x-api-key': process.env.SCRIBIE_API_KEY,
-        },
-      }
-    )
+    })
 
     const pwer = gptTranscript
       ? calculatePWER(assemblyAITranscript, fileId, gptTranscript)
       : calculatePWER(words, fileId)
 
     const qualityCheck = isPwerAboveThreshold(pwer, fileId)
+
+    const orderUpdateData = {
+      ASRTimeTaken: ASRElapsedTime,
+      pwer,
+      initialPwer: pwer,
+      combinedASRFormatValidation: formattingCheckResult
+        ? JSON.parse(JSON.stringify(formattingCheckResult))
+        : null,
+    }
+
     if (qualityCheck.requiresManualScreening) {
       await prisma.order.update({
         where: { fileId },
         data: {
-          ASRTimeTaken: ASRElapsedTime,
-          pwer: pwer,
+          ...orderUpdateData,
           reportMode: ReportMode.AUTO,
           reportOption: ReportOption.AUTO_PWER_ABOVE_THRESHOLD,
           reportComment: qualityCheck.screeningReason,
           status: OrderStatus.SUBMITTED_FOR_SCREENING,
-          combinedASRFormatValidation: formattingCheckResult,
         },
       })
     } else {
       await prisma.order.update({
         where: { fileId },
         data: {
-          ASRTimeTaken: ASRElapsedTime,
-          pwer: pwer,
+          ...orderUpdateData,
           status: OrderStatus.TRANSCRIBED,
           updatedAt: new Date(),
-          combinedASRFormatValidation: formattingCheckResult,
         },
       })
     }
@@ -176,6 +195,7 @@ export async function POST(req: NextRequest) {
         success: true,
         pwer,
         hasGptTranscript: !!gptTranscript,
+        hasCombinedTranscript: !!combinedTranscript,
         status: qualityCheck.requiresManualScreening
           ? 'SUBMITTED_FOR_SCREENING'
           : 'TRANSCRIBED',

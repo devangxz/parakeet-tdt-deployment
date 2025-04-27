@@ -237,6 +237,7 @@ model Order {
   ASRTimeTaken                Int?   @map("asr_time_taken")
   LLMTimeTaken                Int?   @map("llm_time_taken")
   pwer                        Float?
+  initialPwer                 Float? @map("initial_pwer")
   wer                         Float?
   combinedASRFormatValidation Json?  @map("combined_asr_format_validation")
 
@@ -1136,6 +1137,7 @@ enum BonusStage {
 
 enum FileTag {
   AUTO
+  ASSEMBLY_AI_GPT_4O
   GPT_4O
   ASSEMBLY_AI
   QC_EDIT
