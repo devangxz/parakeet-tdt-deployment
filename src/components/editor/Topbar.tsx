@@ -225,6 +225,7 @@ export default memo(function Topbar({
   const [isHeatmapModalOpen, setIsHeatmapModalOpen] = useState(false)
   const [isRestoreVersionModalOpen, setIsRestoreVersionModalOpen] =
     useState(false)
+  const [isDiffModeDialogOpen, setIsDiffModeDialogOpen] = useState(false)
 
   const playNextBlankInstance = useCallback(() => {
     const quill = quillRef?.current?.getEditor()
@@ -768,15 +769,13 @@ export default memo(function Topbar({
             ) : (
               <Button
                 onClick={() => {
-                  if (orderDetails.status === 'QC_ASSIGNED') {
-                    setIsSpeakerNameModalOpen(true)
-                    if (diffToggleEnabled) {
-                      handleDiffToggle()
-                    }
+                  if (diffToggleEnabled) {
+                    setIsDiffModeDialogOpen(true)
                   } else {
-                    setIsSubmitModalOpen(true)
-                    if (diffToggleEnabled) {
-                      handleDiffToggle()
+                    if (orderDetails.status === 'QC_ASSIGNED') {
+                      setIsSpeakerNameModalOpen(true)
+                    } else {
+                      setIsSubmitModalOpen(true)
                     }
                   }
                 }}
@@ -1193,6 +1192,29 @@ export default memo(function Topbar({
         quillRef={quillRef}
         updateQuill={updateTranscript}
       />
+      <Dialog
+        open={isDiffModeDialogOpen}
+        onOpenChange={setIsDiffModeDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Exit Diff Mode</DialogTitle>
+          </DialogHeader>
+          <div className='flex justify-center items-center'>
+            Please exit diff mode before submitting.
+          </div>
+          <DialogFooter>
+            <div className='flex gap-2 justify-end'>
+              <Button
+                variant='outline'
+                onClick={() => setIsDiffModeDialogOpen(false)}
+              >
+                OK
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 })

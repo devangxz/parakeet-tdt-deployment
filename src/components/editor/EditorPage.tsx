@@ -1313,8 +1313,9 @@ function EditorPage() {
   const handleVersionCompare = async (fromVersion: Options, toVersion: Options) => {
     try {
       const result = await getVersionComparisonAction(orderDetails.fileId, fromVersion, toVersion)
-      
+      const toastId = toast.loading('Comparing versions...')
       if (!result.success || !result.fromText || !result.toText) {
+        toast.dismiss(toastId)
         toast.error(result.message || 'Failed to compare versions')
         return
       }
@@ -1325,10 +1326,9 @@ function EditorPage() {
       if (tabsTrigger) {
         tabsTrigger.click()
       }
-
+      toast.dismiss(toastId)
       toast.success('Version comparison loaded')
     } catch (error) {
-      console.error('Error comparing versions:', error)
       toast.error('Failed to compare versions')
     }
   }
@@ -1360,10 +1360,6 @@ function EditorPage() {
 
     doRegen()
   }, [orderDetails, initialEditorData])
-
-  useEffect(() => {
-    console.log('editorRef', editorRef)
-  }, [initialEditorData])
 
   return (
     <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
