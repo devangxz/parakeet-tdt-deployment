@@ -76,9 +76,13 @@ export async function POST(req: NextRequest) {
             ...(alignment.turn && { turn: alignment.turn }),
           }))
 
-        formattingCheckResult = checkCombinedASRFormat(
-          combinedTranscript,
-          fileId
+        formattingCheckResult = checkCombinedASRFormat(combinedTranscript)
+        logger.info(
+          `[${fileId}] Combined ASR format validation ${
+            formattingCheckResult.isValid
+              ? 'passed'
+              : `failed with ${formattingCheckResult.errors.length} issue(s)`
+          }.`
         )
       }
     } else {

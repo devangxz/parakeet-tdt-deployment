@@ -593,11 +593,7 @@ const fetchFileDetails = async ({
       email: orderRes.orderDetails.email,
       speakerOptions: orderRes.orderDetails.speakerOptions || [],
       isTestOrder: orderRes.orderDetails.isTestOrder,
-      combinedASRFormatValidation: orderRes.orderDetails
-        .combinedASRFormatValidation as {
-        isValid: boolean
-        errors: CombinedASRFormatError[]
-      },
+      pwer: orderRes.orderDetails.pwer || 0,
     }
 
     setOrderDetails(orderDetailsFormatted)
@@ -953,7 +949,7 @@ const handleSave = async (
         return /^\[.*\]$/.test(trimmed)
       }
 
-      const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/
+      const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS[\d?]+:/
 
       for (const paragraph of paragraphs) {
         // Skip validation for meta-only paragraphs
