@@ -3,6 +3,7 @@
 import { FileTag } from '@prisma/client'
 import { Cross1Icon, ReloadIcon, CheckIcon, ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons'
 import { debounce } from 'lodash'
+import { Loader2 } from 'lucide-react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Quill, { Op, Delta } from 'quill/core'
@@ -80,7 +81,8 @@ import {
   calculateSpeakerMacroF1Score,
   getTestTranscript,
   escapeRegExp,
-  clearAllHighlights, 
+  clearAllHighlights,
+  generateSubtitles, 
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
@@ -231,6 +233,7 @@ function EditorPage() {
   const formatWarningShown = useRef(false)
   const [diffToggleEnabled, setDiffToggleEnabled] = useState(false);
   const [editorContent, setEditorContent] = useState('')
+  const [isLoading, setIsLoading] = useState(false);
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -1223,10 +1226,14 @@ function EditorPage() {
     setTimeout(async () => {
       try {
         if (!newDiffToggleValue) {
+          // Set loading state to true when toggling back to normal mode
+          setIsLoading(true)
           // When exiting diff mode, use the saved clean transcript 
           const savedTranscript = saveTranscriptInDiffMode()
-          const transcript = editorContent || (savedTranscript || '');
+          const transcript = editorContent || (savedTranscript || '')
           quill.setContents(getFormattedContent(transcript), 'silent')
+          // Set loading state to false after content is set
+          setIsLoading(false)
         } else {
           const currentText = quill.getText()
           const originalTranscript = orderDetails.isTestOrder ? testTranscript : 
@@ -1963,6 +1970,14 @@ function EditorPage() {
           fileId={orderDetails.fileId}
           onCompare={handleVersionCompare}
         />}
+
+        {isLoading && (
+          <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-80 z-50">
+            <span>
+              <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+            </span>
+          </div>
+        )}
       </div>
     </div>
   )
