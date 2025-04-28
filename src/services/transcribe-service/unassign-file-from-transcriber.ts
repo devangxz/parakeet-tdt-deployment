@@ -11,7 +11,8 @@ const unAssignFileFromTranscriber = async (
   jobStatus: JobStatus,
   transcriberId: number,
   fileId: string,
-  type: string
+  type: string,
+  comment?: string
 ) => {
   logger.info(`--> unAssignFileFromTranscriber ${orderId}`)
   try {
@@ -31,6 +32,7 @@ const unAssignFileFromTranscriber = async (
           : type === 'CF'
           ? 'Scribie.ai Review File Unassigned'
           : 'Scribie.ai Finalizer File Unassigned',
+      comment: comment ?? '',
     }
 
     await sendTemplateMail('UNASSIGN_FILE', transcriberId, templateData)

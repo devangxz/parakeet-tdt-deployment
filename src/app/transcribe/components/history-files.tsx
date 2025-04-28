@@ -44,6 +44,7 @@ interface File extends BaseTranscriberFile {
   jobType: string
   orgName: string
   customFormatOption: string
+  comment?: string
 }
 
 export default function HistoryFilesPage() {
@@ -116,6 +117,7 @@ export default function HistoryFilesPage() {
               jobType: assignment.type,
               orgName: assignment.orgName,
               customFormatOption: assignment.customFormatOption,
+              comment: assignment.comment ?? '',
             }
           })
           .sort(
@@ -377,10 +379,22 @@ export default function HistoryFilesPage() {
         data={assignedFiles ?? []}
         columns={columns}
         renderRowSubComponent={({ row }: { row: any }) =>
-          row.original.instructions ? (
+          row.original.instructions || row.original.comment ? (
             <div className='p-2'>
-              <strong>Customer Instructions:</strong>
-              <p>{row.original.instructions}</p>
+              <>
+                {row.original.instructions && (
+                  <>
+                    <strong>Customer Instructions:</strong>
+                    <p>{row.original.instructions}</p>
+                  </>
+                )}
+                {row.original.comment && (
+                  <>
+                    <strong className='mt-2 block'>Admin Comments:</strong>
+                    <p>{row.original.comment}</p>
+                  </>
+                )}
+              </>
             </div>
           ) : null
         }

@@ -17,6 +17,7 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 
 interface DialogProps {
   open: boolean
@@ -34,7 +35,7 @@ const AcceptRejectApprovalFileDialog = ({
   refetch,
 }: DialogProps) => {
   const [loading, setLoading] = useState(false)
-
+  const [comment, setComment] = useState('')
   const handleSubmit = async () => {
     setLoading(true)
     try {
@@ -51,7 +52,10 @@ const AcceptRejectApprovalFileDialog = ({
           toast.error(result.message)
         }
       } else {
-        const result = await rejectApprovalOrder({ orderId: Number(orderId) })
+        const result = await rejectApprovalOrder({
+          orderId: Number(orderId),
+          comment,
+        })
         if (result.success) {
           const successToastId = toast.success(
             `Successfully rejected approval file`
@@ -85,6 +89,17 @@ const AcceptRejectApprovalFileDialog = ({
                   : 'Are you sure you want to reject this screen file?'}
               </Label>
             </div>
+            {!isAccept && (
+              <div className='grid items-center gap-1.5 mt-5'>
+                <Label>Comments</Label>
+                <Textarea
+                  placeholder='Rejection comments...'
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  className='min-h-[100px]'
+                />
+              </div>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
