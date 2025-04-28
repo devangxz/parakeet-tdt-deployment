@@ -1375,9 +1375,9 @@ function EditorPage() {
   const handleVersionCompare = async (fromVersion: Options, toVersion: Options) => {
     try {
       const result = await getVersionComparisonAction(orderDetails.fileId, fromVersion, toVersion)
-      const toastId = toast.loading('Comparing versions...')
+      
       if (!result.success || !result.fromText || !result.toText) {
-        toast.dismiss(toastId)
+      
         toast.error(result.message || 'Failed to compare versions')
         return
       }
@@ -1388,7 +1388,7 @@ function EditorPage() {
       if (tabsTrigger) {
         tabsTrigger.click()
       }
-      toast.dismiss(toastId)
+     
       toast.success('Version comparison loaded')
     } catch (error) {
       toast.error('Failed to compare versions')
