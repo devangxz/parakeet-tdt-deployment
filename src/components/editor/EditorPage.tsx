@@ -1223,25 +1223,21 @@ function EditorPage() {
       return
     }
 
+    setIsLoading(true) // Set loading state to true immediately
+
     setTimeout(async () => {
       try {
         if (!newDiffToggleValue) {
-          // Set loading state to true when toggling back to normal mode
-          setIsLoading(true)
-          // When exiting diff mode, use the saved clean transcript 
           const savedTranscript = saveTranscriptInDiffMode()
           const transcript = editorContent || (savedTranscript || '')
           quill.setContents(getFormattedContent(transcript), 'silent')
-          // Set loading state to false after content is set
-          setIsLoading(false)
         } else {
           const currentText = quill.getText()
           const originalTranscript = orderDetails.isTestOrder ? testTranscript : 
             await getFormattedTranscript(ctms, orderDetails.fileId)
           const diff = generateDiff(originalTranscript, currentText) || []
           renderDiff(diff)
-          
-          // Save the clean transcript immediately when entering diff mode
+
           const cleanTranscript = saveTranscriptInDiffMode()
           if (cleanTranscript) {
             setEditorContent(cleanTranscript)
@@ -1254,6 +1250,8 @@ function EditorPage() {
         }
       } catch (error) {
         console.error("Error generating diff transcript:", error)
+      } finally {
+        setIsLoading(false) // Ensure loading state is reset
       }
     }, 0)
   }, [quillRef, ctms, diffToggleEnabled, generateDiff, saveTranscriptInDiffMode, editorContent, orderDetails.fileId, orderDetails.isTestOrder, testTranscript, listenCount, editedSegments])
@@ -1972,7 +1970,7 @@ function EditorPage() {
         />}
 
         {isLoading && (
-          <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-80 z-50">
+          <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-80 z-100">
             <span>
               <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
             </span>
