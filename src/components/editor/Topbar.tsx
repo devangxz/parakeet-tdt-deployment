@@ -52,12 +52,6 @@ import {
 import { Label } from '../ui/label'
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group'
 import { Textarea } from '../ui/textarea'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '../ui/tooltip'
 import { CheckAndDownload } from '@/app/(dashboard)/files/delivered/components/check-download'
 import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
 import { requestReReviewAction } from '@/app/actions/editor/re-review'
@@ -74,6 +68,7 @@ import 'rc-slider/assets/index.css'
 import RestoreVersionDialog from '@/components/editor/RestoreVersionDialog'
 import Profile from '@/components/navbar/profile'
 import { ThemeSwitcher } from '@/components/theme-switcher'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { FILE_CACHE_URL, COMMON_ABBREVIATIONS } from '@/constants'
 import { AlignmentType, EditorSettings } from '@/types/editor'
 import DefaultShortcuts, {
@@ -131,8 +126,6 @@ interface TopbarProps {
   editorRef: React.Ref<EditorHandle>
   step: string
   cfd: string
-  diffToggleEnabled: boolean
-  handleDiffToggle: () => void
 }
 
 export default memo(function Topbar({
@@ -161,8 +154,6 @@ export default memo(function Topbar({
   editorRef,
   step,
   cfd,
-  diffToggleEnabled,
-  handleDiffToggle
 }: TopbarProps) {
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
@@ -581,9 +572,6 @@ export default memo(function Topbar({
       const LLMFileUrl = await getTextFile(orderDetails.fileId, 'LLM')
       setLLMFileUrl(LLMFileUrl?.signedUrl || '')
     }
-    if (diffToggleEnabled) {
-      handleDiffToggle()
-    }
   }
 
   const revertTranscript = async () => {
@@ -686,18 +674,7 @@ export default memo(function Topbar({
   return (
     <div className='bg-background border border-customBorder rounded-md p-2'>
       <div className='flex items-center justify-between'>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <p className='font-semibold truncate max-w-[300px] md:max-w-[400px] lg:max-w-[500px] overflow-hidden text-ellipsis'>
-                {orderDetails.filename}
-              </p>
-            </TooltipTrigger>
-            <TooltipContent>
-              {orderDetails.filename}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <p className='font-semibold'>{orderDetails.filename}</p>
 
         {orderDetails.status === 'QC_ASSIGNED' && (
           <span
@@ -766,12 +743,7 @@ export default memo(function Topbar({
             {['CUSTOMER'].includes(session?.user?.role ?? '') ? (
               <Button
                 disabled={isCheckAndDownloadLoading}
-                onClick={() => {
-                  handleCheckAndDownload(orderDetails.fileId)
-                  if (diffToggleEnabled) {
-                    handleDiffToggle()
-                  }
-                }}
+                onClick={() => handleCheckAndDownload(orderDetails.fileId)}
                 className='format-button border-r-[1.5px] border-white/70'
               >
                 {isCheckAndDownloadLoading ? (
@@ -788,14 +760,8 @@ export default memo(function Topbar({
                 onClick={() => {
                   if (orderDetails.status === 'QC_ASSIGNED') {
                     setIsSpeakerNameModalOpen(true)
-                    if (diffToggleEnabled) {
-                      handleDiffToggle()
-                    }
                   } else {
                     setIsSubmitModalOpen(true)
-                    if (diffToggleEnabled) {
-                      handleDiffToggle()
-                    }
                   }
                 }}
                 className='format-button border-r-[1.5px] border-white/70'
