@@ -584,6 +584,7 @@ const InvoicesDetailDialog = ({
           response.responseData.invoice.options ?? '{}'
         )
         const isRushOrder = invoiceoOptions.exd === 1
+        const isStrictVerbatim = invoiceoOptions.vb === 1
 
         const files = response.responseData.files?.map((file: any) => {
           let fileRate = 0
@@ -595,6 +596,8 @@ const InvoicesDetailDialog = ({
 
             fileRate = isRushOrder
               ? baseRate + response.responseData.rates.rush_order
+              : isStrictVerbatim
+              ? baseRate + response.responseData.rates.verbatim
               : baseRate
           }
 
