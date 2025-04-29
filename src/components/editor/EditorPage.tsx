@@ -1399,21 +1399,27 @@ function EditorPage() {
   useEffect(() => {
     // only once, when the editor mounts with a valid fileId
     const shouldRegen = localStorage.getItem('shouldRegenerateSubtitles') === 'true'
+    console.log('[shouldRegen]', shouldRegen)
     if (!shouldRegen || !orderDetails.fileId || !editorRef.current) return
 
-    // clear the flag immediately so it won't rerun
     localStorage.setItem('shouldRegenerateSubtitles', 'false')
 
     const doRegen = async () => {
       const toastId = toast.loading('Generating subtitles…')
+      let result = null;
       try {
-        await editorRef.current?.triggerAlignmentUpdate()
-        const alignments = editorRef.current!.getAlignments()
-        const ok = await generateSubtitles(orderDetails, alignments)
-        toast.dismiss(toastId)
-        ok
+        if(editorRef.current) {
+          await editorRef.current?.triggerAlignmentUpdate()
+          console.log('[editorRef.current]', editorRef.current)
+          const alignments = editorRef.current!.getAlignments()
+          console.log('[alignments]', alignments)
+          result = await generateSubtitles(orderDetails, alignments)
+          console.log('[ok]', result)
+          toast.dismiss(toastId)
+        }
+        result
           ? toast.success('Subtitles generated successfully')
-          : toast.error('Failed to generate subtitles')
+            : toast.error('Failed to generate subtitles')
       } catch (e) {
         toast.dismiss(toastId)
         console.error(e)
@@ -1425,7 +1431,7 @@ function EditorPage() {
   }, [orderDetails, initialEditorData])
 
   useEffect(() => {
-    console.log('editorRef', editorRef)
+    console.log('[initialEditorData]', editorRef.current)
   }, [initialEditorData])
 
   return (

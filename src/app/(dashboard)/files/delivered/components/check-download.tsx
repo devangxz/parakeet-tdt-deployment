@@ -627,15 +627,13 @@ export function CheckAndDownload({
                         : 'Subtitle files are not available for this transcript.'}
                     </p>
                   </div>
-                  {!subtitlesExist && (
-                    <Button
-                      onClick={regenerateSubtitles}
-                      className='flex items-center gap-2'
-                    >
-                      <RefreshCw size={16} />
-                      Regenerate Subtitles
-                    </Button>
-                  )}
+                  <Button
+                    onClick={regenerateSubtitles}
+                    className='flex items-center gap-2'
+                  >
+                    <RefreshCw size={16} />
+                    Regenerate Subtitles
+                  </Button>
                 </div>
               </div>
             )}
