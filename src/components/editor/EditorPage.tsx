@@ -57,6 +57,7 @@ import { RenderPDFDocument } from '@/components/utils'
 import { AUTOSAVE_INTERVAL } from '@/constants'
 import usePreventMultipleTabs from '@/hooks/usePreventMultipleTabs'
 import { AlignmentType, CombinedASRFormatError, EditorSettings } from '@/types/editor'
+import { checkCombinedASRFormat } from '@/utils/asr/validation'
 import { calculateWER } from '@/utils/calculateWER'
 import {
   ShortcutControls,
@@ -117,10 +118,7 @@ export type OrderDetails = {
     ln: string
   }[]
   isTestOrder: boolean
-  combinedASRFormatValidation?: {
-    isValid: boolean
-    errors: CombinedASRFormatError[]
-  }
+  pwer: number
 }
 
 export type UploadFilesType = {
@@ -146,7 +144,8 @@ function EditorPage() {
     LLMDone: false,
     email: '',
     speakerOptions: [],
-    isTestOrder: false
+    isTestOrder: false,
+    pwer: 0,
   })
   const [cfd, setCfd] = useState('')
   const [notes, setNotes] = useState('')
@@ -230,7 +229,7 @@ function EditorPage() {
   const [isSettingTest, setIsSettingTest] = useState(false)
   const [toggleReplace, setToggleReplace] = useState(false);
   const [isFormatWarningDialogOpen, setIsFormatWarningDialogOpen] = useState(false)
-  const formatWarningShown = useRef(false)
+  const [formatErrors, setFormatErrors] = useState<CombinedASRFormatError[]>([])
   const [diffToggleEnabled, setDiffToggleEnabled] = useState(false);
   const [editorContent, setEditorContent] = useState('')
   const [isLoading, setIsLoading] = useState(false);
@@ -873,7 +872,7 @@ function EditorPage() {
     try {
       const originalTranscript = await getTranscriptByTagAction(
         orderDetails.fileId,
-        FileTag.AUTO
+        FileTag.ASSEMBLY_AI
       )
       const editorTranscript = getEditorText()
 
@@ -919,7 +918,7 @@ function EditorPage() {
 
   const getSpeakerChangePercentage = async (): Promise<number> =>
     calculateSpeakerChangePercentage(
-      orderDetails.isTestOrder ? testTranscript : await getFormattedTranscript(ctms, orderDetails.fileId),
+      orderDetails.isTestOrder ? testTranscript : await getTranscriptByTagAction(orderDetails.fileId, FileTag.AUTO) || '',
       getEditorText()
     )
 
@@ -936,7 +935,7 @@ function EditorPage() {
   
   const getSpeakerMacroF1Score = async (): Promise<number> =>
     calculateSpeakerMacroF1Score(
-      orderDetails.isTestOrder ? testTranscript : await getFormattedTranscript(ctms, orderDetails.fileId),
+      orderDetails.isTestOrder ? testTranscript : await getTranscriptByTagAction(orderDetails.fileId, FileTag.AUTO) || '',
       getEditorText()
     )
   
@@ -1199,17 +1198,22 @@ function EditorPage() {
   ]);
 
   useEffect(() => {
-    if (
-      !formatWarningShown.current &&
-      orderDetails.combinedASRFormatValidation &&
-      !orderDetails.combinedASRFormatValidation.isValid &&
-      step === 'QC'
-    ) {
-      setIsFormatWarningDialogOpen(true)
-      formatWarningShown.current = true
+    if (!quillRef?.current) return
+
+    const checkFormat = () => {
+      const transcript = quillRef.current?.getEditor()?.getText() || ''
+      const { isValid, errors } = checkCombinedASRFormat(transcript)
+      if (!isValid && errors.length > 0) {
+        setFormatErrors(errors as CombinedASRFormatError[])
+        setIsFormatWarningDialogOpen(true)
+      }
     }
-  }, [orderDetails.combinedASRFormatValidation, step])
- 
+
+    const timeoutId = setTimeout(checkFormat, 50)
+
+    return () => clearTimeout(timeoutId)
+  }, [quillRef])
+
   const generateDiff = useCallback((originalTranscript: string, currentTranscript: string) => {
     const dmp = new diff_match_patch()
     const diff = dmp.diff_wordMode(originalTranscript, currentTranscript)
@@ -1801,6 +1805,7 @@ function EditorPage() {
                       editListenCorrelationPercentage={getEditListenCorrelationPercentage()}
                       speakerChangePercentage={speakerChangePercentage}
                       setIsQCValidationPassed={setIsQCValidationPassed}
+                      pwer={orderDetails.pwer}
                     />
                   </div>
                 )}
@@ -1959,7 +1964,7 @@ function EditorPage() {
         <FormatWarningDialog
           isOpen={isFormatWarningDialogOpen}
           onOpenChange={setIsFormatWarningDialogOpen}
-          errors={orderDetails.combinedASRFormatValidation?.errors || []}
+          errors={formatErrors}
         />
 
         {diffToggleEnabled && <VersionCompareDialog

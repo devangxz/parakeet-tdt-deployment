@@ -176,7 +176,7 @@ export async function getOrderDetailsAction(fileId: string) {
       email: resultJson.email,
       speakerOptions: speakers,
       isTestOrder: order.isTestOrder || false,
-      combinedASRFormatValidation: order.combinedASRFormatValidation || null,
+      pwer: order.pwer,
     }
 
     logger.info(`orderDetails fetched for file ${resultJson.file_id}`)

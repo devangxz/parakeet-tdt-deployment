@@ -16,17 +16,37 @@ function ASRProcessingNotice() {
         </svg>
       </div>
       <div className='ml-3'>
-        <p className='text-sm font-medium text-primary'>
-          {`New Feature: Once transcripts are processed by AssemblyAI, they're
-          automatically sent to GPT-4o Transcribe for necessary corrections.
-          The transcript you see the first time you open it in the editor is the
-          one corrected by GPT-4o Transcribe. If you feel the final transcript
-          isn't satisfactory, you can use the "Restore Version" option available
-          in the dropdown where you'll find the AssemblyAI version.`}
+        <p className='text-sm font-semibold text-primary mb-2'>
+          We&apos;ve enhanced our transcript processing with a two-step system:
         </p>
+        <ol className='mb-3 pl-5 text-sm font-medium text-primary space-y-2 list-decimal'>
+          <li>Initial processing by AssemblyAI</li>
+          <li>Automatic correction by GPT-4o Transcribe</li>
+        </ol>
+        <p className='text-sm font-semibold text-primary mb-2'>
+          What&apos;s New:
+        </p>
+        <ul className='list-disc pl-5 text-sm font-medium text-primary space-y-2'>
+          <li>
+            The transcript you first see in the editor is already the GPT-4o
+            corrected version
+          </li>
+          <li>
+            Not satisfied with the corrections? Use &quot;Restore Version&quot;
+            in the dropdown to access the original AssemblyAI version
+          </li>
+          <li>Toggle to editable diff mode from the toolbar</li>
+          <li>
+            Easily compare and review changes between different transcript
+            versions
+          </li>
+          <li>
+            Changes made in diff mode are automatically saved to your current
+            transcript
+          </li>
+        </ul>
       </div>
     </div>
   )
 }
-
 export default ASRProcessingNotice

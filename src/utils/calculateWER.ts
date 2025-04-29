@@ -9,16 +9,11 @@ export function calculateWER(
   originalTranscript: string,
   modifiedTranscript: string
 ): number {
-  const prepareTranscriptForComparison = (
-    text: string,
-    isOriginal: boolean
-  ): string => {
-    if (isOriginal) {
-      text = text.replace(
-        new RegExp(`${TIMESTAMP_SPEAKER_PATTERN.source}\\s*`, 'g'),
-        ''
-      )
-    }
+  const prepareTranscriptForComparison = (text: string): string => {
+    text = text.replace(
+      new RegExp(`${TIMESTAMP_SPEAKER_PATTERN.source}\\s*`, 'g'),
+      ''
+    )
 
     return text
       .toLowerCase()
@@ -28,11 +23,8 @@ export function calculateWER(
       .trim()
   }
 
-  const cleanOriginal = prepareTranscriptForComparison(originalTranscript, true)
-  const cleanModified = prepareTranscriptForComparison(
-    modifiedTranscript,
-    false
-  )
+  const cleanOriginal = prepareTranscriptForComparison(originalTranscript)
+  const cleanModified = prepareTranscriptForComparison(modifiedTranscript)
 
   const dmp = new diff_match_patch()
   const diffs = dmp.diff_main(cleanOriginal, cleanModified)

@@ -42,20 +42,12 @@ export function getAssemblyAITranscript(ctms: CTMType[]): string {
 
 function formatCombinedTranscript(
   rawCombinedTranscript: string,
-  fileId: string,
-  assemblyAITranscript: string
+  fileId: string
 ): string {
-  let formattedTranscript = rawCombinedTranscript
-    .replace(
-      new RegExp(`(${TIMESTAMP_SPEAKER_PATTERN.source})(\\s+)`, 'g'),
-      '$1 '
-    )
-    .replace(/\s+([.,:;?!])/g, '$1')
-
   const timestamps = []
   let match
   const timestampRegex = new RegExp(TIMESTAMP_SPEAKER_PATTERN, 'g')
-  while ((match = timestampRegex.exec(formattedTranscript)) !== null) {
+  while ((match = timestampRegex.exec(rawCombinedTranscript)) !== null) {
     timestamps.push({
       pattern: match[0],
       index: match.index,
@@ -65,51 +57,35 @@ function formatCombinedTranscript(
   for (let i = 0; i < timestamps.length; i++) {
     const timestampInfo = timestamps[i]
     if (timestampInfo.index > 0) {
-      formattedTranscript =
-        formattedTranscript.substring(0, timestampInfo.index) +
+      rawCombinedTranscript =
+        rawCombinedTranscript.substring(0, timestampInfo.index) +
         '\n\n' +
-        formattedTranscript.substring(timestampInfo.index)
+        rawCombinedTranscript.substring(timestampInfo.index)
     }
   }
 
   try {
-    const originalParas = assemblyAITranscript.split('\n\n')
-    const originalContentMap = new Map<string, string>()
     const patternRegex = new RegExp(
-      `^(${TIMESTAMP_SPEAKER_PATTERN.source})\s*(.*)$`,
+      `^(${TIMESTAMP_SPEAKER_PATTERN.source})\\s*(.*)$`,
       's'
     )
-
-    for (const para of originalParas) {
-      const match = para.trim().match(patternRegex)
-      if (match && match[1]) {
-        const pattern = match[1]
-        const content = match[2] || ''
-        originalContentMap.set(pattern, content.trim())
-      }
-    }
-
-    const currentParas = formattedTranscript.split('\n\n')
-    const updatedParas = currentParas.map((para) => {
-      const trimmedPara = para.trim()
-      const match = trimmedPara.match(patternRegex)
+    const currentParas = rawCombinedTranscript.split('\n\n')
+    const filteredParas = currentParas.filter((para) => {
+      const trimmed = para.trim()
+      const match = trimmed.match(patternRegex)
       if (match && match[1] && !match[2]) {
-        const pattern = match[1]
-        const originalContent = originalContentMap.get(pattern)
-        if (originalContent) {
-          return `${pattern} ${originalContent}`
-        }
+        return false
       }
-      return para
+      return trimmed.length > 0
     })
-    formattedTranscript = updatedParas.join('\n\n')
-  } catch (fillError) {
+    rawCombinedTranscript = filteredParas.join('\n\n')
+  } catch (removeError) {
     logger.error(
-      `[${fileId}] Error during empty paragraph filling: ${fillError}`
+      `[${fileId}] Error during empty paragraph removal: ${removeError}`
     )
   }
 
-  formattedTranscript = formattedTranscript
+  const formattedTranscript = rawCombinedTranscript
     .replace(
       new RegExp(
         `((${TIMESTAMP_SPEAKER_PATTERN.source}).*?)\\n*(?=(${TIMESTAMP_SPEAKER_PATTERN.source}))`,
@@ -120,6 +96,10 @@ function formatCombinedTranscript(
     .replace(/(?<!\n)\n(?!\n)/g, '\n\n')
     .replace(/(\n\n\s*){2,}/g, '\n\n')
     .replace(/\s+([.,:;?!])/g, '$1')
+    .replace(
+      new RegExp(`^(${TIMESTAMP_SPEAKER_PATTERN.source})\\s*`, 'gm'),
+      '$1 '
+    )
 
   return formattedTranscript.trim()
 }
@@ -229,8 +209,7 @@ export function createCombinedTranscript(
 
     const finalCombinedTranscript = formatCombinedTranscript(
       rawCombinedTranscript,
-      fileId,
-      assemblyAITranscript
+      fileId
     )
 
     logger.info(
