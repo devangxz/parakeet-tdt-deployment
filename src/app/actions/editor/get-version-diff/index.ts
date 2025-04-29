@@ -16,10 +16,10 @@ export interface VersionComparisonResult {
   message?: string
 }
 
-const getTranscriptFromCommitHash = async (fileId: string, commitHash: string, tag: string, token: string): Promise<string | null> => {
+const getTranscriptFromCommitHash = async (fileId: string, commitHash: string, token: string): Promise<string | null> => {
   try {
     const response = await axios.post(
-      `${FILE_CACHE_URL}/rollback/${fileId}/${commitHash}/${tag}`,
+      `${FILE_CACHE_URL}/rollback/${fileId}/${commitHash}`,
       {},
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -66,13 +66,13 @@ export async function getVersionComparisonAction(
     let fromText: string | null = null
     let toText: string | null = null
     if (fromVersion.isCommitHash) {
-      fromText = await getTranscriptFromCommitHash(fileId, fromVersion.versionKey, fromVersion.tag, tokenRes.token as string)
+      fromText = await getTranscriptFromCommitHash(fileId, fromVersion.versionKey, tokenRes.token as string)
     } else {
       fromText = await getTranscriptFromS3VersionId(fileId, fromVersion.versionKey)
     }
 
     if (toVersion.isCommitHash) {
-      toText = await getTranscriptFromCommitHash(fileId, toVersion.versionKey, toVersion.tag, tokenRes.token as string)
+      toText = await getTranscriptFromCommitHash(fileId, toVersion.versionKey, tokenRes.token as string)
     } else {
       toText = await getTranscriptFromS3VersionId(fileId, toVersion.versionKey)
     }
@@ -130,7 +130,7 @@ export async function getFileVersionsAction(fileId: string): Promise<VersionsRes
         headers: { Authorization: `Bearer ${tokenRes.token}` },
       }
     )
-    
+
     // Get file version tags from database if available
     const fileVersions = await prisma.fileVersion.findMany({
       where: {
@@ -141,15 +141,13 @@ export async function getFileVersionsAction(fileId: string): Promise<VersionsRes
     const versions: VersionInfo[] = []
     
     // Handle case when versionResponse has versions
-    if (versionsResponse.data?.versions?.length > 0) {
+    if (versionsResponse.data?.versions?.length) {
       versionsResponse.data.versions.forEach((version: VersionInfo) => {
-      if(version.tag !== 'ASSEMBLY_AI' && version.tag !== 'ASSEMBLY_AI_GPT_4O' && version.tag !== 'AUTO') {
         versions.push({
           ...version,
           tag: version.tag,
           s3VersionId: null
         });
-      }
       });
     }
 

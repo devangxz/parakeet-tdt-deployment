@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowRightIcon, ReloadIcon, CheckIcon, ChevronDownIcon } from '@radix-ui/react-icons'
+import { ArrowRightIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { format, formatDistanceToNow } from 'date-fns'
 import React, { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
@@ -8,20 +8,12 @@ import { toast } from 'sonner'
 import { getFileVersionsAction, VersionInfo } from '@/app/actions/editor/get-version-diff'
 import { Button } from '@/components/ui/button'
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { cn } from '@/lib/utils'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface VersionCompareDialogProps {
   isOpen: boolean
@@ -32,7 +24,6 @@ interface VersionCompareDialogProps {
 
 export interface Options {
   versionKey: string
-  tag: string
   isCommitHash: boolean
 }
 
@@ -43,18 +34,14 @@ export default function VersionCompareDialog({
   onCompare,
 }: VersionCompareDialogProps) {
   const [versions, setVersions] = useState<VersionInfo[]>([])
-  const [fromVersion, setFromVersion] = useState<Options>({ versionKey: '', tag: '', isCommitHash: false })
-  const [toVersion, setToVersion] = useState<Options>({ versionKey: '', tag: '', isCommitHash: false })
+  const [fromVersion, setFromVersion] = useState<Options>({ versionKey: '', isCommitHash: false })
+  const [toVersion, setToVersion] = useState<Options>({ versionKey: '', isCommitHash: false })
   const [isFetchingVersions, setIsFetchingVersions] = useState(false)
   const [isComparing, setIsComparing] = useState(false)
   const [position, setPosition] = useState({ x: 10, y: 100 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const dialogRef = useRef<HTMLDivElement>(null)
-  const [fromPopoverOpen, setFromPopoverOpen] = useState(false)
-  const [toPopoverOpen, setToPopoverOpen] = useState(false)
-  const [searchFrom, setSearchFrom] = useState<string>('')
-  const [searchTo, setSearchTo] = useState<string>('')
 
   useEffect(() => {
     const fetchVersions = async () => {
@@ -66,9 +53,9 @@ export default function VersionCompareDialog({
           setVersions(result.versions)
           
           // Set default selections if versions are available
-          if (result.versions.length >= 1) {
-            const getFromVersion = getVersionIdentifier(result.versions[result.versions.length - 1])
-            const getToVersion = getVersionIdentifier(result.versions[0])
+          if (result.versions.length >= 2) {
+            const getFromVersion = getVersionIdentifier(result.versions[0])
+            const getToVersion = getVersionIdentifier(result.versions[result.versions.length - 1])
             setFromVersion(getFromVersion)
             setToVersion(getToVersion)
           }
@@ -89,19 +76,11 @@ export default function VersionCompareDialog({
     }
   }, [isOpen, fileId])
 
-  // Reset search inputs when dialog opens
-  useEffect(() => {
-    if (isOpen) {
-      setSearchFrom('')
-      setSearchTo('')
-    }
-  }, [isOpen])
-
   const getVersionIdentifier = (version: VersionInfo): Options => {
     if (version.tag && version.s3VersionId) {
-      return {versionKey: version.s3VersionId, tag: version.tag, isCommitHash: false};
+      return {versionKey: version.s3VersionId, isCommitHash: false};
     }
-    return {versionKey: version.commitHash, tag: version.tag as string, isCommitHash: true};
+    return {versionKey: version.commitHash, isCommitHash: true};
   }
 
   // Set up drag handlers
@@ -194,18 +173,6 @@ export default function VersionCompareDialog({
       : `${timeFormatted} (${timeAgo})`
   }
 
-  const formatSelectVersionLabel = (version: VersionInfo) => {
-    const timeFormatted = format(new Date(version.timestamp), 'MMM d, h:mm a')
-    const timeAgo = formatDistanceToNow(new Date(version.timestamp), { addSuffix: true })
-    
-    return (
-      <div className="flex flex-col gap-1 items-start">
-        <span className="text-sm text-muted-foreground">{timeFormatted}</span>
-        <span className="text-sm text-muted-foreground">{version.tag ? `${version.tag}` : ''}{' '}({timeAgo})</span>
-      </div>
-    )
-  }
-
   return (
     <div
       ref={dialogRef}
@@ -218,10 +185,10 @@ export default function VersionCompareDialog({
       }}
       onMouseDown={handleMouseDown}
     > 
-      <div className="flex flex-col md:flex-row justify-evenly items-center py-2 gap-4">
-        <div className="flex flex-row gap-2 items-center w-full md:w-auto">
-          <label htmlFor="from-version" className="text-sm font-medium items-center">
-            From Version: 
+      <div className="flex flex-col md:flex-row justify-evenly items-start py-2 gap-4">
+        <div className="flex flex-col gap-2 w-full md:w-auto">
+          <label htmlFor="from-version" className="text-sm font-medium">
+            From Version
           </label>
           {isFetchingVersions ? (
             <div className="flex items-center gap-2">
@@ -233,77 +200,42 @@ export default function VersionCompareDialog({
               No versions found
             </div>
           ) : (
-            <Popover open={fromPopoverOpen} onOpenChange={setFromPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={fromPopoverOpen}
-                  className="flex justify-between"
-                  disabled={isFetchingVersions}
-                >
-                  {fromVersion.versionKey
-                    ? formatVersionLabel(versions.find(v => 
-                        v.s3VersionId === fromVersion.versionKey || 
-                        v.commitHash === fromVersion.versionKey
-                      ) as VersionInfo)
-                    : "Select version"}
-                  <ChevronDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[300px] p-0">
-                <Command>
-                  <CommandInput 
-                    placeholder="Search versions..."  
-                    value={searchFrom}
-                    onValueChange={setSearchFrom}
-                  />
-                  <CommandList>
-                    <ScrollArea className="h-72">
-                      <CommandEmpty>No version found</CommandEmpty>
-                      <CommandGroup>
-                        {versions
-                          .filter(version => 
-                            searchFrom === '' || 
-                            formatVersionLabel(version).toLowerCase().includes(searchFrom.toLowerCase())
-                          )
-                          .map((version) => (
-                            <CommandItem
-                              key={version.s3VersionId || version.commitHash}
-                              value={formatVersionLabel(version)}
-                              onSelect={() => {
-                                setFromVersion(getVersionIdentifier(version));
-                                setFromPopoverOpen(false);
-                              }}
-                            >
-                              <div className="flex-1">{formatSelectVersionLabel(version)}</div>
-                              <CheckIcon
-                                className={cn(
-                                  "ml-2 h-4 w-4",
-                                  (version.s3VersionId === fromVersion.versionKey || 
-                                   version.commitHash === fromVersion.versionKey)
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                            </CommandItem>
-                          ))}
-                      </CommandGroup>
-                    </ScrollArea>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <Select
+              value={fromVersion.versionKey}
+              onValueChange={(value) => {
+                const foundVersion = versions.find(v => 
+                  (v.s3VersionId === value) || (v.commitHash === value)
+                );
+                if (foundVersion) {
+                  setFromVersion(getVersionIdentifier(foundVersion));
+                }
+              }}
+              disabled={isFetchingVersions}
+            >
+              <SelectTrigger id="from-version" className="cursor-pointer">
+                <SelectValue placeholder="Select version" />
+              </SelectTrigger>
+              <SelectContent>
+                {versions.map((version) => (
+                  <SelectItem
+                    key={`from-${getVersionIdentifier(version).versionKey}`}
+                    value={getVersionIdentifier(version).versionKey}
+                  >
+                    {formatVersionLabel(version)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         </div>
 
-        <div className="hidden md:flex items-center justify-center">
+        <div className="hidden md:flex items-center justify-center mt-7">
           <ArrowRightIcon className="h-5 w-5" />
         </div>
 
-        <div className="flex flex-row gap-2 w-full md:w-auto items-center">
+        <div className="flex flex-col gap-2 w-full md:w-auto">
           <label htmlFor="to-version" className="text-sm font-medium">
-            To Version: 
+            To Version
           </label>
           {isFetchingVersions ? (
             <div className="flex items-center gap-2">
@@ -315,67 +247,32 @@ export default function VersionCompareDialog({
               No versions found
             </div>
           ) : (
-            <Popover open={toPopoverOpen} onOpenChange={setToPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={toPopoverOpen}
-                  className="flex justify-between"
-                  disabled={isFetchingVersions}
-                >
-                  {toVersion.versionKey
-                    ? formatVersionLabel(versions.find(v => 
-                        v.s3VersionId === toVersion.versionKey || 
-                        v.commitHash === toVersion.versionKey
-                      ) as VersionInfo)
-                    : "Select version"}
-                  <ChevronDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[300px] p-0">
-                <Command>
-                  <CommandInput 
-                    placeholder="Search versions..." 
-                    value={searchTo}
-                    onValueChange={setSearchTo}
-                  />
-                  <CommandList>
-                    <ScrollArea className="h-72">
-                      <CommandEmpty>No version found</CommandEmpty>
-                      <CommandGroup>
-                        {versions
-                          .filter(version => 
-                            searchTo === '' || 
-                            formatVersionLabel(version).toLowerCase().includes(searchTo.toLowerCase())
-                          )
-                          .map((version) => (
-                            <CommandItem
-                              key={version.s3VersionId || version.commitHash}
-                              value={formatVersionLabel(version)}
-                              onSelect={() => {
-                                setToVersion(getVersionIdentifier(version));
-                                setToPopoverOpen(false);
-                              }}
-                            >
-                              <div className="flex-1">{formatSelectVersionLabel(version)}</div>
-                              <CheckIcon
-                                className={cn(
-                                  "ml-2 h-4 w-4",
-                                  (version.s3VersionId === toVersion.versionKey || 
-                                   version.commitHash === toVersion.versionKey)
-                                    ? "opacity-100"
-                                    : "opacity-0"
-                                )}
-                              />
-                            </CommandItem>
-                          ))}
-                      </CommandGroup>
-                    </ScrollArea>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <Select 
+              value={toVersion.versionKey} 
+              onValueChange={(value) => {
+                const foundVersion = versions.find(v => 
+                  (v.s3VersionId === value) || (v.commitHash === value)
+                );
+                if (foundVersion) {
+                  setToVersion(getVersionIdentifier(foundVersion));
+                }
+              }}
+              disabled={isFetchingVersions}
+            >
+              <SelectTrigger id="to-version" className="cursor-pointer">
+                <SelectValue placeholder="Select version" />
+              </SelectTrigger>
+              <SelectContent>
+                {versions.map((version) => (
+                  <SelectItem
+                    key={`to-${getVersionIdentifier(version).versionKey}`}
+                    value={getVersionIdentifier(version).versionKey}
+                  >
+                    {formatVersionLabel(version)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         </div>
 
@@ -388,7 +285,7 @@ export default function VersionCompareDialog({
             !fromVersion || 
             !toVersion
           }
-          className="w-full md:w-auto"
+          className="w-full md:w-auto mt-2 md:mt-7 cursor-pointer"
         >
           {isComparing ? (
             <>
