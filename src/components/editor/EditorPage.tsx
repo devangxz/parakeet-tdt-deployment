@@ -3,7 +3,6 @@
 import { FileTag } from '@prisma/client'
 import { Cross1Icon, ReloadIcon, CheckIcon, ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons'
 import { debounce } from 'lodash'
-import { Loader2 } from 'lucide-react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Quill, { Op, Delta } from 'quill/core'
@@ -82,8 +81,7 @@ import {
   calculateSpeakerMacroF1Score,
   getTestTranscript,
   escapeRegExp,
-  clearAllHighlights,
-  generateSubtitles, 
+  clearAllHighlights, 
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB } from '@/utils/indexedDB'
 import { getFormattedTranscript } from '@/utils/transcript'
@@ -232,7 +230,6 @@ function EditorPage() {
   const [formatErrors, setFormatErrors] = useState<CombinedASRFormatError[]>([])
   const [diffToggleEnabled, setDiffToggleEnabled] = useState(false);
   const [editorContent, setEditorContent] = useState('')
-  const [isLoading, setIsLoading] = useState(false);
 
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -1216,8 +1213,7 @@ function EditorPage() {
 
   const generateDiff = useCallback((originalTranscript: string, currentTranscript: string) => {
     const dmp = new diff_match_patch()
-    const diff = dmp.diff_wordMode(originalTranscript, currentTranscript)
-    return diff
+    return dmp.diff_wordMode(originalTranscript, currentTranscript)
   }, [])
 
   const toggleDiffView = useCallback((newDiffToggleValue = diffToggleEnabled) => {
@@ -1227,13 +1223,12 @@ function EditorPage() {
       return
     }
 
-    setIsLoading(true) // Set loading state to true immediately
-
     setTimeout(async () => {
       try {
         if (!newDiffToggleValue) {
+          // When exiting diff mode, use the saved clean transcript 
           const savedTranscript = saveTranscriptInDiffMode()
-          const transcript = editorContent || (savedTranscript || '')
+          const transcript = editorContent || (savedTranscript || '');
           quill.setContents(getFormattedContent(transcript), 'silent')
         } else {
           const currentText = quill.getText()
@@ -1241,7 +1236,8 @@ function EditorPage() {
             await getFormattedTranscript(ctms, orderDetails.fileId)
           const diff = generateDiff(originalTranscript, currentText) || []
           renderDiff(diff)
-
+          
+          // Save the clean transcript immediately when entering diff mode
           const cleanTranscript = saveTranscriptInDiffMode()
           if (cleanTranscript) {
             setEditorContent(cleanTranscript)
@@ -1254,8 +1250,6 @@ function EditorPage() {
         }
       } catch (error) {
         console.error("Error generating diff transcript:", error)
-      } finally {
-        setIsLoading(false) // Ensure loading state is reset
       }
     }, 0)
   }, [quillRef, ctms, diffToggleEnabled, generateDiff, saveTranscriptInDiffMode, editorContent, orderDetails.fileId, orderDetails.isTestOrder, testTranscript, listenCount, editedSegments])
@@ -1274,7 +1268,7 @@ function EditorPage() {
           delta.insert(text, { background: insertColor })
           break
         case DIFF_DELETE:
-          delta.insert(text.trim(), { background: deleteColor, strike: true })
+          delta.insert(text, { background: deleteColor, deleted: true })
           break
         case DIFF_EQUAL:
           delta.insert(text)
@@ -1295,7 +1289,11 @@ function EditorPage() {
     const quill = quillRef?.current?.getEditor()
     if (!quill) return
     
-    if (prevText === currentText) {
+    // Skip if texts are identical or nearly identical to improve performance
+    if (prevText === currentText || 
+        (Math.abs(currentText.length - prevText.length) < 3 && 
+         currentText.slice(0, 20) === prevText.slice(0, 20) &&
+         currentText.slice(-20) === prevText.slice(-20))) {
       return;
     }
     
@@ -1352,7 +1350,7 @@ function EditorPage() {
         const currentText = quill.getText()
         await markInsertedWords(prevText, currentText)
         prevText = currentText
-      }, 700) // 500ms debounce for better performance
+      }, 500) // 500ms debounce for better performance
     }
     
     quill.on('text-change', handleTextChange)
@@ -1379,7 +1377,6 @@ function EditorPage() {
       const result = await getVersionComparisonAction(orderDetails.fileId, fromVersion, toVersion)
       
       if (!result.success || !result.fromText || !result.toText) {
-      
         toast.error(result.message || 'Failed to compare versions')
         return
       }
@@ -1390,40 +1387,13 @@ function EditorPage() {
       if (tabsTrigger) {
         tabsTrigger.click()
       }
-     
+
       toast.success('Version comparison loaded')
     } catch (error) {
+      console.error('Error comparing versions:', error)
       toast.error('Failed to compare versions')
     }
   }
-
-  useEffect(() => {
-    // only once, when the editor mounts with a valid fileId
-    const shouldRegen = localStorage.getItem('shouldRegenerateSubtitles') === 'true'
-    if (!shouldRegen || !orderDetails.fileId || !editorRef.current) return
-
-    // clear the flag immediately so it won't rerun
-    localStorage.setItem('shouldRegenerateSubtitles', 'false')
-
-    const doRegen = async () => {
-      const toastId = toast.loading('Generating subtitles…')
-      try {
-        await editorRef.current?.triggerAlignmentUpdate()
-        const alignments = editorRef.current!.getAlignments()
-        const ok = await generateSubtitles(orderDetails, alignments)
-        toast.dismiss(toastId)
-        ok
-          ? toast.success('Subtitles generated successfully')
-          : toast.error('Failed to generate subtitles')
-      } catch (e) {
-        toast.dismiss(toastId)
-        console.error(e)
-        toast.error('Error generating subtitles')
-      }
-    }
-
-    doRegen()
-  }, [orderDetails, initialEditorData])
 
   return (
     <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
@@ -1973,14 +1943,6 @@ function EditorPage() {
           fileId={orderDetails.fileId}
           onCompare={handleVersionCompare}
         />}
-
-        {isLoading && (
-          <div className="fixed inset-0 flex items-center justify-center bg-white bg-opacity-80 z-100">
-            <span>
-              <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-            </span>
-          </div>
-        )}
       </div>
     </div>
   )

@@ -75,8 +75,9 @@ export default memo(function ReviewTranscriptDialog({
   const [progressValue, setProgressValue] = useState<number>(0);
   const [temperature, setTemperature] = useState<number>(1);
   // Store processing start/end times
+  const [processingStartedAt, setProcessingStartedAt] = useState<Date | null>(null);
+  const [processingEndedAt, setProcessingEndedAt] = useState<Date | null>(null);
   const [model, setModel] = useState<GeminiModel>(GeminiModel.GEMINI_1_5_FLASH);
-  const [statsId, setStatsId] = useState<number | null>(null);
   const { fileId } = orderDetails;
 
   // Map the step string to its corresponding index
@@ -92,21 +93,7 @@ export default memo(function ReviewTranscriptDialog({
     setLoading(true);
     setIsError(false);
     setStep('processing');
-    
     try {
-      // Save options step data and create initial stats record
-      const statsResponse = await saveReviewWithGeminiStats({
-        fileId,
-        options: selectedPrompts,
-        instructions,
-        temperature
-      });
-      
-      // Store the stats ID for future updates
-      if (statsResponse && 'id' in statsResponse) {
-        setStatsId(statsResponse.id);
-      }
-      
       const userPrompt = selectedPrompts.join("\n") + "\n" + instructions;
       const chunkPoints = findOptimalChunkPoints(ctms);
       let chunkKey: string | null = null;
@@ -114,9 +101,10 @@ export default memo(function ReviewTranscriptDialog({
       const transcriptChunks = chunkTranscript(newTranscript, chunkPoints);
       const totalChunks = (chunkPoints.length - 1) * 2;
       let progress = 0;
-      console.log(chunkPoints)
+
       // Record processing start time
       const processingStart = new Date();
+      setProcessingStartedAt(processingStart);
 
       for (let i = 0; i < chunkPoints.length - 1; i++) {
         setProgressMessage(`Initializing transcript part ${i + 1} of ${chunkPoints.length - 1}`);
@@ -155,19 +143,7 @@ export default memo(function ReviewTranscriptDialog({
 
       // Record processing end time
       const processingEnd = new Date();
-      
-      // Update existing stats record with processing data
-      const duration = processingStart && processingEnd 
-        ? (processingEnd.getTime() - processingStart.getTime()) / 1000
-        : 0;
-        
-      await saveReviewWithGeminiStats({
-        fileId,
-        startTime: processingStart,
-        endTime: processingEnd,
-        duration,
-        statsId
-      });
+      setProcessingEndedAt(processingEnd);
 
       setProgressMessage('Finalizing transcript review...');
       setProgressValue(100);
@@ -181,7 +157,7 @@ export default memo(function ReviewTranscriptDialog({
     } finally {
       setLoading(false);
     }
-  }, [selectedPrompts, instructions, fileId, ctms, newTranscript, temperature, statsId]);
+  }, [selectedPrompts, instructions, fileId, ctms, newTranscript, temperature]);
 
   const handleAccept = useCallback((index: number) => {
     setDiffs((prevDiffs) => {
@@ -233,14 +209,25 @@ export default memo(function ReviewTranscriptDialog({
     setReviewModalOpen(false);
     await new Promise((resolve) => setTimeout(() => resolve(null), 1000)) // sleeping for 1 second to ensure the quill is updated
 
-    if (statsId) {
-      await saveReviewWithGeminiStats({
-        fileId,
-        savedTime: new Date(),
-        statsId
-      });
-    }
+    const duration = processingStartedAt && processingEndedAt 
+      ? (processingEndedAt.getTime() - processingStartedAt.getTime()) / 1000
+      : 0;
+    const savedTimeVal = new Date();
+    // Call the server action to store the ReviewWithGeminiStats data.
+    // Replace userId with the authenticated user's id as appropriate.
+
+    await saveReviewWithGeminiStats({
+      fileId,
+      options: selectedPrompts,
+      instructions,
+      temperature,
+      duration,
+      startTime: processingStartedAt || new Date(),
+      endTime: processingEndedAt || new Date(),
+      savedTime: savedTimeVal
+    });
     
+    // Ensure the final transcript ends with a newline to prevent clipping.
     await handleSave(
       {
         getEditorText: () => saveTranscript,
@@ -272,7 +259,6 @@ export default memo(function ReviewTranscriptDialog({
       setSelectedPrompts([]);
       setInstructions('');
       setIsError(false);
-      setStatsId(null); // Reset stats ID when modal is closed
     }
   }, [reviewModalOpen, transcript]);
 
