@@ -147,8 +147,6 @@ interface HeaderProps {
   editorRef?: React.RefObject<EditorHandle>
   step: string
   toggleHighlightNumerics: () => void
-  diffToggleEnabled: boolean
-  setDiffToggleEnabled: (enabled: boolean) => void
 }
 
 export default memo(function Header({
@@ -165,12 +163,7 @@ export default memo(function Header({
   editorRef,
   step,
   toggleHighlightNumerics,
-  diffToggleEnabled,
-  setDiffToggleEnabled,
-
 }: HeaderProps) {
-  // const [currentValue, setCurrentValue] = useState(0)
-  // const [currentTime, setCurrentTime] = useState('00:00')
   const [audioDuration, setAudioDuration] = useState(0)
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [isPlayerLoaded, setIsPlayerLoaded] = useState(false)
@@ -559,14 +552,6 @@ export default memo(function Header({
     }
   }
 
-  const generateTranscriptFromDiff = () => {
-    const newDiffToggleValue = !diffToggleEnabled;
-    setDiffToggleEnabled(newDiffToggleValue);
-    // if (editorRef?.current) {
-    //   editorRef.current.generateTranscriptFromDiff(newDiffToggleValue);
-    // }
-  };
-  
   return (
     <div className='border bg-background border-customBorder rounded-md relative'>
       {!isPlayerLoaded && (
@@ -745,8 +730,6 @@ export default memo(function Header({
                     toggleHighlightNumerics={toggleHighlightNumerics}
                     handleUndo={handleUndo}
                     handleRedo={handleRedo}
-                    generateTranscriptFromDiff={generateTranscriptFromDiff}
-                    diffToggleEnabled={diffToggleEnabled}
                   />
                 </div>
               </TooltipProvider>
