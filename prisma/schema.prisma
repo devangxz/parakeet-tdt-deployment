@@ -462,6 +462,7 @@ model JobAssignment {
   inputFile          InputFileType @default(ASR_OUTPUT) @map("input_file")
   extensionRequested Boolean       @default(false) @map("extension_requested")
   assignMode         AssignMode    @default(AUTO) @map("assign_mode")
+  comment            String?       @map("comment")
 
   user  User  @relation(fields: [transcriberId], references: [id])
   order Order @relation(fields: [orderId], references: [id])
@@ -892,6 +893,7 @@ model TestAttempt {
   startedAt   DateTime   @default(now()) @map("started_at")
   completedAt DateTime?  @map("completed_at")
   cancelledAt DateTime?  @map("cancelled_at")
+
   @@index([userId])
   @@index([fileId])
   @@map("scb_test_attempts")

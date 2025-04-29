@@ -6,9 +6,12 @@ import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import unAssignFileFromTranscriber from '@/services/transcribe-service/unassign-file-from-transcriber'
 
-export async function rejectApprovalOrder(formData: { orderId: number }) {
+export async function rejectApprovalOrder(formData: {
+  orderId: number
+  comment?: string
+}) {
   try {
-    const { orderId } = formData
+    const { orderId, comment } = formData
 
     const order = await prisma.order.findUnique({
       where: { id: Number(orderId) },
@@ -39,7 +42,8 @@ export async function rejectApprovalOrder(formData: { orderId: number }) {
       JobStatus.REJECTED,
       currentJobAssignment.transcriberId,
       order.fileId,
-      'QC'
+      'QC',
+      comment
     )
 
     const qcValidationStats = await prisma.qCValidationStats.findFirst({

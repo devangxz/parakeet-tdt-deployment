@@ -67,6 +67,11 @@ const optionNames: Record<string, string> = {
   sif: 'Speaker Tracking',
 }
 
+interface Template {
+  id: number
+  name: string
+}
+
 Font.register({
   family: 'Arial',
   src: 'https://fonts.gstatic.com/s/opensans/v17/mem8YaGs126MiZpBA-UFVZ0e.ttf',
@@ -539,6 +544,12 @@ const InvoicesDetailDialog = ({
         address_2: invoice.user.address_2,
         phone: invoice.user.phone,
       })
+      const templateData = response.responseData.templates.map(
+        (template: Template) => ({
+          id: template.id,
+          name: template.name,
+        })
+      )
       const total =
         Number(
           (
@@ -573,6 +584,7 @@ const InvoicesDetailDialog = ({
           response.responseData.invoice.options ?? '{}'
         )
         const isRushOrder = invoiceoOptions.exd === 1
+        const isStrictVerbatim = invoiceoOptions.vb === 1
 
         const files = response.responseData.files?.map((file: any) => {
           let fileRate = 0
@@ -584,6 +596,8 @@ const InvoicesDetailDialog = ({
 
             fileRate = isRushOrder
               ? baseRate + response.responseData.rates.rush_order
+              : isStrictVerbatim
+              ? baseRate + response.responseData.rates.verbatim
               : baseRate
           }
 
@@ -613,13 +627,17 @@ const InvoicesDetailDialog = ({
 
         setServices({
           orderOptions: enabledOptions,
-          speakerNameFormat: options.si === 1 ? 'Initials' : 'Full Name',
+          speakerNameFormat: options.si,
           transcriptTemplate:
-            response.responseData.templates?.find(
-              (template: { id: number }) => template.id === Number(options.tmp)
-            )?.name || 'Unknown',
+            response.responseData.templates
+              ?.find(
+                (template: { id: number }) =>
+                  template.id === Number(options.tmp)
+              )
+              ?.id.toString() || '0',
           spellingStyle: options.sp,
           specialInstructions: response.responseData.invoice.instructions ?? '',
+          templates: templateData,
         })
         setReceipt({
           services: `${enabledCount} (${enabledOptions})`,

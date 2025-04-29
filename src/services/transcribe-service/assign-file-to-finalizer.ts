@@ -10,7 +10,8 @@ const assignFileToFinalizer = async (
   fileId: string,
   transcriberId: number,
   inputFile: InputFileType,
-  assignMode: AssignMode
+  assignMode: AssignMode,
+  comment?: string
 ) => {
   logger.info(`--> assignFileToFinalizer ${orderId} ${transcriberId}`)
   try {
@@ -20,7 +21,8 @@ const assignFileToFinalizer = async (
       transcriberId,
       JobType.FINALIZE,
       inputFile,
-      assignMode
+      assignMode,
+      comment
     )
 
     const { cost, rate } = await calculateAssignmentAmount(
