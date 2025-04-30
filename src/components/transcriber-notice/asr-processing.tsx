@@ -16,33 +16,24 @@ function ASRProcessingNotice() {
         </svg>
       </div>
       <div className='ml-3'>
-        <p className='text-sm font-semibold text-primary mb-2'>
-          We&apos;ve enhanced our transcript processing with a two-step system:
+        <p className='text-sm text-primary font-medium mb-2'>
+          <span className='font-semibold'>New feature:</span> We&apos;re
+          introducing GPT-4o Transcribe to enhance your editing experience
         </p>
-        <ol className='mb-3 pl-5 text-sm font-medium text-primary space-y-2 list-decimal'>
-          <li>Initial processing by AssemblyAI</li>
-          <li>Automatic correction by GPT-4o Transcribe</li>
-        </ol>
-        <p className='text-sm font-semibold text-primary mb-2'>
-          What&apos;s New:
-        </p>
-        <ul className='list-disc pl-5 text-sm font-medium text-primary space-y-2'>
+        <ul className='list-disc pl-5 text-sm font-medium text-primary space-y-1.5'>
           <li>
-            The transcript you first see in the editor is already the GPT-4o
-            corrected version
+            Your first view will show a corrected transcript powered by GPT-4o
+            Transcribe
           </li>
           <li>
-            Not satisfied with the corrections? Use &quot;Restore Version&quot;
-            in the dropdown to access the original AssemblyAI version
-          </li>
-          <li>Toggle to editable diff mode from the toolbar</li>
-          <li>
-            Easily compare and review changes between different transcript
-            versions
+            See the changes in the Diff tab — or use &quot;Restore Version&quot;
+            in the dropdown to revert to the original AssemblyAI output if you
+            prefer
           </li>
           <li>
-            Changes made in diff mode are automatically saved to your current
-            transcript
+            GPT-4o Transcribe is designed for higher contextual understanding
+            and offers better speaker differentiation and improved
+            punctuation/formatting
           </li>
         </ul>
       </div>

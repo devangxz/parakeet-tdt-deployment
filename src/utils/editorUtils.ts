@@ -978,7 +978,7 @@ const handleSave = async (
 
         if (
           !paragraphRegex.test(paragraph) &&
-          orderDetails.orderType !== 'TRANSCRIPTION_FORMATTING'
+          orderDetails.orderType === 'TRANSCRIPTION'
         ) {
           if (showToast) {
             if (toastId) toast.dismiss(toastId)

@@ -35,6 +35,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/editor/Tabs'
 import renderTitleInputs from '@/components/editor/TitleInputs'
 import Topbar from '@/components/editor/Topbar'
+import VersionCompareDialog from '@/components/editor/VersionCompareDialog'
 import WaveformHeatmap from '@/components/editor/WaveformHeatmap'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -83,8 +84,7 @@ import {
   generateSubtitles,
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB } from '@/utils/indexedDB'
-import { getFormattedTranscript } from '@/utils/transcript'
-import { diff_match_patch, DmpDiff } from '@/utils/transcript/diff_match_patch'
+import { DmpDiff } from '@/utils/transcript/diff_match_patch'
 
 export type SupportingDocument = {
   filename: string
@@ -227,6 +227,7 @@ function EditorPage() {
   const [toggleReplace, setToggleReplace] = useState(false);
   const [isFormatWarningDialogOpen, setIsFormatWarningDialogOpen] = useState(false)
   const [formatErrors, setFormatErrors] = useState<CombinedASRFormatError[]>([])
+  const [diffToggleEnabled, setDiffToggleEnabled] = useState(false)
   const [alignments, setAlignments] = useState<AlignmentType[]>([])
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -716,13 +717,10 @@ function EditorPage() {
   }, [findAndReplaceOpen, quillRef])
 
   const handleTabsValueChange = async (value: string) => {
-     if (value === 'diff') {
-      const contentText = getEditorText()
-      const dmp = new diff_match_patch()
-      const diffBaseTranscript = orderDetails.isTestOrder ? testTranscript : await getFormattedTranscript(ctms, orderDetails.fileId )
-      const diffs = dmp.diff_wordMode(diffBaseTranscript, contentText)
-      dmp.diff_cleanupSemantic(diffs)
-      setDiff(diffs)
+    if (value === 'diff') {
+      setDiffToggleEnabled(true)
+    } else {
+      setDiffToggleEnabled(false)
     }
   }
 
@@ -1079,14 +1077,14 @@ function EditorPage() {
     };
   }, [isSubmitting, submissionStatus]);
 
-  useEffect(() => {
-    // Cleanup debounce timer on unmount
-    return () => {
+  useEffect(
+    () => () => {
       if (findDebounceRef.current) {
         clearTimeout(findDebounceRef.current)
       }
-    }
-  }, [])
+    },
+    []
+  )
 
   useEffect(() => {
     if (!findAndReplaceOpen || !findText || !quillRef?.current) return;
@@ -1141,6 +1139,15 @@ function EditorPage() {
 
   useEffect(() => {
     if (!quillRef?.current) return
+
+    if (
+      step !== 'QC' ||
+      session?.user?.role === 'CUSTOMER' ||
+      orderDetails.orderType !== 'TRANSCRIPTION'
+    ) {
+      setIsFormatWarningDialogOpen(false)
+      return
+    }
 
     const checkFormat = () => {
       const transcript = quillRef.current?.getEditor()?.getText() || ''
@@ -1268,7 +1275,7 @@ function EditorPage() {
                     ? 'rounded-r-md'
                     : 'rounded-md'
                 } w-[80%]`}
-              >                
+              >
                 {selectedSection === 'proceedings' &&
                   (orderDetails.orderType === 'FORMATTING' ? (
                     <Tabs value='info' defaultValue='info' className='h-full'>
@@ -1299,12 +1306,15 @@ function EditorPage() {
                           >
                             Transcribe
                           </TabsTrigger>
-                          <TabsTrigger
-                            className='text-base px-0 pt-2 pb-[6.5px]'
-                            value='diff'
-                          >
-                            Diff
-                          </TabsTrigger>
+                          {session?.user?.role !== 'CUSTOMER' &&
+                            orderDetails.orderType !== 'FORMATTING' && (
+                              <TabsTrigger
+                                className='text-base px-0 pt-2 pb-[6.5px]'
+                                value='diff'
+                              >
+                                Diff
+                              </TabsTrigger>
+                            )}
                           <TabsTrigger
                             className='text-base px-0 pt-2 pb-[6.5px]'
                             value='info'
@@ -1347,7 +1357,10 @@ function EditorPage() {
                         setHighlightNumbersEnabled={setHighlightNumbersEnabled}
                       />
 
-                      <DiffTabComponent diff={diff} />
+                      {session?.user?.role !== 'CUSTOMER' &&
+                        orderDetails.orderType !== 'FORMATTING' && (
+                          <DiffTabComponent diff={diff} />
+                        )}
 
                       <InfoTabComponent orderDetails={orderDetails} />
                       <SpeakersTabComponent
@@ -1381,30 +1394,38 @@ function EditorPage() {
                   {findAndReplaceOpen && (
                     <div className='bg-background border border-customBorder rounded-md overflow-hidden transition-all duration-200 ease-in-out h-[50%]'>
                       <div className='font-medium text-md border-b border-customBorder flex justify-between items-center p-2'>
-                        <span>{toggleReplace ? 'Find & Replace': 'Find'}</span>
+                        <span>{toggleReplace ? 'Find & Replace' : 'Find'}</span>
 
-                        <div className="flex gap-2">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={() => setToggleReplace(!toggleReplace)}
-                                className='p-1 rounded-md text-muted-foreground hover:bg-secondary transition-colors'
-                              >
-                                {toggleReplace ? <ChevronUpIcon className='h-4 w-4' /> : <ChevronDownIcon className='h-4 w-4' />}
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {toggleReplace ? 'Hide replace options' : 'Show replace options'}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <button
-                          onClick={() => setFindAndReplaceOpen(false)}
-                          className='p-1 rounded-md text-muted-foreground hover:bg-secondary transition-colors'
-                        >
-                          <Cross1Icon className='h-4 w-4' />
-                        </button>
+                        <div className='flex gap-2'>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() =>
+                                    setToggleReplace(!toggleReplace)
+                                  }
+                                  className='p-1 rounded-md text-muted-foreground hover:bg-secondary transition-colors'
+                                >
+                                  {toggleReplace ? (
+                                    <ChevronUpIcon className='h-4 w-4' />
+                                  ) : (
+                                    <ChevronDownIcon className='h-4 w-4' />
+                                  )}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {toggleReplace
+                                  ? 'Hide replace options'
+                                  : 'Show replace options'}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <button
+                            onClick={() => setFindAndReplaceOpen(false)}
+                            className='p-1 rounded-md text-muted-foreground hover:bg-secondary transition-colors'
+                          >
+                            <Cross1Icon className='h-4 w-4' />
+                          </button>
                         </div>
                       </div>
                       <div className='space-y-3 px-2 py-[10px] h-[calc(100%-41px)] overflow-y-auto'>
@@ -1421,13 +1442,15 @@ function EditorPage() {
                             </span>
                           )}
                         </div>
-                        {toggleReplace &&<div className="flex gap-2">
-                          <Input
-                            placeholder='Replace with...'
-                          value={replaceText}
-                            onChange={handleReplaceChange}
-                          />
-                        </div>}
+                        {toggleReplace && (
+                          <div className='flex gap-2'>
+                            <Input
+                              placeholder='Replace with...'
+                              value={replaceText}
+                              onChange={handleReplaceChange}
+                            />
+                          </div>
+                        )}
                         <div className='flex gap-4'>
                           <Label className='flex items-center space-x-2'>
                             <Checkbox
@@ -1468,23 +1491,25 @@ function EditorPage() {
                               Next
                             </button>
                           </div>
-                          {toggleReplace && <div
-                            className='inline-flex w-full rounded-md'
-                            role='group'
-                          >
-                            <button
-                              onClick={replaceOneHandler}
-                              className='flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-l-3xl rounded-r-none border-r-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50'
+                          {toggleReplace && (
+                            <div
+                              className='inline-flex w-full rounded-md'
+                              role='group'
                             >
-                              Replace
-                            </button>
-                            <button
-                              onClick={replaceAllHandler}
-                              className='flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-r-3xl rounded-l-none border-l border-white/20 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50'
-                            >
-                              Replace All
-                            </button>
-                          </div>}
+                              <button
+                                onClick={replaceOneHandler}
+                                className='flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-l-3xl rounded-r-none border-r-0 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50'
+                              >
+                                Replace
+                              </button>
+                              <button
+                                onClick={replaceAllHandler}
+                                className='flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-r-3xl rounded-l-none border-l border-white/20 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50'
+                              >
+                                Replace All
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1663,23 +1688,23 @@ function EditorPage() {
                             speakerChangePercentage,
                             speakerMacroF1Score: await getSpeakerMacroF1Score(),
                           },
-                        })                        
+                        })
                       }
-                      
+
                       setSubmissionStatus('completed')
                     } catch (error) {
                       setButtonLoading((prevButtonLoading) => ({
                         ...prevButtonLoading,
                         submit: false,
-                      }));
+                      }))
 
-                      setIsSubmitting(false);
-                      setSubmissionStatus('processing');
+                      setIsSubmitting(false)
+                      setSubmissionStatus('processing')
                     } finally {
                       setButtonLoading((prevButtonLoading) => ({
                         ...prevButtonLoading,
                         submit: false,
-                      }));
+                      }))
                     }
                   }}
                   disabled={buttonLoading.submit}
@@ -1695,12 +1720,14 @@ function EditorPage() {
         </Dialog>
 
         {/* Setting up transcript loader */}
-        <Dialog open={isSettingTest} modal >
-          <DialogContent className="max-w-md p-8 flex flex-col items-center justify-center [&>button]:hidden">
-            <div className="flex flex-col items-center space-y-4">
-              <ReloadIcon className="h-8 w-8 animate-spin text-primary" />
-              <DialogTitle className="text-center">Setting up the test</DialogTitle>
-              <DialogDescription className="text-center">
+        <Dialog open={isSettingTest} modal>
+          <DialogContent className='max-w-md p-8 flex flex-col items-center justify-center [&>button]:hidden'>
+            <div className='flex flex-col items-center space-y-4'>
+              <ReloadIcon className='h-8 w-8 animate-spin text-primary' />
+              <DialogTitle className='text-center'>
+                Setting up the test
+              </DialogTitle>
+              <DialogDescription className='text-center'>
                 Please wait while we prepare your test.
               </DialogDescription>
             </div>
@@ -1709,41 +1736,61 @@ function EditorPage() {
 
         {/* Update the Submission Processing Modal */}
         <Dialog open={isSubmitting} modal>
-          <DialogContent className="max-w-md p-8 flex flex-col items-center justify-center [&>button]:hidden">
-            <div className="flex flex-col items-center space-y-4">
+          <DialogContent className='max-w-md p-8 flex flex-col items-center justify-center [&>button]:hidden'>
+            <div className='flex flex-col items-center space-y-4'>
               {submissionStatus === 'processing' ? (
                 <>
-                  <ReloadIcon className="h-8 w-8 animate-spin text-primary" />
-                  <DialogTitle className="text-center">Submitting Transcript</DialogTitle>
-                  <DialogDescription className="text-center">
+                  <ReloadIcon className='h-8 w-8 animate-spin text-primary' />
+                  <DialogTitle className='text-center'>
+                    Submitting Transcript
+                  </DialogTitle>
+                  <DialogDescription className='text-center'>
                     Please wait while we process your submission...
                   </DialogDescription>
                 </>
               ) : (
                 <>
-                  <div className="h-8 w-8 bg-green-500 rounded-full flex items-center justify-center">
-                    <CheckIcon className="h-5 w-5 text-white" />
+                  <div className='h-8 w-8 bg-green-500 rounded-full flex items-center justify-center'>
+                    <CheckIcon className='h-5 w-5 text-white' />
                   </div>
-                  <DialogTitle className="text-center">Submission Complete</DialogTitle>
-                  <DialogDescription className="text-center">
-                    Your transcript has been submitted successfully. 
-                    This window will close in {submissionCountdown} seconds.
+                  <DialogTitle className='text-center'>
+                    Submission Complete
+                  </DialogTitle>
+                  <DialogDescription className='text-center'>
+                    Your transcript has been submitted successfully. This window
+                    will close in {submissionCountdown} seconds.
                   </DialogDescription>
                 </>
               )}
             </div>
             <DialogFooter>
-              <Button onClick={() => window.close()} disabled={submissionStatus === 'processing'}>Close</Button>
+              <Button
+                onClick={() => window.close()}
+                disabled={submissionStatus === 'processing'}
+              >
+                Close
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        
-        <FormatWarningDialog
-          isOpen={isFormatWarningDialogOpen}
-          onOpenChange={setIsFormatWarningDialogOpen}
-          errors={formatErrors}
-        />
 
+        {step === 'QC' &&
+          session?.user?.role !== 'CUSTOMER' &&
+          orderDetails.orderType === 'TRANSCRIPTION' && (
+            <FormatWarningDialog
+              isOpen={isFormatWarningDialogOpen}
+              onOpenChange={setIsFormatWarningDialogOpen}
+              errors={formatErrors}
+            />
+          )}
+
+        {diffToggleEnabled && (
+          <VersionCompareDialog
+            isOpen={diffToggleEnabled}
+            fileId={orderDetails.fileId}
+            setDiff={setDiff}
+          />
+        )}
       </div>
     </div>
   )

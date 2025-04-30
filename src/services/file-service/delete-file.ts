@@ -16,6 +16,7 @@ export const getListOfGeneratedFiles = (fileId: string) => [
   `${fileId}.mp3`,
   `${fileId}_assembly_ai_ctms.json`,
   `${fileId}_assembly_ai_gpt_4o_ctms.json`,
+  `${fileId}_ctms.json`,
   `${fileId}_qc.txt`,
   `${fileId}_cf_rev.docx`,
   `${fileId}_transcript.docx`,
