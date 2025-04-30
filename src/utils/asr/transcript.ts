@@ -101,7 +101,7 @@ function formatCombinedTranscript(
       '$1 '
     )
 
-  return formattedTranscript.trim()
+  return applyTextReplacements(formattedTranscript.trim())
 }
 
 export function createCombinedTranscript(
