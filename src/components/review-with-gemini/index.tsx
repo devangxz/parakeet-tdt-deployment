@@ -114,7 +114,7 @@ export default memo(function ReviewTranscriptDialog({
       const transcriptChunks = chunkTranscript(newTranscript, chunkPoints);
       const totalChunks = (chunkPoints.length - 1) * 2;
       let progress = 0;
-      console.log(chunkPoints)
+      
       // Record processing start time
       const processingStart = new Date();
 
