@@ -58,6 +58,8 @@ export async function downloadFromS3(fileId: string, suffix: string) {
           key = `${fileId}_assembly_ai_ctms.json`
         } else if (combinedMatch) {
           key = `${fileId}_assembly_ai_gpt_4o_ctms.json`
+        } else {
+          key = `${fileId}_ctms.json`
         }
       }
     } else if (suffix === 'mp3' || suffix === 'mp4') {

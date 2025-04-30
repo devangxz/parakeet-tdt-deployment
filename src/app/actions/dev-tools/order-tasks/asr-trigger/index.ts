@@ -17,7 +17,10 @@ export async function triggerASR(fileId: string) {
     }
 
     const fileExists = await fileExistsInS3(`${fileId}.mp3`)
-    const ctmsExists = await fileExistsInS3(`${fileId}_assembly_ai_ctms.json`)
+    let ctmsExists = await fileExistsInS3(`${fileId}_assembly_ai_ctms.json`)
+    if (!ctmsExists) {
+      ctmsExists = await fileExistsInS3(`${fileId}_ctms.json`)
+    }
 
     if (fileExists && !ctmsExists) {
       await workerQueueService.createJob(
