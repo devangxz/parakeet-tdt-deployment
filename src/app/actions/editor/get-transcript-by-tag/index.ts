@@ -35,7 +35,7 @@ export async function getTranscriptByTagAction(
       whereCondition.userId = userId
     }
 
-    const fileVersion = await prisma.fileVersion.findFirst({
+    let fileVersion = await prisma.fileVersion.findFirst({
       where: whereCondition,
       orderBy: {
         createdAt: 'desc',
@@ -44,6 +44,25 @@ export async function getTranscriptByTagAction(
         s3VersionId: true,
       },
     })
+
+    if (!fileVersion?.s3VersionId && tag === FileTag.ASSEMBLY_AI) {
+      logger.info(
+        `Assembly AI version not found for fileId: ${fileId}, trying AUTO version`
+      )
+      fileVersion = await prisma.fileVersion.findFirst({
+        where: {
+          fileId,
+          tag: FileTag.AUTO,
+          ...(userId && { userId }),
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        select: {
+          s3VersionId: true,
+        },
+      })
+    }
 
     if (!fileVersion?.s3VersionId) {
       logger.info(
