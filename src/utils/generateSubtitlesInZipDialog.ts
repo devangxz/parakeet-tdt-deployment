@@ -27,11 +27,8 @@ export const generateSubtitlesInZipDialog = async (fileIds: string[]) => {
       
       await generateSubtitles(fileId, createUpdatedAlignments);
     }));
-    toast.dismiss(toastId);
     return true;
   } catch (error) {
-    // Dismiss toast on error as well
-    if (toastId) toast.dismiss(toastId);
     toast.error('Failed to generate subtitles');
     return false;
   }
