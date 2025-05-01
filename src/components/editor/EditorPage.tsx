@@ -1191,8 +1191,8 @@ function EditorPage() {
       const shouldRegen = localStorage.getItem('shouldRegenerateSubtitles') === 'true';
       if (shouldRegen && alignments.length > 0 && orderDetails.fileId) {
         try {
-          const toastId = toast.loading('Generating subtitles…');
-          const result = await generateSubtitles(orderDetails, alignments);
+          const toastId = toast.loading('Generating subtitles');
+          const result = await generateSubtitles(orderDetails.fileId, alignments);
           localStorage.setItem('shouldRegenerateSubtitles', 'false');
           toast.dismiss(toastId);
           result
