@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Textarea } from '@/components/ui/textarea'
 import isValidEmail from '@/utils/isValidEmail'
 
 interface DialogProps {
@@ -37,6 +38,7 @@ const ReassignFinalizer = ({
 }: DialogProps) => {
   const [userEmail, setUserEmail] = useState('')
   const [retainEarnings, setRetainEarnings] = useState('no')
+  const [comment, setComment] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async () => {
@@ -52,6 +54,7 @@ const ReassignFinalizer = ({
         userEmail,
         retainEarnings: retainEarnings === 'yes',
         isCompleted,
+        comment,
       })
       if (result.success) {
         const successToastId = toast.success(
@@ -86,7 +89,7 @@ const ReassignFinalizer = ({
                 onlyReviewers={true}
               />
             </div>
-            <div className='grid items-center gap-1.5 mt-5 mb-5'>
+            <div className='grid items-center gap-1.5 mt-5 mb-2'>
               <Label>Retain Earnings.</Label>
               <RadioGroup
                 value={retainEarnings}
@@ -101,6 +104,13 @@ const ReassignFinalizer = ({
                   <Label htmlFor='no'>No</Label>
                 </div>
               </RadioGroup>
+            </div>
+            <div className='grid items-center gap-1.5 mt-5 mb-5'>
+              <Label>Comment</Label>
+              <Textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+              />
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>

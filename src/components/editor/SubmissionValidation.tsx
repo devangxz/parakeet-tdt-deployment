@@ -20,6 +20,7 @@ const SubmissionValidation: React.FC<{
   editListenCorrelationPercentage: number
   speakerChangePercentage: number
   setIsQCValidationPassed: (value: boolean) => void
+  pwer: number
 }> = ({
   playedPercentage,
   werPercentage,
@@ -27,6 +28,7 @@ const SubmissionValidation: React.FC<{
   editListenCorrelationPercentage,
   speakerChangePercentage,
   setIsQCValidationPassed,
+  pwer,
 }) => {
   const validationResults = useMemo(() => {
     const audioPlaybackCheck = {
@@ -34,12 +36,14 @@ const SubmissionValidation: React.FC<{
       message: VALIDATION_MESSAGES.AUDIO_PLAYBACK,
     }
 
+    const marginPercentage = QC_VALIDATION.wer_threshold_margin_percentage
+    const pwerPercent = pwer * 100
+    const thresholdMin = Math.max(0, pwerPercent - marginPercentage)
+    const thresholdMax = Math.min(100, pwerPercent + marginPercentage)
     const werChangesCheck = {
-      failed:
-        werPercentage < QC_VALIDATION.min_wer_percentage ||
-        werPercentage > QC_VALIDATION.max_wer_percentage,
+      failed: werPercentage < thresholdMin || werPercentage > thresholdMax,
       message:
-        werPercentage < QC_VALIDATION.min_wer_percentage
+        werPercentage < thresholdMin
           ? VALIDATION_MESSAGES.FEW_CHANGES
           : VALIDATION_MESSAGES.MANY_CHANGES,
     }
@@ -83,6 +87,7 @@ const SubmissionValidation: React.FC<{
     blankPercentage,
     editListenCorrelationPercentage,
     speakerChangePercentage,
+    pwer,
   ])
 
   useEffect(() => {
@@ -111,9 +116,7 @@ const SubmissionValidation: React.FC<{
           </svg>
         </div>
         <div className='ml-3'>
-          <p className='text-sm font-medium text-primary'>
-            Warning
-          </p>
+          <p className='text-sm font-medium text-primary'>Warning</p>
           <p className='text-sm text-primary mt-1'>
             Your submission does not meet our quality standards and may be
             flagged for review. Please address the issues below before

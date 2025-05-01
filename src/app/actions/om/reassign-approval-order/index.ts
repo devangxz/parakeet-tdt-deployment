@@ -11,9 +11,11 @@ export async function reassignApprovalOrder(formData: {
   userEmail: string
   retainEarnings: boolean
   retainTranscript: boolean
+  comment: string
 }) {
   try {
-    const { orderId, userEmail, retainEarnings, retainTranscript } = formData
+    const { orderId, userEmail, retainEarnings, retainTranscript, comment } =
+      formData
 
     if (!orderId) {
       return {
@@ -62,7 +64,8 @@ export async function reassignApprovalOrder(formData: {
       JobType.QC,
       retainTranscript ? InputFileType.QC_OUTPUT : InputFileType.ASR_OUTPUT,
       orderInformation.fileId,
-      'MANUAL'
+      'MANUAL',
+      comment
     )
 
     await prisma.jobAssignment.update({

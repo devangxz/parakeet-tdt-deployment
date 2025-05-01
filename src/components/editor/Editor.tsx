@@ -73,7 +73,6 @@ export interface EditorHandle {
   getAlignments: () => AlignmentType[]
   removeTimestamps: () => void
   highlightNumbers: () => void
-  getWer: () => number
   handleUndo: () => void
   handleRedo: () => void
 }
@@ -101,7 +100,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
   const ctms = initialCtms // Make CTMs constant
   const quillRef = useRef<ReactQuill>(null)
   const [alignments, setAlignments] = useState<AlignmentType[]>([])
-  const [wer, setWer] = useState<number>(0)
   const [typingTimer, setTypingTimer] = useState<NodeJS.Timeout | null>(null)
   const alignmentWorker = useRef<Worker | null>(null)
   const prevLineNodeRef = useRef<HTMLElement | null>(null)
@@ -521,7 +519,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     }, 0);
   }, [quillRef, highlightNumbersEnabled]);
 
-  // Add effect to highlight numbers when highlightNumbersEnabled changes
   useEffect(() => {
       highlightNumbers()
   }, [highlightNumbersEnabled, highlightNumbers, clearHighlights])
@@ -614,12 +611,11 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       )
   
       alignmentWorker.current.onmessage = (e) => {
-        const { alignments: newAlignments, editedSegments, wer } = e.data
+        const { alignments: newAlignments, editedSegments } = e.data
         setAlignments(newAlignments)
         setEditedSegments(new Set(editedSegments))
         setIsTyping(false)
         setAlignmentWorkerRunning(false)
-        setWer(wer)
 
         alignmentCallbacks.current.forEach(cb => cb())
         alignmentCallbacks.current = []
@@ -772,7 +768,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     highlightNumbers, 
     highlightNumbersEnabled
   ])
-
   const handleUndo = useCallback(() => {
     if (undoStack.length === 0) return
 
@@ -983,26 +978,29 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
 
   // Create initial alignments once when component loads
   useEffect(() => {
-    if (!ctms.length) return
+    const initializeAlignments = async () => {
+      if (!ctms.length) return
+      const quill = quillRef.current?.getEditor()
+      if (!quill) return
 
-    const quill = quillRef.current?.getEditor()
-    if (!quill) return
+      // Create initial alignments from transcript
+      const originalTranscript = await getFormattedTranscript(ctms, orderDetails.fileId)
+      const newAlignments = createAlignments(originalTranscript, ctms)
+      setAlignments(newAlignments)
 
-    // Create initial alignments from transcript
-    const originalTranscript = getFormattedTranscript(ctms)
-    const newAlignments = createAlignments(originalTranscript, ctms)
-    setAlignments(newAlignments)
+      // Process current text differences if any exist
+      const currentText = quill.getText()
+      if (!currentText) return
 
-    // Process current text differences if any exist
-    const currentText = quill.getText()
-    if (!currentText) return
-
-    setAlignmentWorkerRunning(true)
-    alignmentWorker.current?.postMessage({
-      newText: currentText,
-      currentAlignments: newAlignments,
-      ctms,
-    })
+      setAlignmentWorkerRunning(true)
+      alignmentWorker.current?.postMessage({
+        newText: currentText,
+        currentAlignments: newAlignments,
+        ctms,
+      })
+    }
+    
+    initializeAlignments()
   }, [ctms])
 
   useEffect(() => {
@@ -1265,7 +1263,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     getAlignments: () => alignments,
     removeTimestamps: removeTimestampsToolbar,
     highlightNumbers,
-    getWer: () => wer,
     handleUndo,
     handleRedo
   }))

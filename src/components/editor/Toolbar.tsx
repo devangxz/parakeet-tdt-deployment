@@ -84,7 +84,7 @@ export default function Toolbar({
   removeTimestamps,
   toggleHighlightNumerics,
   handleUndo,
-  handleRedo
+  handleRedo,
 }: ToolbarProps) {
   return (
     <TooltipProvider>

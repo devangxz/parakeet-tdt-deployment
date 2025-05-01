@@ -691,7 +691,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
                     <CollapsibleContent className='mt-3 font-normal text-sm text-muted-foreground'>
                       The templates used for formatting the delivery transcript
                       document(s). For custom templates please{' '}
-                      <Link href='/' className='text-primary'>
+                      <Link href='/contact' className='text-primary'>
                         Contact Support
                       </Link>
                     </CollapsibleContent>

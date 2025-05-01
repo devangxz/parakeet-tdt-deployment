@@ -144,6 +144,11 @@ export async function getRevenue(
               gte: start,
               lte: end,
             },
+            user: {
+              Customer: {
+                isTestCustomer: false,
+              },
+            },
           },
           include: {
             File: true,
@@ -176,6 +181,11 @@ export async function getRevenue(
               lte: end,
             },
             status: 'PAID',
+            user: {
+              Customer: {
+                isTestCustomer: false,
+              },
+            },
           },
         })
 
@@ -310,10 +320,11 @@ export async function getRevenue(
               invoice.type === 'ADD_CREDITS' ||
               invoice.type === 'FREE_CREDITS' ||
               invoice.type === 'ADDL_FORMATTING' ||
-              invoice.type === 'ADDL_PROOFREADING'
+              invoice.type === 'ADDL_PROOFREADING' ||
+              invoice.type === 'DEPRECATED'
                 ? invoice.amount
                 : 0) -
-              (invoice.creditsRefunded || 0) -
+              (invoice.creditsUsed || 0) -
               (invoice.refundAmount || 0) -
               (invoice.discount || 0),
             0

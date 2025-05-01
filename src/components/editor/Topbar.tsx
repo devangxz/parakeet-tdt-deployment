@@ -68,7 +68,12 @@ import 'rc-slider/assets/index.css'
 import RestoreVersionDialog from '@/components/editor/RestoreVersionDialog'
 import Profile from '@/components/navbar/profile'
 import { ThemeSwitcher } from '@/components/theme-switcher'
-import { TooltipProvider } from '@/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { FILE_CACHE_URL, COMMON_ABBREVIATIONS } from '@/constants'
 import { AlignmentType, EditorSettings } from '@/types/editor'
 import DefaultShortcuts, {
@@ -123,6 +128,7 @@ interface TopbarProps {
   onAutoCapitalizeChange: (value: boolean) => void
   transcript: string
   ctms: CTMType[]
+  setCtms: (ctms: CTMType[]) => void
   editorRef: React.Ref<EditorHandle>
   step: string
   cfd: string
@@ -150,6 +156,7 @@ export default memo(function Topbar({
   onAutoCapitalizeChange,
   transcript,
   ctms,
+  setCtms,
   editorRef,
   step,
   cfd,
@@ -681,8 +688,17 @@ export default memo(function Topbar({
   return (
     <div className='bg-background border border-customBorder rounded-md p-2'>
       <div className='flex items-center justify-between'>
-        <p className='font-semibold'>{orderDetails.filename}</p>
-
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <p className='font-semibold truncate max-w-[300px] md:max-w-[400px] lg:max-w-[500px] overflow-hidden text-ellipsis'>
+                {orderDetails.filename}
+              </p>
+            </TooltipTrigger>
+            <TooltipContent>{orderDetails.filename}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        
         {orderDetails.status === 'QC_ASSIGNED' && (
           <span
             className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${
@@ -820,28 +836,34 @@ export default memo(function Topbar({
                     Revert Transcript
                   </DropdownMenuItem>
                 )}
-                {session?.user?.role !== 'CUSTOMER' && !orderDetails.isTestOrder && <DropdownMenuItem onClick={toggleVideo} >
-                  Toggle Video
-                </DropdownMenuItem>}
-                {session?.user?.role !== 'CUSTOMER' && !orderDetails.isTestOrder && (
-                  <DropdownMenuItem
-                    onClick={downloadMP3.bind(null, orderDetails)}
-                  >
-                    Download MP3
-                  </DropdownMenuItem>
-                )}
+                {session?.user?.role !== 'CUSTOMER' &&
+                  !orderDetails.isTestOrder && (
+                    <DropdownMenuItem onClick={toggleVideo}>
+                      Toggle Video
+                    </DropdownMenuItem>
+                  )}
+                {session?.user?.role !== 'CUSTOMER' &&
+                  !orderDetails.isTestOrder && (
+                    <DropdownMenuItem
+                      onClick={downloadMP3.bind(null, orderDetails)}
+                    >
+                      Download MP3
+                    </DropdownMenuItem>
+                  )}
                 {!['CUSTOMER', 'OM', 'ADMIN'].includes(
                   session?.user?.role || ''
-                ) && !orderDetails.isTestOrder && (
-                  <DropdownMenuItem onClick={requestExtension}>
-                    Request Extension
-                  </DropdownMenuItem>
-                )}
-                {session?.user?.role !== 'CUSTOMER' && !orderDetails.isTestOrder && (
-                  <DropdownMenuItem onClick={() => setReportModalOpen(true)}>
-                    Report
-                  </DropdownMenuItem>
-                )}
+                ) &&
+                  !orderDetails.isTestOrder && (
+                    <DropdownMenuItem onClick={requestExtension}>
+                      Request Extension
+                    </DropdownMenuItem>
+                  )}
+                {session?.user?.role !== 'CUSTOMER' &&
+                  !orderDetails.isTestOrder && (
+                    <DropdownMenuItem onClick={() => setReportModalOpen(true)}>
+                      Report
+                    </DropdownMenuItem>
+                  )}
                 {session?.user?.role !== 'CUSTOMER' && (
                   <DropdownMenuItem
                     onClick={() =>
@@ -856,9 +878,11 @@ export default memo(function Topbar({
                     Frequent Terms
                   </DropdownMenuItem>
                 )}
-                {!orderDetails.isTestOrder && <DropdownMenuItem onClick={() => setReviewModalOpen(true)}>
-                  Review with Gemini
-                </DropdownMenuItem>}
+                {!orderDetails.isTestOrder && (
+                  <DropdownMenuItem onClick={() => setReviewModalOpen(true)}>
+                    Review with Gemini
+                  </DropdownMenuItem>
+                )}
                 {orderDetails.orderType === 'TRANSCRIPTION_FORMATTING' && (
                   <DropdownMenuItem
                     onClick={() => setProcessWithLLMModalOpen(true)}
@@ -984,11 +1008,11 @@ export default memo(function Topbar({
               Please enter the speaker names below
             </DialogDescription>
           </DialogHeader>
-          <SpeakerManager 
-            orderDetails={orderDetails} 
-            quillRef={quillRef} 
+          <SpeakerManager
+            orderDetails={orderDetails}
+            quillRef={quillRef}
             onUpdateSpeakers={handleSpeakerManagerUpdate}
-            isDialog={true} 
+            isDialog={true}
           />
         </DialogContent>
       </Dialog>
@@ -1000,13 +1024,13 @@ export default memo(function Topbar({
           <DialogHeader>
             <DialogTitle>Revert Transcript</DialogTitle>
           </DialogHeader>
-            <div className='flex justify-center items-center text-red-500'>
-              All edits made will be discarded. This action is irreversible and
-              cannot be un-done. If you have made any changes, then we recommend
-              you to save the current version by creating a copy at your local.
-            </div>
+          <div className='flex justify-center items-center text-red-500'>
+            All edits made will be discarded. This action is irreversible and
+            cannot be un-done. If you have made any changes, then we recommend
+            you to save the current version by creating a copy at your local.
+          </div>
           <DialogFooter>
-          <div className='flex gap-2 justify-end'>
+            <div className='flex gap-2 justify-end'>
               <Button
                 variant='outline'
                 onClick={() => setRevertTranscriptOpen(false)}
@@ -1183,6 +1207,7 @@ export default memo(function Topbar({
         fileId={orderDetails.fileId}
         quillRef={quillRef}
         updateQuill={updateTranscript}
+        setCtms={setCtms}
       />
     </div>
   )

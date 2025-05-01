@@ -153,6 +153,7 @@ model File {
   ReviewWithGeminiStats     ReviewWithGeminiStats[]
   QCValidationStats         QCValidationStats[]
   TestAttempt               TestAttempt[]
+  ASRProcessStats           ASRProcessStats[]
 
   @@index([userId])
   @@index([fileId])
@@ -233,10 +234,12 @@ model Order {
 
   rateBonus Float @default(0) @map("rate_bonus")
 
-  ASRTimeTaken Int?   @map("asr_time_taken")
-  LLMTimeTaken Int?   @map("llm_time_taken")
-  pwer         Float?
-  wer          Float?
+  ASRTimeTaken                Int?   @map("asr_time_taken")
+  LLMTimeTaken                Int?   @map("llm_time_taken")
+  pwer                        Float?
+  initialPwer                 Float? @map("initial_pwer")
+  wer                         Float?
+  combinedASRFormatValidation Json?  @map("combined_asr_format_validation")
 
   createdAt        DateTime      @default(now()) @map("created_at")
   updatedAt        DateTime      @default(now()) @map("updated_at")
@@ -255,6 +258,7 @@ model Order {
   File              File?               @relation(fields: [fileId], references: [fileId])
   Assignment        JobAssignment[]
   QCValidationStats QCValidationStats[]
+  ASRProcessStats   ASRProcessStats[]
 
   @@index([userId])
   @@index([status])
@@ -458,6 +462,7 @@ model JobAssignment {
   inputFile          InputFileType @default(ASR_OUTPUT) @map("input_file")
   extensionRequested Boolean       @default(false) @map("extension_requested")
   assignMode         AssignMode    @default(AUTO) @map("assign_mode")
+  comment            String?       @map("comment")
 
   user  User  @relation(fields: [transcriberId], references: [id])
   order Order @relation(fields: [orderId], references: [id])
@@ -813,6 +818,30 @@ model ProcessWithLLMStats {
   @@map("scb_process_with_llm_stats")
 }
 
+model ASRProcessStats {
+  id                       Int        @id @default(autoincrement())
+  fileId                   String     @map("file_id")
+  orderId                  Int        @map("order_id")
+  assemblyAIStartTime      DateTime   @map("assembly_ai_start_time")
+  assemblyAIEndTime        DateTime   @map("assembly_ai_end_time")
+  assemblyAITimeTaken      Int        @default(0) @map("assembly_ai_time_taken")
+  chunkingStartTime        DateTime?  @map("chunking_start_time")
+  chunkingEndTime          DateTime?  @map("chunking_end_time")
+  chunkingTimeTaken        Int?       @default(0) @map("chunking_time_taken")
+  gpt4oTranscribeStartTime DateTime?  @map("gpt4o_transcribe_start_time")
+  gpt4oTranscribeEndTime   DateTime?  @map("gpt4o_transcribe_end_time")
+  gpt4oTranscribeTimeTaken Int?       @default(0) @map("gpt4o_transcribe_time_taken")
+  totalASRTimeTaken        Int        @default(0) @map("total_asr_time_taken")
+  createdAt                DateTime   @default(now()) @map("created_at")
+
+  file  File  @relation(fields: [fileId], references: [fileId])
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([fileId])
+  @@index([orderId])
+  @@map("scb_asr_process_stats")
+}
+
 model QCValidationStats {
   id                              Int      @id @default(autoincrement())
   orderId                         Int      @map("order_id")
@@ -864,6 +893,7 @@ model TestAttempt {
   startedAt   DateTime   @default(now()) @map("started_at")
   completedAt DateTime?  @map("completed_at")
   cancelledAt DateTime?  @map("cancelled_at")
+
   @@index([userId])
   @@index([fileId])
   @@map("scb_test_attempts")
@@ -1109,6 +1139,9 @@ enum BonusStage {
 
 enum FileTag {
   AUTO
+  ASSEMBLY_AI_GPT_4O
+  GPT_4O
+  ASSEMBLY_AI
   QC_EDIT
   QC_DELIVERED
   CUSTOMER_EDIT
@@ -1127,7 +1160,6 @@ enum FileTag {
   TEST_MODIFIED
   TEST_EDIT
   TEST_SUBMITTED
-
 }
 
 enum SharedFilePermission {

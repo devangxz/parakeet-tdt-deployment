@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Textarea } from '@/components/ui/textarea'
 import isValidEmail from '@/utils/isValidEmail'
 
 interface DialogProps {
@@ -37,6 +38,7 @@ const ReassignPreDeliveryFile = ({
   const [loading, setLoading] = useState(false)
   const [retainEarnings, setRetainEarnings] = useState('no')
   const [retainTranscript, setRetainTranscript] = useState('yes')
+  const [comment, setComment] = useState('')
 
   const handleSubmit = async () => {
     if (!userEmail) return toast.error('Please enter a valid email address')
@@ -51,6 +53,7 @@ const ReassignPreDeliveryFile = ({
         userEmail,
         retainEarnings: retainEarnings === 'yes',
         retainTranscript: retainTranscript === 'yes',
+        comment,
       })
       if (result.success) {
         const successToastId = toast.success(`Successfully re-assigned Editor`)
@@ -113,6 +116,13 @@ const ReassignPreDeliveryFile = ({
                   <Label htmlFor='no'>No</Label>
                 </div>
               </RadioGroup>
+            </div>
+            <div className='grid items-center gap-1.5 mt-5 mb-5'>
+              <Label>Comment</Label>
+              <Textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+              />
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>

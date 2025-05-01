@@ -319,10 +319,10 @@ const TranscriptionCategories = () => {
                 />
               ))}
             </div>
-            <blockquote className='text-muted-foreground italic mb-6'>
+            <blockquote className='text-muted-foreground italic mb-10'>
               &ldquo;{activeService.testimonial.text}&rdquo;
             </blockquote>
-            <div className='flex items-center gap-4'>
+            <div className='flex items-center gap-4 mb-0.5'>
               <div className='w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-semibold'>
                 {activeService.testimonial.author[0]}
               </div>
@@ -330,7 +330,7 @@ const TranscriptionCategories = () => {
                 <div className='font-semibold text-foreground'>
                   {activeService.testimonial.author}
                 </div>
-                <div className='text-sm text-muted-foreground'>
+                <div className='text-sm text-muted-foreground mb-1'>
                   {activeService.testimonial.role}
                 </div>
               </div>
@@ -365,13 +365,11 @@ const TranscriptionCategories = () => {
             <div className='bg-background rounded-2xl border border-customBorder overflow-hidden'>
               <div className='p-6'>
                 <div className='flex items-baseline gap-2 mb-4'>
+                  Starting at
                   <span className='text-3xl font-bold text-primary'>
                     {activeService.price}
                   </span>
-                  <span className='text-lg text-muted-foreground line-through'>
-                    {activeService.originalPrice}
-                  </span>
-                  <span className='text-sm text-muted-foreground'>/minute</span>
+                  <span className='text-sm'>/min (transcription only)</span>
                 </div>
                 <button
                   onClick={() => router.push('/files/upload')}
@@ -384,7 +382,10 @@ const TranscriptionCategories = () => {
               <div className='bg-secondary px-6 py-4 border-t border-customBorder'>
                 <div className='flex items-center gap-2 text-sm text-primary'>
                   <Star className='w-4 h-4 fill-current' />
-                  <span>Top-rated service</span>
+                  <span>
+                    Additional charges apply based on selected
+                    formatting/template
+                  </span>
                 </div>
               </div>
             </div>

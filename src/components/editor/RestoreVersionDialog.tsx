@@ -1,3 +1,4 @@
+import { FileTag } from '@prisma/client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { format, formatDistanceToNow } from 'date-fns'
 import React, { useState, useEffect } from 'react'
@@ -5,6 +6,7 @@ import ReactQuill from 'react-quill'
 import { toast } from 'sonner'
 
 import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
+import { revertToDefaultVersionAction } from '@/app/actions/editor/revert-to-default-version'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -16,11 +18,18 @@ import {
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { FILE_CACHE_URL } from '@/constants'
+import { CTMType } from '@/utils/editorUtils'
 
 interface Version {
   commitHash: string
   timestamp: string
   message: string
+  tag: string
+}
+
+interface SelectedVersion {
+  commitHash: string
+  tag: string
 }
 
 const RestoreVersionDialog = ({
@@ -29,15 +38,21 @@ const RestoreVersionDialog = ({
   fileId,
   quillRef,
   updateQuill,
+  setCtms,
 }: {
   isOpen: boolean
   onClose: () => void
   fileId: string
   quillRef: React.RefObject<ReactQuill> | undefined
-  updateQuill: (quillRef: React.RefObject<ReactQuill> | undefined, content: string,) => void
+  updateQuill: (
+    quillRef: React.RefObject<ReactQuill> | undefined,
+    content: string
+  ) => void
+  setCtms: (ctms: CTMType[]) => void
 }) => {
   const [versions, setVersions] = useState<Version[]>([])
-  const [selectedVersion, setSelectedVersion] = useState('')
+  const [selectedVersion, setSelectedVersion] =
+    useState<SelectedVersion | null>(null)
   const [isRestoring, setIsRestoring] = useState(false)
   const [isFetchingVersions, setIsFetchingVersions] = useState(false)
 
@@ -69,19 +84,35 @@ const RestoreVersionDialog = ({
   }, [isOpen, fileId])
 
   const handleRestore = async () => {
+    if (!selectedVersion) return
+
     try {
       setIsRestoring(true)
-      const tokenRes = await fileCacheTokenAction()
-      const res = await fetch(
-        `${FILE_CACHE_URL}/rollback/${fileId}/${selectedVersion}`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${tokenRes.token}` },
+
+      const { tag, commitHash } = selectedVersion
+      const isDefaultVersion =
+        tag === FileTag.ASSEMBLY_AI || tag === FileTag.ASSEMBLY_AI_GPT_4O
+
+      let result
+      if (isDefaultVersion) {
+        result = await revertToDefaultVersionAction(fileId, tag as FileTag)
+      } else {
+        const tokenRes = await fileCacheTokenAction()
+        const res = await fetch(
+          `${FILE_CACHE_URL}/rollback/${fileId}/${commitHash}/${tag}`,
+          {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${tokenRes.token}` },
+          }
+        )
+        result = await res.json()
+      }
+
+      if (result.success && result.transcript) {
+        updateQuill(quillRef, result.transcript)
+        if (result.ctms) {
+          setCtms(result.ctms)
         }
-      )
-      const data = await res.json()
-      if (data.success) {
-        updateQuill(quillRef, data.transcript)
         toast.success('Version restored successfully')
       } else {
         toast.error('Failed to restore version. Please try again.')
@@ -90,7 +121,7 @@ const RestoreVersionDialog = ({
       toast.error('Failed to restore version. Please try again.')
     } finally {
       setIsRestoring(false)
-      setSelectedVersion('')
+      setSelectedVersion(null)
       onClose()
     }
   }
@@ -99,7 +130,7 @@ const RestoreVersionDialog = ({
     <Dialog
       open={isOpen}
       onOpenChange={() => {
-        setSelectedVersion('')
+        setSelectedVersion(null)
         onClose()
       }}
     >
@@ -116,7 +147,9 @@ const RestoreVersionDialog = ({
           {isFetchingVersions ? (
             <div className='flex justify-center items-center py-4'>
               <ReloadIcon className='h-4 w-4 animate-spin' />
-              <span className='ml-2 text-sm text-muted-foreground'>Getting version history...</span>
+              <span className='ml-2 text-sm text-muted-foreground'>
+                Getting version history...
+              </span>
             </div>
           ) : versions.length === 0 ? (
             <div className='flex justify-center items-center p-4 text-sm text-muted-foreground'>
@@ -124,16 +157,23 @@ const RestoreVersionDialog = ({
             </div>
           ) : (
             <RadioGroup
-              value={selectedVersion}
-              onValueChange={setSelectedVersion}
+              value={selectedVersion?.commitHash}
+              onValueChange={(commitHash) => {
+                const version = versions.find(
+                  (v) => v.commitHash === commitHash
+                )
+                if (version) {
+                  setSelectedVersion({
+                    commitHash: version.commitHash,
+                    tag: version.tag,
+                  })
+                }
+              }}
               className='p-4'
             >
               <div className='space-y-5'>
                 {versions.map((version) => (
-                  <div
-                    key={version.commitHash}
-                    className='flex flex-col'
-                  >
+                  <div key={version.commitHash} className='flex flex-col'>
                     <div className='flex items-center space-x-2'>
                       <RadioGroupItem
                         value={version.commitHash}
@@ -144,11 +184,23 @@ const RestoreVersionDialog = ({
                         className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
                       >
                         {format(new Date(version.timestamp), 'MMMM d, h:mm a')}
+                        {(version.tag === 'ASSEMBLY_AI_GPT_4O' ||
+                          version.tag === 'ASSEMBLY_AI') && (
+                          <span className='ml-2 text-primary font-medium'>
+                            {`(${
+                              version.tag === 'ASSEMBLY_AI'
+                                ? 'AssemblyAI'
+                                : 'AssemblyAI + GPT-4o Transcribe'
+                            })`}
+                          </span>
+                        )}
                       </Label>
                     </div>
                     <div className='pl-6'>
                       <span className='text-xs text-muted-foreground'>
-                        {formatDistanceToNow(new Date(version.timestamp), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(version.timestamp), {
+                          addSuffix: true,
+                        })}
                       </span>
                     </div>
                   </div>
@@ -162,7 +214,7 @@ const RestoreVersionDialog = ({
           <Button
             variant='outline'
             onClick={() => {
-              setSelectedVersion('')
+              setSelectedVersion(null)
               onClose()
             }}
           >
@@ -171,7 +223,10 @@ const RestoreVersionDialog = ({
           <Button
             onClick={handleRestore}
             disabled={
-              isRestoring || isFetchingVersions || versions.length === 0
+              isRestoring ||
+              isFetchingVersions ||
+              versions.length === 0 ||
+              !selectedVersion
             }
           >
             {isRestoring && (

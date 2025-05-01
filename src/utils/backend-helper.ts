@@ -197,7 +197,7 @@ export const getCreditsPreferences = async (userId: number) => {
     })
 
     if (!customer) {
-      return false
+      return true
     }
 
     return customer.useCreditsDefault
@@ -1065,10 +1065,12 @@ export async function getFileVersionFromS3(
 
 export async function objectExists(key: string): Promise<boolean> {
   try {
-    await s3Client.send(new HeadObjectCommand({
-      Bucket: bucketName,
-      Key: key,
-    }))
+    await s3Client.send(
+      new HeadObjectCommand({
+        Bucket: bucketName,
+        Key: key,
+      })
+    )
 
     return true
   } catch (error) {

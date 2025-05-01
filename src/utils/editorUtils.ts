@@ -33,7 +33,7 @@ import {
   QC_VALIDATION,
 } from '@/constants'
 import { getModifiedTranscript, getTranscriptVersion, setTranscriptVersion } from '@/services/editor-service/get-set-version-transcript'
-import { AlignmentType, CTMType, UndoRedoItem, QCValidation } from '@/types/editor'
+import { AlignmentType, CTMType, UndoRedoItem, QCValidation, CombinedASRFormatError } from '@/types/editor'
 import {
   getEditorDataIDB,
   persistEditorDataIDB,
@@ -592,7 +592,8 @@ const fetchFileDetails = async ({
       supportingDocuments: orderRes.orderDetails.supportingDocuments || [],
       email: orderRes.orderDetails.email,
       speakerOptions: orderRes.orderDetails.speakerOptions || [],
-      isTestOrder: orderRes.orderDetails.isTestOrder
+      isTestOrder: orderRes.orderDetails.isTestOrder,
+      pwer: orderRes.orderDetails.pwer || 0,
     }
 
     setOrderDetails(orderDetailsFormatted)
@@ -703,11 +704,21 @@ const fetchFileDetails = async ({
             reject(error)
           }
           // Run the alignment worker with the modified transcript
-          alignmentWorker.postMessage({
-            newText: transcript,
-            currentAlignments: createAlignments(getFormattedTranscript(originalCtms), originalCtms),
-            ctms: originalCtms,
-          })
+          const prepareAndSendData = async () => {
+            try {
+              const formattedTranscript = await getFormattedTranscript(originalCtms, orderRes.orderDetails.fileId)
+              alignmentWorker.postMessage({
+                newText: transcript,
+                currentAlignments: createAlignments(formattedTranscript, originalCtms),
+                ctms: originalCtms,
+              })
+            } catch (error) {
+              alignmentWorker.terminate()
+              reject(error)
+            }
+          }
+          
+          prepareAndSendData()
         })
       } catch (error) {
         console.error('Error processing alignment:', error)
@@ -938,7 +949,7 @@ const handleSave = async (
         return /^\[.*\]$/.test(trimmed)
       }
 
-      const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS\d+:/
+      const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS[\d?]+:/
 
       for (const paragraph of paragraphs) {
         // Skip validation for meta-only paragraphs
@@ -946,7 +957,7 @@ const handleSave = async (
 
         if (
           !paragraphRegex.test(paragraph) &&
-          orderDetails.orderType !== 'TRANSCRIPTION_FORMATTING'
+          orderDetails.orderType === 'TRANSCRIPTION'
         ) {
           if (showToast) {
             if (toastId) toast.dismiss(toastId)
@@ -1786,7 +1797,21 @@ function getFormattedContent(text: string): Op[] {
   }
 
   if (lastIndex < text.length) {
-    formattedContent.push({ insert: text.slice(lastIndex) })
+    const remainingText = text.slice(lastIndex)
+    if (remainingText.trim().length > 0 && !remainingText.endsWith('\n')) {
+      formattedContent.push({ insert: remainingText + '\n' })
+    } else {
+      formattedContent.push({ insert: remainingText })
+    }
+  } else if (formattedContent.length > 0) {
+    const lastOperation = formattedContent[formattedContent.length - 1]
+    if (
+      typeof lastOperation.insert === 'string' &&
+      lastOperation.insert.trim().length > 0 &&
+      !lastOperation.insert.endsWith('\n')
+    ) {
+      lastOperation.insert += '\n'
+    }
   }
 
   return formattedContent

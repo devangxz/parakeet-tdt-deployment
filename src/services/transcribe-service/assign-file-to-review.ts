@@ -11,7 +11,8 @@ const assignFileToReviewer = async (
   transcriberId: number,
   inputFile: InputFileType,
   assignMode: AssignMode,
-  changeOrderStatus: boolean = true
+  changeOrderStatus: boolean = true,
+  comment?: string
 ) => {
   logger.info(`--> assignFileToReviewer ${orderId} ${transcriberId}`)
   try {
@@ -33,6 +34,7 @@ const assignFileToReviewer = async (
           transcriberId: transcriberId,
           inputFile: inputFile,
           assignMode,
+          ...(comment && { comment }),
         },
       })
     })

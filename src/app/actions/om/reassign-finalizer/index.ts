@@ -11,9 +11,11 @@ export async function reassignFinalizer(formData: {
   userEmail: string
   retainEarnings: boolean
   isCompleted: boolean
+  comment: string
 }) {
   try {
-    const { orderId, userEmail, retainEarnings, isCompleted } = formData
+    const { orderId, userEmail, retainEarnings, isCompleted, comment } =
+      formData
 
     if (!orderId) {
       return {
@@ -61,7 +63,8 @@ export async function reassignFinalizer(formData: {
       orderInformation.fileId,
       user.id,
       InputFileType.REVIEW_OUTPUT,
-      'MANUAL'
+      'MANUAL',
+      comment
     )
 
     await prisma.jobAssignment.update({

@@ -424,6 +424,11 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
               : 'bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-400/10 dark:text-green-400 dark:ring-green-400/20'
           }`
 
+        const pwerPercent = row.original.pwer * 100
+        const marginPercentage = QC_VALIDATION.wer_threshold_margin_percentage
+        const thresholdMin = Math.max(0, pwerPercent - marginPercentage)
+        const thresholdMax = Math.min(100, pwerPercent + marginPercentage)
+
         const statsConfig = [
           {
             value: stats.playedPercentage,
@@ -435,9 +440,9 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
           {
             value: stats.werPercentage,
             isError:
-              stats.werPercentage < QC_VALIDATION.min_wer_percentage ||
-              stats.werPercentage > QC_VALIDATION.max_wer_percentage,
-            tooltip: `Indicates percentage of changes made to the transcript by QC. Should be between ${QC_VALIDATION.min_wer_percentage}% and ${QC_VALIDATION.max_wer_percentage}% - too few changes may indicate insufficient review, while too many could indicate potential issues.`,
+              stats.werPercentage < thresholdMin ||
+              stats.werPercentage > thresholdMax,
+            tooltip: `Indicates percentage of transcript changes by QC. The acceptable range is ${thresholdMin}%–${thresholdMax}% (±${marginPercentage}% around the file's PWER of ${pwerPercent}%). Values outside this range may indicate insufficient or excessive review.`,
           },
           {
             value: stats.blankPercentage,

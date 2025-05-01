@@ -58,3 +58,10 @@ export interface QCValidation {
   speakerChangePercentage: number
   speakerMacroF1Score: number
 }
+
+export type CombinedASRFormatError = {
+  type: 'INVALID_PARAGRAPH_FORMAT'
+  paragraphNumber: number
+  paragraphContent: string
+  message: string
+}

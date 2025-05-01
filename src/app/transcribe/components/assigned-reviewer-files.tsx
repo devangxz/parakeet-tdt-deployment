@@ -35,6 +35,7 @@ interface File extends BaseTranscriberFile {
   testFile: boolean
   containsMp4: boolean
   customFormatOption: string
+  comment: string
 }
 
 interface Props {
@@ -117,6 +118,7 @@ export default function AssignedFilesPage({ changeTab }: Props) {
               assignment.order.File.fileKey?.split('.').pop().toLowerCase() ===
               'mp4',
             customFormatOption: assignment.order.customFormatOption,
+            comment: assignment.comment ?? '',
           }
         })
         setAssginedFiles((orders as any) ?? [])
@@ -350,10 +352,22 @@ export default function AssignedFilesPage({ changeTab }: Props) {
         data={assignedFiles ?? []}
         columns={columns}
         renderRowSubComponent={({ row }: { row: any }) =>
-          row.original.instructions ? (
+          row.original.instructions || row.original.comment ? (
             <div className='p-2'>
-              <strong>Customer Instructions:</strong>
-              <p>{row.original.instructions}</p>
+              <>
+                {row.original.instructions && (
+                  <>
+                    <strong>Customer Instructions:</strong>
+                    <p>{row.original.instructions}</p>
+                  </>
+                )}
+                {row.original.comment && (
+                  <>
+                    <strong className='mt-2 block'>Admin Comments:</strong>
+                    <p>{row.original.comment}</p>
+                  </>
+                )}
+              </>
             </div>
           ) : null
         }

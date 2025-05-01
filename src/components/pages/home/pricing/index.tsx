@@ -12,6 +12,7 @@ import {
   Gauge,
   Waves,
   Wallet,
+  Check,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -28,25 +29,21 @@ const featuresBasic = [
     name: 'Audio Time Coding',
     icon: Timer,
     description: 'Automated timestamp syncing',
-    badge: 'Auto',
   },
   {
     name: 'Speaker Tracking',
     icon: Volume2,
     description: 'Advanced voice recognition',
-    badge: 'Smart',
   },
   {
     name: 'Dual Format Export',
     icon: Files,
     description: 'SRT/VTT subtitle file',
-    badge: 'Pro',
   },
   {
     name: 'Word Document',
     icon: FileText,
     description: 'AI-enhanced formatting',
-    badge: 'AI',
   },
 ]
 
@@ -57,7 +54,6 @@ const featuresAdvanced = [
     price: 0.5,
     icon: Wand2,
     description: '99.9% accuracy guaranteed',
-    badge: 'Expert',
   },
   {
     name: 'Priority Processing',
@@ -65,7 +61,6 @@ const featuresAdvanced = [
     price: 1.25,
     icon: Gauge,
     description: '2x faster delivery',
-    badge: 'Fast',
   },
   {
     name: 'Noisy & Accented Audio',
@@ -73,7 +68,6 @@ const featuresAdvanced = [
     price: 0.5,
     icon: Waves,
     description: 'Handle noisy audio & accents',
-    badge: 'Elite',
   },
 ]
 
@@ -401,23 +395,17 @@ const Pricing = () => {
                               <feature.icon className='w-4 h-4 sm:w-5 sm:h-5' />
                             </div>
                             <div>
-                              <div className='flex items-center gap-2'>
-                                <h4 className='text-sm sm:text-base font-medium text-foreground'>
-                                  {feature.name}
-                                </h4>
-                                <span className='px-1.5 sm:px-2 pt-[1px] pb-[2px] text-xs font-medium text-emerald-700 bg-emerald-50 rounded-full'>
-                                  {feature.badge}
-                                </span>
-                              </div>
+                              <h4 className='text-sm sm:text-base font-medium text-foreground'>
+                                {feature.name}
+                              </h4>
                               <p className='mt-0.5 sm:mt-1 text-xs sm:text-sm text-muted-foreground'>
                                 {feature.description}
                               </p>
                             </div>
                           </div>
-                          <Switch
-                            className='ml-3 sm:ml-4 data-[state=checked]:bg-emerald-600'
-                            checked
-                          />
+                          <div className='flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full bg-emerald-200 text-emerald-700 ml-3 sm:ml-4'>
+                            <Check className='w-4 h-4' />
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -445,14 +433,9 @@ const Pricing = () => {
                               <feature.icon className='w-4 h-4 sm:w-5 sm:h-5' />
                             </div>
                             <div>
-                              <div className='flex items-center flex-wrap gap-1.5 sm:gap-2'>
-                                <h4 className='text-sm sm:text-base font-medium text-foreground'>
-                                  {feature.name}
-                                </h4>
-                                <span className='px-1.5 sm:px-2 pt-[1px] pb-[2px] text-xs font-medium text-secondary-foreground bg-primary/15 rounded-full'>
-                                  {feature.badge}
-                                </span>
-                              </div>
+                              <h4 className='text-sm sm:text-base font-medium text-foreground'>
+                                {feature.name}
+                              </h4>
                               <div className='flex items-center gap-2 mt-0.5 sm:mt-1'>
                                 <p className='text-xs sm:text-sm text-muted-foreground'>
                                   {feature.description}

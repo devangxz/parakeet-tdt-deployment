@@ -41,7 +41,11 @@ export async function rejectOrder(formData: {
 
       await prisma.jobAssignment.updateMany({
         where: { orderId: order.id },
-        data: { status: JobStatus.REJECTED, cancelledTs: new Date() },
+        data: {
+          status: JobStatus.REJECTED,
+          cancelledTs: new Date(),
+          comment: comment ?? '',
+        },
       })
     })
 

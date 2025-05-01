@@ -21,12 +21,18 @@ export interface File {
   amount: string
 }
 
+interface Template {
+  id: number
+  name: string
+}
+
 export interface ServicesInterface {
   orderOptions: string
   speakerNameFormat: string
   transcriptTemplate: string
   spellingStyle: string
   specialInstructions: string
+  templates: Template[]
 }
 
 export interface BillSummary {

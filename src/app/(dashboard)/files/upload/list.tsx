@@ -14,6 +14,7 @@ import { getRefundInvoice } from '@/app/actions/file/refund-invoice'
 import { refetchFiles } from '@/app/actions/files'
 import { getOrderButtonLabel } from '@/app/actions/files/order-button-label'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
+import { checkUserHasInvoices } from '@/app/actions/invoice/check-has-invoices'
 import { createOrder } from '@/app/actions/order'
 import { fetchWorkspaces } from '@/app/actions/workspaces'
 import { CustomFormatRequestModal } from '@/components/custom-format-request'
@@ -101,6 +102,7 @@ const FileList = ({
   >([])
   const [openTransferDialog, setOpenTransferDialog] = useState(false)
   const [orderButtonLabel, setOrderButtonLabel] = useState('Order')
+  const [hasInvoice, setHasInvoice] = useState(false)
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -165,9 +167,22 @@ const FileList = ({
     }
   }
 
+  const checkUserInvoices = async () => {
+    try {
+      const response = await checkUserHasInvoices()
+      if (response.success) {
+        setHasInvoice(response.hasInvoice)
+      }
+    } catch (error) {
+      console.error('Failed to check user invoices:', error)
+      setHasInvoice(false)
+    }
+  }
+
   useEffect(() => {
     fetchPendingFiles(true)
     getWorkspaces()
+    checkUserInvoices()
   }, [])
 
   useEffect(() => {
@@ -590,7 +605,7 @@ const FileList = ({
           Uploads ({pendingFiles?.length})
         </h2>
         <div className='flex items-center'>
-          {session?.user?.orderType === 'TRANSCRIPTION' && (
+          {session?.user?.orderType === 'TRANSCRIPTION' && hasInvoice && (
             <Button
               variant='order'
               className='not-rounded mr-2'

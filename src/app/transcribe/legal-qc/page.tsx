@@ -7,6 +7,7 @@ import AssignedFilesPage from '../components/assigned-files'
 import AvailableFilesPage from '../components/available-files'
 import HistoryFilesPage from '../components/history-files'
 import Motd from '@/components/transcriber-motd/review-with-gemini'
+import ASRProcessingNotice from '@/components/transcriber-notice/asr-processing'
 import LlmProcessingNotice from '@/components/transcriber-notice/llm-processing'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -43,6 +44,7 @@ function LegalQCPageContent() {
     <div className='h-full flex-1 flex-col p-4 md:flex space-y-3'>
       <Motd />
       <LlmProcessingNotice />
+      <ASRProcessingNotice />
 
       <div>
         <Tabs
