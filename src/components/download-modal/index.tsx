@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Label } from '../ui/label'
 import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token';
 import { getZipFilesAction } from '@/app/actions/order/get-zip-files'
+import { generateSubtitlesInZipDialog } from '@/utils/generateSubtitlesInZipDialog';
 
 interface DownloadDialogProps {
     isDownloadDialogOpen: boolean
@@ -96,6 +97,12 @@ const DownloadModal = ({
         try {
             const tokenRes = await fileCacheTokenAction();
             const authToken = tokenRes.token;
+            if(selectedTypes['vtt'] || selectedTypes['srt']){
+                const generateSubtitlesResult = await generateSubtitlesInZipDialog(fileIds);
+                if(!generateSubtitlesResult){
+                    throw new Error('Error generating subtitles');
+                }
+            }
             const res = await getZipFilesAction(fileIds, Object.entries(selectedTypes)
                 // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 .filter(([_, isSelected]) => isSelected)
@@ -177,7 +184,8 @@ const DownloadModal = ({
 
             <DialogFooter>
                 <Button variant="secondary" disabled={step === 2} className='w-full' onClick={handleSelectAllTypes} type="submit">Select All</Button>
-                {step === 1 && <Button className='w-full' onClick={handleDownloadStep}>Next</Button>}
+                {step === 1 && <Button className='w-full' onClick={handleDownloadStep}
+                disabled={!selectedTypes['microsoft-word'] && !selectedTypes['pdf'] && !selectedTypes['plain-text'] && !selectedTypes['vtt'] && !selectedTypes['srt']}>Next</Button>}
                 {step === 2 && <Button disabled={isLoading} className='w-full' asChild><a download="files.zip" href={downloadUrl}>Download</a></Button>}
             </DialogFooter>
         </DialogContent>

@@ -810,12 +810,12 @@ function getSRTVTT(alignments: AlignmentType[]) {
       if (!nextAlignment && line.length > 0) {
         const startTs = alignments[i - line.length + 1].start
         const endTs = current.end
-        const srtTimestamp = `00:${secondsToTs(startTs).replace(
+        const srtTimestamp = `00:${secondsToTs(startTs, false, 3).replace(
           '.',
           ','
-        )} --> 00:${secondsToTs(endTs).replace('.', ',')}`
-        const vttTimestamp = `00:${secondsToTs(startTs)} --> 00:${secondsToTs(
-          endTs
+        )} --> 00:${secondsToTs(endTs, false, 3).replace('.', ',')}`
+        const vttTimestamp = `00:${secondsToTs(startTs, false, 3)} --> 00:${secondsToTs(
+          endTs, false, 3
         )}`
 
         paraCount++
@@ -847,12 +847,12 @@ function getSRTVTT(alignments: AlignmentType[]) {
       if (forceBreak) {
         const startTs = alignments[i - line.length + 1].start
         const endTs = current.end
-        const srtTimestamp = `00:${secondsToTs(startTs).replace(
+        const srtTimestamp = `00:${secondsToTs(startTs, false, 3).replace(
           '.',
           ','
-        )} --> 00:${secondsToTs(endTs).replace('.', ',')}`
-        const vttTimestamp = `00:${secondsToTs(startTs)} --> 00:${secondsToTs(
-          endTs
+        )} --> 00:${secondsToTs(endTs, false, 3).replace('.', ',')}`
+        const vttTimestamp = `00:${secondsToTs(startTs, false, 3)} --> 00:${secondsToTs(
+          endTs, false, 3
         )}`
 
         paraCount++
@@ -869,12 +869,12 @@ function getSRTVTT(alignments: AlignmentType[]) {
       const endIndex = alignments.length - 1
       const startTs = alignments[startIndex].start
       const endTs = alignments[endIndex].end
-      const srtTimestamp = `00:${secondsToTs(startTs).replace(
+      const srtTimestamp = `00:${secondsToTs(startTs, false, 3).replace(
         '.',
         ','
-      )} --> 00:${secondsToTs(endTs).replace('.', ',')}`
-      const vttTimestamp = `00:${secondsToTs(startTs)} --> 00:${secondsToTs(
-        endTs
+      )} --> 00:${secondsToTs(endTs, false, 3).replace('.', ',')}`
+      const vttTimestamp = `00:${secondsToTs(startTs, false, 3)} --> 00:${secondsToTs(
+        endTs, false, 3
       )}`
 
       paraCount++
@@ -891,8 +891,8 @@ function getSRTVTT(alignments: AlignmentType[]) {
   }
 }
 
-const generateSubtitles = async(orderDetails: OrderDetails, currentAlignments: AlignmentType[]) => {
-  if (!orderDetails || !orderDetails.fileId || !currentAlignments) return
+const generateSubtitles = async(fileId: string, currentAlignments: AlignmentType[]) => {
+  if(!fileId || !currentAlignments) return
 
   if (
     currentAlignments &&
@@ -905,7 +905,7 @@ const generateSubtitles = async(orderDetails: OrderDetails, currentAlignments: A
 
     const subtitles = getSRTVTT(filteredAlignments)
     if (subtitles) {
-      await uploadSubtitlesAction(orderDetails.fileId, subtitles)
+      await uploadSubtitlesAction(fileId, subtitles)
     }
     return true
   }
