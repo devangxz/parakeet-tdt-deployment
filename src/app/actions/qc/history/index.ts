@@ -10,7 +10,13 @@ import prisma from '@/lib/prisma'
 import getCustomFormatOption from '@/utils/getCustomFormatOption'
 import getOrgName from '@/utils/getOrgName'
 
-export async function getHistoryQCFiles(type?: string | null) {
+export async function getHistoryQCFiles(
+  type?: string | null,
+  page: number = 1,
+  pageSize: number = 10,
+  sortField: string = 'id',
+  sortOrder: 'asc' | 'desc' = 'desc'
+) {
   try {
     const session = await getServerSession(authOptions)
     const user = session?.user
@@ -24,13 +30,26 @@ export async function getHistoryQCFiles(type?: string | null) {
       }
     }
 
-    let historyQCFiles = await prisma.jobAssignment.findMany({
-      where: {
-        transcriberId,
-        type: {
-          in: [JobType.QC, JobType.REVIEW],
-        },
+    // Calculate pagination parameters
+    const skip = (page - 1) * pageSize
+    const take = pageSize
+
+    // Base query to get total count
+    const baseWhereCondition = {
+      transcriberId,
+      type: {
+        in: [JobType.QC, JobType.REVIEW],
       },
+    }
+
+    // Get total count for pagination
+    const totalCount = await prisma.jobAssignment.count({
+      where: baseWhereCondition,
+    })
+
+    // Get paginated data
+    let historyQCFiles = await prisma.jobAssignment.findMany({
+      where: baseWhereCondition,
       include: {
         order: {
           include: {
@@ -38,6 +57,11 @@ export async function getHistoryQCFiles(type?: string | null) {
             user: true,
           },
         },
+      },
+      skip,
+      take,
+      orderBy: {
+        [sortField]: sortOrder,
       },
     })
 
@@ -88,11 +112,17 @@ export async function getHistoryQCFiles(type?: string | null) {
     }
 
     logger.info(
-      `History QC files fetched successfully for ${transcriberId} with type ${type}`
+      `History QC files fetched successfully for ${transcriberId} with type ${type}, page ${page}, pageSize ${pageSize}`
     )
     return {
       success: true,
       data: historyQCFiles,
+      pagination: {
+        totalCount,
+        pageCount: Math.ceil(totalCount / pageSize),
+        currentPage: page,
+        pageSize,
+      },
     }
   } catch (error) {
     logger.error('Error fetching history QC files', error)
