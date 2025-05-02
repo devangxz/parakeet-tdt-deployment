@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
-
+import { getTeamAdminUserDetails } from '@/utils/backend-helper'
 export async function POST() {
   try {
     const lastMonth = new Date()
@@ -27,8 +27,13 @@ export async function POST() {
     })
 
     for (const customer of customers) {
-      const { id: userId, Organization } = customer.user
-      const organization = Organization?.name ?? 'Customer'
+      const { id: userId, Organization, email } = customer.user
+
+      const customerDetails = await getTeamAdminUserDetails(userId)
+
+      const emailId = customerDetails ? customerDetails.email : email
+
+      const organization = Organization ? Organization.name : emailId
 
       const invoices = await prisma.invoice.findMany({
         where: {

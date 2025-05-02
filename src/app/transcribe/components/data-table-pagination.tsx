@@ -17,11 +17,26 @@ import {
 
 interface DataTablePaginationProps<TData> {
   table: Table<TData>
+  onPageChange?: (page: number) => void
+  onPageSizeChange?: (pageSize: number) => void
 }
 
 export function DataTablePagination<TData>({
   table,
+  onPageChange,
+  onPageSizeChange,
 }: DataTablePaginationProps<TData>) {
+  const handlePageSizeChange = (value: string) => {
+    const newPageSize = Number(value)
+    table.setPageSize(newPageSize)
+    onPageSizeChange?.(newPageSize)
+  }
+
+  const handlePageChange = (newPageIndex: number) => {
+    table.setPageIndex(newPageIndex)
+    onPageChange?.(newPageIndex + 1) // Convert to 1-indexed for external API
+  }
+
   return (
     <div className='flex items-center justify-between'>
       <div className='flex-1 text-sm text-muted-foreground'>
@@ -30,19 +45,23 @@ export function DataTablePagination<TData>({
       </div>
       <div className='flex items-center space-x-6 lg:space-x-8'>
         <div className='flex items-center space-x-2'>
-          <p className='text-sm font-medium text-muted-foreground'>Rows per page</p>
+          <p className='text-sm font-medium text-muted-foreground'>
+            Rows per page
+          </p>
           <Select
             value={`${table.getState().pagination.pageSize}`}
-            onValueChange={(value) => {
-              table.setPageSize(Number(value))
-            }}
+            onValueChange={handlePageSizeChange}
           >
             <SelectTrigger className='h-8 w-[70px] text-muted-foreground'>
               <SelectValue placeholder={table.getState().pagination.pageSize} />
             </SelectTrigger>
             <SelectContent side='top'>
               {[10, 20, 30, 40, 50].map((pageSize) => (
-                <SelectItem key={pageSize} value={`${pageSize}`} className='text-muted-foreground'>
+                <SelectItem
+                  key={pageSize}
+                  value={`${pageSize}`}
+                  className='text-muted-foreground'
+                >
                   {pageSize}
                 </SelectItem>
               ))}
@@ -57,7 +76,7 @@ export function DataTablePagination<TData>({
           <Button
             variant='outline'
             className='hidden h-8 w-8 p-0 lg:flex not-rounded text-muted-foreground border-2 border-customBorder'
-            onClick={() => table.setPageIndex(0)}
+            onClick={() => handlePageChange(0)}
             disabled={!table.getCanPreviousPage()}
           >
             <span className='sr-only'>Go to first page</span>
@@ -66,7 +85,9 @@ export function DataTablePagination<TData>({
           <Button
             variant='outline'
             className='h-8 w-8 p-0 not-rounded text-muted-foreground border-2 border-customBorder'
-            onClick={() => table.previousPage()}
+            onClick={() =>
+              handlePageChange(table.getState().pagination.pageIndex - 1)
+            }
             disabled={!table.getCanPreviousPage()}
           >
             <span className='sr-only'>Go to previous page</span>
@@ -75,7 +96,9 @@ export function DataTablePagination<TData>({
           <Button
             variant='outline'
             className='h-8 w-8 p-0 not-rounded text-muted-foreground border-2 border-customBorder'
-            onClick={() => table.nextPage()}
+            onClick={() =>
+              handlePageChange(table.getState().pagination.pageIndex + 1)
+            }
             disabled={!table.getCanNextPage()}
           >
             <span className='sr-only'>Go to next page</span>
@@ -84,7 +107,7 @@ export function DataTablePagination<TData>({
           <Button
             variant='outline'
             className='hidden h-8 w-8 p-0 lg:flex not-rounded text-muted-foreground border-2 border-customBorder'
-            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+            onClick={() => handlePageChange(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
           >
             <span className='sr-only'>Go to last page</span>

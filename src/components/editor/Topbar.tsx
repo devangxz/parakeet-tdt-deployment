@@ -87,6 +87,7 @@ import {
   autoCapitalizeSentences,
   CTMType,
   downloadMP3,
+  generateSubtitles,
   getFormattedContent,
   getFrequentTermsHandler,
   handleSave,
@@ -543,6 +544,14 @@ export default memo(function Topbar({
         },
         false
       )
+
+      if (orderDetails.orderType === 'TRANSCRIPTION') {
+        const srtResponse = await getSignedUrlAction(`${orderDetails.fileId}.srt`, 3600)
+        if (srtResponse.success && !srtResponse.keyExists && currentAlignments.length > 0) {
+          // Generate subtitles if they don't exist yet
+          await generateSubtitles(orderDetails, currentAlignments)
+        }
+      }
 
       const txtRes = await getFileTxtSignedUrl(fileId)
       const docxRes = await getFileDocxSignedUrl(

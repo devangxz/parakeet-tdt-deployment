@@ -10,20 +10,38 @@ import prisma from '@/lib/prisma'
 import getCustomFormatOption from '@/utils/getCustomFormatOption'
 import getOrgName from '@/utils/getOrgName'
 
-export async function getHistoryFiles(type: string) {
+export async function getHistoryFiles(
+  type: string,
+  page: number = 1,
+  pageSize: number = 10,
+  sortField: string = 'id',
+  sortOrder: 'asc' | 'desc' = 'desc'
+) {
   const session = await getServerSession(authOptions)
   const user = session?.user
   const transcriberId = user?.userId as number
 
   try {
+    // Calculate pagination parameters
+    const skip = (page - 1) * pageSize
+    const take = pageSize
+
+    // Base query condition
+    const baseWhereCondition = {
+      transcriberId,
+      type: JobType.FINALIZE,
+    }
+
+    // Get total count for pagination
+    const totalCount = await prisma.jobAssignment.count({
+      where: baseWhereCondition,
+    })
+
     // eslint-disable-next-line prefer-const
     let [historyCFFiles, userRates] = await prisma.$transaction(
       async (prisma) => {
         const historyCFFiles = await prisma.jobAssignment.findMany({
-          where: {
-            transcriberId,
-            type: JobType.FINALIZE,
-          },
+          where: baseWhereCondition,
           include: {
             order: {
               include: {
@@ -31,6 +49,11 @@ export async function getHistoryFiles(type: string) {
                 user: true,
               },
             },
+          },
+          skip,
+          take,
+          orderBy: {
+            [sortField]: sortOrder,
           },
         })
 
@@ -86,8 +109,19 @@ export async function getHistoryFiles(type: string) {
       file.customFormatOption = customFormatOption
     }
 
-    logger.info(`History CF files fetched successfully for ${transcriberId}`)
-    return { success: true, data: historyCFFiles }
+    logger.info(
+      `History CF files fetched successfully for ${transcriberId}, page ${page}, pageSize ${pageSize}`
+    )
+    return {
+      success: true,
+      data: historyCFFiles,
+      pagination: {
+        totalCount,
+        pageCount: Math.ceil(totalCount / pageSize),
+        currentPage: page,
+        pageSize,
+      },
+    }
   } catch (error) {
     logger.error(error)
     return { success: false, message: 'Failed to fetch history CF files' }

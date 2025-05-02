@@ -8,6 +8,7 @@ import { DateFilter } from './date-filter'
 import { DateRangeFilter } from './date-range-filter'
 import { DataTableFacetedFilter } from './filter'
 import { DataTableViewOptions } from './view-options'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -27,6 +28,21 @@ export function DataTableToolbar<TData>({
 }: DataTableToolbarProps<TData>) {
   const [watchlistFilter, setWatchlistFilter] = React.useState<string>('all')
   const isFiltered = table.getState().columnFilters.length > 0
+
+  // Calculate counts for watchlist filters
+  const customerWatchCount = React.useMemo(() => {
+    if (!table.getColumn('customerWatch')) return 0
+    return table
+      .getFilteredRowModel()
+      .rows.filter((row) => row.getValue('customerWatch') === true).length
+  }, [table.getFilteredRowModel().rows, table])
+
+  const transcriberWatchCount = React.useMemo(() => {
+    if (!table.getColumn('transcriberWatch')) return 0
+    return table
+      .getFilteredRowModel()
+      .rows.filter((row) => row.getValue('transcriberWatch') === true).length
+  }, [table.getFilteredRowModel().rows, table])
 
   const handleWatchlistChange = (value: string) => {
     setWatchlistFilter(value)
@@ -76,9 +92,27 @@ export function DataTableToolbar<TData>({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='all'>All</SelectItem>
-                <SelectItem value='customer'>Watchlist Customer</SelectItem>
-                <SelectItem value='transcriber'>
-                  Watchlist Transcriber
+                <SelectItem
+                  value='customer'
+                  className='flex items-center justify-between'
+                >
+                  <span>Watchlist Customer</span>
+                  {customerWatchCount > 0 && (
+                    <Badge variant='secondary' className='ml-2'>
+                      {customerWatchCount}
+                    </Badge>
+                  )}
+                </SelectItem>
+                <SelectItem
+                  value='transcriber'
+                  className='flex items-center justify-between'
+                >
+                  <span>Watchlist Transcriber</span>
+                  {transcriberWatchCount > 0 && (
+                    <Badge variant='secondary' className='ml-2'>
+                      {transcriberWatchCount}
+                    </Badge>
+                  )}
                 </SelectItem>
               </SelectContent>
             </Select>

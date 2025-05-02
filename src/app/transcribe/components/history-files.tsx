@@ -5,7 +5,7 @@ import { ColumnDef } from '@tanstack/react-table'
 import { diffWords } from 'diff'
 import { ChevronDownIcon } from 'lucide-react'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './data-table'
@@ -34,17 +34,48 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { LEGAL_QC_TRANSCRIBER_RATE } from '@/constants'
-import { BaseTranscriberFile } from '@/types/files'
 import formatDuration from '@/utils/formatDuration'
 import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
 
-interface File extends BaseTranscriberFile {
-  qc_cost: number
+interface File {
   jobId: number
+  index: number
+  orderId: number
+  fileId: string
+  filename: string
+  orderTs: string
+  pwer: number
+  status: string
+  priority: number | string
+  qc_cost: number
+  duration: number
+  deliveryTs: string
+  hd: boolean
+  orderType: string
+  rateBonus: number
+  timeString: string
+  dateString: string
+  diff: string
+  rate: number
+  instructions: string | null
   jobType: string
   orgName: string
   customFormatOption: string
   comment?: string
+}
+
+interface PaginationMeta {
+  totalCount: number
+  pageCount: number
+  currentPage: number
+  pageSize: number
+}
+
+interface CachedData {
+  [key: string]: {
+    data: File[]
+    pagination: PaginationMeta
+  }
 }
 
 export default function HistoryFilesPage() {
@@ -65,20 +96,45 @@ export default function HistoryFilesPage() {
   const pathname = usePathname()
   const isLegalQCPage = pathname === '/transcribe/legal-qc'
 
-  const fetchFiles = async (showLoader = false) => {
-    if (showLoader) {
-      setIsLoading(true)
-    } else {
-      setIsLoading(false)
-    }
-    try {
-      const response = await getHistoryQCFiles(
-        isLegalQCPage ? 'legal' : 'general'
-      )
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(
+    null
+  )
 
-      if (response.success && response.data) {
-        const orders = response.data
-          .map((assignment: any, index: number) => {
+  // Cache state - store already loaded pages
+  const cachedDataRef = useRef<CachedData>({})
+
+  const getCacheKey = useCallback(
+    (pageNum: number, size: number) => {
+      return `${isLegalQCPage ? 'legal' : 'general'}_${pageNum}_${size}`
+    },
+    [isLegalQCPage]
+  )
+
+  const fetchFiles = useCallback(
+    async (pageNum: number, size: number, forceRefresh = false) => {
+      const cacheKey = getCacheKey(pageNum, size)
+
+      // Check if data exists in cache and is not being force refreshed
+      if (!forceRefresh && cachedDataRef.current[cacheKey]) {
+        setAssginedFiles(cachedDataRef.current[cacheKey].data)
+        setPaginationMeta(cachedDataRef.current[cacheKey].pagination)
+        setIsLoading(false)
+        return
+      }
+
+      setIsLoading(true)
+      try {
+        const response = await getHistoryQCFiles(
+          isLegalQCPage ? 'legal' : 'general',
+          pageNum,
+          size
+        )
+
+        if (response.success && response.data) {
+          const orders = response.data.map((assignment: any, index: number) => {
             const diff = determinePwerLevel(assignment.order.pwer)
             const rate = determineRate(
               assignment.order.pwer,
@@ -120,37 +176,38 @@ export default function HistoryFilesPage() {
               comment: assignment.comment ?? '',
             }
           })
-          .sort(
-            (a: { jobId: number }, b: { jobId: number }) => b.jobId - a.jobId
-          )
-        setAssginedFiles((orders as any) ?? [])
-        setError(null)
+
+          // Store in cache
+          cachedDataRef.current[cacheKey] = {
+            data: orders,
+            pagination: response.pagination,
+          }
+
+          setAssginedFiles(orders)
+          setPaginationMeta(response.pagination)
+          setError(null)
+        }
+      } catch (err) {
+        setError('an error occurred')
+      } finally {
+        setIsLoading(false)
       }
-    } catch (err) {
-      setError('an error occurred')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    },
+    [isLegalQCPage]
+  )
 
   useEffect(() => {
-    fetchFiles(true)
-  }, [])
+    fetchFiles(page, pageSize)
+  }, [fetchFiles, page, pageSize])
 
-  if (isLoading) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '50vh',
-        }}
-      >
-        <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-        <p>Loading...</p>
-      </div>
-    )
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    // When changing page size, we need to reset to page 1 and potentially refetch data
+    setPageSize(newPageSize)
+    setPage(1)
   }
 
   if (error) {
@@ -163,7 +220,7 @@ export default function HistoryFilesPage() {
           height: '20vh',
         }}
       >
-        <p>An Error Occured</p>
+        <p>An Error Occurred</p>
       </div>
     )
   }
@@ -378,6 +435,14 @@ export default function HistoryFilesPage() {
       <DataTable
         data={assignedFiles ?? []}
         columns={columns}
+        isLoading={isLoading}
+        pagination={{
+          currentPage: page,
+          pageCount: paginationMeta?.pageCount || 1,
+          pageSize: pageSize,
+          onPageChange: handlePageChange,
+          onPageSizeChange: handlePageSizeChange,
+        }}
         renderRowSubComponent={({ row }: { row: any }) =>
           row.original.instructions || row.original.comment ? (
             <div className='p-2'>

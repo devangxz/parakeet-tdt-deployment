@@ -20,12 +20,27 @@ const getUserWatchList = async (customerId: number, transcriberId: number) => {
   }
 }
 
-export async function fetchApprovalOrders() {
+export async function fetchApprovalOrders(
+  page: number = 1,
+  pageSize: number = 10
+) {
   try {
+    // Base where condition
+    const whereCondition = {
+      status: OrderStatus.SUBMITTED_FOR_APPROVAL,
+    }
+
+    // Get total count for pagination
+    const totalCount = await prisma.order.count({
+      where: whereCondition,
+    })
+
+    // Calculate pagination parameters
+    const skip = (page - 1) * pageSize
+    const take = pageSize
+
     const orders = await prisma.order.findMany({
-      where: {
-        status: OrderStatus.SUBMITTED_FOR_APPROVAL,
-      },
+      where: whereCondition,
       include: {
         File: true,
         Assignment: {
@@ -34,6 +49,31 @@ export async function fetchApprovalOrders() {
           },
         },
       },
+      skip,
+      take,
+      orderBy: {
+        deliveryTs: 'asc',
+      },
+    })
+
+    // Sort orders by delivery date with yesterday's orders first
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const yesterday = new Date(today)
+    yesterday.setDate(today.getDate() - 1)
+
+    orders.sort((a, b) => {
+      const aDelivery = new Date(a.deliveryTs)
+      aDelivery.setHours(0, 0, 0, 0)
+      const bDelivery = new Date(b.deliveryTs)
+      bDelivery.setHours(0, 0, 0, 0)
+
+      const aOverdue = aDelivery.getTime() === yesterday.getTime()
+      const bOverdue = bDelivery.getTime() === yesterday.getTime()
+
+      if (aOverdue && !bOverdue) return -1
+      if (!aOverdue && bOverdue) return 1
+      return a.id - b.id
     })
 
     const ordersWithCost = await Promise.all(
@@ -47,7 +87,7 @@ export async function fetchApprovalOrders() {
           order.userId,
           transcriberId ?? 0
         )
-        
+
         const qcValidationStats = await prisma.qCValidationStats.findFirst({
           where: {
             orderId: order.id,
@@ -57,22 +97,28 @@ export async function fetchApprovalOrders() {
           orderBy: {
             createdAt: 'desc',
           },
-        })      
-       
-        return { 
-          ...order, 
-          fileCost, 
-          watchList, 
+        })
+
+        return {
+          ...order,
+          fileCost,
+          watchList,
           orderType,
-          qcValidationStats
+          qcValidationStats,
         }
       })
     )
 
-    logger.info(`fetched approval order`)
+    logger.info(`Fetched approval orders: page ${page}, pageSize ${pageSize}`)
     return {
       success: true,
       details: ordersWithCost,
+      pagination: {
+        totalCount,
+        pageCount: Math.ceil(totalCount / pageSize),
+        currentPage: page,
+        pageSize,
+      },
     }
   } catch (error) {
     logger.error(`Error while fetching approval orders`, error)
