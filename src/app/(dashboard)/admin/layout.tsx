@@ -11,6 +11,7 @@ import {
   Building2,
   Loader2,
   TestTubes,
+  BarChart,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import React, { useEffect, useRef } from 'react'
@@ -71,6 +72,12 @@ export default function FilesLayout({
       href: '/admin/withdraws',
       name: 'Withdraws',
       icon: CreditCard,
+      isActive: false,
+    },
+    {
+      href: '/admin/reports',
+      name: 'Reports',
+      icon: BarChart,
       isActive: false,
     },
     {
