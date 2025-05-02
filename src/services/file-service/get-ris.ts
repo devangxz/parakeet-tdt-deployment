@@ -218,7 +218,9 @@ export default async function extractDataFromRISFile(
       )
     }
 
-    logger.info(`<-- extractDataFromRISFile ${fileId}`)
+    logger.info(
+      `<-- extractDataFromRISFile ${fileId} ${JSON.stringify(risDataJson)}`
+    )
     return risDataJson
   } catch (error) {
     logger.error(`<-- extractDataFromRISFile ${error} for file ${fileId}`)
