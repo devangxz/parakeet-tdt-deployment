@@ -52,6 +52,12 @@ export default function FilesLayout({
       icon: PackageMinus,
       isActive: false,
     },
+    {
+      href: '/admin/reports',
+      name: 'Reports',
+      icon: BarChart,
+      isActive: false,
+    },
   ]
 
   const fullSidebarItems: SidebarItemType[] = [
@@ -72,12 +78,6 @@ export default function FilesLayout({
       href: '/admin/withdraws',
       name: 'Withdraws',
       icon: CreditCard,
-      isActive: false,
-    },
-    {
-      href: '/admin/reports',
-      name: 'Reports',
-      icon: BarChart,
       isActive: false,
     },
     {

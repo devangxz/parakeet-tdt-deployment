@@ -18,19 +18,36 @@ const getSpecialInstructions = async (userId: number) => {
   return user?.splInstructions ?? ''
 }
 
-export async function fetchPendingOrders() {
+export async function fetchPendingOrders(
+  page: number = 1,
+  pageSize: number = 10,
+  sortField: string = 'id',
+  sortOrder: 'asc' | 'desc' = 'desc'
+) {
   try {
-    const pendingOrders = await prisma.order.findMany({
-      where: {
-        status: {
-          notIn: [
-            OrderStatus.DELIVERED,
-            OrderStatus.CANCELLED,
-            OrderStatus.REFUNDED,
-          ],
-        },
-        isTestOrder: false,
+    // Base where condition
+    const whereCondition = {
+      status: {
+        notIn: [
+          OrderStatus.DELIVERED,
+          OrderStatus.CANCELLED,
+          OrderStatus.REFUNDED,
+        ],
       },
+      isTestOrder: false,
+    }
+
+    // Get total count for pagination
+    const totalCount = await prisma.order.count({
+      where: whereCondition,
+    })
+
+    // Calculate pagination parameters
+    const skip = (page - 1) * pageSize
+    const take = pageSize
+
+    const pendingOrders = await prisma.order.findMany({
+      where: whereCondition,
       include: {
         File: true,
         Assignment: {
@@ -38,6 +55,11 @@ export async function fetchPendingOrders() {
             user: true,
           },
         },
+      },
+      skip,
+      take,
+      orderBy: {
+        [sortField]: sortOrder,
       },
     })
 
@@ -75,6 +97,12 @@ export async function fetchPendingOrders() {
     return {
       success: true,
       details: ordersWithCostAndCancellations,
+      pagination: {
+        totalCount,
+        pageCount: Math.ceil(totalCount / pageSize),
+        currentPage: page,
+        pageSize,
+      },
     }
   } catch (error) {
     logger.error(`Error while fetching pending orders`, error)
