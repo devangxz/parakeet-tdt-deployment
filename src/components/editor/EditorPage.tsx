@@ -577,6 +577,7 @@ function EditorPage() {
           listenCount,
           editedSegments,
           role: session?.user?.role || '',
+          quill: quillRef?.current?.getEditor(),
         })
 
         updateFormattedTranscript()
@@ -760,6 +761,7 @@ function EditorPage() {
           listenCount,
           editedSegments,
           role: session?.user?.role || '',
+          quill: quillRef?.current?.getEditor(),
         },
         false
       )
@@ -775,6 +777,7 @@ function EditorPage() {
     cfd,
     listenCount,
     editedSegments,
+    quillRef,
   ])
 
   useEffect(() => {

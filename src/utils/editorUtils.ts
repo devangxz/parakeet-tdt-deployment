@@ -924,6 +924,7 @@ type HandleSaveParams = {
   isCF?: boolean
   role: string
   currentAlignments?: AlignmentType[]
+  quill?: Quill // Add quill parameter
 }
 
 const handleSave = async (
@@ -939,6 +940,7 @@ const handleSave = async (
     isCF = false,
     role,
     currentAlignments,
+    quill, // Use the quill parameter
   }: HandleSaveParams,
   showToast = true
 ) => {
@@ -972,7 +974,8 @@ const handleSave = async (
 
       const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS[\d?]+:/
 
-      for (const paragraph of paragraphs) {
+      for (let i = 0; i < paragraphs.length; i++) {
+        const paragraph = paragraphs[i]
         // Skip validation for meta-only paragraphs
         if (isMetaOnlyParagraph(paragraph)) continue
 
@@ -982,6 +985,26 @@ const handleSave = async (
         ) {
           if (showToast) {
             if (toastId) toast.dismiss(toastId)
+           
+            if (quill) {
+              const fullText = quill.getText()
+              const paragraphRegex = new RegExp(escapeRegExp(paragraph), 'g')
+              const match = paragraphRegex.exec(fullText)
+              
+              if (match) {
+                console.log('paragraph', paragraph)
+                console.log('match', paragraph.length)
+
+                quill.setSelection(match.index, paragraph.length)
+
+                quill.formatText(match.index, paragraph.length, {
+                  background: '#ffcdd2', 
+                });
+                
+                scrollEditorToPos(quill, match.index)
+              }
+            }
+
             toast.error(
               'Invalid paragraph format detected. Each paragraph must start with a timestamp and speaker identification.'
             )
