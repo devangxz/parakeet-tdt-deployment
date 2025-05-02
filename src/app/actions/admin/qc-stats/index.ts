@@ -1,5 +1,6 @@
 'use server'
 
+import { OrderStatus, OrderType, Prisma } from '@prisma/client'
 import { format, startOfDay, endOfDay, differenceInDays } from 'date-fns'
 
 import prisma from '@/lib/prisma'
@@ -10,7 +11,12 @@ interface QCStats {
   a: { t: number }
 }
 
-export async function fetchQCStats(from: string, to: string): Promise<QCStats> {
+export async function fetchQCStats(
+  from: string,
+  to: string,
+  orderTypes?: string[],
+  orgNames?: string[]
+): Promise<QCStats> {
   const startDate = new Date(from)
   const endDate = new Date(to)
 
@@ -29,7 +35,6 @@ export async function fetchQCStats(from: string, to: string): Promise<QCStats> {
   const endTs = endDate.getTime()
   const period = Math.floor((endTs - startTs) / msPerDay)
 
-  // Generate date labels
   let i = 0
   const dateCursor = new Date(startTs)
   while (dateCursor.getTime() <= endTs) {
@@ -37,41 +42,61 @@ export async function fetchQCStats(from: string, to: string): Promise<QCStats> {
     dateCursor.setDate(dateCursor.getDate() + 1)
   }
 
-  // Fetch delivered orders with durations grouped by date
-  const deliveredOrders = await prisma.order.findMany({
-    where: {
-      status: 'DELIVERED',
-      deliveredTs: {
-        gte: startOfDay(startDate),
-        lte: endOfDay(endDate),
-      },
+  const whereClause: Prisma.OrderWhereInput = {
+    status: 'DELIVERED' as OrderStatus,
+    deliveredTs: {
+      gte: startOfDay(startDate),
+      lte: endOfDay(endDate),
     },
+  }
+
+  if (orderTypes && orderTypes.length > 0) {
+    whereClause.orderType = {
+      in: orderTypes as OrderType[],
+    }
+  }
+
+  const deliveredOrders = await prisma.order.findMany({
+    where: whereClause,
     include: {
       File: {
         select: {
           duration: true,
         },
       },
+      user: {
+        select: {
+          Organization: true,
+        },
+      },
     },
   })
 
-  // Group the data by date and calculate totals
+  let filteredOrders = deliveredOrders
+  if (orgNames && orgNames.length > 0) {
+    filteredOrders = deliveredOrders.filter((order) => {
+      const orgName = order.user.Organization?.name || ''
+      return (
+        orgNames.includes(orgName) ||
+        (orgNames.includes('NONE') && orgName === '')
+      )
+    })
+  }
+
   const deliveryDataMap = new Map<number, number>()
 
-  deliveredOrders.forEach((order) => {
+  filteredOrders.forEach((order) => {
     if (!order.File) return
 
     const orderDate = new Date(order.deliveredTs)
     const dayIndex = period - differenceInDays(endDate, orderDate)
 
-    // Convert duration from seconds to hours and round to 2 decimal places
     const durationInHours = Math.round((order.File.duration / 3600) * 100) / 100
 
     const currentValue = deliveryDataMap.get(dayIndex) || 0
     deliveryDataMap.set(dayIndex, currentValue + durationInHours)
   })
 
-  // Fill stats with grouped results
   for (let i = 0; i <= period; i++) {
     const hoursValue = deliveryDataMap.get(i) || 0
     stats.t.push([i, hoursValue])

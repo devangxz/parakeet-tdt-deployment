@@ -6,6 +6,7 @@ import { useState } from 'react'
 
 import { DatePicker } from './components/date-picker'
 import { DeliveriesChart } from './components/deliveries-chart'
+import { MultiSelect, type Option } from './components/multi-select'
 import { fetchQCStats } from '@/app/actions/admin/qc-stats'
 import { Button } from '@/components/ui/button'
 
@@ -15,11 +16,25 @@ interface QCStats {
   a: { t: number }
 }
 
+const orderTypeOptions: Option[] = [
+  { value: 'TRANSCRIPTION', label: 'Transcription' },
+  { value: 'TRANSCRIPTION_FORMATTING', label: 'Transcription & Formatting' },
+  { value: 'FORMATTING', label: 'Formatting' },
+]
+
+const orgOptions: Option[] = [
+  { value: 'REMOTELEGAL', label: 'RemoteLegal' },
+  { value: 'ACR', label: 'ACR' },
+  { value: 'NONE', label: 'None' },
+]
+
 export default function ReportsPage() {
   const [fromDate, setFromDate] = useState<Date>(
     new Date(new Date().setDate(new Date().getDate() - 10))
   )
   const [toDate, setToDate] = useState<Date>(new Date())
+  const [selectedOrderTypes, setSelectedOrderTypes] = useState<string[]>([])
+  const [selectedOrgNames, setSelectedOrgNames] = useState<string[]>([])
 
   const [stats, setStats] = useState<QCStats | null>(null)
   const [loading, setLoading] = useState(false)
@@ -29,7 +44,12 @@ export default function ReportsPage() {
     try {
       const formattedFromDate = format(fromDate, 'yyyy-MM-dd')
       const formattedToDate = format(toDate, 'yyyy-MM-dd')
-      const result = await fetchQCStats(formattedFromDate, formattedToDate)
+      const result = await fetchQCStats(
+        formattedFromDate,
+        formattedToDate,
+        selectedOrderTypes.length > 0 ? selectedOrderTypes : undefined,
+        selectedOrgNames.length > 0 ? selectedOrgNames : undefined
+      )
       setStats(result)
     } catch (error) {
       console.error('Failed to fetch QC stats:', error)
@@ -69,6 +89,39 @@ export default function ReportsPage() {
                   date={toDate}
                   setDate={setToDate}
                   placeholder='To date'
+                />
+              </div>
+            </div>
+
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+              <div>
+                <label
+                  htmlFor='order-types'
+                  className='text-sm font-medium mb-1 block'
+                >
+                  Order Types
+                </label>
+                <MultiSelect
+                  options={orderTypeOptions}
+                  selected={selectedOrderTypes}
+                  onChange={setSelectedOrderTypes}
+                  placeholder='Select order types'
+                  label='Order Types'
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor='org-names'
+                  className='text-sm font-medium mb-1 block'
+                >
+                  Organizations
+                </label>
+                <MultiSelect
+                  options={orgOptions}
+                  selected={selectedOrgNames}
+                  onChange={setSelectedOrgNames}
+                  placeholder='Select organizations'
+                  label='Organizations'
                 />
               </div>
             </div>

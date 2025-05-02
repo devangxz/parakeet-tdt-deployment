@@ -92,6 +92,8 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
   const [editedSegments, setEditedSegments] = useState<
     Record<string, Set<number>>
   >({})
+  const [customerWatchCount, setCustomerWatchCount] = useState(0)
+  const [transcriberWatchCount, setTranscriberWatchCount] = useState(0)
 
   // Pagination state
   const [page, setPage] = useState(1)
@@ -175,6 +177,16 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
         setApprovalFiles(cachedDataRef.current[cacheKey].data)
         setPaginationMeta(cachedDataRef.current[cacheKey].pagination)
         setTotalCount(cachedDataRef.current[cacheKey].pagination.totalCount)
+
+        // Update watchlist counts from cached data
+        const cachedData = cachedDataRef.current[cacheKey].data
+        setCustomerWatchCount(
+          cachedData.filter((file) => file.customerWatch).length
+        )
+        setTranscriberWatchCount(
+          cachedData.filter((file) => file.transcriberWatch).length
+        )
+
         setIsLoading(false)
         return
       }
@@ -241,6 +253,14 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
             if (!aOverdue && bOverdue) return 1
             return a.index - b.index
           })
+
+          // Update watchlist counts
+          setCustomerWatchCount(
+            orders.filter((file) => file.customerWatch).length
+          )
+          setTranscriberWatchCount(
+            orders.filter((file) => file.transcriberWatch).length
+          )
 
           // Store in cache
           cachedDataRef.current[cacheKey] = {
@@ -674,6 +694,20 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
           <div>
             <h1 className='text-lg font-semibold md:text-lg'>
               Available Approval Orders ({totalCount})
+              {(customerWatchCount > 0 || transcriberWatchCount > 0) && (
+                <span className='ml-2 text-sm font-normal'>
+                  {customerWatchCount > 0 && (
+                    <Badge variant='outline' className='mr-2'>
+                      Customer Watch: {customerWatchCount}
+                    </Badge>
+                  )}
+                  {transcriberWatchCount > 0 && (
+                    <Badge variant='outline'>
+                      Transcriber Watch: {transcriberWatchCount}
+                    </Badge>
+                  )}
+                </span>
+              )}
             </h1>
           </div>
         </div>
