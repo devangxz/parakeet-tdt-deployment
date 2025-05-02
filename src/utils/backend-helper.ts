@@ -475,7 +475,10 @@ export const processRefund = async (
       if (paymentMethod === PaymentMethod.CREDITS || refundToCredits) {
         creditsRefunded += parseFloat(refundAmount.toFixed(2))
         refundAmount = 0
-      } else if (paymentMethod === PaymentMethod.CREDITCARD) {
+      } else if (
+        paymentMethod === PaymentMethod.CREDITCARD ||
+        paymentMethod === PaymentMethod.PAYPAL
+      ) {
         if (creditsUsed > 0 && refundedAmount + refundAmount > chargedAmount) {
           const creditsRefund = parseFloat(
             (refundedAmount + refundAmount - chargedAmount).toFixed(2)
