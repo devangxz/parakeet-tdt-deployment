@@ -20,9 +20,7 @@ const getSpecialInstructions = async (userId: number) => {
 
 export async function fetchPendingOrders(
   page: number = 1,
-  pageSize: number = 10,
-  sortField: string = 'id',
-  sortOrder: 'asc' | 'desc' = 'desc'
+  pageSize: number = 10
 ) {
   try {
     // Base where condition
@@ -59,8 +57,28 @@ export async function fetchPendingOrders(
       skip,
       take,
       orderBy: {
-        [sortField]: sortOrder,
+        deliveryTs: 'asc', // First sort by delivery date
       },
+    })
+
+    // Sort orders so that overdue files from yesterday are placed on top
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const yesterday = new Date(today)
+    yesterday.setDate(today.getDate() - 1)
+
+    pendingOrders.sort((a, b) => {
+      const aDelivery = new Date(a.deliveryTs)
+      aDelivery.setHours(0, 0, 0, 0)
+      const bDelivery = new Date(b.deliveryTs)
+      bDelivery.setHours(0, 0, 0, 0)
+
+      const aOverdue = aDelivery.getTime() === yesterday.getTime()
+      const bOverdue = bDelivery.getTime() === yesterday.getTime()
+
+      if (aOverdue && !bOverdue) return -1
+      if (!aOverdue && bOverdue) return 1
+      return 0
     })
 
     const ordersWithCost = await Promise.all(

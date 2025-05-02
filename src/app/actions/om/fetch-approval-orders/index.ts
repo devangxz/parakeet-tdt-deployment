@@ -22,9 +22,7 @@ const getUserWatchList = async (customerId: number, transcriberId: number) => {
 
 export async function fetchApprovalOrders(
   page: number = 1,
-  pageSize: number = 10,
-  sortField: string = 'id',
-  sortOrder: 'asc' | 'desc' = 'desc'
+  pageSize: number = 10
 ) {
   try {
     // Base where condition
@@ -54,8 +52,28 @@ export async function fetchApprovalOrders(
       skip,
       take,
       orderBy: {
-        [sortField]: sortOrder,
+        deliveryTs: 'asc',
       },
+    })
+
+    // Sort orders by delivery date with yesterday's orders first
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const yesterday = new Date(today)
+    yesterday.setDate(today.getDate() - 1)
+
+    orders.sort((a, b) => {
+      const aDelivery = new Date(a.deliveryTs)
+      aDelivery.setHours(0, 0, 0, 0)
+      const bDelivery = new Date(b.deliveryTs)
+      bDelivery.setHours(0, 0, 0, 0)
+
+      const aOverdue = aDelivery.getTime() === yesterday.getTime()
+      const bOverdue = bDelivery.getTime() === yesterday.getTime()
+
+      if (aOverdue && !bOverdue) return -1
+      if (!aOverdue && bOverdue) return 1
+      return a.id - b.id
     })
 
     const ordersWithCost = await Promise.all(
