@@ -822,6 +822,7 @@ export const getAssignmentEarnings = async (transcriberId: number) => {
       },
       where: {
         transcriberId: transcriberId,
+        status: JobStatus.COMPLETED,
         order: {
           status: 'DELIVERED',
         },
