@@ -891,6 +891,27 @@ function getSRTVTT(alignments: AlignmentType[]) {
   }
 }
 
+const generateSubtitles = async(fileId: string, currentAlignments: AlignmentType[]) => {
+  if(!fileId || !currentAlignments) return
+
+  if (
+    currentAlignments &&
+    Array.isArray(currentAlignments) &&
+    currentAlignments.length > 0
+  ) {
+    const filteredAlignments = currentAlignments.filter(
+      (alignment) => 'type' in alignment && alignment.type !== 'meta'
+    )
+
+    const subtitles = getSRTVTT(filteredAlignments)
+    if (subtitles) {
+      await uploadSubtitlesAction(fileId, subtitles)
+    }
+    return true
+  }
+  return false
+}
+
 type HandleSaveParams = {
   getEditorText: () => string
   orderDetails: OrderDetails
@@ -1215,26 +1236,6 @@ const handleSubmit = async ({
     toast.dismiss(errorToastId)
     throw new Error(errorText)
   }
-}
-
-const generateSubtitles = async(orderDetails: OrderDetails, currentAlignments: AlignmentType[]) => {
-  if (!orderDetails || !orderDetails.fileId || !currentAlignments) return
-  if (
-    currentAlignments &&
-    Array.isArray(currentAlignments) &&
-    currentAlignments.length > 0
-  ) {
-    const filteredAlignments = currentAlignments.filter(
-      (alignment) => 'type' in alignment && alignment.type !== 'meta'
-    )
-
-    const subtitles = getSRTVTT(filteredAlignments)
-    if (subtitles) {
-      await uploadSubtitlesAction(orderDetails.fileId, subtitles)
-    }
-    return true
-  }
-  return false
 }
 
 const getFrequentTermsHandler = async (

@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { StarFilledIcon, StarIcon } from '@radix-ui/react-icons'
 import { useGoogleLogin } from '@react-oauth/google'
-import { ChevronDown, ChevronUp, FileText } from 'lucide-react'
+import { ChevronDown, ChevronUp, FileText, RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -133,6 +133,7 @@ export function CheckAndDownload({
   const [authToken, setAuthToken] = useState<string | undefined>('')
   const ratingMessages = ['Poor', 'Bad', 'Okay', 'Good', 'Excellent']
   const [showMoreFormats, setShowMoreFormats] = useState(false)
+  const [subtitlesExist, setSubtitlesExist] = useState(true)
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -164,9 +165,12 @@ export function CheckAndDownload({
 
   const [currentFileUrl, setCurrentFileUrl] = useState<string>('')
   const [currentFileName, setCurrentFileName] = useState<string>('')
-  const [subtitleUrls, setSubtitleUrls] = useState({
-    srtUrl: '',
-    vttUrl: '',
+  const [subtitleUrls, setSubtitleUrls] = useState<{
+    srtUrl: string | null
+    vttUrl: string | null
+  }>({
+    srtUrl: null,
+    vttUrl: null,
   })
 
   const login = useGoogleLogin({
@@ -247,24 +251,39 @@ export function CheckAndDownload({
         `${filename}.vtt`
       )
 
-      if(srtResponse.success && !srtResponse.keyExists){
-        toast.error('Subtitle file not found. Please download subtitles from Editor.')
-      }
-      else{
-        setSubtitleUrls({
-          srtUrl:
-          srtResponse.success && srtResponse.signedUrl
+      const srtExists = srtResponse.success && srtResponse.keyExists
+      const vttExists = vttResponse.success && vttResponse.keyExists
+      
+      setSubtitlesExist(!!(srtExists || vttExists))
+      
+      setSubtitleUrls({
+        srtUrl:
+          srtExists && srtResponse.signedUrl
             ? srtResponse.signedUrl
-            : '',
+            : null,
         vttUrl:
-          vttResponse.success && vttResponse.signedUrl
+          vttExists && vttResponse.signedUrl
             ? vttResponse.signedUrl
-            : '',
-        })
-      }
+            : null,
+      })
     } catch (error) {
       toast.error('Failed to fetch subtitle files')
     }
+  }
+
+  const regenerateSubtitles = () => {
+    // mark in localStorage that the next editor load should regenerate
+    localStorage.setItem('shouldRegenerateSubtitles', 'true')
+    window.open(
+      `/editor/${id}`,
+      '_blank',
+      'toolbar=no,location=no,menubar=no,width=' +
+        window.screen.width +
+        ',height=' +
+        window.screen.height +
+        ',left=0,top=0'
+    )
+    setToggleCheckAndDownload(false)
   }
 
   useEffect(() => {
@@ -596,6 +615,28 @@ export function CheckAndDownload({
                 </div>
               )}
             </div>
+
+            {orderType === 'TRANSCRIPTION' && (
+              <div className='border-b p-4'>
+                <div className='flex items-center justify-between'>
+                  <div className='flex-1 space-y-1'>
+                    <h3 className='text-lg font-semibold'>Subtitle Files</h3>
+                    <p className='text-sm text-muted-foreground'>
+                      {subtitlesExist 
+                        ? 'Download subtitle files in SRT and VTT formats.' 
+                        : 'Subtitle files are not available for this transcript.'}
+                    </p>
+                  </div>
+                  <Button
+                    onClick={regenerateSubtitles}
+                    className='flex items-center gap-2'
+                  >
+                    <RefreshCw size={16} />
+                    Regenerate Subtitles
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className='border-b p-4'>
               <div className='flex justify-between items-center'>

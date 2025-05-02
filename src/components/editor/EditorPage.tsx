@@ -80,7 +80,8 @@ import {
   calculateSpeakerMacroF1Score,
   getTestTranscript,
   escapeRegExp,
-  clearAllHighlights, 
+  clearAllHighlights,
+  generateSubtitles,
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB } from '@/utils/indexedDB'
 import { DmpDiff } from '@/utils/transcript/diff_match_patch'
@@ -227,7 +228,7 @@ function EditorPage() {
   const [isFormatWarningDialogOpen, setIsFormatWarningDialogOpen] = useState(false)
   const [formatErrors, setFormatErrors] = useState<CombinedASRFormatError[]>([])
   const [diffToggleEnabled, setDiffToggleEnabled] = useState(false)
-
+  const [alignments, setAlignments] = useState<AlignmentType[]>([])
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
     if (!quill) return
@@ -1161,6 +1162,50 @@ function EditorPage() {
 
     return () => clearTimeout(timeoutId)
   }, [quillRef])
+
+  useEffect(() => {
+    const generateAlignments = async () => {
+      if (editorRef.current && alignments.length === 0 && initialEditorData) {
+        try {
+          await editorRef.current.triggerAlignmentUpdate();
+          const currentAlignments = editorRef.current.getAlignments();
+          setAlignments(currentAlignments);
+        } catch (e) {
+          toast.error('Error generating alignments');
+        }
+      }
+    };
+
+    const intervalId = setInterval(() => {
+      const shouldRegen = localStorage.getItem('shouldRegenerateSubtitles') === 'true';
+      if (shouldRegen && alignments.length === 0) {
+        generateAlignments();
+      }
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [editorRef, initialEditorData, alignments.length]);
+
+  useEffect(() => {
+    const generateSubtitlesIfNeeded = async () => {
+      const shouldRegen = localStorage.getItem('shouldRegenerateSubtitles') === 'true';
+      if (shouldRegen && alignments.length > 0 && orderDetails.fileId) {
+        try {
+          const toastId = toast.loading('Generating subtitles');
+          const result = await generateSubtitles(orderDetails.fileId, alignments);
+          localStorage.setItem('shouldRegenerateSubtitles', 'false');
+          toast.dismiss(toastId);
+          result
+            ? toast.success('Subtitles generated successfully')
+            : toast.error('Failed to generate subtitles');
+        } catch (e) {
+          toast.error('Error generating subtitles');
+        }
+      }
+    };
+
+    generateSubtitlesIfNeeded();
+  }, [alignments]);
 
   return (
     <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
