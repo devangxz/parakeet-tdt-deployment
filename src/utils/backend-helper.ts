@@ -1223,3 +1223,15 @@ export const checkOrderWatch = async (userId: number) => {
 
   return customer.watch
 }
+
+export const checkTranscriberWatchlist = async (userId: number) => {
+  const transcriber = await prisma.verifier.findUnique({
+    where: { userId },
+  })
+
+  if (!transcriber) {
+    return false
+  }
+
+  return transcriber.watchlist
+}

@@ -592,7 +592,9 @@ const InvoicesDetailDialog = ({
           if (response.responseData.invoice.type === 'ADDL_FORMATTING') {
             fileRate = response.responseData.customFormatRate
           } else {
-            const baseRate = file.price / (file.File.duration / 60)
+            const baseRate = response.responseData.invoice.orderRate
+              ? response.responseData.invoice.orderRate
+              : file.price / (file.File.duration / 60)
 
             fileRate = isRushOrder
               ? baseRate + response.responseData.rates.rush_order
