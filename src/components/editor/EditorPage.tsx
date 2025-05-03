@@ -3,9 +3,10 @@
 import { FileTag } from '@prisma/client'
 import { Cross1Icon, ReloadIcon, CheckIcon, ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons'
 import { debounce } from 'lodash'
+import { Loader2 } from 'lucide-react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import Quill, { Delta } from 'quill/core'
+import Quill, { Op } from 'quill/core'
 import React, {
   useCallback,
   useEffect,
@@ -84,7 +85,8 @@ import {
   generateSubtitles,
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB } from '@/utils/indexedDB'
-import { DmpDiff } from '@/utils/transcript/diff_match_patch'
+import { getFormattedTranscript } from '@/utils/transcript'
+import { diff_match_patch, DmpDiff, DIFF_DELETE, DIFF_INSERT } from '@/utils/transcript/diff_match_patch'
 
 export type SupportingDocument = {
   filename: string
@@ -228,6 +230,8 @@ function EditorPage() {
   const [isFormatWarningDialogOpen, setIsFormatWarningDialogOpen] = useState(false)
   const [formatErrors, setFormatErrors] = useState<CombinedASRFormatError[]>([])
   const [diffToggleEnabled, setDiffToggleEnabled] = useState(false)
+  const [editorContent, setEditorContent] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   const [alignments, setAlignments] = useState<AlignmentType[]>([])
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -389,7 +393,8 @@ function EditorPage() {
     // Then highlight all matches using a single Delta operation
     if (results.length > 0) {
       // Create a delta that represents all the formatting operations
-      const delta = new Delta();
+      const DeltaClass = Quill.import('delta')
+      const delta = new DeltaClass()
       
       // We need to sort the results to apply formatting in ascending order
       results.sort((a, b) => a - b);
@@ -561,15 +566,30 @@ function EditorPage() {
       },
       saveChanges: async () => {
         if (editorRef.current) {
-          if (!highlightNumbersEnabled) {
+          if (!highlightNumbersEnabled && !diffToggleEnabled) {
             editorRef.current.clearAllHighlights();
           }
           editorRef.current.triggerAlignmentUpdate();
         }
         autoCapitalizeSentences(quillRef, autoCapitalize)
+
+        let transcript: string | null = null
+
+        if (orderDetails.fileId && diffToggleEnabled) {
+          transcript = saveTranscriptInDiffMode()
+
+          if (transcript) {
+            setEditorContent(transcript)
+            persistEditorDataIDB(orderDetails.fileId, {
+              transcript: transcript,
+              listenCount,
+              editedSegments: Array.from(editedSegments),
+            })
+          }
+        }
         
         await handleSave({
-          getEditorText: getEditorText,
+          getEditorText: transcript ? () => transcript : getEditorText,
           orderDetails,
           notes,
           cfd,
@@ -579,7 +599,9 @@ function EditorPage() {
           role: session?.user?.role || '',
         })
 
-        updateFormattedTranscript()
+        if(!diffToggleEnabled) {
+          updateFormattedTranscript()
+        }
 
         if (highlightNumbersEnabled && editorRef.current != null) {
           setTimeout(() => {
@@ -718,9 +740,14 @@ function EditorPage() {
 
   const handleTabsValueChange = async (value: string) => {
     if (value === 'diff') {
-      setDiffToggleEnabled(true)
-    } else {
-      setDiffToggleEnabled(false)
+      const contentText = getEditorText()
+
+      const diffBaseTranscript = orderDetails.isTestOrder
+        ? testTranscript
+        : await getFormattedTranscript(ctms, orderDetails.fileId)
+
+      const diffs = generateDiff(diffBaseTranscript, contentText)
+      setDiff(diffs)
     }
   }
 
@@ -748,11 +775,43 @@ function EditorPage() {
     }
   }, [orderDetails.fileId])
 
+  // create transcript excluding deleted text and saves in idb
+  const saveTranscriptInDiffMode = useCallback(() => {
+    const quill = quillRef?.current?.getEditor()
+    if (!quill) return null
+    const currentContent = quill.getContents()
+    const transcript = currentContent.ops.reduce((result: string, op: Op) => {
+      const isDeletedText = op.attributes?.strike && 
+        op.attributes.strike == true
+      
+      if (op.insert && !isDeletedText) {
+        result += op.insert
+      }
+      return result
+    }, '')
+
+    return transcript
+  }, [quillRef])
+
   useEffect(() => {
     const interval = setInterval(async () => {
+      let transcript: string | null = null;
+      if (orderDetails.fileId && diffToggleEnabled) {
+
+        transcript = saveTranscriptInDiffMode()
+        if (transcript) {  
+          setEditorContent(transcript)
+          persistEditorDataIDB(orderDetails.fileId, { 
+            transcript: transcript,
+            listenCount,
+            editedSegments: Array.from(editedSegments)
+          });
+        }
+      }
+
       await handleSave(
         {
-          getEditorText,
+          getEditorText: transcript ? () => transcript : getEditorText,
           orderDetails,
           notes,
           cfd,
@@ -763,7 +822,10 @@ function EditorPage() {
         },
         false
       )
-      updateFormattedTranscript()
+
+      if(!diffToggleEnabled) {
+        updateFormattedTranscript()
+      }
     }, 1000 * 60 * AUTOSAVE_INTERVAL)
 
     return () => clearInterval(interval)
@@ -775,6 +837,9 @@ function EditorPage() {
     cfd,
     listenCount,
     editedSegments,
+    diffToggleEnabled,
+    saveTranscriptInDiffMode,
+    setEditorContent
   ])
 
   useEffect(() => {
@@ -1163,6 +1228,157 @@ function EditorPage() {
     return () => clearTimeout(timeoutId)
   }, [quillRef])
 
+  const generateDiff = (originalTranscript: string, currentTranscript: string) => {
+    const dmp = new diff_match_patch()
+    const diff = dmp.diff_wordMode(originalTranscript, currentTranscript)
+    return diff
+  }
+
+  const toggleDiffView = useCallback((newDiffToggleValue = diffToggleEnabled) => {
+    const quill = quillRef?.current?.getEditor()
+    if (!quill) {
+      console.warn('Diff generation prerequisites not met.', { quill })
+      return
+    }
+
+    setIsLoading(true) // Set loading state to true immediately
+
+    setTimeout(async () => {
+      try {
+        if (!newDiffToggleValue) {
+          const savedTranscript = saveTranscriptInDiffMode()
+          const transcript = editorContent || (savedTranscript || '')
+          quill.setContents(getFormattedContent(transcript), 'silent')
+        } else {
+          const currentText = quill.getText().trim()
+          const originalTranscript = orderDetails.isTestOrder ? testTranscript : 
+            await getFormattedTranscript(ctms, orderDetails.fileId)
+          const diff = generateDiff(originalTranscript, currentText) || []
+          renderDiff(diff)
+
+          const cleanTranscript = saveTranscriptInDiffMode()
+          if (cleanTranscript) {
+            setEditorContent(cleanTranscript)
+            persistEditorDataIDB(orderDetails.fileId, { 
+              transcript: cleanTranscript,
+              listenCount,
+              editedSegments: Array.from(editedSegments)
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error generating diff transcript:", error)
+      } finally {
+        setIsLoading(false) // Ensure loading state is reset
+      }
+    }, 0)
+  }, [quillRef, ctms, diffToggleEnabled, generateDiff, saveTranscriptInDiffMode, editorContent, orderDetails.fileId, orderDetails.isTestOrder, testTranscript, listenCount, editedSegments])
+
+  const renderDiff = useCallback((diffs: [number, string][]) => {
+    const quill = quillRef?.current?.getEditor()
+    if (!quill) return
+    // Use Quill.import to get the Delta class
+    const DeltaClass = Quill.import('delta')
+    const delta = new DeltaClass()
+    diffs.forEach(([op, text]) => {
+      if (op === DIFF_INSERT) {
+        delta.insert(text, { background: '#e6ffe6' })
+      } else if (op === DIFF_DELETE) {
+        delta.insert(text, { background: '#ffe6e6', strike: true })
+      } else {
+        delta.insert(text)
+      }
+    })
+    quill.setContents(delta, 'silent')
+  }, [quillRef])
+
+  const markInsertedWords = useCallback(async (prevText: string, currentText: string) => {
+    // Skip processing if not in diff mode
+    if (!diffToggleEnabled) return;
+    
+    const quill = quillRef?.current?.getEditor()
+    if (!quill) return
+    
+    if (prevText === currentText) {
+      return;
+    }
+    
+    try {
+      // First get the clean text without diff formatting (sanitized)
+      const sanitizedTranscript = saveTranscriptInDiffMode()
+      const originalTranscript = orderDetails.isTestOrder ? testTranscript : await getFormattedTranscript(ctms, orderDetails.fileId)
+      console.log('[markInsertedWords] sanitizedTranscript:', sanitizedTranscript?.slice(0, 100))
+      if (!sanitizedTranscript || !originalTranscript) {
+        console.warn('Missing required transcripts for diff generation');
+        return;
+      }
+      const diffs = generateDiff(originalTranscript, sanitizedTranscript)
+      renderDiff(diffs)
+
+      if (sanitizedTranscript !== editorContent) {
+        setEditorContent(sanitizedTranscript)
+        
+        // Also save to IndexedDB to ensure persistence
+        persistEditorDataIDB(orderDetails.fileId, { 
+          transcript: sanitizedTranscript,
+          listenCount,
+          editedSegments: Array.from(editedSegments)
+        });
+      }
+    } catch (error) {
+      console.error('Error in markInsertedWords:', error);
+    }
+  }, [quillRef, generateDiff, saveTranscriptInDiffMode, diffToggleEnabled, ctms, editorContent, orderDetails.fileId, orderDetails.isTestOrder, testTranscript, listenCount, editedSegments])
+
+  // Handle text changes in diff mode
+  useEffect(() => {
+    // Skip completely if not in diff mode
+    if (!diffToggleEnabled) return;
+    
+    const quill = quillRef?.current?.getEditor()
+    if (!quill) return
+    
+    let prevText = quill.getText()
+    let changeTimeout: NodeJS.Timeout | null = null
+    
+    const handleTextChange = () => {
+      // Double-check we're still in diff mode before processing
+      console.log('[handleTextChange] diffToggleEnabled:', diffToggleEnabled)
+      if (!diffToggleEnabled) return;
+      
+      if (changeTimeout) {
+        clearTimeout(changeTimeout)
+      }
+      
+      changeTimeout = setTimeout(async () => {
+        // Final check before applying changes
+        if (!diffToggleEnabled) return;
+        
+        const currentText = quill.getText()
+        console.log('[handleTextChange] currentText:', currentText)
+        await markInsertedWords(prevText, currentText)
+        prevText = currentText
+      }, 700) // 500ms debounce for better performance
+    }
+    
+    quill.on('text-change', handleTextChange)
+    
+    return () => {
+      quill.off('text-change', handleTextChange)
+      if (changeTimeout) {
+        clearTimeout(changeTimeout)
+      }
+    }
+  }, [diffToggleEnabled, markInsertedWords, quillRef])
+
+  // Add a function to handle diff toggle from the toolbar
+  const handleDiffToggle = useCallback(() => {
+    setDiffToggleEnabled(prev => {
+      toggleDiffView(!prev)
+      return !prev
+    })
+  }, [setDiffToggleEnabled, toggleDiffView])
+
   useEffect(() => {
     const generateAlignments = async () => {
       if (editorRef.current && alignments.length === 0 && initialEditorData) {
@@ -1235,6 +1451,8 @@ function EditorPage() {
         editorRef={editorRef}
         step={step}
         cfd={cfd}
+        diffToggleEnabled={diffToggleEnabled}
+        handleDiffToggle={handleDiffToggle}
       />
 
       <Header
@@ -1251,6 +1469,8 @@ function EditorPage() {
         editorRef={editorRef}
         step={step}
         toggleHighlightNumerics={toggleHighlightNumerics}
+        diffToggleEnabled={diffToggleEnabled}
+        handleDiffToggle={handleDiffToggle}
       />
 
       <div className='flex h-full overflow-hidden'>
@@ -1305,16 +1525,7 @@ function EditorPage() {
                             value='transcribe'
                           >
                             Transcribe
-                          </TabsTrigger>
-                          {session?.user?.role !== 'CUSTOMER' &&
-                            orderDetails.orderType !== 'FORMATTING' && (
-                              <TabsTrigger
-                                className='text-base px-0 pt-2 pb-[6.5px]'
-                                value='diff'
-                              >
-                                Diff
-                              </TabsTrigger>
-                            )}
+                          </TabsTrigger>                          
                           <TabsTrigger
                             className='text-base px-0 pt-2 pb-[6.5px]'
                             value='info'
@@ -1789,7 +2000,16 @@ function EditorPage() {
             isOpen={diffToggleEnabled}
             fileId={orderDetails.fileId}
             setDiff={setDiff}
+            renderDiff={renderDiff}
           />
+        )}
+
+        {isLoading && (
+          <div className='fixed inset-0 flex items-center justify-center bg-white bg-opacity-80 z-100'>
+            <span>
+              <Loader2 className='h-8 w-8 animate-spin text-gray-500' />
+            </span>
+          </div>
         )}
       </div>
     </div>
