@@ -109,6 +109,8 @@ interface DefaultShortcuts {
   // markTheStartOfASection: string;
   // markExaminee: string;
   // insertSwearInLine: string;
+  scrollUpEditorContent: string
+  scrollDownEditorContent: string
 }
 
 export interface ShortcutControls {
@@ -205,6 +207,8 @@ export interface ShortcutControls {
   // markTheStartOfASection: () => void;
   // markExaminee: () => void;
   // insertSwearInLine: () => void;
+  scrollUpEditorContent: () => void
+  scrollDownEditorContent: () => void
 }
 
 export const defaultShortcuts: DefaultShortcuts = {
@@ -300,6 +304,8 @@ export const defaultShortcuts: DefaultShortcuts = {
   // markTheStartOfASection: "Control+Shift+M",
   // markExaminee: "Control+Shift+E",
   // insertSwearInLine: "Control+Shift+S"
+  scrollDownEditorContent: 'Control+ArrowDown',
+  scrollUpEditorContent: 'Control+ArrowUp',
 }
 
 const setShortcut = async (
