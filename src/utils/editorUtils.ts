@@ -959,7 +959,10 @@ const handleSave = async (
       }
       return
     }
-    const transcript = fileData.transcript as string
+    
+    let transcript = fileData.transcript as string
+    transcript = transcript.replace(/\n{3,}/g, '\n\n');
+    await persistEditorDataIDB(orderDetails.fileId, { transcript });
 
     const paragraphs = transcript
       .split('\n')
@@ -1041,7 +1044,9 @@ const handleSave = async (
       isCF,
     }
     if (isCF) {
-      body.transcript = getEditorText()
+      let transcript = getEditorText()
+      transcript = transcript.replace(/\n{3,}/g, '\n\n');
+      body.transcript = transcript
       body.userId = Number(orderDetails.userId)
     }
 
@@ -2336,6 +2341,17 @@ function calculateSpeakerMacroF1Score(
   return Number(macroF1.toFixed(2))
 }
 
+const getOptimalInterval = (duration: number): number => {
+  const hours = duration / 3600;
+  
+  if (hours <= 0.5) return 300;     // 5 min intervals for <= 30 mins
+  if (hours <= 1) return 600;       // 10 min intervals for <= 1 hour
+  if (hours <= 2) return 900;       // 15 min intervals for <= 2 hours
+  if (hours <= 3) return 1800;      // 30 min intervals for <= 3 hours
+  if (hours <= 6) return 3600;      // 1 hour intervals for <= 6 hours
+  return 7200;                      // 2 hour intervals for > 6 hours
+};
+
 export enum GeminiModel {
   GEMINI_1_5_FLASH = 'gemini-1.5-flash',
   GEMINI_2_0_FLASH = 'gemini-2.0-flash',
@@ -2387,6 +2403,7 @@ export {
   getTestTranscript,
   escapeRegExp,
   clearAllHighlights,
-  generateSubtitles
+  generateSubtitles,
+  getOptimalInterval,
 }
 export type { CTMType }
