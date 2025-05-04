@@ -1,7 +1,7 @@
 'use client'
-import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
+import { ChevronDownIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
@@ -54,6 +54,20 @@ interface File {
   qcValidationStats?: QCValidation
 }
 
+interface PaginationMeta {
+  totalCount: number
+  pageCount: number
+  currentPage: number
+  pageSize: number
+}
+
+interface CachedData {
+  [key: string]: {
+    data: File[]
+    pagination: PaginationMeta
+  }
+}
+
 interface ApprovalPageProps {
   onActionComplete?: () => Promise<void>
 }
@@ -69,15 +83,32 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
   const [diffDialogOpen, setDiffDialogOpen] = useState(false)
   const [fileId, setFileId] = useState('')
   const [playing, setPlaying] = useState<Record<string, boolean>>({})
-  const audioPlayer = useRef<HTMLAudioElement>(null);
+  const audioPlayer = useRef<HTMLAudioElement>(null)
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
   const [waveformUrls, setWaveformUrls] = useState<Record<string, string>>({})
   const [listenCounts, setListenCounts] = useState<Record<string, number[]>>({})
   const [editedSegments, setEditedSegments] = useState<
-  Record<string, Set<number>>
+    Record<string, Set<number>>
   >({})
+  const [customerWatchCount, setCustomerWatchCount] = useState(0)
+  const [transcriberWatchCount, setTranscriberWatchCount] = useState(0)
+
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(
+    null
+  )
+  const [totalCount, setTotalCount] = useState(0)
+
+  // Cache state - store already loaded pages
+  const cachedDataRef = useRef<CachedData>({})
+
+  const getCacheKey = useCallback((pageNum: number, size: number) => {
+    return `approvals_${pageNum}_${size}`
+  }, [])
 
   const fetchWaveformUrl = async (fileId: string) => {
     try {
@@ -127,109 +158,141 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
     setAudioUrl()
   }, [playing])
 
-  const fetchOrders = async (showLoader = false) => {
-    if (showLoader) {
-      setIsLoading(true)
-    } else {
-      setIsLoading(false)
-    }
-    try {
-      const response = await fetchApprovalOrders()
-
-      if (response.success && response.details) {
-        const orders = response.details.map((order, index: number) => {
-          const qcUsers = order.Assignment.filter(
-            (a) =>
-              a.status === 'ACCEPTED' ||
-              a.status === 'COMPLETED' ||
-              a.status === 'SUBMITTED_FOR_APPROVAL'
-          ).map((a) => ({
-            name: `${a.user.firstname} ${a.user.lastname}`,
-            email: a.user.email,
-            id: a.user.id.toString(),
-          }))
-
-          fetchWaveformUrl(order.fileId)
-          fetchEditorData(order.fileId)
-
-          return {
-            index: index + 1,
-            orderId: order.id,
-            fileId: order.fileId,
-            filename: order?.File?.filename ?? '',
-            orderTs: order.orderTs.toISOString(),
-            pwer: order.pwer ?? 0,
-            status: order.status,
-            priority: order.priority,
-            duration: order?.File?.duration ?? 0,
-            qc: qcUsers,
-            deliveryTs: order.deliveryTs.toISOString(),
-            hd: order.highDifficulty ?? false,
-            fileCost: order.fileCost,
-            rateBonus: order.rateBonus,
-            type: order.orderType,
-            transcriberWatch: order.watchList.transcriber,
-            customerWatch: order.watchList.customer,
-            qcValidationStats: order.qcValidationStats,
-          } as File
-        })
-        // Sort orders so that overdue files from yesterday are placed on top
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const yesterday = new Date(today)
-        yesterday.setDate(today.getDate() - 1)
-
-        orders.sort((a, b) => {
-          const aDelivery = new Date(a.deliveryTs)
-          aDelivery.setHours(0, 0, 0, 0)
-          const bDelivery = new Date(b.deliveryTs)
-          bDelivery.setHours(0, 0, 0, 0)
-
-          const aOverdue = aDelivery.getTime() === yesterday.getTime()
-          const bOverdue = bDelivery.getTime() === yesterday.getTime()
-
-          if (aOverdue && !bOverdue) return -1
-          if (!aOverdue && bOverdue) return 1
-          return a.index - b.index
-        })
-
-        setApprovalFiles(orders ?? [])
-        setError(null)
-
-        if (onActionComplete) {
-          await onActionComplete()
-        }
-      } else {
-        toast.error(response.message || 'An error occurred')
-        setError(response.message || 'An error occurred')
-      }
-    } catch (err) {
-      toast.error('An error occurred')
-      setError('an error occurred')
-    } finally {
-      setIsLoading(false)
-    }
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage)
   }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    // When changing page size, we need to reset to page 1
+    setPageSize(newPageSize)
+    setPage(1)
+  }
+
+  const fetchOrders = useCallback(
+    async (pageNum: number, size: number, forceRefresh = false) => {
+      const cacheKey = getCacheKey(pageNum, size)
+
+      // Check if data exists in cache and is not being force refreshed
+      if (!forceRefresh && cachedDataRef.current[cacheKey]) {
+        setApprovalFiles(cachedDataRef.current[cacheKey].data)
+        setPaginationMeta(cachedDataRef.current[cacheKey].pagination)
+        setTotalCount(cachedDataRef.current[cacheKey].pagination.totalCount)
+
+        // Update watchlist counts from cached data
+        const cachedData = cachedDataRef.current[cacheKey].data
+        setCustomerWatchCount(
+          cachedData.filter((file) => file.customerWatch).length
+        )
+        setTranscriberWatchCount(
+          cachedData.filter((file) => file.transcriberWatch).length
+        )
+
+        setIsLoading(false)
+        return
+      }
+
+      setIsLoading(true)
+
+      try {
+        const response = await fetchApprovalOrders(pageNum, size)
+
+        if (response.success && response.details) {
+          const orders = response.details.map((order, index: number) => {
+            const qcUsers = order.Assignment.filter(
+              (a) =>
+                a.status === 'ACCEPTED' ||
+                a.status === 'COMPLETED' ||
+                a.status === 'SUBMITTED_FOR_APPROVAL'
+            ).map((a) => ({
+              name: `${a.user.firstname} ${a.user.lastname}`,
+              email: a.user.email,
+              id: a.user.id.toString(),
+            }))
+
+            fetchWaveformUrl(order.fileId)
+            fetchEditorData(order.fileId)
+
+            return {
+              index: index + 1,
+              orderId: order.id,
+              fileId: order.fileId,
+              filename: order?.File?.filename ?? '',
+              orderTs: order.orderTs.toISOString(),
+              pwer: order.pwer ?? 0,
+              status: order.status,
+              priority: order.priority,
+              duration: order?.File?.duration ?? 0,
+              qc: qcUsers,
+              deliveryTs: order.deliveryTs.toISOString(),
+              hd: order.highDifficulty ?? false,
+              fileCost: order.fileCost,
+              rateBonus: order.rateBonus,
+              type: order.orderType,
+              transcriberWatch: order.watchList.transcriber,
+              customerWatch: order.watchList.customer,
+              qcValidationStats: order.qcValidationStats,
+            } as File
+          })
+
+          // Sort orders so that overdue files from yesterday are placed on top
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          const yesterday = new Date(today)
+          yesterday.setDate(today.getDate() - 1)
+
+          orders.sort((a, b) => {
+            const aDelivery = new Date(a.deliveryTs)
+            aDelivery.setHours(0, 0, 0, 0)
+            const bDelivery = new Date(b.deliveryTs)
+            bDelivery.setHours(0, 0, 0, 0)
+
+            const aOverdue = aDelivery.getTime() === yesterday.getTime()
+            const bOverdue = bDelivery.getTime() === yesterday.getTime()
+
+            if (aOverdue && !bOverdue) return -1
+            if (!aOverdue && bOverdue) return 1
+            return a.index - b.index
+          })
+
+          // Update watchlist counts
+          setCustomerWatchCount(
+            orders.filter((file) => file.customerWatch).length
+          )
+          setTranscriberWatchCount(
+            orders.filter((file) => file.transcriberWatch).length
+          )
+
+          // Store in cache
+          cachedDataRef.current[cacheKey] = {
+            data: orders,
+            pagination: response.pagination,
+          }
+
+          setApprovalFiles(orders ?? [])
+          setPaginationMeta(response.pagination)
+          setTotalCount(response.pagination.totalCount)
+          setError(null)
+
+          if (onActionComplete) {
+            await onActionComplete()
+          }
+        } else {
+          toast.error(response.message || 'An error occurred')
+          setError(response.message || 'An error occurred')
+        }
+      } catch (err) {
+        toast.error('An error occurred')
+        setError('an error occurred')
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [getCacheKey, onActionComplete]
+  )
 
   useEffect(() => {
-    fetchOrders(true)
-  }, [])
-
-  if (isLoading) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '80vh',
-        }}
-      >
-        <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-        <p>Loading...</p>
-      </div>
-    )
-  }
+    fetchOrders(page, pageSize)
+  }, [fetchOrders, page, pageSize])
 
   if (error) {
     return (
@@ -241,7 +304,7 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
           height: '20vh',
         }}
       >
-        <p>An Error Occured</p>
+        <p>An Error Occurred</p>
       </div>
     )
   }
@@ -567,11 +630,44 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
   ]
 
   const removeOrder = (orderId: string) => {
+    // Remove the order from all caches
+    Object.keys(cachedDataRef.current).forEach((key) => {
+      const pageData = cachedDataRef.current[key]
+      const updatedData = pageData.data.filter(
+        (file) => file.orderId.toString() !== orderId
+      )
+      if (updatedData.length !== pageData.data.length) {
+        const updatedPagination = {
+          ...pageData.pagination,
+          totalCount: pageData.pagination.totalCount - 1,
+        }
+        cachedDataRef.current[key] = {
+          data: updatedData,
+          pagination: updatedPagination,
+        }
+      }
+    })
+
+    // Update current view
     setApprovalFiles((prevFiles) =>
       prevFiles
         ? prevFiles.filter((file) => file.orderId.toString() !== orderId)
         : null
     )
+
+    // Update total count
+    setTotalCount((prev) => prev - 1)
+
+    // If this was the last item on the page and not the first page, go back one page
+    if (approvalFiles?.length === 1 && page > 1) {
+      setPage((prevPage) => prevPage - 1)
+    } else if (page > 1 && (page - 1) * pageSize >= totalCount - 1) {
+      // If we've removed an item and now the current page would be empty, go back
+      setPage((prevPage) => prevPage - 1)
+    } else {
+      // Otherwise just refresh current page data
+      fetchOrders(page, pageSize, true)
+    }
   }
 
   const renderWaveform = (row: File) => {
@@ -580,8 +676,7 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
     if (!waveformUrls[fileId]) return null
 
     return (
-      <div className='w-full h-full cursor-pointer'
-      >
+      <div className='w-full h-full cursor-pointer'>
         <WaveformHeatmap
           waveformUrl={waveformUrls[fileId]}
           listenCount={listenCounts[fileId] || []}
@@ -598,7 +693,21 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
         <div className='flex items-center justify-between space-y-2'>
           <div>
             <h1 className='text-lg font-semibold md:text-lg'>
-              Available Approval Orders ({approvalFiles?.length})
+              Available Approval Orders ({totalCount})
+              {(customerWatchCount > 0 || transcriberWatchCount > 0) && (
+                <span className='ml-2 text-sm font-normal'>
+                  {customerWatchCount > 0 && (
+                    <Badge variant='outline' className='mr-2'>
+                      Customer Watch: {customerWatchCount}
+                    </Badge>
+                  )}
+                  {transcriberWatchCount > 0 && (
+                    <Badge variant='outline'>
+                      Transcriber Watch: {transcriberWatchCount}
+                    </Badge>
+                  )}
+                </span>
+              )}
             </h1>
           </div>
         </div>
@@ -611,13 +720,21 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
             status: false,
           }}
           renderWaveform={renderWaveform}
+          isLoading={isLoading}
+          pagination={{
+            currentPage: page,
+            pageCount: paginationMeta?.pageCount || 1,
+            pageSize: pageSize,
+            onPageChange: handlePageChange,
+            onPageSizeChange: handlePageSizeChange,
+          }}
         />
       </div>
       <ReassignApprovalFile
         open={openReassignDialog}
         onClose={() => setOpenReassignDialog(false)}
         orderId={orderId || ''}
-        refetch={() => fetchOrders()}
+        refetch={() => fetchOrders(page, pageSize, true)}
       />
       <AcceptRejectApprovalFileDialog
         open={openDialog}
