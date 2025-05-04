@@ -919,8 +919,8 @@ function EditorPage() {
     const quill = quillRef.current.getEditor()
 
     const currentSelection = quill.getSelection()
-
-    const text = quill.getText()
+    let text = quill.getText()
+    text = text.replace(/\n{3,}/g, '\n\n')
     const formattedDelta = getFormattedContent(text)
 
     quill.setContents(formattedDelta)
