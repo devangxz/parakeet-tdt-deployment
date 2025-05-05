@@ -995,11 +995,7 @@ const handleSave = async (
               const match = paragraphRegex.exec(fullText)
               
               if (match) {
-                console.log('paragraph', paragraph)
-                console.log('match', paragraph.length)
-
                 quill.setSelection(match.index, paragraph.length)
-
                 quill.formatText(match.index, paragraph.length, {
                   background: '#ffcdd2', 
                 });
