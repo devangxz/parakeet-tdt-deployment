@@ -38,6 +38,7 @@ interface File extends BaseTranscriberFile {
   containsMp4: boolean
   customFormatOption: string
   comment: string
+  isCustomFormat: string
 }
 
 interface Props {
@@ -110,6 +111,8 @@ export default function AssignedFilesPage({ changeTab }: Props) {
             assignment.acceptedTs?.toISOString()
           )
 
+          const isCustomFormat = assignment.type === 'REVIEW' ? 'YES' : 'NO'
+
           return {
             index: index + 1,
             orderId: assignment.order.id,
@@ -139,6 +142,7 @@ export default function AssignedFilesPage({ changeTab }: Props) {
               'mp4',
             customFormatOption: assignment.order.customFormatOption,
             comment: assignment.comment ?? '',
+            isCustomFormat,
           }
         })
         setAssginedFiles(orders ?? [])
@@ -289,6 +293,26 @@ export default function AssignedFilesPage({ changeTab }: Props) {
       ),
     },
     {
+      accessorKey: 'isCustomFormat',
+      enableHiding: true,
+      filterFn: (row, id, filterValue) => {
+        if (!filterValue || filterValue.includes('ALL')) {
+          return true
+        }
+
+        const customFormatValue = row.getValue(id) as string
+        return filterValue.includes(customFormatValue)
+      },
+    },
+    {
+      accessorKey: 'orgName',
+      enableHiding: true,
+    },
+    {
+      accessorKey: 'diff',
+      enableHiding: true,
+    },
+    {
       accessorKey: 'duration',
       header: 'Price/Duration',
       cell: ({ row }) => (
@@ -402,6 +426,7 @@ export default function AssignedFilesPage({ changeTab }: Props) {
       <DataTable
         data={assignedFiles ?? []}
         columns={columns}
+        showToolbar={true}
         renderRowSubComponent={({ row }: { row: any }) =>
           row.original.instructions || row.original.comment ? (
             <div className='p-2'>
