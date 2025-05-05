@@ -807,6 +807,7 @@ export default memo(function Topbar({
                       listenCount,
                       editedSegments,
                       role: session?.user?.role || '',
+                      quill: quillRef?.current?.getEditor(),
                     })
                   }}
                 >

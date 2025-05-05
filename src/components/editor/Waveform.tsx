@@ -115,12 +115,22 @@ export default function Waveform({
     }
   }, [audioPlayer])
 
-  // Generate time markers at specified interval
+  const getOptimalInterval = (duration: number): number => {
+    const hours = duration / 3600;
+    
+    if (hours <= 0.5) return 300;     // 5 min intervals for <= 30 mins
+    if (hours <= 1) return 600;       // 10 min intervals for <= 1 hour
+    if (hours <= 2) return 900;       // 15 min intervals for <= 2 hours
+    if (hours <= 3) return 1200;      // 20 min intervals for <= 3 hours
+    if (hours <= 6) return 1800;      // 30 min intervals for <= 6 hours
+    return 3600;                      // 1 hour intervals for > 6 hours
+  };
+
   const timeMarkers = useMemo(() => {
     if (!audioDuration) return [];
     
     const markers = [];
-    const intervalSeconds = timeMarkerInterval * 60;
+    const intervalSeconds = getOptimalInterval(audioDuration);
     
     // Start from first interval (skip the 0 mark)
     for (let time = intervalSeconds; time < audioDuration; time += intervalSeconds) {

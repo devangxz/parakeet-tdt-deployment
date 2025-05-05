@@ -9,7 +9,7 @@ export async function fetchFileOrderInformation(fileId: string) {
     if (!fileId) {
       return {
         success: false,
-        message: 'File id parameter is required.',
+        message: `File id parameter is required.`,
       }
     }
 
@@ -42,6 +42,7 @@ export async function fetchFileOrderInformation(fileId: string) {
     return {
       success: true,
       details: null,
+      message: 'No order information found.',
     }
   } catch (error) {
     logger.error(`Error while fetching order information`, error)
