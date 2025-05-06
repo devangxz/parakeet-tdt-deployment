@@ -915,8 +915,6 @@ const generateSubtitles = async(fileId: string, currentAlignments: AlignmentType
 type HandleSaveParams = {
   getEditorText: () => string
   orderDetails: OrderDetails
-  notes: string
-  cfd: string
   setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
   listenCount: number[]
   editedSegments: Set<number>
@@ -931,8 +929,6 @@ const handleSave = async (
   {
     getEditorText,
     orderDetails,
-    notes,
-    cfd,
     setButtonLoading,
     listenCount,
     editedSegments,
@@ -1034,8 +1030,6 @@ const handleSave = async (
     const body: { [key: string]: string | number | boolean } = {
       fileId: orderDetails.fileId,
       transcript,
-      cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
-      orderId: orderDetails.orderId,
       isGeminiReviewed,
       isCF,
     }

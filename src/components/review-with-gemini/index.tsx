@@ -245,8 +245,6 @@ export default memo(function ReviewTranscriptDialog({
       {
         getEditorText: () => saveTranscript,
         orderDetails,
-        notes: '',
-        cfd: '',
         setButtonLoading: () => {},
         listenCount: [],
         editedSegments: new Set(),
