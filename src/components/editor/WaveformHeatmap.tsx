@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 
+import { getOptimalInterval } from '@/utils/editorUtils';
 import formatDuration from '@/utils/formatDuration';
 
 interface WaveformHeatmapProps {
@@ -28,17 +29,6 @@ export const WaveformHeatmap = ({
       'rgba(185, 28, 28, 0.7)'    // red-700
     ];
     return colors[Math.min(count, 5)];
-  };
-
-  const getOptimalInterval = (duration: number): number => {
-    const hours = duration / 3600;
-    
-    if (hours <= 0.5) return 300;     // 5 min intervals for <= 30 mins
-    if (hours <= 1) return 600;       // 10 min intervals for <= 1 hour
-    if (hours <= 2) return 900;       // 15 min intervals for <= 2 hours
-    if (hours <= 3) return 1800;      // 30 min intervals for <= 3 hours
-    if (hours <= 6) return 3600;      // 1 hour intervals for <= 6 hours
-    return 7200;                      // 2 hour intervals for > 6 hours
   };
 
   const generateTimeMarkers = () => {
