@@ -571,8 +571,6 @@ function EditorPage() {
         await handleSave({
           getEditorText: getEditorText,
           orderDetails,
-          notes,
-          cfd,
           setButtonLoading,
           listenCount,
           editedSegments,
@@ -755,8 +753,6 @@ function EditorPage() {
         {
           getEditorText,
           orderDetails,
-          notes,
-          cfd,
           setButtonLoading,
           listenCount,
           editedSegments,
@@ -1217,7 +1213,6 @@ function EditorPage() {
         editorModeOptions={editorModeOptions}
         getEditorMode={getEditorMode}
         editorMode={editorMode}
-        notes={notes}
         orderDetails={orderDetails}
         setIsSubmitModalOpen={setIsSubmitModalOpen}
         setPdfUrl={setPdfUrl}
@@ -1237,7 +1232,6 @@ function EditorPage() {
         setCtms={setCtms}
         editorRef={editorRef}
         step={step}
-        cfd={cfd}
       />
 
       <Header
@@ -1661,8 +1655,6 @@ function EditorPage() {
                           {
                             getEditorText,
                             orderDetails,
-                            notes,
-                            cfd,
                             setButtonLoading,
                             listenCount,
                             editedSegments,

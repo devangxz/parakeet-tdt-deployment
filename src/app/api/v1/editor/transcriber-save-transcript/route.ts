@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
         fileId: fileId,
         transcript: transcript,
         userId: parseInt(userId),
+        isSaveFromAPI: true,
       },
       {
         headers: {
