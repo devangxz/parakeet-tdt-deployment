@@ -591,12 +591,11 @@ function EditorPage() {
         await handleSave({
           getEditorText: transcript ? () => transcript : getEditorText,
           orderDetails,
-          notes,
-          cfd,
           setButtonLoading,
           listenCount,
           editedSegments,
           role: session?.user?.role || '',
+          quill: quillRef?.current?.getEditor(),
         })
 
         if(!diffToggleEnabled) {
@@ -813,12 +812,11 @@ function EditorPage() {
         {
           getEditorText: transcript ? () => transcript : getEditorText,
           orderDetails,
-          notes,
-          cfd,
           setButtonLoading,
           listenCount,
           editedSegments,
           role: session?.user?.role || '',
+          quill: quillRef?.current?.getEditor(),
         },
         false
       )
@@ -839,7 +837,8 @@ function EditorPage() {
     editedSegments,
     diffToggleEnabled,
     saveTranscriptInDiffMode,
-    setEditorContent
+    setEditorContent,
+    quillRef,
   ])
 
   useEffect(() => {
@@ -981,8 +980,8 @@ function EditorPage() {
     const quill = quillRef.current.getEditor()
 
     const currentSelection = quill.getSelection()
-
-    const text = quill.getText()
+    let text = quill.getText()
+    text = text.replace(/\n{3,}/g, '\n\n')
     const formattedDelta = getFormattedContent(text)
 
     quill.setContents(formattedDelta)
@@ -1430,7 +1429,6 @@ function EditorPage() {
         editorModeOptions={editorModeOptions}
         getEditorMode={getEditorMode}
         editorMode={editorMode}
-        notes={notes}
         orderDetails={orderDetails}
         setIsSubmitModalOpen={setIsSubmitModalOpen}
         setPdfUrl={setPdfUrl}
@@ -1450,7 +1448,6 @@ function EditorPage() {
         setCtms={setCtms}
         editorRef={editorRef}
         step={step}
-        cfd={cfd}
         diffToggleEnabled={diffToggleEnabled}
         handleDiffToggle={handleDiffToggle}
       />
@@ -1869,8 +1866,6 @@ function EditorPage() {
                           {
                             getEditorText,
                             orderDetails,
-                            notes,
-                            cfd,
                             setButtonLoading,
                             listenCount,
                             editedSegments,

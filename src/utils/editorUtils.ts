@@ -915,8 +915,6 @@ const generateSubtitles = async(fileId: string, currentAlignments: AlignmentType
 type HandleSaveParams = {
   getEditorText: () => string
   orderDetails: OrderDetails
-  notes: string
-  cfd: string
   setButtonLoading: React.Dispatch<React.SetStateAction<ButtonLoading>>
   listenCount: number[]
   editedSegments: Set<number>
@@ -924,14 +922,13 @@ type HandleSaveParams = {
   isCF?: boolean
   role: string
   currentAlignments?: AlignmentType[]
+  quill?: Quill // Add quill parameter
 }
 
 const handleSave = async (
   {
     getEditorText,
     orderDetails,
-    notes,
-    cfd,
     setButtonLoading,
     listenCount,
     editedSegments,
@@ -939,6 +936,7 @@ const handleSave = async (
     isCF = false,
     role,
     currentAlignments,
+    quill, // Use the quill parameter
   }: HandleSaveParams,
   showToast = true
 ) => {
@@ -957,7 +955,10 @@ const handleSave = async (
       }
       return
     }
-    const transcript = fileData.transcript as string
+    
+    let transcript = fileData.transcript as string
+    transcript = transcript.replace(/\n{3,}/g, '\n\n');
+    await persistEditorDataIDB(orderDetails.fileId, { transcript });
 
     const paragraphs = transcript
       .split('\n')
@@ -972,7 +973,8 @@ const handleSave = async (
 
       const paragraphRegex = /^\d{1,2}:\d{2}:\d{2}\.\d\sS[\d?]+:/
 
-      for (const paragraph of paragraphs) {
+      for (let i = 0; i < paragraphs.length; i++) {
+        const paragraph = paragraphs[i]
         // Skip validation for meta-only paragraphs
         if (isMetaOnlyParagraph(paragraph)) continue
 
@@ -982,6 +984,22 @@ const handleSave = async (
         ) {
           if (showToast) {
             if (toastId) toast.dismiss(toastId)
+           
+            if (quill) {
+              const fullText = quill.getText()
+              const paragraphRegex = new RegExp(escapeRegExp(paragraph), 'g')
+              const match = paragraphRegex.exec(fullText)
+              
+              if (match) {
+                quill.setSelection(match.index, paragraph.length)
+                quill.formatText(match.index, paragraph.length, {
+                  background: '#ffcdd2', 
+                });
+                
+                scrollEditorToPos(quill, match.index)
+              }
+            }
+
             toast.error(
               'Invalid paragraph format detected. Each paragraph must start with a timestamp and speaker identification.'
             )
@@ -1012,13 +1030,13 @@ const handleSave = async (
     const body: { [key: string]: string | number | boolean } = {
       fileId: orderDetails.fileId,
       transcript,
-      cfd: cfd, //!this will be used when the cf side of the editor is begin worked on.
-      orderId: orderDetails.orderId,
       isGeminiReviewed,
       isCF,
     }
     if (isCF) {
-      body.transcript = getEditorText()
+      let transcript = getEditorText()
+      transcript = transcript.replace(/\n{3,}/g, '\n\n');
+      body.transcript = transcript
       body.userId = Number(orderDetails.userId)
     }
 
@@ -2313,6 +2331,17 @@ function calculateSpeakerMacroF1Score(
   return Number(macroF1.toFixed(2))
 }
 
+const getOptimalInterval = (duration: number): number => {
+  const hours = duration / 3600;
+  
+  if (hours <= 0.5) return 300;     // 5 min intervals for <= 30 mins
+  if (hours <= 1) return 600;       // 10 min intervals for <= 1 hour
+  if (hours <= 2) return 900;       // 15 min intervals for <= 2 hours
+  if (hours <= 3) return 1800;      // 30 min intervals for <= 3 hours
+  if (hours <= 6) return 3600;      // 1 hour intervals for <= 6 hours
+  return 7200;                      // 2 hour intervals for > 6 hours
+};
+
 export enum GeminiModel {
   GEMINI_1_5_FLASH = 'gemini-1.5-flash',
   GEMINI_2_0_FLASH = 'gemini-2.0-flash',
@@ -2364,6 +2393,7 @@ export {
   getTestTranscript,
   escapeRegExp,
   clearAllHighlights,
-  generateSubtitles
+  generateSubtitles,
+  getOptimalInterval,
 }
 export type { CTMType }

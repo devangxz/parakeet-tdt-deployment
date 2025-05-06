@@ -234,7 +234,7 @@ export function Services({ services, invoiceId }: Props) {
         </CollapsibleTrigger>
       </div>
       <CollapsibleContent className='mt-3'>
-        <ScrollArea className='max-h-[70vh]'>
+        <ScrollArea className='max-h-[70vh] overflow-y-auto'>
           {options.map((option, index) => (
             <OrderOptions
               id={option.id}

@@ -1,14 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 import { CancellationStatus } from '@prisma/client'
-import {
-  ReloadIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-} from '@radix-ui/react-icons'
+import { ChevronLeftIcon, ChevronRightIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
 import dynamic from 'next/dynamic'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 
 import ApprovalPage from './approvals'
@@ -88,6 +84,20 @@ interface File {
   }[]
 }
 
+interface PaginationMeta {
+  totalCount: number
+  pageCount: number
+  currentPage: number
+  pageSize: number
+}
+
+interface CachedData {
+  [key: string]: {
+    data: File[]
+    pagination: PaginationMeta
+  }
+}
+
 export default function OrdersPage() {
   const [pendingOrders, setPendingOrders] = useState<File[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -123,6 +133,20 @@ export default function OrdersPage() {
   const [reReviewFilesCount, setReReviewFilesCount] = useState<number>(0)
   const [youtubeImportsCount, setYoutubeImportsCount] = useState<number>(0)
 
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta | null>(
+    null
+  )
+
+  // Cache state - store already loaded pages
+  const cachedDataRef = useRef<CachedData>({})
+
+  const getCacheKey = useCallback((pageNum: number, size: number) => {
+    return `orders_${pageNum}_${size}`
+  }, [])
+
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
     if (!fileId) return
@@ -136,84 +160,110 @@ export default function OrdersPage() {
     setAudioUrl()
   }, [playing])
 
-  const getPendingOrders = async (showLoader = false) => {
-    if (showLoader) {
-      setIsLoading(true)
-    } else {
-      setIsLoading(false)
-    }
+  const getPendingOrders = useCallback(
+    async (pageNum: number, size: number, forceRefresh = false) => {
+      const cacheKey = getCacheKey(pageNum, size)
 
-    try {
-      const response = await fetchPendingOrders()
-
-      if (response.success && response.details) {
-        const orders = response.details.map((order, index) => {
-          const qcAssignments = order.Assignment.filter(
-            (a) =>
-              a.status === 'ACCEPTED' ||
-              a.status === 'COMPLETED' ||
-              a.status === 'SUBMITTED_FOR_APPROVAL'
-          ).map((a) => ({
-            name: `${a.user.firstname} ${a.user.lastname}`,
-            email: a.user.email,
-            id: a.user.id.toString(),
-          }))
-
-          return {
-            index: index + 1,
-            orderId: order.id,
-            fileId: order.fileId,
-            filename: order.File?.filename ?? '',
-            orderTs: order.orderTs.toISOString(),
-            pwer: order.pwer ?? 0,
-            status: order.status,
-            priority: order.priority,
-            duration: order.File?.duration ?? 0,
-            qc: qcAssignments,
-            deliveryTs: order.deliveryTs.toISOString(),
-            hd: order.highDifficulty ?? false,
-            fileCost: order.fileCost,
-            rateBonus: order.rateBonus,
-            type: order.orderType,
-            orgName: order.orgName,
-            specialInstructions: order.specialInstructions,
-            cancellations: order.cancellations,
-            containsMp4:
-              order.File?.fileKey?.split('.')?.pop()?.toLowerCase() === 'mp4',
-          }
-        })
-
-        // Sort orders so that overdue files from yesterday are placed on top
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const yesterday = new Date(today)
-        yesterday.setDate(today.getDate() - 1)
-
-        orders.sort((a, b) => {
-          const aDelivery = new Date(a.deliveryTs)
-          aDelivery.setHours(0, 0, 0, 0)
-          const bDelivery = new Date(b.deliveryTs)
-          bDelivery.setHours(0, 0, 0, 0)
-
-          const aOverdue = aDelivery.getTime() === yesterday.getTime()
-          const bOverdue = bDelivery.getTime() === yesterday.getTime()
-
-          if (aOverdue && !bOverdue) return -1
-          if (!aOverdue && bOverdue) return 1
-          return a.index - b.index
-        })
-
-        setPendingOrders(orders ?? [])
-        setPendingCount(orders.length)
-        setError(null)
-      } else {
-        setError(response.message ?? 'Unknown error')
+      // Check if data exists in cache and is not being force refreshed
+      if (!forceRefresh && cachedDataRef.current[cacheKey]) {
+        setPendingOrders(cachedDataRef.current[cacheKey].data)
+        setPaginationMeta(cachedDataRef.current[cacheKey].pagination)
+        setIsLoading(false)
+        return
       }
-    } catch (err) {
-      setError('an error occurred')
-    } finally {
-      setIsLoading(false)
-    }
+
+      setIsLoading(true)
+
+      try {
+        const response = await fetchPendingOrders(pageNum, size)
+
+        if (response.success && response.details) {
+          const orders = response.details.map((order, index) => {
+            const qcAssignments = order.Assignment.filter(
+              (a) =>
+                a.status === 'ACCEPTED' ||
+                a.status === 'COMPLETED' ||
+                a.status === 'SUBMITTED_FOR_APPROVAL'
+            ).map((a) => ({
+              name: `${a.user.firstname} ${a.user.lastname}`,
+              email: a.user.email,
+              id: a.user.id.toString(),
+            }))
+
+            return {
+              index: index + 1,
+              orderId: order.id,
+              fileId: order.fileId,
+              filename: order.File?.filename ?? '',
+              orderTs: order.orderTs.toISOString(),
+              pwer: order.pwer ?? 0,
+              status: order.status,
+              priority: order.priority,
+              duration: order.File?.duration ?? 0,
+              qc: qcAssignments,
+              deliveryTs: order.deliveryTs.toISOString(),
+              hd: order.highDifficulty ?? false,
+              fileCost: order.fileCost,
+              rateBonus: order.rateBonus,
+              type: order.orderType,
+              orgName: order.orgName,
+              specialInstructions: order.specialInstructions,
+              cancellations: order.cancellations,
+              containsMp4:
+                order.File?.fileKey?.split('.')?.pop()?.toLowerCase() === 'mp4',
+            }
+          })
+
+          // Sort orders so that overdue files from yesterday are placed on top
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          const yesterday = new Date(today)
+          yesterday.setDate(today.getDate() - 1)
+
+          orders.sort((a, b) => {
+            const aDelivery = new Date(a.deliveryTs)
+            aDelivery.setHours(0, 0, 0, 0)
+            const bDelivery = new Date(b.deliveryTs)
+            bDelivery.setHours(0, 0, 0, 0)
+
+            const aOverdue = aDelivery.getTime() === yesterday.getTime()
+            const bOverdue = bDelivery.getTime() === yesterday.getTime()
+
+            if (aOverdue && !bOverdue) return -1
+            if (!aOverdue && bOverdue) return 1
+            return a.index - b.index
+          })
+
+          // Store in cache
+          cachedDataRef.current[cacheKey] = {
+            data: orders,
+            pagination: response.pagination,
+          }
+
+          setPendingOrders(orders ?? [])
+          setPendingCount(response.pagination.totalCount)
+          setPaginationMeta(response.pagination)
+          setError(null)
+        } else {
+          setError(response.message ?? 'Unknown error')
+        }
+      } catch (err) {
+        setError('an error occurred')
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [getCacheKey]
+  )
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage)
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    // When changing page size, we need to reset to page 1
+    setPageSize(newPageSize)
+    setPage(1)
   }
 
   const fetchAllTabCounts = async () => {
@@ -251,38 +301,23 @@ export default function OrdersPage() {
   }
 
   useEffect(() => {
-    getPendingOrders(true)
+    getPendingOrders(page, pageSize)
     fetchAllTabCounts()
-  }, [])
+  }, [page, pageSize, getPendingOrders])
 
   const handleDeliveryDateChanged = async (orderId: number, day: number) => {
     try {
       const response = await changeDeliveryDate(orderId, day)
       if (response.success) {
         toast.success('Delivery date changed successfully')
-        getPendingOrders()
+        // Force refresh
+        getPendingOrders(page, pageSize, true)
       } else {
         toast.error(response.message)
       }
     } catch (err) {
       toast.error('An error occurred')
     }
-  }
-
-  if (isLoading) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '80vh',
-        }}
-      >
-        <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-        <p>Loading...</p>
-      </div>
-    )
   }
 
   if (error) {
@@ -295,7 +330,7 @@ export default function OrdersPage() {
           height: '80vh',
         }}
       >
-        <p>An Error Occured</p>
+        <p>An Error Occurred</p>
       </div>
     )
   }
@@ -634,13 +669,21 @@ export default function OrdersPage() {
             <div className='flex items-center justify-between space-y-2'>
               <div>
                 <h1 className='text-lg font-semibold md:text-lg'>
-                  Pending Orders ({pendingOrders?.length})
+                  Pending Orders ({pendingCount})
                 </h1>
               </div>
             </div>
             <DataTable
               data={pendingOrders ?? []}
               columns={columns}
+              isLoading={isLoading}
+              pagination={{
+                currentPage: page,
+                pageCount: paginationMeta?.pageCount || 1,
+                pageSize: pageSize,
+                onPageChange: handlePageChange,
+                onPageSizeChange: handlePageSizeChange,
+              }}
               renderRowSubComponent={({ row }: { row: any }) =>
                 row.original.specialInstructions ? (
                   <div className='p-2 flex gap-1'>
@@ -659,7 +702,7 @@ export default function OrdersPage() {
         <TabsContent value='status'>
           <StatusPage
             selectedFileId={fileId}
-            refetchPendingOrders={() => getPendingOrders()}
+            refetchPendingOrders={() => getPendingOrders(page, pageSize, true)}
           />
         </TabsContent>
         <TabsContent value='screen'>

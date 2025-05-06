@@ -293,6 +293,20 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     }
   }, [quillRef, alignments])
 
+  const scrollUpEditorContent = useCallback(() => {
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
+    const currentScrollPosition = quill.root.scrollTop
+    quill.root.scrollTo(0, currentScrollPosition - 100)
+  }, [quillRef])
+
+  const scrollDownEditorContent = useCallback(() => {
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
+    const currentScrollPosition = quill.root.scrollTop
+    quill.root.scrollTo(0, currentScrollPosition + 100)
+  }, [quillRef])
+
   const adjustFontSize = useCallback(
     (increase: boolean) => {
       if (!quillRef?.current) return
@@ -405,6 +419,8 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       lowercaseWord,
       increaseFontSize: () => adjustFontSize(true),
       decreaseFontSize: () => adjustFontSize(false),
+      scrollUpEditorContent,
+      scrollDownEditorContent
     }
     return controls as ShortcutControls
   }, [

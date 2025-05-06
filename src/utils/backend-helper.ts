@@ -475,7 +475,10 @@ export const processRefund = async (
       if (paymentMethod === PaymentMethod.CREDITS || refundToCredits) {
         creditsRefunded += parseFloat(refundAmount.toFixed(2))
         refundAmount = 0
-      } else if (paymentMethod === PaymentMethod.CREDITCARD) {
+      } else if (
+        paymentMethod === PaymentMethod.CREDITCARD ||
+        paymentMethod === PaymentMethod.PAYPAL
+      ) {
         if (creditsUsed > 0 && refundedAmount + refundAmount > chargedAmount) {
           const creditsRefund = parseFloat(
             (refundedAmount + refundAmount - chargedAmount).toFixed(2)
@@ -819,6 +822,7 @@ export const getAssignmentEarnings = async (transcriberId: number) => {
       },
       where: {
         transcriberId: transcriberId,
+        status: JobStatus.COMPLETED,
         order: {
           status: 'DELIVERED',
         },
@@ -1222,4 +1226,16 @@ export const checkOrderWatch = async (userId: number) => {
   }
 
   return customer.watch
+}
+
+export const checkTranscriberWatchlist = async (userId: number) => {
+  const transcriber = await prisma.verifier.findUnique({
+    where: { userId },
+  })
+
+  if (!transcriber) {
+    return false
+  }
+
+  return transcriber.watchlist
 }

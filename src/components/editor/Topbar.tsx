@@ -100,7 +100,6 @@ interface TopbarProps {
   editorModeOptions: string[]
   getEditorMode: (editorMode: string) => void
   editorMode: string
-  notes: string
   orderDetails: OrderDetails
   setIsSubmitModalOpen: React.Dispatch<React.SetStateAction<boolean>>
   setPdfUrl: React.Dispatch<React.SetStateAction<string>>
@@ -130,7 +129,6 @@ interface TopbarProps {
   setCtms: (ctms: CTMType[]) => void
   editorRef: React.Ref<EditorHandle>
   step: string
-  cfd: string
   diffToggleEnabled: boolean
   handleDiffToggle: () => void
 }
@@ -140,7 +138,6 @@ export default memo(function Topbar({
   editorModeOptions,
   getEditorMode,
   editorMode,
-  notes,
   orderDetails,
   setIsSubmitModalOpen,
   setPdfUrl,
@@ -160,7 +157,6 @@ export default memo(function Topbar({
   setCtms,
   editorRef,
   step,
-  cfd,
   diffToggleEnabled,
   handleDiffToggle
 }: TopbarProps) {
@@ -538,8 +534,6 @@ export default memo(function Topbar({
         {
           getEditorText,
           orderDetails,
-          notes,
-          cfd,
           setButtonLoading,
           listenCount,
           editedSegments,
@@ -818,12 +812,11 @@ export default memo(function Topbar({
                     handleSave({
                       getEditorText,
                       orderDetails,
-                      notes,
-                      cfd,
                       setButtonLoading,
                       listenCount,
                       editedSegments,
                       role: session?.user?.role || '',
+                      quill: quillRef?.current?.getEditor(),
                     })
                   }}
                 >

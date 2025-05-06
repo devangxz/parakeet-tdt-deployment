@@ -22,6 +22,7 @@ import {
   getTestCustomer,
   getTeamAdminUserDetails,
   getUserRate,
+  checkTranscriberWatchlist,
 } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 import getCustomerTranscript from '@/utils/getCustomerTranscript'
@@ -50,19 +51,25 @@ async function completeQCJob(order: Order, transcriberId: number) {
     orderWithFileData as OrderWithFileData,
     transcriberId
   )
-  await prisma.jobAssignment.updateMany({
+  const jobAssignment = await prisma.jobAssignment.findFirst({
     where: {
       orderId: order.id,
       transcriberId,
       type: JobType.QC,
       status: JobStatus.ACCEPTED,
     },
-    data: {
-      status: JobStatus.COMPLETED,
-      earnings: isTestCustomer ? 0 : qcCost.cost,
-      completedTs: new Date(),
-    },
   })
+
+  if (jobAssignment) {
+    await prisma.jobAssignment.update({
+      where: { id: jobAssignment.id },
+      data: {
+        status: JobStatus.COMPLETED,
+        earnings: isTestCustomer ? 0 : qcCost.cost,
+        completedTs: new Date(),
+      },
+    })
+  }
   if (order.status === OrderStatus.QC_ASSIGNED) {
     await prisma.order.update({
       where: { id: order.id },
@@ -339,6 +346,42 @@ export async function submitQCFile(
       logger.info(
         `<-- OrderTranscriptionFlow:submitQC - OrderStatus.SUBMITTED_FOR_APPROVAL`
       )
+      return
+    }
+
+    const isTranscriberWatchlist = await checkTranscriberWatchlist(
+      transcriberId
+    )
+
+    if (isTranscriberWatchlist && order.orderType === OrderType.TRANSCRIPTION) {
+      logger.info(
+        `Transcriber ${transcriberId} is on the watchlist, sending file ${order.fileId} to approval`
+      )
+      const qcCost = await calculateTranscriberCost(order, transcriberId)
+      await prisma.$transaction(async (prisma) => {
+        await prisma.order.update({
+          where: {
+            id: order.id,
+          },
+          data: {
+            reportMode: ReportMode.AUTO,
+            status: OrderStatus.SUBMITTED_FOR_APPROVAL,
+          },
+        })
+        await prisma.jobAssignment.updateMany({
+          where: {
+            orderId: order.id,
+            transcriberId,
+            type: JobType.QC,
+            status: JobStatus.ACCEPTED,
+          },
+          data: {
+            status: JobStatus.SUBMITTED_FOR_APPROVAL,
+            earnings: isTestCustomer ? 0 : qcCost.cost,
+            completedTs: new Date(),
+          },
+        })
+      })
       return
     }
 

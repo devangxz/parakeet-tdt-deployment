@@ -303,7 +303,7 @@ const Navbar = () => {
 
       <nav
         className={`fixed ${
-          showBanner ? 'top-20 md:top-12' : 'top-0'
+          showBanner ? 'top-20 md:top-[3.5rem]' : 'top-0'
         } left-0 right-0 h-20 w-full transition-all duration-300`}
         style={{ zIndex: 50 }}
       >

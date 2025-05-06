@@ -1,5 +1,6 @@
 'use client'
 
+import { ReloadIcon } from '@radix-ui/react-icons'
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -33,6 +34,14 @@ interface DataTableProps<TData, TValue> {
   onSelectedRowsChange?: (selectedRows: TData[]) => void
   renderRowSubComponent?: (props: { row: unknown }) => React.ReactNode
   showToolbar?: boolean
+  isLoading?: boolean
+  pagination?: {
+    currentPage: number
+    pageCount: number
+    pageSize: number
+    onPageChange: (page: number) => void
+    onPageSizeChange: (pageSize: number) => void
+  }
 }
 
 export function DataTable<TData, TValue>({
@@ -41,12 +50,15 @@ export function DataTable<TData, TValue>({
   onSelectedRowsChange,
   renderRowSubComponent,
   showToolbar = false,
+  isLoading = false,
+  pagination,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({
       orgName: false,
       diff: false,
+      isCustomFormat: false,
     })
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -73,7 +85,29 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
+    manualPagination: !!pagination,
+    pageCount: pagination?.pageCount || -1,
   })
+
+  // Set current page from external pagination state
+  React.useEffect(() => {
+    if (
+      pagination &&
+      table.getState().pagination.pageIndex !== pagination.currentPage - 1
+    ) {
+      table.setPageIndex(pagination.currentPage - 1)
+    }
+  }, [pagination, table])
+
+  // Set page size from external pagination state
+  React.useEffect(() => {
+    if (
+      pagination &&
+      table.getState().pagination.pageSize !== pagination.pageSize
+    ) {
+      table.setPageSize(pagination.pageSize)
+    }
+  }, [pagination, table])
 
   React.useEffect(() => {
     if (table.getSelectedRowModel().rows.length > 0 && onSelectedRowsChange) {
@@ -112,7 +146,19 @@ export function DataTable<TData, TValue>({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {isLoading ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className='h-24 text-center'
+                >
+                  <div className='flex justify-center items-center'>
+                    <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                    <p>Loading...</p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <React.Fragment key={row.id}>
                   <TableRow data-state={row.getIsSelected() && 'selected'}>
@@ -157,7 +203,11 @@ export function DataTable<TData, TValue>({
           </TableBody>
         </Table>
       </div>
-      <DataTablePagination table={table} />
+      <DataTablePagination
+        table={table}
+        onPageChange={pagination?.onPageChange}
+        onPageSizeChange={pagination?.onPageSizeChange}
+      />
     </div>
   )
 }

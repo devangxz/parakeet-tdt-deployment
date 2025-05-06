@@ -131,6 +131,8 @@ const createShortcutControls = (
   playAt100Speed: () => {
     setSpeed(100)
   },
+  scrollDownEditorContent: () => {},
+  scrollUpEditorContent: () => {},
 })
 
 interface HeaderProps {
