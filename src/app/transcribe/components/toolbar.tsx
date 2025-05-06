@@ -47,6 +47,17 @@ export function DataTableToolbar<TData>({
             ]}
           />
         )}
+        {/* Custom Formatting Filter */}
+        {table.getColumn('isCustomFormat') && (
+          <DataTableFacetedFilter
+            column={table.getColumn('isCustomFormat')}
+            title='Custom Formatting'
+            options={[
+              { label: 'CF Files Only', value: 'YES' },
+              { label: 'Non-CF Files', value: 'NO' },
+            ]}
+          />
+        )}
         {/* Duration Filter */}
         {table.getColumn('duration') && (
           <DataTableFacetedFilter

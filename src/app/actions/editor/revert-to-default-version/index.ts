@@ -56,7 +56,7 @@ export async function revertToDefaultVersionAction(
         tag: sourceTag,
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: 'asc',
       },
     })
     if (!sourceVersion || !sourceVersion.s3VersionId) {
@@ -72,7 +72,7 @@ export async function revertToDefaultVersionAction(
         tag: FileTag.AUTO,
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: 'asc',
       },
     })
     if (!autoVersion) {

@@ -15,7 +15,7 @@ export const getAutoFileVersion = async (fileId: string) => {
         s3VersionId: { not: null }
       },
       select: { tag: true, s3VersionId: true },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'asc' }
     });
     let ctms: CTMType[] = [];
     let s3VersionId: string | null = null;
