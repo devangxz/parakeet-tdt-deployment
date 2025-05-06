@@ -80,10 +80,19 @@ export async function getTranscriberEarnings() {
 
     earnings['CURRENT_BALANCE'] = earnings['TOTAL'] - earnings['WITHDRAWAL']
 
+    const transcriberDetails = await prisma.user.findUnique({
+      where: {
+        id: transcriberId,
+      },
+      select: {
+        paypalId: true,
+      },
+    })
     logger.info(`Earnings fetched successfully for ${transcriberId}`)
     return {
       success: true,
       earnings,
+      paypalId: transcriberDetails ? transcriberDetails.paypalId : user?.email,
     }
   } catch (error) {
     logger.error(`Failed to fetch earnings: ${error}`)
