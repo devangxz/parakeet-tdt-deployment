@@ -577,6 +577,7 @@ function EditorPage() {
           listenCount,
           editedSegments,
           role: session?.user?.role || '',
+          quill: quillRef?.current?.getEditor(),
         })
 
         updateFormattedTranscript()
@@ -760,6 +761,7 @@ function EditorPage() {
           listenCount,
           editedSegments,
           role: session?.user?.role || '',
+          quill: quillRef?.current?.getEditor(),
         },
         false
       )
@@ -775,6 +777,7 @@ function EditorPage() {
     cfd,
     listenCount,
     editedSegments,
+    quillRef,
   ])
 
   useEffect(() => {
@@ -916,8 +919,8 @@ function EditorPage() {
     const quill = quillRef.current.getEditor()
 
     const currentSelection = quill.getSelection()
-
-    const text = quill.getText()
+    let text = quill.getText()
+    text = text.replace(/\n{3,}/g, '\n\n')
     const formattedDelta = getFormattedContent(text)
 
     quill.setContents(formattedDelta)
