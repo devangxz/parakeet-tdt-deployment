@@ -100,7 +100,6 @@ interface TopbarProps {
   editorModeOptions: string[]
   getEditorMode: (editorMode: string) => void
   editorMode: string
-  notes: string
   orderDetails: OrderDetails
   setIsSubmitModalOpen: React.Dispatch<React.SetStateAction<boolean>>
   setPdfUrl: React.Dispatch<React.SetStateAction<string>>
@@ -130,7 +129,6 @@ interface TopbarProps {
   setCtms: (ctms: CTMType[]) => void
   editorRef: React.Ref<EditorHandle>
   step: string
-  cfd: string
 }
 
 export default memo(function Topbar({
@@ -138,7 +136,6 @@ export default memo(function Topbar({
   editorModeOptions,
   getEditorMode,
   editorMode,
-  notes,
   orderDetails,
   setIsSubmitModalOpen,
   setPdfUrl,
@@ -158,7 +155,6 @@ export default memo(function Topbar({
   setCtms,
   editorRef,
   step,
-  cfd,
 }: TopbarProps) {
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
@@ -533,8 +529,6 @@ export default memo(function Topbar({
         {
           getEditorText,
           orderDetails,
-          notes,
-          cfd,
           setButtonLoading,
           listenCount,
           editedSegments,
@@ -801,8 +795,6 @@ export default memo(function Topbar({
                     handleSave({
                       getEditorText,
                       orderDetails,
-                      notes,
-                      cfd,
                       setButtonLoading,
                       listenCount,
                       editedSegments,

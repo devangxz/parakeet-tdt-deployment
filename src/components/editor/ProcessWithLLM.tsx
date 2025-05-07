@@ -151,8 +151,6 @@ export default memo(function ProcessWithLLMDialog (
     await handleSave(
       {
         orderDetails,
-        notes: '',
-        cfd: '',
         setButtonLoading: () => {},
         listenCount: [],
         editedSegments: new Set(),

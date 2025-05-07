@@ -40,7 +40,7 @@ export async function downloadFromS3(fileId: string, suffix: string) {
           s3VersionId: { not: null },
         },
         select: { tag: true, s3VersionId: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: 'asc' },
       })
       const autoRec = versionRecs.find((v) => v.tag === FileTag.AUTO)
       if (autoRec?.s3VersionId) {
