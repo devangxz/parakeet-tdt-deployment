@@ -4,6 +4,7 @@ import { JobStatus } from '@prisma/client'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { createCustomerTranscript } from '@/services/file-service/customer-transcript'
 import deliver from '@/services/file-service/deliver'
 import preDeliverIfConfigured from '@/services/file-service/pre-deliver-if-configured'
 
@@ -49,6 +50,7 @@ export async function acceptApprovalOrder(orderId: number) {
     )
 
     if (!isPreDeliveryEligible) {
+      await createCustomerTranscript(orderInformation.fileId, orderInformation.userId)
       await deliver(orderInformation, currentJobAssignment.transcriberId)
     }
 
@@ -79,13 +81,13 @@ export async function acceptApprovalOrder(orderId: number) {
       })
     }
 
-    logger.info(`Successfully delivered pre delivery file ${orderId}`)
+    logger.info(`Successfully delivered approval tab file ${orderId}`)
     return {
       success: true,
       message: 'Successfully delivered file',
     }
   } catch (error) {
-    logger.error(`Failed to deliver pre delivery file`, error)
+    logger.error(`Failed to deliver approval tab file`, error)
     return {
       success: false,
       message: 'An error occurred. Please try again after some time.',

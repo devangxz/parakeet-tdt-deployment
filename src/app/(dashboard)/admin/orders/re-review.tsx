@@ -316,7 +316,7 @@ export default function ReReviewPage({ onActionComplete }: ReReviewPageProps) {
             className='format-button'
             onClick={() =>
               window.open(
-                `/editor/${row.original.orderId}`,
+                `/editor/${row.original.fileId}`,
                 '_blank',
                 'toolbar=no,location=no,menubar=no,width=' +
                   window.screen.width +
