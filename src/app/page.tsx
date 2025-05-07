@@ -19,8 +19,8 @@ export default function Home() {
     <>
       <Navbar />
       <Hero />
-      <Partners />
       <TranscriptionCategories />
+      <Partners />
       <Pricing />
       <Achievments />
       <Process />
