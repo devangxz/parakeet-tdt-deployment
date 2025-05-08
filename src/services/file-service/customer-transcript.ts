@@ -10,27 +10,17 @@ import getCustomerTranscript from '@/utils/getCustomerTranscript'
 export async function createCustomerTranscript(fileId: string, userId: number) {
   try {
     logger.info(`--> createCustomerTranscript: ${fileId} ${userId}`)
-    let latestCustomerTranscript = await prisma.fileVersion.findFirst({
+    const latestCustomerTranscript = await prisma.fileVersion.findFirst({
       where: {
         fileId: fileId,
-        tag: FileTag.OM_EDIT,
+        tag: {
+          in: [FileTag.OM_EDIT, FileTag.QC_DELIVERED]
+        }
       },
       orderBy: {
         createdAt: 'desc',
       },
     })
-  
-    if (!latestCustomerTranscript) {
-      latestCustomerTranscript = await prisma.fileVersion.findFirst({
-        where: {
-          fileId: fileId,
-          tag: FileTag.QC_DELIVERED,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        }
-      })
-    }
 
     if (!latestCustomerTranscript?.s3VersionId) {
       throw new Error("Could not create customer delivered version!")

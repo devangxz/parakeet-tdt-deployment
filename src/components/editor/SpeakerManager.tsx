@@ -24,16 +24,18 @@ import {
 
 interface SpeakerManagerProps {
   orderDetails: OrderDetails
-  quillRef: React.RefObject<ReactQuill> | undefined
+  quillRef?: React.RefObject<ReactQuill> | undefined
   onUpdateSpeakers?: (speakers: Record<string, string>) => Promise<void>
   isDialog?: boolean
+  isDiffDialog?: boolean
 }
 
 export default function SpeakerManager({
   orderDetails,
   quillRef,
   onUpdateSpeakers,
-  isDialog = false
+  isDialog = false,
+  isDiffDialog = false
 }: SpeakerManagerProps) {
   const [speakers, setSpeakers] = useState<{
     [key: string]: string
@@ -42,9 +44,7 @@ export default function SpeakerManager({
   const [isUpdatingSpeakers, setIsUpdatingSpeakers] = useState(false)
 
   useEffect(() => {
-    if (quillRef && quillRef.current) {
-      loadSpeakerNames()
-    }
+    loadSpeakerNames()
   }, [quillRef, orderDetails.fileId])
 
   const loadSpeakerNames = async () => {
@@ -111,11 +111,47 @@ export default function SpeakerManager({
             }
           }
         }
-
+        setSpeakers(newSpeakerNames)
+      } else {
+        // When quillRef is not available (e.g., in dialog mode)
+        // Load speakers directly from the API
+        const response = await getSpeakerNamesAction(orderDetails.fileId)
+        const speakerNamesList = response.data
+        const newSpeakerNames: Record<string, string> = {}
+        
+        if (speakerNamesList && speakerNamesList.length > 0) {
+          // Create speaker entries from the API data
+          speakerNamesList.forEach((speaker: { fn: string; ln: string }, index: number) => {
+            const speakerKey = `S${index + 1}`
+            if (speaker.fn || speaker.ln) {
+              newSpeakerNames[speakerKey] = `${speaker.fn || ''} ${speaker.ln || ''}`.trim()
+            } else {
+              newSpeakerNames[speakerKey] = `Speaker ${index + 1}`
+            }
+          })
+        } else if (orderDetails.speakerOptions && orderDetails.speakerOptions.length > 0) {
+          // If API data isn't available, try using speakerOptions from orderDetails
+          orderDetails.speakerOptions.forEach((speaker: { fn: string; ln: string }, index: number) => {
+            const speakerKey = `S${index + 1}`
+            if (speaker.fn || speaker.ln) {
+              newSpeakerNames[speakerKey] = `${speaker.fn || ''} ${speaker.ln || ''}`.trim()
+            } else {
+              newSpeakerNames[speakerKey] = `Speaker ${index + 1}`
+            }
+          })
+        }
+        
+        // If no speakers were found, create at least one default speaker
+        if (Object.keys(newSpeakerNames).length === 0) {
+          newSpeakerNames['S1'] = 'Speaker 1'
+        }
+        
         setSpeakers(newSpeakerNames)
       }
     } catch (error) {
       toast.error('An error occurred while loading speaker names')
+      // Create a default speaker when error occurs
+      setSpeakers({ 'S1': 'Speaker 1' })
     } finally {
       setIsSpeakerNamesLoading(false)
     }
@@ -175,8 +211,8 @@ export default function SpeakerManager({
   }
 
   return (
-    <div className={`${isDialog ? '' : 'h-full py-[12px] px-[15px]'} overflow-y-auto`}>
-      <div className={`${isDialog ? '' : 'h-full'} flex flex-col gap-4`}>
+    <div className={`${isDiffDialog ? 'h-full overflow-y-auto p-4' : isDialog ? 'overflow-y-auto' : 'h-full py-[12px] px-[15px] flex flex-1'}`}>
+      <div className={`${isDialog && !isDiffDialog ? '' : 'h-full'} flex flex-col flex-1 gap-4`}>
         {isSpeakerNamesLoading ? (
           <div className='flex items-center justify-center h-32'>
             <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
@@ -298,9 +334,9 @@ export default function SpeakerManager({
             </div>
 
             <div className={`flex gap-x-2 justify-end ${!isDialog && 'pb-[12px]'}`}>
-              {isDialog && (
+              {(isDialog) && (
                 <DialogClose asChild>
-                  <Button variant='outline'>Close</Button>
+                  <Button variant='outline' className={`${isDiffDialog ? 'hidden' : ''}`}>Close</Button>
                 </DialogClose>
               )}
               <Button

@@ -526,6 +526,11 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
               QC_VALIDATION.max_speaker_change_percentage,
             tooltip: `Indicates percentage of speaker label changes made by QC. Should not exceed ${QC_VALIDATION.max_speaker_change_percentage}% to maintain speaker consistency.`,
           },
+          {
+            value: stats.blankPercentage,
+            isError: stats.blankPercentage > QC_VALIDATION.max_blank_percentage,
+            tooltip: `Indicates percentage of inaudible/blank segments in the transcript added by QC. Should not exceed ${QC_VALIDATION.max_blank_percentage}% to maintain transcript quality.`,
+          }
         ]
 
         return (
