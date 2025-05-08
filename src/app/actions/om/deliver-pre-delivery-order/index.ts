@@ -1,17 +1,13 @@
 'use server'
 
 import { FileTag, OrderType } from '@prisma/client'
-import axios from 'axios'
 import { getServerSession } from 'next-auth'
 
-import { fileCacheTokenAction } from '../../auth/file-cache-token'
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
-import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { createCustomerTranscript } from '@/services/file-service/customer-transcript'
 import deliver from '@/services/file-service/deliver'
-import { uploadToS3 } from '@/utils/backend-helper'
-import getCustomerTranscript from '@/utils/getCustomerTranscript'
 
 export async function deliverPreDeliveryOrder(
   orderId: number,
@@ -136,42 +132,7 @@ export async function deliverPreDeliveryOrder(
     }
 
     if (order?.orderType === OrderType.TRANSCRIPTION) {
-      const tokenRes = await fileCacheTokenAction(session)
-      const transcriptRes = await axios.get(
-        `${FILE_CACHE_URL}/fetch-transcript?fileId=${orderInformation.fileId}&orderId=${orderInformation.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${tokenRes.token}`,
-          },
-        }
-      )
-
-      const transcript = transcriptRes.data.result.transcript
-      const customerTranscript = await getCustomerTranscript(
-        orderInformation.fileId,
-        transcript
-      )
-
-      const { VersionId } = await uploadToS3(
-        `${orderInformation.fileId}.txt`,
-        customerTranscript
-      )
-
-      const fileVersion = await prisma.fileVersion.findFirst({
-        where: {
-          fileId: orderInformation.fileId,
-          tag: FileTag.CUSTOMER_DELIVERED,
-        },
-      })
-
-      await prisma.fileVersion.update({
-        where: {
-          id: fileVersion?.id,
-        },
-        data: {
-          s3VersionId: VersionId,
-        },
-      })
+      await createCustomerTranscript(orderInformation.fileId, orderInformation.userId)
     }
 
     await deliver(orderInformation, omId)
