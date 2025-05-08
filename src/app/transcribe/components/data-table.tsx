@@ -64,6 +64,12 @@ export function DataTable<TData, TValue>({
     []
   )
   const [sorting, setSorting] = React.useState<SortingState>([])
+  const [localPagination, setLocalPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: 10,
+  })
+
+  const isManualPagination = !!pagination
 
   const table = useReactTable({
     data,
@@ -73,20 +79,27 @@ export function DataTable<TData, TValue>({
       columnVisibility,
       rowSelection,
       columnFilters,
+      pagination: isManualPagination
+        ? {
+            pageIndex: pagination?.currentPage ? pagination.currentPage - 1 : 0,
+            pageSize: pagination?.pageSize || 10,
+          }
+        : localPagination,
     },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
+    onPaginationChange: isManualPagination ? undefined : setLocalPagination,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
-    manualPagination: !!pagination,
-    pageCount: pagination?.pageCount || -1,
+    manualPagination: isManualPagination,
+    pageCount: isManualPagination ? pagination.pageCount : undefined,
   })
 
   // Set current page from external pagination state
@@ -205,8 +218,10 @@ export function DataTable<TData, TValue>({
       </div>
       <DataTablePagination
         table={table}
-        onPageChange={pagination?.onPageChange}
-        onPageSizeChange={pagination?.onPageSizeChange}
+        onPageChange={isManualPagination ? pagination.onPageChange : undefined}
+        onPageSizeChange={
+          isManualPagination ? pagination.onPageSizeChange : undefined
+        }
       />
     </div>
   )
