@@ -263,25 +263,6 @@ export async function submitQCFile(
       }
     )
 
-    const customerTranscript = await getCustomerTranscript(
-      order.fileId,
-      transcript
-    )
-
-    await axios.post(
-      `${FILE_CACHE_URL}/save-transcript`,
-      {
-        fileId: order.fileId,
-        transcript: customerTranscript,
-        userId: order.userId,
-      },
-      {
-        headers: {
-          'x-api-key': process.env.SCRIBIE_API_KEY,
-        },
-      }
-    )
-
     const isTestCustomer = await getTestCustomer(order.userId)
 
     if (qcValidation && order.status === OrderStatus.QC_ASSIGNED) {
@@ -404,6 +385,24 @@ export async function submitQCFile(
       )
     } else {
       if (order.status === OrderStatus.QC_ASSIGNED) {
+        const customerTranscript = await getCustomerTranscript(
+          order.fileId,
+          transcript
+        )
+
+        await axios.post(
+          `${FILE_CACHE_URL}/save-transcript`,
+          {
+            fileId: order.fileId,
+            transcript: customerTranscript,
+            userId: order.userId,
+          },
+          {
+            headers: {
+              'x-api-key': process.env.SCRIBIE_API_KEY,
+            },
+          }
+        )
         await deliver(order, transcriberId)
       }
     }

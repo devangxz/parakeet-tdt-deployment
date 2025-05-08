@@ -1,6 +1,6 @@
 'use server'
 
-import { FileTag, FileVersion } from '@prisma/client'
+import { FileTag } from '@prisma/client'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
@@ -23,33 +23,20 @@ export async function getDiffFilesAction(fileId: string) {
             throw new Error('ASR file not found')
         }
 
-        const omFileVersion = await prisma.fileVersion.findFirst({
+        const latestFileVersion = await prisma.fileVersion.findFirst({
           where: {
               fileId,
-              tag: FileTag.OM_EDIT,
+              tag: {
+                in: [FileTag.OM_EDIT, FileTag.QC_DELIVERED]
+              }
           },
           orderBy: {
               updatedAt: 'desc',
           },
         })
-        let qcFileVersion: FileVersion | null = null;
-        if(!omFileVersion || !omFileVersion.s3VersionId) {
-          qcFileVersion = await prisma.fileVersion.findFirst({
-              where: {
-                  fileId,
-                  tag: FileTag.QC_DELIVERED,
-              },
-              orderBy: {
-                  updatedAt: 'desc',
-              },
-          })
-          if (!qcFileVersion || !qcFileVersion.s3VersionId) {
-              throw new Error('QC file not found')
-          }
-        }
-        const latestFileVersion = omFileVersion || qcFileVersion
-        if(!latestFileVersion || !latestFileVersion.s3VersionId) {
-          throw new Error('No transcriber edited file version not found')
+
+        if (!latestFileVersion || !latestFileVersion.s3VersionId) {
+            throw new Error('No edited version found (OM_EDIT or QC_DELIVERED)')
         }
         
         const asrFile = (await getFileVersionFromS3(`${fileId}.txt`, asrFileVersion.s3VersionId)).toString()
