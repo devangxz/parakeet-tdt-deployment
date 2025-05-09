@@ -62,7 +62,7 @@ const optionNames: Record<string, string> = {
   ts: 'Audio time coding',
   vb: 'Strict verbatim',
   sub: 'Subtitle file',
-  exd: 'Rush hour',
+  exd: 'Rush order',
   vts: 'BITC',
   sif: 'Speaker Tracking',
 }
