@@ -5,8 +5,10 @@ import { useSession } from 'next-auth/react'
 import { useState } from 'react'
 
 import { DataTable } from './components/data-table'
+import ConsolidatedInvoiceModal from '@/components/consolidated-invoice-modal'
 import PaymentsDetailsModal from '@/components/payment-details-modal'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import formatDateTime from '@/utils/formatDateTime'
 
 interface Invoice {
@@ -19,8 +21,32 @@ const Invoice = ({ invoices }: { invoices: Invoice[] }) => {
   const { data: session } = useSession()
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false)
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>('')
+  const [selectedInvoices, setSelectedInvoices] = useState<Invoice[]>([])
+  const [openConsolidatedDialog, setOpenConsolidatedDialog] = useState(false)
 
   const columns: ColumnDef<Invoice>[] = [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label='Select all'
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label='Select row'
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       accessorKey: 'id',
       header: 'Invoice ID',
@@ -67,18 +93,43 @@ const Invoice = ({ invoices }: { invoices: Invoice[] }) => {
     setOpenDetailsDialog(true)
   }
 
+  const handleConsolidatedInvoice = () => {
+    if (selectedInvoices.length === 0) {
+      return
+    }
+    setOpenConsolidatedDialog(true)
+  }
+
   return (
     <>
       <div className='h-full flex-1 flex-col p-4 md:flex space-y-3'>
-        <div>
+        <div className='flex justify-between items-center'>
           <h1 className='text-lg font-semibold md:text-lg'>Paid Invoices</h1>
+          <Button
+            variant='order'
+            className='not-rounded'
+            onClick={handleConsolidatedInvoice}
+            disabled={selectedInvoices.length === 0}
+          >
+            Consolidate
+          </Button>
         </div>
-        <DataTable data={invoices || []} columns={columns} />
+        <DataTable
+          data={invoices || []}
+          columns={columns}
+          onSelectedRowsChange={setSelectedInvoices}
+        />
       </div>
       <PaymentsDetailsModal
         open={openDetailsDialog}
         onClose={() => setOpenDetailsDialog(false)}
         selectedInvoiceId={selectedInvoiceId}
+        session={session!}
+      />
+      <ConsolidatedInvoiceModal
+        open={openConsolidatedDialog}
+        onClose={() => setOpenConsolidatedDialog(false)}
+        selectedInvoiceIds={selectedInvoices.map((invoice) => invoice.id)}
         session={session!}
       />
     </>

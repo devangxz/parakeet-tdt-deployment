@@ -37,6 +37,11 @@ export function DataTablePagination<TData>({
     onPageChange?.(newPageIndex + 1) // Convert to 1-indexed for external API
   }
 
+  // If no rows, don't show pagination
+  if (table.getFilteredRowModel().rows.length === 0) {
+    return null
+  }
+
   return (
     <div className='flex items-center justify-between'>
       <div className='flex-1 text-sm text-muted-foreground'>
@@ -70,7 +75,7 @@ export function DataTablePagination<TData>({
         </div>
         <div className='flex w-[100px] items-center justify-center text-sm font-medium text-muted-foreground'>
           Page {table.getState().pagination.pageIndex + 1} of{' '}
-          {table.getPageCount()}
+          {Math.max(table.getPageCount(), 1)}
         </div>
         <div className='flex items-center space-x-2'>
           <Button
