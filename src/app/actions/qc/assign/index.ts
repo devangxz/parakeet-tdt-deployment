@@ -122,7 +122,7 @@ export async function assignQC(orderId: number, isICQC: boolean = false) {
     )
 
     logger.info(
-      `QC ${transcriberId} assigned for order ${orderId}${
+      `QC ${user.email} assigned for order ${order.fileId}${
         isICQC ? ' as IC QC' : ''
       }`
     )
