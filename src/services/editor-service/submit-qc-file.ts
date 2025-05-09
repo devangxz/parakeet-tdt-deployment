@@ -154,6 +154,14 @@ export async function submitQCFile(
       }
     }
 
+    if (order.status !== OrderStatus.QC_ASSIGNED) {
+      logger.error(`Order is not assigned to QC for fileId ${order.fileId}`)
+      return {
+        success: false,
+        message: 'Something went wrong',
+      }
+    }
+
     const isTestOrder = order.isTestOrder
 
     if (isTestOrder) {
@@ -236,13 +244,19 @@ export async function submitQCFile(
         orderId,
         transcriberId,
         type: JobType.QC,
+        status: JobStatus.ACCEPTED,
       },
     })
 
     if (!assignment) {
       logger.error(
-        `Unauthorized try to submit a QC file by user ${transcriberId} for order ${orderId}`
+        `Unauthorized try to submit a QC file by user ${transcriberId} for fileId ${order.fileId}`
       )
+      return {
+        success: false,
+        message:
+          'File is not assigned, it may have timed out, pls check history and try again',
+      }
     }
 
     logger.info(
