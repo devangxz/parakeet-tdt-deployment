@@ -2,8 +2,11 @@ import { ReloadIcon } from '@radix-ui/react-icons'
 import { useState, useEffect, useCallback, memo } from 'react'
 import { toast } from 'sonner'
 
+import { getOrderDetailsAction } from '@/app/actions/editor/order-details'
 import { getDiffFilesAction } from '@/app/actions/files/get-diff-files'
 import { getTestDiffFilesAction } from '@/app/actions/files/get-test-diff-files'
+import { OrderDetails } from '@/components/editor/EditorPage'
+import SpeakerManager from '@/components/editor/SpeakerManager'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogFooter, DialogContent, DialogHeader, DialogDescription, DialogTitle, DialogClose } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -17,13 +20,7 @@ interface DialogProps {
 
 const LoadingComponent = memo(() => (
   <div
-    style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: '20vh',
-    }}
-    className='gap-2'
+    className='flex justify-center items-center h-full min-h-[10rem] gap-2'
   >
     <ReloadIcon className='h-4 w-4 animate-spin' />
     <p>Loading</p>
@@ -41,6 +38,7 @@ const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
   const [isFailed, setIsFailed] = useState(false)
   const [isTestOrder, setIsTestOrder] = useState(false)
   const [activeTab, setActiveTab] = useState("master-modified")
+  const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null)
   
   // Clear all diff data when dialog closes to prevent memory leaks
   const handleClose = useCallback(() => {
@@ -49,8 +47,50 @@ const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
     setMasterToSubmittedDiff([])
     setModifiedToSubmittedDiff([])
     setIsTestOrder(false)
+    setOrderDetails(null)
     onClose()
   }, [onClose])
+
+  // Fetch order details for speakers tab
+  const fetchOrderDetails = useCallback(async () => {
+    if (!fileId || fileId.length === 0) return
+    
+    try {
+      const response = await getOrderDetailsAction(fileId)
+      
+      if (response?.success && response.orderDetails) {
+        const formattedDetails: OrderDetails = {
+          orderId: response.orderDetails.orderId.toString(),
+          userId: response.orderDetails.userId.toString(),
+          duration: response.orderDetails.duration || '',
+          fileId: response.orderDetails.fileId,
+          orderType: response.orderDetails.orderType,
+          filename: response.orderDetails.filename,
+          templateName: response.orderDetails.templateName,
+          orgName: response.orderDetails.orgName,
+          cfd: response.orderDetails.cfd,
+          status: response.orderDetails.status,
+          instructions: response.orderDetails.instructions,
+          remainingTime: response.orderDetails.remainingTime,
+          LLMDone: response.orderDetails.LLMDone,
+          customFormatOption: response.orderDetails.customFormatOption || undefined,
+          outputFormat: response.orderDetails.outputFormat || undefined,
+          supportingDocuments: response.orderDetails.supportingDocuments || [],
+          email: response.orderDetails.email,
+          speakerOptions: response.orderDetails.speakerOptions || [],
+          isTestOrder: response.orderDetails.isTestOrder,
+          pwer: response.orderDetails.pwer || 0,
+        }
+        
+        setOrderDetails(formattedDetails)
+      } else {
+        throw new Error('Order details not found')
+      }
+    } catch (error) {
+      console.error('Failed to load file details:', error)
+      toast.error('Failed to load file details')
+    }
+  }, [fileId])
   
   const loadDiff = useCallback(async () => {
     if (!fileId || fileId.length === 0) return
@@ -109,6 +149,7 @@ const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
     if (open && fileId.length > 0) {
       setLoading(true)
       loadDiff()
+      fetchOrderDetails()
     }
     
     // Clean up when component unmounts or dialog closes
@@ -118,9 +159,10 @@ const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
         setMasterToModifiedDiff([])
         setMasterToSubmittedDiff([])
         setModifiedToSubmittedDiff([])
+        setOrderDetails(null)
       }
     }
-  }, [open, fileId, loadDiff])
+  }, [open, fileId, loadDiff, fetchOrderDetails])
 
   const renderDiff = (diff: DmpDiff[]) => {
       // Preprocess the diff to handle newlines better
@@ -175,80 +217,107 @@ const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className='w-96 sm:w-full lg:max-w-4xl xl:max-w-6xl max-h-[90vh] flex flex-col'>
-        <DialogHeader>
+      <DialogContent className='w-[95vw] sm:max-w-[90vw] md:max-w-[85vw] lg:max-w-4xl xl:max-w-6xl max-h-[90vh] flex flex-col'>
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Diff</DialogTitle>
           <DialogDescription>
             {isTestOrder ? 'Compare test transcript versions' : 'Diff between ASR and QC outputs'}
           </DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto flex-1 border rounded-md p-2 border-customBorder">
-          {loading ? (
-            <LoadingComponent />
-          ) : isTestOrder ? (
-            <Tabs 
-              defaultValue="master-modified" 
-              className="w-full"
-              value={activeTab}
-              onValueChange={(value) => {
-                setActiveTab(value)
-                if(value === "master-modified" && masterToModifiedDiff.length === 0){
-                  loadDiff()
-                } else if(value === "master-submitted" && masterToSubmittedDiff.length === 0){
-                  loadDiff()
-                } else if(value === "modified-submitted" && modifiedToSubmittedDiff.length === 0){
-                  loadDiff()
-                }
-              }}
-            >
-              <TabsList className="w-full grid grid-cols-3">
-                <TabsTrigger 
-                  value="master-modified" 
-                  className={`${activeTab === "master-modified" ? "font-medium bg-primary text-primary-foreground" : ""}`}
+        
+        <Tabs defaultValue="diff" className="w-full flex-1 flex flex-col min-h-0">
+          <TabsList className="w-full justify-start flex-shrink-0">
+            <TabsTrigger value="diff">Diff</TabsTrigger>
+            <TabsTrigger value="speakers">Speakers</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="diff" className='flex-1 flex flex-col min-h-0 overflow-hidden'>
+            <div className="flex-1 border rounded-md border-customBorder flex flex-col min-h-0">
+              {loading ? (
+                <LoadingComponent />
+              ) : isTestOrder ? (
+                <Tabs 
+                  defaultValue="master-modified" 
+                  className="w-full h-full flex flex-col min-h-0"
+                  value={activeTab}
+                  onValueChange={(value) => {
+                    setActiveTab(value)
+                    if(value === "master-modified" && masterToModifiedDiff.length === 0){
+                      loadDiff()
+                    } else if(value === "master-submitted" && masterToSubmittedDiff.length === 0){
+                      loadDiff()
+                    } else if(value === "modified-submitted" && modifiedToSubmittedDiff.length === 0){
+                      loadDiff()
+                    }
+                  }}
                 >
-                  Master → Modified
-                </TabsTrigger>
-                
-                <TabsTrigger 
-                  value="master-submitted" 
-                  className={`${activeTab === "master-submitted" ? "font-medium bg-primary text-primary-foreground" : ""}`}
-                >
-                  Master → Submitted
-                </TabsTrigger>
-                
-                <TabsTrigger 
-                  value="modified-submitted" 
-                  className={`${activeTab === "modified-submitted" ? "font-medium bg-primary text-primary-foreground" : ""}`}
-                >
-                  Modified → Submitted
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="master-modified" className="p-4 border rounded-md mt-2">
-                <div className='whitespace-pre-wrap'>
-                 {isFailed ? <p>No diff available between Master and Modified versions</p> : masterToModifiedDiff.length > 0 ? renderDiff(masterToModifiedDiff) : <LoadingComponent />
-                  }
+                  <TabsList className="w-full grid grid-cols-3 flex-shrink-0">
+                    <TabsTrigger 
+                      value="master-modified" 
+                      className={`${activeTab === "master-modified" ? "font-medium bg-primary text-primary-foreground" : ""}`}
+                    >
+                      Master → Modified
+                    </TabsTrigger>
+                    
+                    <TabsTrigger 
+                      value="master-submitted" 
+                      className={`${activeTab === "master-submitted" ? "font-medium bg-primary text-primary-foreground" : ""}`}
+                    >
+                      Master → Submitted
+                    </TabsTrigger>
+                    
+                    <TabsTrigger 
+                      value="modified-submitted" 
+                      className={`${activeTab === "modified-submitted" ? "font-medium bg-primary text-primary-foreground" : ""}`}
+                    >
+                      Modified → Submitted
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="master-modified" className="p-4 border rounded-md mt-2 flex-1 overflow-y-auto">
+                    <div className='whitespace-pre-wrap'>
+                     {isFailed ? <p>No diff available between Master and Modified versions</p> : masterToModifiedDiff.length > 0 ? renderDiff(masterToModifiedDiff) : <LoadingComponent />
+                      }
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="master-submitted" className="p-4 border rounded-md mt-2 flex-1 overflow-y-auto">
+                    <div className='whitespace-pre-wrap'>
+                     {isFailed ? <p>No diff available between Master and Submitted versions</p> : masterToSubmittedDiff.length > 0 ? renderDiff(masterToSubmittedDiff) : <LoadingComponent />
+                      }
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="modified-submitted" className="p-4 border rounded-md mt-2 flex-1 overflow-y-auto">
+                    <div className='whitespace-pre-wrap'>
+                     {isFailed ? <p>No diff available between Modified and Submitted versions</p> : modifiedToSubmittedDiff.length > 0 ? renderDiff(modifiedToSubmittedDiff) : <LoadingComponent />
+                      }
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              ) : (
+                <div className='whitespace-pre-wrap p-4 overflow-y-auto h-full'>
+                  {renderDiff(regularDiff)}
                 </div>
-              </TabsContent>
-              <TabsContent value="master-submitted" className="p-4 border rounded-md mt-2">
-                <div className='whitespace-pre-wrap'>
-                 {isFailed ? <p>No diff available between Master and Submitted versions</p> : masterToSubmittedDiff.length > 0 ? renderDiff(masterToSubmittedDiff) : <LoadingComponent />
-                  }
-                </div>
-              </TabsContent>
-              <TabsContent value="modified-submitted" className="p-4 border rounded-md mt-2">
-                <div className='whitespace-pre-wrap'>
-                 {isFailed ? <p>No diff available between Modified and Submitted versions</p> : modifiedToSubmittedDiff.length > 0 ? renderDiff(modifiedToSubmittedDiff) : <LoadingComponent />
-                  }
-                </div>
-              </TabsContent>
-            </Tabs>
-          ) : (
-            <div className='whitespace-pre-wrap'>
-              {renderDiff(regularDiff)}
+              )}
             </div>
-          )}
-        </div>
-        <DialogFooter>
+          </TabsContent>
+          
+          <TabsContent value="speakers" className="flex-1 min-h-0 overflow-y-auto">
+            <div className="h-full flex-1 border rounded-md border-customBorder overflow-hidden">
+              { orderDetails ? (
+                <SpeakerManager 
+                  orderDetails={orderDetails} 
+                  isDialog={true}
+                  isDiffDialog={true}
+                />
+              ) : (
+                <div className="flex justify-center items-center h-full">
+                  <p>Failed to load speaker information</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+        
+        <DialogFooter className="flex-shrink-0 mt-4">
           <DialogClose asChild>
             <Button variant='outline' onClick={handleClose}>Close</Button>
           </DialogClose>

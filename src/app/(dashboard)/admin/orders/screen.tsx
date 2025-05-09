@@ -1,18 +1,17 @@
 'use client'
 import { ChevronDownIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { ColumnDef } from '@tanstack/react-table'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
-import { getListenCountAndEditedSegmentAction } from '@/app/actions/admin/get-listen-count-and-edited-segment'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { fetchScreeningOrders } from '@/app/actions/om/fetch-screening-orders'
 import AcceptRejectScreenFileDialog from '@/components/admin-components/accept-reject-screen-file'
 import AssignQcDialog from '@/components/admin-components/assign-qc-dialog'
+import AudioWaveformPlayer, { AudioProvider, RowPlayButton } from '@/components/admin-components/audio-waveform-player'
 import FlagHighDifficulyDialog from '@/components/admin-components/flag-high-difficulty-dialog'
 import RevertToAssemblyAITranscriptDialog from '@/components/admin-components/revert-to-assembly-ai-transcript-dialog'
-import WaveformHeatmap from '@/components/editor/WaveformHeatmap'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -26,7 +25,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import FileAudioPlayer from '@/components/utils/FileAudioPlayer'
 import { HIGH_PWER, LOW_PWER } from '@/constants'
 import { FileCost } from '@/types/files'
 import formatDateTime from '@/utils/formatDateTime'
@@ -86,17 +84,8 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
   const [isAccept, setIsAccept] = useState(true)
   const [highDifficultyDialog, setHighDifficultyDialog] = useState(false)
   const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false)
-  const [playing, setPlaying] = useState<Record<string, boolean>>({})
-  const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
-    [key: string]: string
-  }>({})
   const [openAssignQcDialog, setAssignQcDialog] = useState(false)
-  const audioPlayer = useRef<HTMLAudioElement>(null)
   const [waveformUrls, setWaveformUrls] = useState<Record<string, string>>({})
-  const [listenCounts, setListenCounts] = useState<Record<string, number[]>>({})
-  const [editedSegments, setEditedSegments] = useState<
-    Record<string, Set<number>>
-  >({})
 
   const fetchWaveformUrl = async (fileId: string) => {
     try {
@@ -111,39 +100,6 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
       console.error('Failed to load waveform:', error)
     }
   }
-
-  const fetchEditorData = async (fileId: string) => {
-    try {
-      const data = await getListenCountAndEditedSegmentAction(fileId)
-      if (data?.listenCount) {
-        setListenCounts((prev) => ({
-          ...prev,
-          [fileId]: data.listenCount as number[],
-        }))
-      }
-      if (data?.editedSegments) {
-        setEditedSegments((prev) => ({
-          ...prev,
-          [fileId]: new Set(data.editedSegments as number[]),
-        }))
-      }
-    } catch (error) {
-      console.error('Failed to load editor data:', error)
-    }
-  }
-
-  const setAudioUrl = async () => {
-    const fileId = Object.keys(playing)[0]
-    if (!fileId) return
-    const res = await getSignedUrlAction(`${fileId}.mp3`, 3600)
-    if (res.success && res.signedUrl) {
-      setCurrentlyPlayingFileUrl({ [fileId]: res.signedUrl })
-    }
-  }
-
-  useEffect(() => {
-    setAudioUrl()
-  }, [playing])
 
   const getScreeningOrders = async (showLoader = false) => {
     if (showLoader) {
@@ -166,7 +122,6 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
             .join(', ')
 
           fetchWaveformUrl(order.fileId)
-          fetchEditorData(order.fileId)
 
           return {
             index: index + 1,
@@ -247,15 +202,13 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
       accessorKey: 'index',
       header: 'SL No.',
       cell: ({ row }) => (
-        <div className='font-medium flex items-center gap-5'>
-          {row.getValue('index')}
-          <FileAudioPlayer
-            fileId={row.original.fileId}
-            playing={playing}
-            setPlaying={setPlaying}
-            url={currentlyPlayingFileUrl[row.original.fileId]}
-            audioPlayer={audioPlayer}
-          />
+        <div className='font-medium flex items-center gap-2'>
+          <span>{row.getValue('index')}</span>
+          {waveformUrls[row.original.fileId] && (
+            <RowPlayButton 
+              fileId={row.original.fileId} 
+            />
+          )}
         </div>
       ),
     },
@@ -481,22 +434,18 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
     if (!('fileId' in row)) return null
     const fileId = row.fileId as string
     if (!waveformUrls[fileId]) return null
-
+    
     return (
-      <div className='w-full h-full cursor-pointer'
-      >
-        <WaveformHeatmap
-          waveformUrl={waveformUrls[fileId]}
-          listenCount={listenCounts[fileId] || []}
-          editedSegments={editedSegments[fileId] || new Set()}
-          duration={row.duration}
-        />
-      </div>
+      <AudioWaveformPlayer 
+        fileId={fileId}
+        waveformUrl={waveformUrls[fileId]}
+        duration={row.duration}
+      />
     )
   }
 
   return (
-    <>
+    <AudioProvider>
       <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
         <div className='flex items-center justify-between space-y-2'>
           <div>
@@ -537,6 +486,6 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
         orderData={orderData}
         refetch={() => getScreeningOrders()}
       />
-    </>
+    </AudioProvider>
   )
 }
