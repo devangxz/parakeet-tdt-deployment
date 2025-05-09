@@ -116,6 +116,7 @@ export async function addICQC(
         qcRate,
         cfRate,
         cfRRate,
+        monthlyBonusEnabled: true,
       },
       create: {
         userId: user.id,
@@ -123,6 +124,7 @@ export async function addICQC(
         qcRate,
         cfRate,
         cfRRate,
+        monthlyBonusEnabled: true,
       },
     })
 
