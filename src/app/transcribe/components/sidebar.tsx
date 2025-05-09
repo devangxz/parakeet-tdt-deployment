@@ -187,7 +187,7 @@ export function SidebarNav({
           </div>
 
           {isICQC && (
-            <div className='flex flex-col gap-y-2 px-3 py-2 mt-2 border-t border-customBorder pt-3'>
+            <div className='flex flex-col gap-y-2 px-3 py-2 mt-2'>
               <div className='flex items-center justify-between gap-2 rounded-md'>
                 <div className='flex gap-1.5 items-center'>
                   <Clock className='h-5 w-5' />

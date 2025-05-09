@@ -40,6 +40,7 @@ const assignFileToQC = async (
     const templateData = {
       fileId,
       amount: `$${cost} (${rate}/ah)`,
+      comment: comment ?? '',
     }
 
     await sendTemplateMail('QC_ASSIGNMENT', transcriberId, templateData)

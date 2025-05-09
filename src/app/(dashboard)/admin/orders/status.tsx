@@ -236,6 +236,7 @@ export default function StatusPage({
     deliveryTs: 'Delivery',
     status: 'Status',
     qc: 'Editor',
+    cancellations: 'Cancellations',
     customFormattingFile: 'Custom Formatting File',
     priority: 'Priority',
     fileId: 'File ID',
@@ -369,30 +370,36 @@ export default function StatusPage({
                                     <QCLink key={user.id} user={user} />
                                   ))
                                 : '-'}
-                              {orderInformation.cancellations &&
-                                orderInformation.cancellations.length > 0 && (
-                                  <Tooltip>
-                                    <TooltipTrigger>
-                                      <button
-                                        className='inline-flex items-center justify-center w-5 h-5 bg-red-500 text-primary-foreground rounded-full text-xs font-medium mt-2 cursor-pointer'
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          setSelectedCancellations(
-                                            orderInformation.cancellations
-                                          )
-                                          setIsCancellationsModalOpen(true)
-                                        }}
-                                      >
-                                        {orderInformation.cancellations.length}
-                                      </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>View cancellation history</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                )}
                             </div>
                           </div>
+                        )
+                      }
+                      if (key === 'cancellations') {
+                        return (
+                          <>
+                            {orderInformation.cancellations &&
+                              orderInformation.cancellations.length > 0 && (
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <button
+                                      className='inline-flex items-center justify-center w-5 h-5 bg-red-500 text-primary-foreground rounded-full text-xs font-medium mt-2 cursor-pointer'
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setSelectedCancellations(
+                                          orderInformation.cancellations
+                                        )
+                                        setIsCancellationsModalOpen(true)
+                                      }}
+                                    >
+                                      {orderInformation.cancellations.length}
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>View cancellation history</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                          </>
                         )
                       }
                       return (
