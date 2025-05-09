@@ -12,6 +12,7 @@ import {
   Loader2,
   TestTubes,
   BarChart,
+  Headphones,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import React, { useEffect, useRef } from 'react'
@@ -56,6 +57,12 @@ export default function FilesLayout({
       href: '/admin/reports',
       name: 'Reports',
       icon: BarChart,
+      isActive: false,
+    },
+    {
+      href: '/admin/ic-qcs',
+      name: 'IC QCs',
+      icon: Headphones,
       isActive: false,
     },
   ]

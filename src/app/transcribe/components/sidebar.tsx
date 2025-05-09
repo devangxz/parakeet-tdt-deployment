@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
-import { Settings, ChevronDown, DollarSign, Star } from 'lucide-react'
+import { Settings, ChevronDown, DollarSign, Star, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -17,22 +17,28 @@ export interface SidebarItemType {
   type: string
 }
 
-export function SidebarNav({ setIsExpanded }: { setIsExpanded: (isExpanded: boolean) => void }) {
+export function SidebarNav({
+  setIsExpanded,
+}: {
+  setIsExpanded: (isExpanded: boolean) => void
+}) {
   const { data: session } = useSession()
   const pathname = usePathname()
   const [earnings, setEarnings] = useState<any>(null)
+  const [isICQC, setIsICQC] = useState(false)
 
   const handleResponsiveCollapse = () => {
     if (window.innerWidth < 1024 && setIsExpanded) {
-      setIsExpanded(false);
+      setIsExpanded(false)
     }
-  };
+  }
 
   const fetchEarnings = async () => {
     try {
       const response = await getTranscriberEarnings()
       if (response.success && response.earnings) {
         setEarnings(response.earnings)
+        setIsICQC(response.isICQC || false)
       }
     } catch (err) {
       console.error('Failed to fetch transcriber earnings:', err)
@@ -179,6 +185,20 @@ export function SidebarNav({ setIsExpanded }: { setIsExpanded: (isExpanded: bool
               Get a $5 bonus by submitting 4 hours by 2:30PM EDT (US).
             </p>
           </div>
+
+          {isICQC && (
+            <div className='flex flex-col gap-y-2 px-3 py-2 mt-2 border-t border-customBorder pt-3'>
+              <div className='flex items-center justify-between gap-2 rounded-md'>
+                <div className='flex gap-1.5 items-center'>
+                  <Clock className='h-5 w-5' />
+                  <span>IC QC Hours Today</span>
+                </div>
+                <p className='font-normal'>
+                  {earnings?.IC_QC_CREDITED_HOURS?.toFixed(2) || '0.00'}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className='pt-3'>
