@@ -60,7 +60,6 @@ export default function Waveform({
     if (!audioPlayer?.current) return
 
     const audio = audioPlayer.current
-    console.log(audio)
     const handleTimeUpdate = () => {
       const playedPercentage = (audio.currentTime / audio.duration) * 100
       setInternalCurrentValue(playedPercentage)
@@ -103,7 +102,6 @@ export default function Waveform({
       setInternalAudioDuration(audio.duration)
       handleProgress()
     }
-    console.log(`working called`);
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate)
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
