@@ -7,7 +7,11 @@ import prisma from '@/lib/prisma'
 import assignFileToQC from '@/services/transcribe-service/assign-file-to-qc'
 import { fileExistsInS3 } from '@/utils/backend-helper'
 
-export async function assignQC(fileId: string, userEmail: string) {
+export async function assignQC(
+  fileId: string,
+  userEmail: string,
+  resetTimer = false
+) {
   try {
     if (!fileId) {
       return {
@@ -43,15 +47,37 @@ export async function assignQC(fileId: string, userEmail: string) {
       }
     }
 
-    await assignFileToQC(
-      orderInformation.id,
-      OrderStatus.QC_ASSIGNED,
-      user.id,
-      JobType.QC,
-      InputFileType.ASR_OUTPUT,
-      fileId,
-      'MANUAL'
-    )
+    if (resetTimer) {
+      const currentAssignment = await prisma.jobAssignment.findFirst({
+        where: {
+          orderId: orderInformation.id,
+          status: 'ACCEPTED',
+          type: JobType.QC,
+          transcriberId: user.id,
+        },
+      })
+      if (currentAssignment) {
+        await prisma.jobAssignment.update({
+          where: { id: currentAssignment.id },
+          data: { acceptedTs: new Date() },
+        })
+      } else {
+        return {
+          success: false,
+          message: 'No Accepted QC Assignment found',
+        }
+      }
+    } else {
+      await assignFileToQC(
+        orderInformation.id,
+        OrderStatus.QC_ASSIGNED,
+        user.id,
+        JobType.QC,
+        InputFileType.ASR_OUTPUT,
+        fileId,
+        'MANUAL'
+      )
+    }
 
     logger.info(`Successfully assigned qc for file ${fileId}`)
     return {

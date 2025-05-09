@@ -13,9 +13,12 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import assignFileToQC from '@/services/transcribe-service/assign-file-to-qc'
-import { checkExistingAssignment } from '@/utils/backend-helper'
+import {
+  checkExistingAssignment,
+  isTranscriberICQC,
+} from '@/utils/backend-helper'
 
-export async function assignQC(orderId: number) {
+export async function assignQC(orderId: number, isICQC: boolean = false) {
   try {
     const session = await getServerSession(authOptions)
     const user = session?.user
@@ -26,6 +29,18 @@ export async function assignQC(orderId: number) {
       return {
         success: false,
         error: 'User not authenticated',
+      }
+    }
+
+    // If user is assigning as ICQC, verify they have ICQC status
+    if (isICQC) {
+      const isICQCResult = await isTranscriberICQC(transcriberId)
+      if (!isICQCResult.isICQC) {
+        logger.error(`User ${transcriberId} is not authorized as IC QC`)
+        return {
+          success: false,
+          error: 'You are not authorized to take IC QC files',
+        }
       }
     }
 
@@ -101,10 +116,16 @@ export async function assignQC(orderId: number) {
         ? InputFileType.ASR_OUTPUT
         : InputFileType.LLM_OUTPUT,
       order.fileId,
-      AssignMode.AUTO
+      AssignMode.AUTO,
+      '',
+      isICQC
     )
 
-    logger.info(`QC ${transcriberId} assigned for order ${orderId}`)
+    logger.info(
+      `QC ${transcriberId} assigned for order ${orderId}${
+        isICQC ? ' as IC QC' : ''
+      }`
+    )
     return {
       success: true,
       message: 'Assigned file to QC',

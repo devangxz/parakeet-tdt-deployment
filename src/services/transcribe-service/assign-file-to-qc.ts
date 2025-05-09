@@ -13,9 +13,12 @@ const assignFileToQC = async (
   inputFile: InputFileType,
   fileId: string,
   assignMode: AssignMode,
-  comment?: string
+  comment?: string,
+  isICQC: boolean = false
 ) => {
-  logger.info(`--> assignFileToQC ${orderId} ${transcriberId}`)
+  logger.info(
+    `--> assignFileToQC ${orderId} ${transcriberId}${isICQC ? ' (IC QC)' : ''}`
+  )
   try {
     await updateOrderAndCreateJobAssignment(
       orderId,
@@ -24,7 +27,8 @@ const assignFileToQC = async (
       jobType,
       inputFile,
       assignMode,
-      comment
+      comment,
+      isICQC
     )
 
     const { cost, rate } = await calculateAssignmentAmount(
@@ -36,11 +40,12 @@ const assignFileToQC = async (
     const templateData = {
       fileId,
       amount: `$${cost} (${rate}/ah)`,
+      comment: comment ?? '',
     }
 
     await sendTemplateMail('QC_ASSIGNMENT', transcriberId, templateData)
 
-    logger.info(`--> assignFileToQC ${orderId} ${transcriberId}`)
+    logger.info(`--> assignFileToQC ${orderId} ${transcriberId} completed`)
     return true
   } catch (error) {
     logger.error(`--> assignFileToQC ` + error)

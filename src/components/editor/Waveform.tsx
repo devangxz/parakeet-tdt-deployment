@@ -21,6 +21,7 @@ interface WaveformProps {
   backgroundSize?: string
   backgroundPosition?: string
   timeMarkerInterval?: number
+  isScreenMode?: boolean
 }
 
 export default function Waveform({
@@ -38,7 +39,8 @@ export default function Waveform({
   showDurationLabel = false,
   backgroundSize = 'cover',
   backgroundPosition = 'center',
-  timeMarkerInterval = 10, // Default 10 minutes
+  timeMarkerInterval = 10, 
+  isScreenMode = false,
 }: WaveformProps) {
   // Internal state when not provided externally
   const [internalCurrentValue, setInternalCurrentValue] = useState(0)
@@ -48,19 +50,16 @@ export default function Waveform({
   const [internalLoading, setInternalLoading] = useState(false)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0, visible: false, text: '' })
   
-  // Use provided values or internal state
   const currentValue = externalCurrentValue !== undefined ? externalCurrentValue : internalCurrentValue
   const bufferedRanges = externalBufferedRanges || internalBufferedRanges
   const audioDuration = externalAudioDuration || internalAudioDuration
   const currentTimeDisplay = externalCurrentTime || internalCurrentTime
   const isLoading = externalLoading !== undefined ? externalLoading : internalLoading
 
-  // Update internal state based on audio player if provided
   useEffect(() => {
     if (!audioPlayer?.current) return
 
     const audio = audioPlayer.current
-    
     const handleTimeUpdate = () => {
       const playedPercentage = (audio.currentTime / audio.duration) * 100
       setInternalCurrentValue(playedPercentage)
@@ -103,7 +102,6 @@ export default function Waveform({
       setInternalAudioDuration(audio.duration)
       handleProgress()
     }
-    
     return () => {
       audio.removeEventListener('timeupdate', handleTimeUpdate)
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
@@ -113,7 +111,7 @@ export default function Waveform({
       audio.removeEventListener('waiting', handleLoadingStart)
       audio.removeEventListener('canplay', handleLoadingEnd)
     }
-  }, [audioPlayer])
+  }, [audioPlayer?.current])
 
   const getOptimalInterval = (duration: number): number => {
     const hours = duration / 3600;
@@ -194,20 +192,20 @@ export default function Waveform({
   return (
     <>
       <div 
-        className={`relative cursor-pointer h-full overflow-hidden ${className}`} 
+        className={`relative cursor-pointer ${isScreenMode ? 'h-16' : 'h-full'} overflow-hidden ${className}`} 
         onClick={handleClick}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ 
-            backgroundImage: `url(${waveformUrl})`, 
-            backgroundSize,
-            backgroundPosition,
-            backgroundRepeat: 'no-repeat'
-          }}
-        />
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ 
+              backgroundImage: `url(${waveformUrl})`, 
+              backgroundSize,
+              backgroundPosition,
+              backgroundRepeat: 'no-repeat'
+            }}
+          />
         
         {/* Time markers at intervals */}
         {timeMarkers.map(marker => (

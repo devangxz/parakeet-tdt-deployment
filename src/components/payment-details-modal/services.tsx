@@ -74,8 +74,8 @@ export function Services({ services, invoiceId }: Props) {
   const [options, setOptions] = React.useState<OrderOption[]>([
     {
       id: 'exd',
-      name: 'Rush hour',
-      enabled: serviceOptions.includes('Rush hour'),
+      name: 'Rush order',
+      enabled: serviceOptions.includes('Rush order'),
       rate: RUSH_ORDER_PRICE,
       description: `All files are prioritised for completion. Get your files delivered up to
         3x faster. Files exceeding a duration of 2 hours will require more than
