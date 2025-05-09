@@ -12,13 +12,6 @@ import {
 import { removeICQCAction } from '@/app/actions/admin/remove-ic-qc'
 import { Button } from '@/components/ui/button'
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -157,7 +150,15 @@ export default function ICQCsPage() {
   return (
     <div className='h-full flex-1 flex-col space-y-8 p-5 md:flex'>
       <div className='flex items-center justify-between'>
-        <h1 className='text-lg font-semibold md:text-lg'>IC QCs</h1>
+        <div>
+          {' '}
+          <h1 className='text-lg font-semibold md:text-lg'>IC QCs </h1>
+          <div className='flex items-center gap-2'>
+            Manage Independent Contractor QCs. Changes to rates and bonus status
+            are applied immediately.
+          </div>
+        </div>
+
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>Add IC QC</Button>
@@ -181,7 +182,7 @@ export default function ICQCsPage() {
               </div>
               <div className='grid grid-cols-3 gap-4'>
                 <div className='grid gap-2'>
-                  <Label htmlFor='qcRate'>QC Rate</Label>
+                  <Label htmlFor='qcRate'>QC Rate (/hour)</Label>
                   <Input
                     id='qcRate'
                     type='number'
@@ -190,7 +191,7 @@ export default function ICQCsPage() {
                   />
                 </div>
                 <div className='grid gap-2'>
-                  <Label htmlFor='cfRate'>CF Rate</Label>
+                  <Label htmlFor='cfRate'>CF Rate (/hour)</Label>
                   <Input
                     id='cfRate'
                     type='number'
@@ -199,7 +200,7 @@ export default function ICQCsPage() {
                   />
                 </div>
                 <div className='grid gap-2'>
-                  <Label htmlFor='cfRRate'>CF R Rate</Label>
+                  <Label htmlFor='cfRRate'>CFR Rate (/hour)</Label>
                   <Input
                     id='cfRRate'
                     type='number'
@@ -223,24 +224,17 @@ export default function ICQCsPage() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>IC QCs</CardTitle>
-          <CardDescription>
-            Manage Independent Contractor QCs. Changes to rates and bonus status
-            are applied immediately.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className='flex justify-center p-6'>
-              <ReloadIcon className='h-6 w-6 animate-spin' />
-            </div>
-          ) : icQcs.length === 0 ? (
-            <div className='text-center p-6 text-muted-foreground'>
-              No IC QCs found
-            </div>
-          ) : (
+      <div>
+        {loading ? (
+          <div className='flex justify-center p-6'>
+            <ReloadIcon className='h-6 w-6 animate-spin' />
+          </div>
+        ) : icQcs.length === 0 ? (
+          <div className='text-center p-6 text-muted-foreground'>
+            No IC QCs found
+          </div>
+        ) : (
+          <div className='rounded-md border-2 border-customBorder bg-background'>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -273,7 +267,7 @@ export default function ICQCsPage() {
                     <TableCell>{icQc.watchlist ? 'Yes' : 'No'}</TableCell>
                     <TableCell>
                       <Button
-                        variant='outline'
+                        variant='order'
                         size='sm'
                         onClick={() =>
                           handleViewMonthlyHours(
@@ -283,6 +277,7 @@ export default function ICQCsPage() {
                               .join(' ') || icQc.email
                           )
                         }
+                        className='not-rounded'
                       >
                         <ClockIcon className='mr-2 h-4 w-4' />
                         View Hours
@@ -290,7 +285,12 @@ export default function ICQCsPage() {
                     </TableCell>
                     <TableCell className='text-right'>
                       {removingIcQc === icQc.id ? (
-                        <Button variant='destructive' size='sm' disabled>
+                        <Button
+                          variant='destructive'
+                          size='sm'
+                          disabled
+                          className='not-rounded'
+                        >
                           <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
                           Removing...
                         </Button>
@@ -298,6 +298,7 @@ export default function ICQCsPage() {
                         <Button
                           variant='destructive'
                           size='sm'
+                          className='not-rounded'
                           onClick={() => handleRemoveIcQc(icQc.id)}
                         >
                           <TrashIcon className='mr-2 h-4 w-4' />
@@ -309,9 +310,9 @@ export default function ICQCsPage() {
                 ))}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        )}
+      </div>
 
       {/* Monthly Hours Dialog */}
       <Dialog
