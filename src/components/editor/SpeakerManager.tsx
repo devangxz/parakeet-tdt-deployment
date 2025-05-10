@@ -211,7 +211,7 @@ export default function SpeakerManager({
   }
 
   return (
-    <div className={`${isDiffDialog ? 'h-full overflow-y-auto p-4' : isDialog ? 'overflow-y-auto' : 'h-full py-[12px] px-[15px] flex flex-1'}`}>
+    <div className={`${isDiffDialog ? 'h-full p-4' : isDialog ? '' : 'h-full py-[12px] px-[15px] flex flex-1'} overflow-y-auto`}>
       <div className={`${isDialog && !isDiffDialog ? '' : 'h-full'} flex flex-col flex-1 gap-4`}>
         {isSpeakerNamesLoading ? (
           <div className='flex items-center justify-center h-32'>
