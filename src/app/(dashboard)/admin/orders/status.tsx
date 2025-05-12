@@ -133,6 +133,7 @@ export default function StatusPage({
   const handleSearch = async () => {
     try {
       setIsLoading(true)
+      setOrderInformation(null)
       const response = await fetchFileOrderInformation(fileId)
 
       if (response.success && response.details) {
@@ -150,10 +151,12 @@ export default function StatusPage({
               id: string
               email: string
             }
+            type: string
           }) => ({
             name: `${a.user.firstname} ${a.user.lastname}`,
             email: a.user.email,
             id: a.user.id.toString(),
+            jobType: a.type,
           })
         )
 
@@ -377,28 +380,45 @@ export default function StatusPage({
                       if (key === 'cancellations') {
                         return (
                           <>
-                            {orderInformation.cancellations &&
-                              orderInformation.cancellations.length > 0 && (
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <button
-                                      className='inline-flex items-center justify-center w-5 h-5 bg-red-500 text-primary-foreground rounded-full text-xs font-medium mt-2 cursor-pointer'
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setSelectedCancellations(
-                                          orderInformation.cancellations
-                                        )
-                                        setIsCancellationsModalOpen(true)
-                                      }}
-                                    >
-                                      {orderInformation.cancellations.length}
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>View cancellation history</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              )}
+                            <div
+                              key={key}
+                              className={`grid grid-cols-2 p-2 mt-2 ${
+                                index % 2 === 0
+                                  ? 'bg-secondary'
+                                  : 'bg-background'
+                              }`}
+                            >
+                              <span className='font-semibold'>
+                                {fieldLabels[key]}
+                              </span>
+                              <span>
+                                {orderInformation.cancellations &&
+                                  orderInformation.cancellations.length > 0 && (
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <button
+                                          className='inline-flex items-center justify-center w-5 h-5 bg-red-500 text-primary-foreground rounded-full text-xs font-medium mt-2 cursor-pointer'
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            setSelectedCancellations(
+                                              orderInformation.cancellations
+                                            )
+                                            setIsCancellationsModalOpen(true)
+                                          }}
+                                        >
+                                          {
+                                            orderInformation.cancellations
+                                              .length
+                                          }
+                                        </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>View cancellation history</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+                              </span>
+                            </div>
                           </>
                         )
                       }
