@@ -316,15 +316,42 @@ export default function AssignedFilesPage({ changeTab }: Props) {
     },
     {
       accessorKey: 'orgName',
-      enableHiding: true,
+      header: 'Organization',
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
       accessorKey: 'diff',
+      header: 'Difficulty',
+      filterFn: (row, id, filterValues: string[]) => {
+        const diffVal = row.getValue(id) as string
+        if (!filterValues || filterValues.length === 0) return true
+        return filterValues.includes(diffVal)
+      },
       enableHiding: true,
     },
     {
       accessorKey: 'duration',
       header: 'Price/Duration',
+      filterFn: (row, id, filterValues: string[]) => {
+        const duration = row.getValue(id) as number
+        if (!filterValues || filterValues.length === 0) return true
+        if (filterValues.includes('lt2') && duration < 7200) return true
+        if (
+          filterValues.includes('2to3') &&
+          duration >= 7200 &&
+          duration < 10800
+        )
+          return true
+        if (filterValues.includes('gt3') && duration >= 10800) return true
+        return false
+      },
+      meta: {
+        filterOptions: [
+          { label: '<2 hours', value: 'lt2' },
+          { label: '2-3 hours', value: '2to3' },
+          { label: '>3 hours', value: 'gt3' },
+        ],
+      },
       cell: ({ row }) => (
         <div>
           <p>
