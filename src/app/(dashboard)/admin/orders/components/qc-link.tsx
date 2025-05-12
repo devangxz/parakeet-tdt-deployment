@@ -9,7 +9,7 @@ import {
 const QCLink = ({
   user,
 }: {
-  user: { name: string; email: string; id: string }
+  user: { name: string; email: string; id: string; jobType?: string }
 }) => {
   const [open, setOpen] = useState(false)
   return (
@@ -29,6 +29,7 @@ const QCLink = ({
         <div>
           <div>ID: {user.id}</div>
           <div>Email: {user.email}</div>
+          {user.jobType && <div>Job Type: {user.jobType}</div>}
         </div>
       </TooltipContent>
     </Tooltip>
