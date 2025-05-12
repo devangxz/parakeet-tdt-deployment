@@ -677,7 +677,7 @@
     "max_blank_percentage": 2,
     "min_edit_listen_correlation_percentage": 80,
     "min_listen_count_threshold": 2,
-    "max_speaker_change_percentage": 10
+    "max_speaker_change_percentage": 30
   },
   "max_blank_percentage": 2,
   "transcriber_test_user": "test+b2c@scribie.com",
