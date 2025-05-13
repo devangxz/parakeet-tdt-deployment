@@ -1722,12 +1722,13 @@ const insertTimestampBlankAtCursorPosition = (
   // Insert the blank with the red color style.
   quill.insertText(cursorPosition, formattedTime, { color: '#FF0000' }, 'user')
 
-  // Set the selection after the inserted text.
-  quill.setSelection(cursorPosition + formattedTime.length, 0)
-
   // Reset the text format so that new text is not red.
   quill.format('color', false)
   
+  // Space added after reverting back to default color.
+  quill.insertText(cursorPosition + formattedTime.length, ` `, 'user')
+  // Set the selection after the inserted text.
+  quill.setSelection(cursorPosition + formattedTime.length + 1, 0)
   // Count total blanks in the transcript and show toast message with updated blank count
   const text = quill.getText()
   const regex = /\[\d{1,2}:\d{2}:\d{2}\.\d\] ____/g
