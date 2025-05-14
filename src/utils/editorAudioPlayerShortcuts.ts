@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { tinykeys } from 'tinykeys'
 
 import { getUserOS } from './getUserOS'
@@ -394,6 +394,33 @@ async function migrateShortcutsFromLocalStorageToDB(): Promise<void> {
 
 const useShortcuts = (shortcutControls: ShortcutControls) => {
   const shortcutsRef = useRef<Record<string, () => void>>({})
+
+  const editorInFocusRef = useRef(false)
+
+   const checkEditorFocus = useCallback(() => {
+    const quillEditor = document.querySelector('.ql-editor')
+    editorInFocusRef.current = document.activeElement === quillEditor || 
+                              document.activeElement === document.body
+    return editorInFocusRef.current
+  }, [])
+
+  useEffect(() => {
+    const handleFocus = () => checkEditorFocus()
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (target?.closest('.ql-editor')) {
+        editorInFocusRef.current = true
+      }
+    }
+    
+    document.addEventListener('focus', handleFocus, true)
+    document.addEventListener('click', handleClick, true)
+    
+    return () => {
+      document.removeEventListener('focus', handleFocus, true)
+      document.removeEventListener('click', handleClick, true)
+    }
+  }, [checkEditorFocus])
 
   useEffect(() => {
     let mounted = true
