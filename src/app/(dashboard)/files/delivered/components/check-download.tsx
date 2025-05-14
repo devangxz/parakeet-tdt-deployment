@@ -307,14 +307,11 @@ export function CheckAndDownload({
 
   const getAuthToken = async () => {
     const tokenRes = await fileCacheTokenAction()
-    console.log(`tokenRes`,tokenRes)
     setAuthToken(tokenRes.token)
   }
 
   const fetchTranscriptAndCountBlanks = async () => {
-    console.log(`fetching transcript and counting blanks`)
     setIsLoadingBlanks(true);
-    console.log(`authToken`,authToken)
     if (!authToken) return;
     
     try {
@@ -328,13 +325,11 @@ export function CheckAndDownload({
         throw new Error('Failed to fetch transcript');
       }
       const data = await response.json();
-      console.log(`data`,data)
       if (data.result?.transcript) {
         const transcript = data.result.transcript;
         // Use regex to find all blanks in the format [HH:MM:SS.S] ____
         const blankPattern = /\[\d{1,2}:\d{2}:\d{2}\.\d\]\s+____/g;
         const matches = transcript.match(blankPattern) || [];
-        console.log(`matches`,matches.length)
         setBlanksCount(matches.length);
       }
     } catch (error) {
