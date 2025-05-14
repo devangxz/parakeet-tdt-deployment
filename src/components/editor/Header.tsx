@@ -95,6 +95,15 @@ const createShortcutControls = (
   decreasePlaybackSpeed: () => {
     setSpeed((prevSpeed: number) => Math.max(10, prevSpeed - 10))
   },
+  setPlaybackRateTo150: () => {
+    setSpeed(150)
+  },
+  decreasePlaybackRateBy25: () => {
+    setSpeed((prevSpeed: number) => Math.max(10, prevSpeed - 25))
+  },
+  increasePlaybackRateBy25: () => {
+    setSpeed((prevSpeed: number) => Math.min(300, prevSpeed + 25))
+  },
   playAudioFromTheStartOfCurrentParagraph: () => {},
   capitalizeFirstLetter: () => {},
   uppercaseWord: () => {},
@@ -133,6 +142,8 @@ const createShortcutControls = (
   },
   scrollDownEditorContent: () => {},
   scrollUpEditorContent: () => {},
+  editAllOccurrencesOfString: () => {},
+  multiEdit: () => {},
 })
 
 interface HeaderProps {

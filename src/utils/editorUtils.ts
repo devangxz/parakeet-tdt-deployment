@@ -1722,12 +1722,13 @@ const insertTimestampBlankAtCursorPosition = (
   // Insert the blank with the red color style.
   quill.insertText(cursorPosition, formattedTime, { color: '#FF0000' }, 'user')
 
-  // Set the selection after the inserted text.
-  quill.setSelection(cursorPosition + formattedTime.length, 0)
-
   // Reset the text format so that new text is not red.
   quill.format('color', false)
   
+  // Space added after reverting back to default color.
+  quill.insertText(cursorPosition + formattedTime.length, ` `, 'user')
+  // Set the selection after the inserted text.
+  quill.setSelection(cursorPosition + formattedTime.length + 1, 0)
   // Count total blanks in the transcript and show toast message with updated blank count
   const text = quill.getText()
   const regex = /\[\d{1,2}:\d{2}:\d{2}\.\d\] ____/g
@@ -2397,3 +2398,46 @@ export {
   getOptimalInterval,
 }
 export type { CTMType }
+
+/**
+ * Finds and edits all occurrences of a selected text in the editor
+ * @param quill The Quill editor instance
+ * @param selectedText The text to find and replace
+ * @param newText The new text to replace with
+ * @param matchCase Whether to match case when searching for occurrences
+ * @returns The number of occurrences that were edited
+ */
+export const editAllOccurrences = (
+  quill: Quill,
+  selectedText: string,
+  newText: string,
+  matchCase: boolean = false
+): number => {
+  if (!quill || !selectedText || selectedText === newText) return 0;
+  
+  const text = quill.getText();
+  const searchPattern = matchCase 
+    ? new RegExp(escapeRegExp(selectedText), 'g') 
+    : new RegExp(escapeRegExp(selectedText), 'gi');
+  
+  let match;
+  const matches: { index: number; length: number }[] = [];
+  
+  // First, find all occurrences to avoid issues with changing text positions
+  while ((match = searchPattern.exec(text)) !== null) {
+    matches.push({
+      index: match.index,
+      length: match[0].length
+    });
+  }
+  
+  // Then replace them in reverse order (from end to start)
+  // This prevents position shifts from affecting earlier replacements
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const { index, length } = matches[i];
+    quill.deleteText(index, length, 'user');
+    quill.insertText(index, newText, 'user');
+  }
+  
+  return matches.length;
+};

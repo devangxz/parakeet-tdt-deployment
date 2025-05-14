@@ -2,6 +2,8 @@ import { OrderStatus, ReportMode, ReportOption } from '@prisma/client'
 import axios from 'axios'
 import { NextRequest, NextResponse } from 'next/server'
 
+import config from '../../../../config.json'
+import { getAccentAction } from '@/app/actions/editor/process-audio-chunk'
 import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
@@ -137,6 +139,23 @@ export async function POST(req: NextRequest) {
       combinedASRFormatValidation: formattingCheckResult
         ? JSON.parse(JSON.stringify(formattingCheckResult))
         : null,
+    }
+
+    const accent = await getAccentAction(fileId)
+
+    if (accent.success) {
+      const accentValue = accent.data || 'NA'
+      if(accentValue in config.accents_list) {
+        await prisma.fileAccent.create(
+          {
+            data: {
+              userId: order.userId,
+              fileId,
+              accentCode: accentValue,
+            },
+          }
+        )
+      }
     }
 
     if (qualityCheck.requiresManualScreening) {

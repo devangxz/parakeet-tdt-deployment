@@ -41,6 +41,9 @@ interface DefaultShortcuts {
   // focusOnVolumeTextBox: string;
   increasePlaybackSpeed: string
   decreasePlaybackSpeed: string
+  setPlaybackRateTo150: string
+  decreasePlaybackRateBy25: string
+  increasePlaybackRateBy25: string
   // focusOnPlaybackSpeedTextBox: string;
   playAudioFromTheStartOfCurrentParagraph: string
   capitalizeFirstLetter: string
@@ -79,7 +82,7 @@ interface DefaultShortcuts {
   findNextOccurrenceOfString: string
   // repeatLastFind: string;
   findThePreviousOccurrenceOfString: string
-  // findAllOccurrencesOfString: string;
+  editAllOccurrencesOfString: string;
   // focusFindStringTextBox: string;
   // focusReplaceStringTextBox: string;
   replaceNextOccurrenceOfString: string
@@ -111,6 +114,7 @@ interface DefaultShortcuts {
   // insertSwearInLine: string;
   scrollUpEditorContent: string
   scrollDownEditorContent: string
+  multiEdit: string
 }
 
 export interface ShortcutControls {
@@ -134,6 +138,9 @@ export interface ShortcutControls {
   // focusOnVolumeTextBox: () => void;
   increasePlaybackSpeed: () => void
   decreasePlaybackSpeed: () => void
+  setPlaybackRateTo150: () => void
+  decreasePlaybackRateBy25: () => void
+  increasePlaybackRateBy25: () => void
   // focusOnPlaybackSpeedTextBox: () => void;
   playAudioFromTheStartOfCurrentParagraph: () => void
   playNextBlankInstance: () => void
@@ -177,7 +184,8 @@ export interface ShortcutControls {
   findNextOccurrenceOfString: () => void
   // repeatLastFind: () => void;
   findThePreviousOccurrenceOfString: () => void
-  // findAllOccurrencesOfString: () => void;
+  editAllOccurrencesOfString: () => void;
+  multiEdit: () => void;
   // focusFindStringTextBox: () => void;
   // focusReplaceStringTextBox: () => void;
   replaceNextOccurrenceOfString: () => void
@@ -241,6 +249,9 @@ export const defaultShortcuts: DefaultShortcuts = {
   // focusOnVolumeTextBox: "Control+Alt+V",
   increasePlaybackSpeed: 'Control+Alt+ArrowUp',
   decreasePlaybackSpeed: 'Control+Alt+ArrowDown',
+  setPlaybackRateTo150: 'F1',
+  decreasePlaybackRateBy25: 'Shift+F1',
+  increasePlaybackRateBy25: 'Control+F1',
   playAudioFromTheStartOfCurrentParagraph: 'Control+N',
   joinWithNextParagraph: 'Alt+J',
   playAt75Speed: 'Control+Q',
@@ -276,7 +287,8 @@ export const defaultShortcuts: DefaultShortcuts = {
   findNextOccurrenceOfString: 'Control+F',
   // repeatLastFind: "Control+G",
   findThePreviousOccurrenceOfString: 'Control+Shift+G',
-  // findAllOccurrencesOfString: "Control+Alt+G",
+  editAllOccurrencesOfString: "Control+Alt+G",
+  multiEdit: "Control+Shift+Q",
   // focusFindStringTextBox: "Alt+1",
   // focusReplaceStringTextBox: "Alt+2",
   replaceNextOccurrenceOfString: 'Control+R',
