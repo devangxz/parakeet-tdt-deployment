@@ -342,7 +342,7 @@ export async function submitQCFile(
         })
       })
       logger.info(
-        `<-- OrderTranscriptionFlow:submitQC - OrderStatus.SUBMITTED_FOR_APPROVAL`
+        `<-- OrderTranscriptionFlow:submitQC - OrderStatus.SUBMITTED_FOR_APPROVAL ${order.fileId} , userId: ${order.userId}`
       )
       return
     }
