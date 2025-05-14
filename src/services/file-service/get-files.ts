@@ -63,6 +63,7 @@ export async function getFilesByStatus(
               select: {
                 orderTs: true,
                 orderType: true,
+                status: true,
               },
             },
           },

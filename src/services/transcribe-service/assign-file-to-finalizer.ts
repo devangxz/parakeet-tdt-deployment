@@ -34,6 +34,7 @@ const assignFileToFinalizer = async (
     const templateData = {
       fileId,
       amount: `$${cost} (${rate}/ah)`,
+      comment: comment ?? '',
     }
 
     await sendTemplateMail('FINALIZER_ASSIGNMENT', transcriberId, templateData)

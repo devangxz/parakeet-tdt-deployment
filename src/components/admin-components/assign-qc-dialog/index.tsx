@@ -16,6 +16,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import isValidEmail from '@/utils/isValidEmail'
 
@@ -28,6 +29,7 @@ interface DialogProps {
 
 const AssignQcDialog = ({ open, onClose, fileId, refetch }: DialogProps) => {
   const [userEmail, setUserEmail] = useState('')
+  const [resetTimer, setResetTimer] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async () => {
@@ -38,9 +40,12 @@ const AssignQcDialog = ({ open, onClose, fileId, refetch }: DialogProps) => {
     }
     setLoading(true)
     try {
-      const result = await assignQC(fileId, userEmail)
+      const result = await assignQC(fileId, userEmail, resetTimer)
       if (result.success) {
-        const successToastId = toast.success(`Successfully assigned Editor`)
+        const message = resetTimer
+          ? 'Successfully reset timer'
+          : 'Successfully assigned Editor'
+        const successToastId = toast.success(message)
         toast.dismiss(successToastId)
         onClose()
         refetch()
@@ -68,6 +73,14 @@ const AssignQcDialog = ({ open, onClose, fileId, refetch }: DialogProps) => {
                 triggerOnLoad={open}
                 placeholder='Select an Editor...'
               />
+              <div className='flex items-center gap-2 mt-2'>
+                <Checkbox
+                  id='reset-timer'
+                  checked={resetTimer}
+                  onCheckedChange={(checked) => setResetTimer(checked === true)}
+                />
+                <Label htmlFor='reset-timer'>Reset Timer</Label>
+              </div>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>

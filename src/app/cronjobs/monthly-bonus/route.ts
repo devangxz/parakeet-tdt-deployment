@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { isTranscriberICQC } from '@/utils/backend-helper'
 
 interface TranscriberData {
   transcriberId: number
@@ -11,6 +12,7 @@ interface TranscriberData {
   totalHoursWorked: number
   fileIds: string[]
   cfBonusEnabled?: boolean
+  isICQC?: boolean
 }
 
 const addBonus = async (userId: number, amount: number, jobType: JobType) => {
@@ -66,6 +68,7 @@ const giveBonus = async (jobType: JobType) => {
             },
           },
         },
+        isICQC: true,
       },
     })
 
@@ -74,10 +77,14 @@ const giveBonus = async (jobType: JobType) => {
         const existing = acc.find((t) => t.transcriberId === curr.transcriberId)
         const duration = curr.order.File ? curr.order.File.duration : 0
         const fileId = curr.order.fileId
+        const isICQC = curr.isICQC
 
         if (existing) {
           existing.totalHoursWorked += duration
           existing.fileIds.push(fileId)
+          if (isICQC) {
+            existing.isICQC = true
+          }
         } else {
           acc.push({
             transcriberId: curr.transcriberId,
@@ -85,11 +92,16 @@ const giveBonus = async (jobType: JobType) => {
             firstname: curr.user.firstname,
             totalHoursWorked: duration,
             fileIds: [fileId],
+            isICQC: isICQC || false,
           })
         }
         return acc
       },
       []
+    )
+
+    logger.info(
+      `Found ${transcriberData.length} transcribers who completed files last month`
     )
 
     const eligibleTranscribers = transcriberData.filter(
@@ -101,15 +113,42 @@ const giveBonus = async (jobType: JobType) => {
         where: { userId: user.transcriberId },
       })
 
-      if (!verifier?.monthlyBonusEnabled) continue
+      if (!verifier?.monthlyBonusEnabled) {
+        logger.info(
+          `Transcriber ${user.email} has monthly bonus disabled in settings`
+        )
+        continue
+      }
 
       logger.info(`Sending monthly bonus for ${user.email}`)
+
+      const icqcStatus = await isTranscriberICQC(user.transcriberId)
+      if (icqcStatus.isICQC) {
+        // Check if the IC/QC user has worked at least 24 hours on IC files
+        if (!user.isICQC || user.totalHoursWorked / 3600 < 24) {
+          logger.info(
+            `Skipping IC/QC transcriber ${
+              user.email
+            } - insufficient IC hours (${(user.totalHoursWorked / 3600).toFixed(
+              2
+            )}/24)`
+          )
+          continue
+        }
+        logger.info(
+          `IC/QC transcriber ${user.email} eligible with ${(
+            user.totalHoursWorked / 3600
+          ).toFixed(2)} hours`
+        )
+      }
 
       const hoursWorked = Math.floor(user.totalHoursWorked / 3600)
       const amount = Math.floor(hoursWorked / 3) * 10
       await addBonus(user.transcriberId, amount, jobType)
 
-      logger.info(`Successfully sent monthly bonus for ${user.email}`)
+      logger.info(
+        `Successfully sent monthly bonus of $${amount} for ${user.email} (${hoursWorked} hours)`
+      )
     }
   } catch (error) {
     logger.error(`Error sending monthly bonus: ${error}`)

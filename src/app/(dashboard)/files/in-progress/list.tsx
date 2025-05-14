@@ -12,9 +12,11 @@ import { getRefundAmountAction } from '@/app/actions/file/cancel-order'
 import { downloadMp3 } from '@/app/actions/file/download-mp3'
 import { refetchFiles } from '@/app/actions/files'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
+import { refreshPendingHighDifficultyCount } from '@/app/actions/invoice/pending-high-difficulty/refresh'
 import DraftTranscriptFileDialog from '@/components/draft-transcript'
 import CanceOrderDialog from '@/components/draft-transcript/cancel-order'
 import RenameFileDialog from '@/components/file-rename-dialog'
+import HighDifficultyNotice from '@/components/high-difficulty-notice'
 import { DataTableColumnHeader } from '@/components/table-components/column-header'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -40,13 +42,18 @@ interface ExtendedFile extends File {
   uploadedByUser: User
   folderId: number | null
   orderType: string
+  orderStatus: string
 }
 
 interface ListProps {
   files: ExtendedFile[]
+  pendingHighDifficultyCount?: number
 }
 
-export default function InprogressFilesPage({ files }: ListProps) {
+export default function InprogressFilesPage({
+  files,
+  pendingHighDifficultyCount = 0,
+}: ListProps) {
   const [inprogressFiles, setInprogressFiles] = useState<ExtendedFile[] | null>(
     files
   )
@@ -68,6 +75,9 @@ export default function InprogressFilesPage({ files }: ListProps) {
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
+  const [highDifficultyCount, setHighDifficultyCount] = useState(
+    pendingHighDifficultyCount
+  )
   const router = useRouter()
 
   const setAudioUrl = async () => {
@@ -101,6 +111,7 @@ export default function InprogressFilesPage({ files }: ListProps) {
           uploadedByUser: file.uploadedByUser,
           folderId: file.parentId,
           orderType: file.Orders[0]?.orderType,
+          orderStatus: file.Orders[0]?.status,
         }))
         .sort((a: ExtendedFile, b: ExtendedFile) => {
           if (a.date && b.date) {
@@ -109,6 +120,13 @@ export default function InprogressFilesPage({ files }: ListProps) {
           return 0
         })
       setInprogressFiles(files ?? [])
+
+      // Refresh high difficulty count
+      const highDifficultyResponse = await refreshPendingHighDifficultyCount()
+      if (highDifficultyResponse.success) {
+        setHighDifficultyCount(highDifficultyResponse.count)
+      }
+
       setError(null)
     } catch (err) {
       setError('an error occurred')
@@ -161,6 +179,11 @@ export default function InprogressFilesPage({ files }: ListProps) {
         <p>An Error Occured</p>
       </div>
     )
+  }
+
+  // Check if a file is blocked
+  const isFileBlocked = (file: ExtendedFile): boolean => {
+    return file.orderStatus === 'BLOCKED'
   }
 
   const columns: ColumnDef<ExtendedFile>[] = [
@@ -257,6 +280,16 @@ export default function InprogressFilesPage({ files }: ListProps) {
         }
 
         return <div className='font-medium'>{displayText}</div>
+      },
+    },
+    {
+      accessorKey: 'orderStatus',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Status' />
+      ),
+      cell: ({ row }) => {
+        const orderStatus = row.getValue('orderStatus') as string
+        return <div className='font-medium'>{orderStatus || '-'}</div>
       },
     },
   ]
@@ -459,10 +492,18 @@ export default function InprogressFilesPage({ files }: ListProps) {
             </Button>
           </div>
         </div>
+
+        {highDifficultyCount > 0 && (
+          <HighDifficultyNotice count={highDifficultyCount} />
+        )}
+
         <DataTable
           data={inprogressFiles || []}
           columns={columns}
           onSelectedRowsChange={handleSelectedRowsChange}
+          getRowClassName={(row: ExtendedFile) =>
+            isFileBlocked(row) ? 'bg-red-50' : ''
+          }
         />
       </div>
       <DraftTranscriptFileDialog

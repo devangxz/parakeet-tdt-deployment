@@ -39,6 +39,7 @@ interface File extends BaseTranscriberFile {
   customFormatOption: string
   comment: string
   isCustomFormat: string
+  isICQC: boolean
 }
 
 interface Props {
@@ -143,6 +144,7 @@ export default function AssignedFilesPage({ changeTab }: Props) {
             customFormatOption: assignment.order.customFormatOption,
             comment: assignment.comment ?? '',
             isCustomFormat,
+            isICQC: assignment.order.isICQC,
           }
         })
         setAssginedFiles(orders ?? [])
@@ -286,6 +288,14 @@ export default function AssignedFilesPage({ changeTab }: Props) {
                 className='font-semibold text-[10px] text-green-600'
               >
                 Contains Video
+              </Badge>
+            )}
+            {row.original.isICQC && (
+              <Badge
+                variant='outline'
+                className='font-semibold text-[10px] text-green-600'
+              >
+                IC QC
               </Badge>
             )}
           </div>

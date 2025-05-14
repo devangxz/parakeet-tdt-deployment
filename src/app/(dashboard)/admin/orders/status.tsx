@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
+import { CancellationStatus } from '@prisma/client'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import AudioPlayer from './components/AudioPlayer'
+import QCLink from './components/qc-link'
 import { fetchFileOrderInformation } from '@/app/actions/om/fetch-file-order-information'
 import { updatePriority } from '@/app/actions/om/update-priority'
 import AssignCfDialog from '@/components/admin-components/assign-cf-file'
@@ -20,6 +22,7 @@ import SetFileRateDialog from '@/components/admin-components/set-file-rate-dialo
 import SetInstructionsDialog from '@/components/admin-components/set-instructions-dialog'
 import UnassignCfDialog from '@/components/admin-components/unassign-cf-dialog'
 import UnassignQcDialog from '@/components/admin-components/unassign-qc-dialog'
+import { CancellationDetailsModal } from '@/components/cancellation-details-modal'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -31,6 +34,11 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { FileCost } from '@/types/files'
 import formatDateTime from '@/utils/formatDateTime'
 import formatDuration from '@/utils/formatDuration'
@@ -50,7 +58,7 @@ interface File {
   deadline: string
   deliveryTs: string
   status: string
-  qc: string
+  qc: { name: string; email: string; id: string }[]
   customFormattingFile: string
   priority: number
   fileId: string
@@ -59,6 +67,20 @@ interface File {
   fileCost: FileCost
   rateBonus: number
   type: string
+  cancellations: {
+    user: {
+      firstname: string | null
+      lastname: string | null
+      email: string
+    }
+    id: number
+    userId: number
+    fileId: string
+    reason: string
+    createdAt: Date
+    comment: string | null
+    status: CancellationStatus
+  }[]
 }
 
 interface StatusPageProps {
@@ -89,6 +111,24 @@ export default function StatusPage({
   const [openAssignFinalizerDialog, setAssignFinalizerDialog] = useState(false)
   const [openAssignCfDialog, setAssignCfDialog] = useState(false)
   const [openUnassignCfDialog, setUnassignCfDialog] = useState(false)
+  const [isCancellationsModalOpen, setIsCancellationsModalOpen] =
+    useState(false)
+  const [selectedCancellations, setSelectedCancellations] = useState<
+    {
+      user: {
+        firstname: string | null
+        lastname: string | null
+        email: string
+      }
+      id: number
+      userId: number
+      fileId: string
+      reason: string
+      createdAt: Date
+      comment: string | null
+      status: CancellationStatus
+    }[]
+  >([])
 
   const handleSearch = async () => {
     try {
@@ -97,17 +137,25 @@ export default function StatusPage({
 
       if (response.success && response.details) {
         const orderDetails = response.details as any
-        const qcNames = orderDetails.Assignment.filter(
+        const qcUsers = orderDetails.Assignment.filter(
           (a: { status: string }) =>
             a.status === 'ACCEPTED' ||
             a.status === 'COMPLETED' ||
             a.status === 'SUBMITTED_FOR_APPROVAL'
+        ).map(
+          (a: {
+            user: {
+              firstname: string
+              lastname: string
+              id: string
+              email: string
+            }
+          }) => ({
+            name: `${a.user.firstname} ${a.user.lastname}`,
+            email: a.user.email,
+            id: a.user.id.toString(),
+          })
         )
-          .map(
-            (a: { user: { firstname: string; lastname: string } }) =>
-              `${a.user.firstname} ${a.user.lastname}`
-          )
-          .join(', ')
 
         const order = {
           filename: orderDetails.File.filename,
@@ -124,7 +172,7 @@ export default function StatusPage({
           deadline: formatDateTime(orderDetails.deadlineTs),
           deliveryTs: formatDateTime(orderDetails.deliveryTs),
           status: orderDetails.status,
-          qc: qcNames || '-',
+          qc: qcUsers.length > 0 ? qcUsers : [],
           customFormattingFile:
             orderDetails.orderType === 'TRANSCRIPTION' ? 'No' : 'Yes',
           priority: orderDetails.priority,
@@ -134,6 +182,7 @@ export default function StatusPage({
           fileCost: orderDetails.fileCost,
           rateBonus: orderDetails.rateBonus,
           type: orderDetails.orderType,
+          cancellations: orderDetails.cancellations,
         }
 
         setOrderInformation(order)
@@ -187,6 +236,7 @@ export default function StatusPage({
     deliveryTs: 'Delivery',
     status: 'Status',
     qc: 'Editor',
+    cancellations: 'Cancellations',
     customFormattingFile: 'Custom Formatting File',
     priority: 'Priority',
     fileId: 'File ID',
@@ -199,6 +249,7 @@ export default function StatusPage({
 
   useEffect(() => {
     if (selectedFileId.length > 0) {
+      setFileId(selectedFileId)
       handleSearch()
     }
   }, [selectedFileId])
@@ -300,6 +351,55 @@ export default function StatusPage({
                               )}
                             </span>
                           </div>
+                        )
+                      }
+                      if (key === 'qc') {
+                        return (
+                          <div
+                            key={key}
+                            className={`grid grid-cols-2 p-2 mt-2 ${
+                              index % 2 === 0 ? 'bg-secondary' : 'bg-background'
+                            }`}
+                          >
+                            <span className='font-semibold'>
+                              {fieldLabels[key]}
+                            </span>
+                            <div className='font-medium flex flex-col'>
+                              {Array.isArray(value) && value.length > 0
+                                ? value.map((user) => (
+                                    <QCLink key={user.id} user={user} />
+                                  ))
+                                : '-'}
+                            </div>
+                          </div>
+                        )
+                      }
+                      if (key === 'cancellations') {
+                        return (
+                          <>
+                            {orderInformation.cancellations &&
+                              orderInformation.cancellations.length > 0 && (
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <button
+                                      className='inline-flex items-center justify-center w-5 h-5 bg-red-500 text-primary-foreground rounded-full text-xs font-medium mt-2 cursor-pointer'
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setSelectedCancellations(
+                                          orderInformation.cancellations
+                                        )
+                                        setIsCancellationsModalOpen(true)
+                                      }}
+                                    >
+                                      {orderInformation.cancellations.length}
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>View cancellation history</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                          </>
                         )
                       }
                       return (
@@ -534,6 +634,11 @@ export default function StatusPage({
         onClose={() => setUnassignCfDialog(false)}
         fileId={orderInformation?.fileId || ''}
         refetch={() => refetch()}
+      />
+      <CancellationDetailsModal
+        isOpen={isCancellationsModalOpen}
+        onClose={() => setIsCancellationsModalOpen(false)}
+        cancellations={selectedCancellations}
       />
     </>
   )

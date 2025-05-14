@@ -84,18 +84,6 @@ export async function flagHighDifficulty(formData: {
 
       const price = ((rate * file.duration) / 60).toFixed(2)
 
-      const customer = await prisma.customer.findUnique({
-        where: { userId: orderInformation.userId },
-      })
-
-      if (!customer) {
-        logger.error(`Customer not found for ${orderInformation.userId}`)
-        return {
-          success: false,
-          message: 'Customer not found',
-        }
-      }
-
       const invoiceId = generateInvoiceId('CGAP')
       const invoice = await prisma.invoice.create({
         data: {
@@ -123,8 +111,8 @@ export async function flagHighDifficulty(formData: {
         issues: issues,
         final_rate: rate.toString(),
         total: price.toString(),
-        payment_url: `https://${process.env.SERVER}/payments?id=${invoice?.invoiceId}`,
-        file_url: `https://${process.env.SERVER}/files/${orderInformation.fileId}`,
+        payment_url: `https://${process.env.SERVER}/payments/pending?id=${invoice?.invoiceId}`,
+        file_url: `https://${process.env.SERVER}/files/permalink/${orderInformation.fileId}`,
       }
       await sendTemplateMail(
         'HIGH_DIFFICULTY',

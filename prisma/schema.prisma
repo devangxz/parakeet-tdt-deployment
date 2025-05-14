@@ -463,6 +463,7 @@ model JobAssignment {
   extensionRequested Boolean       @default(false) @map("extension_requested")
   assignMode         AssignMode    @default(AUTO) @map("assign_mode")
   comment            String?       @map("comment")
+  isICQC             Boolean       @default(false) @map("is_icqc")
 
   user  User  @relation(fields: [transcriberId], references: [id])
   order Order @relation(fields: [orderId], references: [id])
@@ -781,12 +782,12 @@ model Cancellations {
 }
 
 model ReviewWithGeminiStats {
-  id           Int      @id @default(autoincrement())
-  userId       Int      @map("user_id")
-  fileId       String   @map("file_id")
-  options      String[] @map("options") // selected prompt options
-  instructions String   @map("instructions")
-  temperature  Float    @map("temperature")
+  id           Int       @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  fileId       String    @map("file_id")
+  options      String[]  @map("options") // selected prompt options
+  instructions String    @map("instructions")
+  temperature  Float     @map("temperature")
   startTime    DateTime? @map("start_time")
   endTime      DateTime? @map("end_time")
   duration     Int?      @default(0) @map("duration")
@@ -819,20 +820,20 @@ model ProcessWithLLMStats {
 }
 
 model ASRProcessStats {
-  id                       Int        @id @default(autoincrement())
-  fileId                   String     @map("file_id")
-  orderId                  Int        @map("order_id")
-  assemblyAIStartTime      DateTime   @map("assembly_ai_start_time")
-  assemblyAIEndTime        DateTime   @map("assembly_ai_end_time")
-  assemblyAITimeTaken      Int        @default(0) @map("assembly_ai_time_taken")
-  chunkingStartTime        DateTime?  @map("chunking_start_time")
-  chunkingEndTime          DateTime?  @map("chunking_end_time")
-  chunkingTimeTaken        Int?       @default(0) @map("chunking_time_taken")
-  gpt4oTranscribeStartTime DateTime?  @map("gpt4o_transcribe_start_time")
-  gpt4oTranscribeEndTime   DateTime?  @map("gpt4o_transcribe_end_time")
-  gpt4oTranscribeTimeTaken Int?       @default(0) @map("gpt4o_transcribe_time_taken")
-  totalASRTimeTaken        Int        @default(0) @map("total_asr_time_taken")
-  createdAt                DateTime   @default(now()) @map("created_at")
+  id                       Int       @id @default(autoincrement())
+  fileId                   String    @map("file_id")
+  orderId                  Int       @map("order_id")
+  assemblyAIStartTime      DateTime  @map("assembly_ai_start_time")
+  assemblyAIEndTime        DateTime  @map("assembly_ai_end_time")
+  assemblyAITimeTaken      Int       @default(0) @map("assembly_ai_time_taken")
+  chunkingStartTime        DateTime? @map("chunking_start_time")
+  chunkingEndTime          DateTime? @map("chunking_end_time")
+  chunkingTimeTaken        Int?      @default(0) @map("chunking_time_taken")
+  gpt4oTranscribeStartTime DateTime? @map("gpt4o_transcribe_start_time")
+  gpt4oTranscribeEndTime   DateTime? @map("gpt4o_transcribe_end_time")
+  gpt4oTranscribeTimeTaken Int?      @default(0) @map("gpt4o_transcribe_time_taken")
+  totalASRTimeTaken        Int       @default(0) @map("total_asr_time_taken")
+  createdAt                DateTime  @default(now()) @map("created_at")
 
   file  File  @relation(fields: [fileId], references: [fileId])
   order Order @relation(fields: [orderId], references: [id])
