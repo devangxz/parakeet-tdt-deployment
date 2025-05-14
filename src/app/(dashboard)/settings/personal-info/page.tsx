@@ -336,7 +336,7 @@ const Page = () => {
         <HeadingDescription
           heading={'Email'}
           description={
-            'The secondary email address can be set as the Sign In email address after it has been verified. Use this setting if you wish to change the login email address of your Scribie.ai account.'
+            'The secondary email address can be set as the Sign In email address after it has been verified. Use this setting if you wish to change the login email address of your Scribie account.'
           }
         />
         <Form {...emailForm}>
