@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { StarFilledIcon, StarIcon } from '@radix-ui/react-icons'
+import { StarFilledIcon, StarIcon, ReloadIcon } from '@radix-ui/react-icons'
 import { useGoogleLogin } from '@react-oauth/google'
 import { ChevronDown, ChevronUp, FileText, RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -134,6 +134,8 @@ export function CheckAndDownload({
   const ratingMessages = ['Poor', 'Bad', 'Okay', 'Good', 'Excellent']
   const [showMoreFormats, setShowMoreFormats] = useState(false)
   const [subtitlesExist, setSubtitlesExist] = useState(true)
+  const [blanksCount, setBlanksCount] = useState<number>(0)
+  const [isLoadingBlanks, setIsLoadingBlanks] = useState(true)
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
@@ -308,11 +310,47 @@ export function CheckAndDownload({
     setAuthToken(tokenRes.token)
   }
 
+  const fetchTranscriptAndCountBlanks = async () => {
+    setIsLoadingBlanks(true);
+    if (!authToken) return;
+    
+    try {
+      const response = await fetch(`${FILE_CACHE_URL}/fetch-transcript?fileId=${id}`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch transcript');
+      }
+      const data = await response.json();
+      if (data.result?.transcript) {
+        const transcript = data.result.transcript;
+        // Use regex to find all blanks in the format [HH:MM:SS.S] ____
+        const blankPattern = /\[\d{1,2}:\d{2}:\d{2}\.\d\]\s+____/g;
+        const matches = transcript.match(blankPattern) || [];
+        setBlanksCount(matches.length);
+      }
+    } catch (error) {
+      console.error('Error fetching transcript:', error);
+      toast.error('Failed to count blanks in transcript');
+    } finally {
+      setIsLoadingBlanks(false);
+    }
+  };
+
   useEffect(() => {
     if (toggleCheckAndDownload) {
       getAuthToken()
     }
   }, [toggleCheckAndDownload])
+
+  useEffect(() => {
+    if(toggleCheckAndDownload && authToken){
+      fetchTranscriptAndCountBlanks();
+    }
+  },[authToken,toggleCheckAndDownload])
 
   async function onSubmit(data: z.infer<typeof FormSchema>) {
     const toastId = toast.loading(`Submitting.`)
@@ -361,7 +399,14 @@ export function CheckAndDownload({
                   <div className='flex-1 space-y-1'>
                     <h3 className='text-lg font-semibold'>Check File</h3>
                     <p className='text-sm text-muted-foreground'>
-                      The transcript contains no blanks/inaudibles.
+                      {isLoadingBlanks ? (
+                        <span className='flex items-center gap-2'>
+                          <ReloadIcon className='h-4 w-4 animate-spin' />
+                          Counting blanks...
+                        </span>
+                      ) : (
+                        `The transcript contains ${blanksCount > 0 ? blanksCount : 'no'} blanks/inaudibles.`
+                      )}
                     </p>
                   </div>
                   <Button
