@@ -1,6 +1,6 @@
 ## Acceptance of Terms
 
-By using Scribie.ai web site ("Service"), all services of Scribie Technologies, you are agreeing to be bound by the following terms and conditions ("Freelance Transcription Program Terms and Conditions"), including any subsequent changes or modifications to them. If you do not agree to these Terms please do not use the Scribie.ai website or services.
+By using Scribie web site ("Service"), all services of Scribie Technologies, you are agreeing to be bound by the following terms and conditions ("Freelance Transcription Program Terms and Conditions"), including any subsequent changes or modifications to them. If you do not agree to these Terms please do not use the Scribie website or services.
 
 ## Confidentiality
 
@@ -14,7 +14,7 @@ You acknowledge and agree that you will not delegate the selected assignments to
 
 ## Legal Name & Address
 
-You acknowledge and agree that you will provide your legal name and full residential address in your Scribie.ai account. Any incorrect information may lead to account suspension. Please note Scribie does not accept applications/transcribers from residents of California, US.
+You acknowledge and agree that you will provide your legal name and full residential address in your Scribie account. Any incorrect information may lead to account suspension. Please note Scribie does not accept applications/transcribers from residents of California, US.
 
 ## Duplicate Accounts
 
@@ -22,7 +22,7 @@ You acknowledge and agree that you will not create duplicate accounts and/or sub
 
 ## Non-transferable
 
-You acknowledge and agree that your account on Scribie.ai is non-transferable and you will not sell or transfer ownership of your account to other persons or parties. In case of evidence to the contrary your account may be suspended. You may however delete your account anytime you wish.
+You acknowledge and agree that your account on Scribie is non-transferable and you will not sell or transfer ownership of your account to other persons or parties. In case of evidence to the contrary your account may be suspended. You may however delete your account anytime you wish.
 
 ## Privacy
 
@@ -30,7 +30,7 @@ You acknowledge and authorize us to collect and store personal information such 
 
 ## Dispute Resolution
 
-You acknowledge and agree that the final decision regarding a review dispute as judged by Scribie.ai administrators is binding and you are willing to accept the decision. Refusal to accept the decision constitutes a violation of this Terms and Conditions.
+You acknowledge and agree that the final decision regarding a review dispute as judged by Scribie administrators is binding and you are willing to accept the decision. Refusal to accept the decision constitutes a violation of this Terms and Conditions.
 
 ## Minimum Quality Standard
 
@@ -54,7 +54,7 @@ You are solely responsible for your conduct and your data related to the Service
 
 Any unauthorized use of any Scribie Techologies's Service is a violation of this Agreement and certain federal and state laws. Such violations may subject the unauthorized user and his or her agents to civil and criminal penalties.
 
-Scribie.ai has a strict policy on abusive behaviour, derogatory language and threats directed towards Scribie Technologies, the employees of Scribie Technologies or any users of the Service. Your account may be suspended and your attempts to contact support will be ignored.
+Scribie has a strict policy on abusive behaviour, derogatory language and threats directed towards Scribie Technologies, the employees of Scribie Technologies or any users of the Service. Your account may be suspended and your attempts to contact support will be ignored.
 
 Any attempt to contact persons who are directly or indirectly referred to in any particular file is a violation of this agreement and may lead to account suspension.
 
@@ -70,7 +70,7 @@ You acknowledge and agree that all decisions made by Scribie Technologies regard
 
 ## Termination of Service
 
-We reserve the right to suspend your Scribie.ai account at any time.
+We reserve the right to suspend your Scribie account at any time.
 
 ## Conditions
 

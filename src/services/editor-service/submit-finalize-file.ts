@@ -193,7 +193,7 @@ export async function submitFinalize(
 
     const templateData = {
       file_id: order.fileId,
-      subject: 'Scribie.ai Finalizer Assignment Submitted',
+      subject: 'Scribie Finalizer Assignment Submitted',
     }
     await sendTemplateMail('TRANSCRIBER_SUBMIT', transcriberId, templateData)
 

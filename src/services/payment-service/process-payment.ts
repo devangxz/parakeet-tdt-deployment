@@ -179,10 +179,10 @@ export const processPayment = async (
         files: body,
         subject:
           orderType === OrderType.TRANSCRIPTION_FORMATTING
-            ? 'Scribie.ai Custom Format Order Confirmation'
+            ? 'Scribie Custom Format Order Confirmation'
             : orderType === OrderType.FORMATTING
-            ? 'Scribie.ai Format Order Confirmation'
-            : 'Scribie.ai Transcript Order Confirmation',
+            ? 'Scribie Format Order Confirmation'
+            : 'Scribie Transcript Order Confirmation',
       }
 
       await ses.sendMail('ORDER_CONFIRMATION', emailData, templateData)

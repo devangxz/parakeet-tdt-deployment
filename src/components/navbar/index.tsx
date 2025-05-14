@@ -129,12 +129,12 @@ const MobileMenu = ({
                 <Image
                   className='h-8 w-8'
                   src='/assets/images/logo.svg'
-                  alt='scribie.ai'
+                  alt='scribie'
                   width={32}
                   height={32}
                 />
                 <span className='ml-2 text-lg font-semibold text-primary'>
-                  scribie.ai
+                  scribie
                 </span>
               </div>
             </Link>
@@ -328,7 +328,7 @@ const Navbar = () => {
                   height={48}
                 />
                 <span className='ml-2 sm:ml-3 text-xl sm:text-2xl md:text-3xl font-semibold text-primary'>
-                  scribie.ai
+                  scribie
                 </span>
               </div>
 

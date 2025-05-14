@@ -118,7 +118,7 @@ async function completeQCJob(order: Order, transcriberId: number) {
 
   const templateData = {
     file_id: order.fileId,
-    subject: 'Scribie.ai Editor Assignment Submitted',
+    subject: 'Scribie Editor Assignment Submitted',
   }
   const ses = getAWSSesInstance()
   await ses.sendMail(
