@@ -1,34 +1,33 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
+  <body>
+    <p>Hello {{ firstname }},</p>
 
-<body>
-  <p>Hello {{ firstname }},</p>
+    <p>
+      You have earned a $${{amount}} bonus for ${{totalHours}} hours of {{type}}
+      work for ${{today_date}} for files ${{fileId}}. Your account has been
+      credited for the same. Please visit the following link and click on the
+      bonus details link for the details.<br /><br />
+    </p>
 
-  <p>
-    You have earned a $${{amount}} bonus for ${{totalHours}} hours of {{type}}
-    work for ${{today_date}} for files ${{fileId}}. Your account has been
-    credited for the same. Please visit the following link and click on the
-    bonus details link for the details.<br /><br />
-  </p>
+    <p>
+      <a target="_blank" href="https://{{$$SCRIBIE_SERVER$$}}/earnings#earnings"
+        >https://{{$$SCRIBIE_SERVER$$}}/earnings#earnings</a
+      >
+    </p>
 
-  <p>
-    <a target="_blank"
-      href="https://{{$$SCRIBIE_SERVER$$}}/earnings#earnings">https://{{$$SCRIBIE_SERVER$$}}/earnings#earnings</a>
-  </p>
+    <p>
+      We appreciate all the hard work and effort you have spent and would like
+      to sincerely thank you for choosing Scribie.<br /><br />
+    </p>
 
-  <p>
-    We appreciate all the hard work and effort you have spent and would like
-    to sincerely thank you for choosing Scribie.ai.<br /><br />
-  </p>
+    <p>For any queries, please contact {{$$SCRIBIE_SUPPORT_EMAIL$$}}.</p>
 
-  <p>For any queries, please contact {{$$SCRIBIE_SUPPORT_EMAIL$$}}.</p>
-
-  <p>
-    Thank you,<br />
-    {{$$SCRIBIE_SERVER$$}} Support.
-  </p>
-  <br />
-  {{$$MAIL_SIGNATURE$$}}
-</body>
-
+    <p>
+      Thank you,<br />
+      {{$$SCRIBIE_SERVER$$}} Support.
+    </p>
+    <br />
+    {{$$MAIL_SIGNATURE$$}}
+  </body>
 </html>

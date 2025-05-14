@@ -54,14 +54,14 @@ const Footer = () => (
               <Image
                 className='h-12 w-12'
                 src='/assets/images/logo-white-variant.svg'
-                alt='scribie.ai'
+                alt='scribie'
                 width={48}
                 height={48}
                 loading='lazy'
               />
             </div>
             <h3 className='text-3xl font-semibold text-primary-foreground ml-3'>
-              scribie.ai
+              scribie
             </h3>
           </div>
 

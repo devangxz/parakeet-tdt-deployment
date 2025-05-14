@@ -503,7 +503,7 @@ const ConsolidatedInvoicePDF = ({
       </View>
       <View style={styles.footer}>
         <Text style={{ borderBottom: '1px solid black', marginBottom: '10px' }}>
-          Thank you for choosing Scribie.ai!
+          Thank you for choosing Scribie!
         </Text>
         <Text>{INVOICE_ADDRESS}</Text>
       </View>

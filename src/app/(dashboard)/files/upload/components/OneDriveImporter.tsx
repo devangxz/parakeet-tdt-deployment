@@ -640,7 +640,7 @@ const OneDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             <h4 className='flex items-center'>OneDrive Importer</h4>
           </div>
           <div className='text-xs self-stretch mt-4 leading-5 text-center text-muted-foreground max-md:mr-1 max-md:max-w-full'>
-            Select files from your OneDrive to import. Please allow Scribie.ai
+            Select files from your OneDrive to import. Please allow Scribie
             Importer in the popup to access your OneDrive files for the import
             process. We will only access the selected files.
           </div>
