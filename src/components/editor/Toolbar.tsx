@@ -59,7 +59,7 @@ interface ToolbarProps {
   toggleHighlightNumerics: () => void
   handleUndo: () => void
   handleRedo: () => void
-  generateTranscriptFromDiff: () => void
+  handleDiffToggle: () => void
   diffToggleEnabled: boolean
 }
 
@@ -87,7 +87,7 @@ export default function Toolbar({
   toggleHighlightNumerics,
   handleUndo,
   handleRedo,
-  generateTranscriptFromDiff,
+  handleDiffToggle,
   diffToggleEnabled,
 }: ToolbarProps) {
   return (
@@ -280,7 +280,7 @@ export default function Toolbar({
           <PlayerButton
             icon={<GitCompareArrowsIcon className={`w-4 h-4 ${diffToggleEnabled ? 'text-primary' : ''}`} />}
             tooltip='Diff Mode'
-            onClick={generateTranscriptFromDiff}
+            onClick={handleDiffToggle}
           />
         </TooltipTrigger>
         <TooltipContent>
