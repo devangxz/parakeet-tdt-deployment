@@ -94,7 +94,9 @@ export function DataTable<TData, TValue>({
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
     manualPagination: !!pagination,
-    pageCount: pagination?.pageCount || -1,
+    pageCount:
+      pagination?.pageCount ||
+      Math.ceil(data.length / (pagination?.pageSize || 10)),
   })
 
   // Set current page from external pagination state
@@ -114,6 +116,9 @@ export function DataTable<TData, TValue>({
       table.getState().pagination.pageSize !== pagination.pageSize
     ) {
       table.setPageSize(pagination.pageSize)
+    } else if (!pagination) {
+      // Default page size for client-side pagination
+      table.setPageSize(10)
     }
   }, [pagination, table])
 
@@ -126,7 +131,19 @@ export function DataTable<TData, TValue>({
     } else {
       onSelectedRowsChange?.([])
     }
-  }, [rowSelection])
+  }, [rowSelection, onSelectedRowsChange, table])
+
+  // Handler for client-side pagination
+  const handleClientPageChange = (page: number) => {
+    table.setPageIndex(page - 1)
+    pagination?.onPageChange?.(page)
+  }
+
+  // Handler for client-side page size change
+  const handleClientPageSizeChange = (pageSize: number) => {
+    table.setPageSize(pageSize)
+    pagination?.onPageSizeChange?.(pageSize)
+  }
 
   return (
     <div className='space-y-4'>
@@ -134,8 +151,10 @@ export function DataTable<TData, TValue>({
       <div className='mt-4'>
         <DataTablePagination
           table={table}
-          onPageChange={pagination?.onPageChange}
-          onPageSizeChange={pagination?.onPageSizeChange}
+          onPageChange={pagination?.onPageChange || handleClientPageChange}
+          onPageSizeChange={
+            pagination?.onPageSizeChange || handleClientPageSizeChange
+          }
         />
       </div>
 
@@ -233,8 +252,10 @@ export function DataTable<TData, TValue>({
       </div>
       <DataTablePagination
         table={table}
-        onPageChange={pagination?.onPageChange}
-        onPageSizeChange={pagination?.onPageSizeChange}
+        onPageChange={pagination?.onPageChange || handleClientPageChange}
+        onPageSizeChange={
+          pagination?.onPageSizeChange || handleClientPageSizeChange
+        }
       />
     </div>
   )
