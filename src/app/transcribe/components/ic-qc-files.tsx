@@ -19,6 +19,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import FileAudioPlayer from '@/components/utils/FileAudioPlayer'
+import { getAccentCode } from '@/services/editor-service/get-accent-code'
 import { BaseTranscriberFile } from '@/types/files'
 import formatDuration from '@/utils/formatDuration'
 import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
@@ -61,6 +62,18 @@ export default function ICQCFilesPage({ changeTab }: Props) {
   useEffect(() => {
     setAudioUrl()
   }, [playing])
+
+  const fetchAccentCode = async (fileId: string) => {
+    try {
+      const result = await getAccentCode(fileId)
+      if (result.success && result.accentCode) {
+        return result.accentCode
+      }
+    } catch (error) {
+      console.error('Failed to fetch accent code', error)
+    }
+    return 'N/A'
+  }
 
   const fetchICQCFiles = async (showLoader = false) => {
     if (showLoader) {
@@ -117,6 +130,13 @@ export default function ICQCFilesPage({ changeTab }: Props) {
           }
         })
         setIcqcFiles(orders ?? [])
+        const filesWithAccent = await Promise.all(
+          orders.map(async (file: File) => {
+            const accentCode = await fetchAccentCode(file.fileId)
+            return { ...file, accentCode }
+          })
+        )
+        setIcqcFiles(filesWithAccent)
         setError(null)
       }
     } catch (err) {

@@ -63,7 +63,7 @@ export async function getAccentAction(
     logger.info(`Extracting accent from audio file: ${fileId}`)
     const processResult = await extractAccentAction(
       `${fileId}.mp3`, // Assuming the file is in mp3 format
-      response.data.uploadResult
+      response.data
     )
     
     if (!processResult.success) {

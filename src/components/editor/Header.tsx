@@ -95,9 +95,6 @@ const createShortcutControls = (
   decreasePlaybackSpeed: () => {
     setSpeed((prevSpeed: number) => Math.max(10, prevSpeed - 10))
   },
-  setPlaybackRateTo150: () => {
-    setSpeed(150)
-  },
   decreasePlaybackRateBy25: () => {
     setSpeed((prevSpeed: number) => Math.max(10, prevSpeed - 25))
   },
@@ -140,10 +137,20 @@ const createShortcutControls = (
   playAt100Speed: () => {
     setSpeed(100)
   },
+  playAt125Speed: () => {
+    setSpeed(125)
+  },
+  playAt150Speed: () => {
+    setSpeed(150)
+  },
+  playAt175Speed: () => {
+    setSpeed(175)
+  },
+  playAt200Speed: () => {
+    setSpeed(200)
+  },
   scrollDownEditorContent: () => {},
-  scrollUpEditorContent: () => {},
-  editAllOccurrencesOfString: () => {},
-  multiEdit: () => {},
+  scrollUpEditorContent: () => {}
 })
 
 interface HeaderProps {

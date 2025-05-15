@@ -48,57 +48,56 @@ export async function extractAccentAction(
 
     // Define user and system prompts
     const userPrompt = {
-      text: `You are given a transcript audio/video file. Your task is to detect the major accent used in the audio file. Focus on pronunciation patterns, intonation, vowel/consonant shifts, and rhythm to identify the regional or national origin of the accent. Be as specific as possible (e.g., “Indian English - South Indian”, “American English - Southern US”, “British English - RP”, etc.). 
-Return the value field (e.g., "NA", "IN") that best represents the dominant accent in the file.
+      text: `You are given a transcript audio/video file. Your task is to parse the audio and detect the major accent in the audio file. Focus on pronunciation patterns, intonation, vowel/consonant shifts, and rhythm to identify the regional or national origin of the accent. Be as specific as possible (e.g., “Indian English - South Indian”, “American English - Southern US”, “British English - RP”, etc.).
+Return the value and label field (e.g., { "value": "NA", "label": "North American" ) that best represents the dominant accent in the file from the given json array.
 [
-  { "value": "NA", "label": "North American" },
-  { "value": "CA", "label": "Canadian" },
-  { "value": "AU", "label": "Australian" },
-  { "value": "GB", "label": "British" },
-  { "value": "IN", "label": "Indian" },
-  { "value": "AA", "label": "African-American" },
-  { "value": "AF", "label": "African" },
-  { "value": "RW", "label": "Rwandan" },
-  { "value": "GR", "label": "German" },
-  { "value": "FR", "label": "French" },
-  { "value": "IT", "label": "Italian" },
-  { "value": "PL", "label": "Polish" },
-  { "value": "EU", "label": "European" },
-  { "value": "SP", "label": "Spanish" },
-  { "value": "RU", "label": "Russian" },
-  { "value": "FN", "label": "Finnish" },
-  { "value": "TK", "label": "Turkish" },
-  { "value": "ID", "label": "Indonesian" },
-  { "value": "MX", "label": "Mexican" },
-  { "value": "HP", "label": "Hispanic" },
-  { "value": "LA", "label": "Latin American" },
-  { "value": "BR", "label": "Brazilian" },
-  { "value": "PR", "label": "Portugese" },
-  { "value": "NL", "label": "Dutch" },
-  { "value": "ME", "label": "Middle Eastern" },
-  { "value": "IR", "label": "Irish" },
-  { "value": "AS", "label": "Asian" },
-  { "value": "CN", "label": "Chinese" },
-  { "value": "KO", "label": "Korean" },
-  { "value": "SG", "label": "Singaporean" },
-  { "value": "EA", "label": "East Asian" },
-  { "value": "NZ", "label": "New Zealand" },
-  { "value": "AB", "label": "Arabic" },
-  { "value": "MY", "label": "Malaysian" },
-  { "value": "JP", "label": "Japanese" },
-  { "value": "SE", "label": "Southeast Asian" },
-  { "value": "SA", "label": "South African" },
-  { "value": "JM", "label": "Jamaican" },
-  { "value": "WI", "label": "West Indian" },
-  { "value": "AG", "label": "Aboriginal" },
-  { "value": "SC", "label": "Scottish" },
-  { "value": "NP", "label": "Nepalese" },
-  { "value": "EG", "label": "Egyptian" },
-  { "value": "AI", "label": "Indigenous American" },
-  { "value": "NTA", "label": "Unsure/Unknown/Not Applicable" },
-  { "value": "NN", "label": "Other Non-native/Mixed" }
+{ "value": "NA", "label": "North American" },
+{ "value": "CA", "label": "Canadian" },
+{ "value": "AU", "label": "Australian" },
+{ "value": "GB", "label": "British" },
+{ "value": "IN", "label": "Indian" },
+{ "value": "AA", "label": "African-American" },
+{ "value": "AF", "label": "African" },
+{ "value": "RW", "label": "Rwandan" },
+{ "value": "GR", "label": "German" },
+{ "value": "FR", "label": "French" },
+{ "value": "IT", "label": "Italian" },
+{ "value": "PL", "label": "Polish" },
+{ "value": "EU", "label": "European" },
+{ "value": "SP", "label": "Spanish" },
+{ "value": "RU", "label": "Russian" },
+{ "value": "FN", "label": "Finnish" },
+{ "value": "TK", "label": "Turkish" },
+{ "value": "ID", "label": "Indonesian" },
+{ "value": "MX", "label": "Mexican" },
+{ "value": "HP", "label": "Hispanic" },
+{ "value": "LA", "label": "Latin American" },
+{ "value": "BR", "label": "Brazilian" },
+{ "value": "PR", "label": "Portugese" },
+{ "value": "NL", "label": "Dutch" },
+{ "value": "ME", "label": "Middle Eastern" },
+{ "value": "IR", "label": "Irish" },
+{ "value": "AS", "label": "Asian" },
+{ "value": "CN", "label": "Chinese" },
+{ "value": "KO", "label": "Korean" },
+{ "value": "SG", "label": "Singaporean" },
+{ "value": "EA", "label": "East Asian" },
+{ "value": "NZ", "label": "New Zealand" },
+{ "value": "AB", "label": "Arabic" },
+{ "value": "MY", "label": "Malaysian" },
+{ "value": "JP", "label": "Japanese" },
+{ "value": "SE", "label": "Southeast Asian" },
+{ "value": "SA", "label": "South African" },
+{ "value": "JM", "label": "Jamaican" },
+{ "value": "WI", "label": "West Indian" },
+{ "value": "AG", "label": "Aboriginal" },
+{ "value": "SC", "label": "Scottish" },
+{ "value": "NP", "label": "Nepalese" },
+{ "value": "EG", "label": "Egyptian" },
+{ "value": "AI", "label": "Indigenous American" },
+{ "value": "NN", "label": "Other Non-native/Mixed" }
 ]
-  Give response from above json array only. Do not provide any response outside json.`}
+Give response from above json array only. Do not provide any response outside json.`}
 
     const systemPrompt = {
       text: 'You are an expert linguist and phonetics analyst. Given a transcript and/or an audio file, your task is to determine the most likely accent of the speaker(s). ',
@@ -159,7 +158,7 @@ Return the value field (e.g., "NA", "IN") that best represents the dominant acce
         error: `AI processing failed: ${result.error}`
       }
     }
-
+    logger.info(`[${fileKey}] Successfully extracted accent from audio file. Accent: ${result.data}`)
     return {
       success: true,
       fileId: fileKey.split('.')[0], // Extract fileId from the fileKey

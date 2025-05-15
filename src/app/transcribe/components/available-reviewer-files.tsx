@@ -20,6 +20,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import FileAudioPlayer from '@/components/utils/FileAudioPlayer'
+import { getAccentCode } from '@/services/editor-service/get-accent-code'
 import { BaseTranscriberFile } from '@/types/files'
 import formatDuration from '@/utils/formatDuration'
 import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
@@ -31,6 +32,7 @@ interface File extends BaseTranscriberFile {
   testFile: boolean
   containsMp4: boolean
   customFormatOption: string
+  accentCode?: string
 }
 
 interface Props {
@@ -65,6 +67,18 @@ export default function AvailableFilesPage({ changeTab }: Props) {
   useEffect(() => {
     setAudioUrl()
   }, [playing])
+
+  const fetchAccentCode = async (fileId: string) => {
+    try {
+      const result = await getAccentCode(fileId)
+      if (result.success && result.accentCode) {
+        return result.accentCode
+      }
+    } catch (error) {
+      console.error('Failed to fetch accent code', error)
+    }
+    return 'N/A'
+  }
 
   const fetchAvailableFiles = async (showLoader = false) => {
     if (showLoader) {
@@ -121,6 +135,13 @@ export default function AvailableFilesPage({ changeTab }: Props) {
           }
         })
         setAvailableFiles((orders as any) ?? [])
+        const filesWithAccent = await Promise.all(
+          orders.map(async (file: any) => {
+            const accentCode = await fetchAccentCode(file.fileId)
+            return { ...file, accentCode }
+          })
+        )
+        setAvailableFiles(filesWithAccent)
         setError(null)
       }
     } catch (err) {
@@ -201,6 +222,21 @@ export default function AvailableFilesPage({ changeTab }: Props) {
                 <p>Difficulty</p>
               </TooltipContent>
             </Tooltip>
+            {row.original.accentCode && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge
+                    variant='outline'
+                    className='font-semibold text-[10px] text-blue-600'
+                  >
+                    {row.original.accentCode}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Accent</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
             {row.original.priority === 1 && (
               <Tooltip>
                 <TooltipTrigger>

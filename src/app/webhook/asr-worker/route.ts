@@ -3,7 +3,7 @@ import axios from 'axios'
 import { NextRequest, NextResponse } from 'next/server'
 
 import config from '../../../../config.json'
-import { getAccentAction } from '@/app/actions/editor/process-audio-chunk'
+import { getAccentAction, GetAccentResult } from '@/app/actions/editor/process-audio-chunk'
 import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
@@ -141,10 +141,12 @@ export async function POST(req: NextRequest) {
         : null,
     }
 
-    const accent = await getAccentAction(fileId)
+    const accent: GetAccentResult = await getAccentAction(fileId)
 
-    if (accent.success) {
-      const accentValue = accent.data || 'NA'
+    if (accent.success && accent.data) {
+      const accentResponse = JSON.parse(accent.data)
+      const accentValue = accentResponse.value || 'N/A'
+      logger.info(`[${fileId}] Extracted accent: ${accentValue}`)
       if(accentValue in config.accents_list) {
         await prisma.fileAccent.create(
           {
@@ -156,6 +158,18 @@ export async function POST(req: NextRequest) {
           }
         )
       }
+    }
+    else{
+      logger.error(`[${fileId}] Failed to get accent using default accent: ${accent.error} ${JSON.stringify(accent)}`)
+      await prisma.fileAccent.create(
+        {
+          data: {
+            userId: order.userId,
+            fileId,
+            accentCode: 'N/A',
+          },
+        }
+      )
     }
 
     if (qualityCheck.requiresManualScreening) {

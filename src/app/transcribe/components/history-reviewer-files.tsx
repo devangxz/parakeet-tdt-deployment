@@ -13,6 +13,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { getAccentCode } from '@/services/editor-service/get-accent-code'
 import formatDuration from '@/utils/formatDuration'
 import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
 
@@ -40,6 +41,7 @@ interface File {
   orgName: string
   customFormatOption: string
   comment?: string
+  accentCode?: string
 }
 
 interface PaginationMeta {
@@ -79,6 +81,18 @@ export default function HistoryFilesPage() {
     },
     [isLegalPage]
   )
+
+  const fetchAccentCode = async (fileId: string) => {
+    try {
+      const result = await getAccentCode(fileId)
+      if (result.success && result.accentCode) {
+        return result.accentCode
+      }
+    } catch (error) {
+      console.error('Failed to fetch accent code', error)
+    }
+    return 'N/A'
+  }
 
   const fetchFiles = useCallback(
     async (pageNum: number, size: number, forceRefresh = false) => {
@@ -146,6 +160,13 @@ export default function HistoryFilesPage() {
           }
 
           setAssginedFiles(orders)
+          const filesWithAccent = await Promise.all(
+            orders.map(async (file: File) => {
+              const accentCode = await fetchAccentCode(file.fileId)
+              return { ...file, accentCode }
+            })
+          )
+          setAssginedFiles(filesWithAccent)
           setPaginationMeta(response.pagination)
           setError(null)
         }
@@ -209,6 +230,21 @@ export default function HistoryFilesPage() {
                 <p>Difficulty</p>
               </TooltipContent>
             </Tooltip>
+            {row.original.accentCode && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge
+                    variant='outline'
+                    className='font-semibold text-[10px] text-blue-600'
+                  >
+                    {row.original.accentCode}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Accent</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
             {row.original.orgName.length > 0 && (
               <Badge
                 variant='outline'
