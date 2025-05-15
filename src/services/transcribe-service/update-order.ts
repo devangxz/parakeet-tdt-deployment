@@ -60,12 +60,10 @@ export const updateOrderAndCreateJobAssignment = async (
   try {
     return await prisma.$transaction(
       async (prisma) => {
-        // First lock the order row with FOR UPDATE to prevent concurrent access
+        // First fetch the order to check if it exists
         const order = await prisma.order.findUnique({
           where: { id: orderId },
           select: { id: true, status: true },
-          // @ts-expect-error - Prisma doesn't type this correctly but it works
-          lock: { mode: 'pessimistic' },
         })
 
         if (!order) {
@@ -118,7 +116,7 @@ export const updateOrderAndCreateJobAssignment = async (
       {
         // Set a reasonable timeout for the transaction
         timeout: 10000,
-        // Enable pessimistic locking
+        // Enable serializable isolation level for pessimistic locking
         isolationLevel: 'Serializable',
       }
     )
