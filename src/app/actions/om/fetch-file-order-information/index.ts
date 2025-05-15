@@ -28,6 +28,21 @@ export async function fetchFileOrderInformation(fileId: string) {
       },
     })
 
+    const cancellations = await prisma.cancellations.findMany({
+      where: {
+        fileId: fileId,
+      },
+      include: {
+        user: {
+          select: {
+            firstname: true,
+            lastname: true,
+            email: true,
+          },
+        },
+      },
+    })
+
     if (orderInformation) {
       const fileCost = await calculateFileCost(orderInformation)
       return {
@@ -35,6 +50,7 @@ export async function fetchFileOrderInformation(fileId: string) {
         details: {
           ...orderInformation,
           fileCost,
+          cancellations,
         },
       }
     }

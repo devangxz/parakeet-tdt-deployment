@@ -3,7 +3,6 @@
 import { DialogClose } from '@radix-ui/react-dialog'
 import { ReloadIcon } from '@radix-ui/react-icons'
 import Link from 'next/link'
-import { useSession } from 'next-auth/react'
 import { useEffect, useState, useMemo } from 'react'
 import { toast } from 'sonner'
 
@@ -79,13 +78,13 @@ export default function EarningsPage() {
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { data: session } = useSession()
   const [earningsDetailsDialog, setEarningsDetailsDialog] = useState(false)
   const [miscEarningsDialog, setMiscEarningsDialog] = useState(false)
   const [miscEarnings, setMiscEarnings] = useState<MiscEarnings[]>([])
   const [bonuses, setBonuses] = useState<Bonus[]>([])
   const [bonusLoading, setBonusLoading] = useState(true)
   const [miscEarningsLoading, setMiscEarningsLoading] = useState(true)
+  const [paypalId, setPaypalId] = useState<string>('')
 
   const fetchEarnings = async (showLoader = false) => {
     if (showLoader) {
@@ -97,6 +96,7 @@ export default function EarningsPage() {
       const data = await getTranscriberEarnings()
       if (data.success && data.earnings) {
         setEarnings(data.earnings as any)
+        setPaypalId(data.paypalId || '')
       } else {
         setError(data.message || 'Failed to fetch earnings')
       }
@@ -327,7 +327,7 @@ export default function EarningsPage() {
                   </Table>
                 </div>
                 <p className='text-center py-5'>
-                  The funds will be sent to &apos;{session?.user?.email}
+                  The funds will be sent to &apos;{paypalId}
                   &apos;.
                 </p>
                 <DialogClose>

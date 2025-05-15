@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt'
 
 import { signJwtAccessToken } from '@/lib/jwt'
+import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 
 interface PropsData {
@@ -22,6 +23,7 @@ export async function signInUser(userData: PropsData) {
     })
 
     if (!user || !bcrypt.compareSync(password, user.pass as string)) {
+      logger.error(`Invalid email or password for user ${email}`)
       return {
         success: false,
         message: 'Invalid email or password',
@@ -29,6 +31,7 @@ export async function signInUser(userData: PropsData) {
     }
 
     if (user.status === 'SUSPENDED') {
+      logger.error(`Account suspended for user ${email}`)
       return {
         success: false,
         message: 'Account suspended',
@@ -48,7 +51,9 @@ export async function signInUser(userData: PropsData) {
       })
 
       if (!teamExists) {
-        console.error(`Team not found ${lastSelectedInternalTeamUserId}`)
+        logger.error(
+          `Team not found ${lastSelectedInternalTeamUserId} for user ${email}`
+        )
         return { success: false, message: 'Team not found' }
       }
 
@@ -141,7 +146,7 @@ export async function signInUser(userData: PropsData) {
       }
     }
   } catch (error) {
-    console.error('Error during sign in:', error)
+    logger.error(`Error during sign in: ${error} for user ${email}`)
     return { success: false, message: 'Error during sign in' }
   }
 }

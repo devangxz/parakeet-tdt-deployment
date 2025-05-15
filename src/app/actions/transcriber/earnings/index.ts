@@ -10,6 +10,8 @@ import {
   getWithdrawalsBonusesAndMiscEarnings,
   getTranscriberCreditedHours,
   getTranscriberTodayCreditedHours,
+  isTranscriberICQC,
+  getICQCTodayCreditedHours,
 } from '@/utils/backend-helper'
 
 export async function getTranscriberEarnings() {
@@ -39,6 +41,7 @@ export async function getTranscriberEarnings() {
       CREDITED_HOURS: 0,
       TODAY_CREDITED_HOURS: 0,
       ME: 0,
+      IC_QC_CREDITED_HOURS: 0,
     }
 
     const completedJobs = await prisma.jobAssignment.findMany({
@@ -54,6 +57,8 @@ export async function getTranscriberEarnings() {
     const withdrawalsAndBonuses = await getWithdrawalsBonusesAndMiscEarnings(
       transcriberId
     )
+
+    const isICQCResult = await isTranscriberICQC(transcriberId)
 
     earnings['WITHDRAWAL'] = withdrawalsAndBonuses.withdrawals
 
@@ -78,12 +83,28 @@ export async function getTranscriberEarnings() {
       transcriberId
     )
 
+    if (isICQCResult.isICQC) {
+      earnings['IC_QC_CREDITED_HOURS'] = await getICQCTodayCreditedHours(
+        transcriberId
+      )
+    }
+
     earnings['CURRENT_BALANCE'] = earnings['TOTAL'] - earnings['WITHDRAWAL']
 
+    const transcriberDetails = await prisma.user.findUnique({
+      where: {
+        id: transcriberId,
+      },
+      select: {
+        paypalId: true,
+      },
+    })
     logger.info(`Earnings fetched successfully for ${transcriberId}`)
     return {
       success: true,
       earnings,
+      paypalId: transcriberDetails ? transcriberDetails.paypalId : user?.email,
+      isICQC: isICQCResult.isICQC,
     }
   } catch (error) {
     logger.error(`Failed to fetch earnings: ${error}`)

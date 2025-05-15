@@ -96,6 +96,7 @@ export async function getAssignedQCFiles(type?: string | null) {
       file.order.orgName = orgName
       file.order.isTestCustomer = isTestCustomer
       file.order.customFormatOption = customFormatOption
+      file.order.isICQC = file.isICQC || false
     }
 
     logger.info(

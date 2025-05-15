@@ -121,7 +121,7 @@ const TranscriptionOrder = ({ invoiceId }: { invoiceId: string }) => {
   const [options, setOptions] = React.useState<Option[]>([
     {
       id: 'exd',
-      name: 'Rush hour',
+      name: 'Rush order',
       enabled: false,
       rate: RUSH_ORDER_PRICE,
       description: `All files are prioritised for completion. Get your files delivered up to

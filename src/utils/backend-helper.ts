@@ -813,6 +813,58 @@ export const getTranscriberTodayCreditedHours = async (
   }
 }
 
+export const getICQCTodayCreditedHours = async (transcriberId: number) => {
+  logger.info(`--> getICQCTodayCreditedHours ${transcriberId}`)
+  const startOfDay = new Date()
+  startOfDay.setHours(0, 0, 0, 0)
+
+  const endOfDay = new Date()
+  endOfDay.setHours(23, 59, 59, 999)
+
+  try {
+    const isICQCResult = await isTranscriberICQC(transcriberId)
+
+    if (!isICQCResult.isICQC) {
+      return 0
+    }
+
+    const assignments = await prisma.jobAssignment.findMany({
+      where: {
+        transcriberId: transcriberId,
+        status: JobStatus.COMPLETED,
+        completedTs: {
+          gte: startOfDay,
+          lt: endOfDay,
+        },
+        type: {
+          in: ['QC', 'REVIEW'],
+        },
+      },
+      include: {
+        order: {
+          include: {
+            File: true,
+          },
+        },
+      },
+    })
+
+    const totalDuration = assignments.reduce(
+      (total, assignment) => total + (assignment.order.File?.duration || 0),
+      0
+    )
+
+    const totalWorkedHours = totalDuration / 3600
+
+    return totalWorkedHours
+  } catch (error) {
+    logger.error(
+      `failed to get IC QC today credited hours for ${transcriberId}: ${error}`
+    )
+    return 0
+  }
+}
+
 export const getAssignmentEarnings = async (transcriberId: number) => {
   logger.info(`--> getAssignmentEarnings ${transcriberId}`)
   try {

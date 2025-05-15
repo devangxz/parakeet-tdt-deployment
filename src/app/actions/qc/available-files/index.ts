@@ -7,7 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
-import { isTranscriberICQC, getTestCustomer } from '@/utils/backend-helper'
+import { getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 import getCustomFormatOption from '@/utils/getCustomFormatOption'
 import getOrgName from '@/utils/getOrgName'
@@ -132,20 +132,6 @@ export async function getAvailableQCFiles(type?: string | null) {
       if (!file.orgName) return true
       return enabledCustomers.includes(file.orgName.toLowerCase())
     })
-
-    const isTranscriberICQCResult = await isTranscriberICQC(user.userId)
-
-    if (isTranscriberICQCResult.isICQC) {
-      qcFiles.sort((a, b) => {
-        if (b.priority !== a.priority) {
-          return b.priority - a.priority
-        }
-        if (b.highDifficulty !== a.highDifficulty) {
-          return Number(b.highDifficulty) - Number(a.highDifficulty)
-        }
-        return (b.rateBonus || 0) - (a.rateBonus || 0)
-      })
-    }
 
     qcFiles.sort((a, b) => {
       const aHasTat12 = a.tat === 12

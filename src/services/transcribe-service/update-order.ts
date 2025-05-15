@@ -53,7 +53,8 @@ export const updateOrderAndCreateJobAssignment = async (
   jobType: JobType,
   inputFile: InputFileType,
   assignMode: AssignMode,
-  comment?: string
+  comment?: string,
+  isICQC: boolean = false
 ) => {
   logger.info(`--> updateOrderAndCreateJobAssignment ${orderId}`)
   try {
@@ -74,10 +75,13 @@ export const updateOrderAndCreateJobAssignment = async (
           inputFile: inputFile,
           assignMode,
           ...(comment && { comment }),
+          isICQC,
         },
       })
     })
-    logger.info(`FInalize file assigned to ${transcriberId}`)
+    logger.info(
+      `FInalize file assigned to ${transcriberId}${isICQC ? ' as IC QC' : ''}`
+    )
   } catch (error) {
     logger.error(`failed to create job assignment ${orderId}: ${error}`)
     throw new Error()

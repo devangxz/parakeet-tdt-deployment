@@ -2,6 +2,7 @@
 import { getServerSession } from 'next-auth/next'
 
 import List from './list'
+import { getPendingHighDifficultyCount } from '@/app/actions/invoice/pending-high-difficulty'
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import { getFilesByStatus } from '@/services/file-service/get-files'
 import { User } from '@/types/files'
@@ -14,6 +15,7 @@ interface File {
   orderType: string
   uploadedByUser: User
   folderId: number | null
+  orderStatus: string
 }
 
 export default async function InprogressFilesPage() {
@@ -33,14 +35,24 @@ export default async function InprogressFilesPage() {
       date: file.Orders[0]?.orderTs,
       duration: Number(file.duration),
       orderType: file.Orders[0]?.orderType,
+      orderStatus: file.Orders[0]?.status,
       uploadedByUser: file.uploadedByUser,
       folderId: file.parentId,
     }))
   }
 
+  // Check for pending high difficulty invoices
+  const highDifficultyResponse = await getPendingHighDifficultyCount()
+  const pendingHighDifficultyCount = highDifficultyResponse.success
+    ? highDifficultyResponse.count
+    : 0
+
   return (
     <>
-      <List files={files} />
+      <List
+        files={files}
+        pendingHighDifficultyCount={pendingHighDifficultyCount}
+      />
     </>
   )
 }

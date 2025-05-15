@@ -31,12 +31,14 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
   onSelectedRowsChange?: (selectedRows: TData[]) => void
+  getRowClassName?: (row: TData) => string
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   onSelectedRowsChange,
+  getRowClassName,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
@@ -110,12 +112,12 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
+                  className={
+                    getRowClassName ? getRowClassName(row.original) : ''
+                  }
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className='px-4 py-3'
-                    >
+                    <TableCell key={cell.id} className='px-4 py-3'>
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
