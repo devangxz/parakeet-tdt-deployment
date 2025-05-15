@@ -67,10 +67,12 @@ export async function assignQC(orderId: number, isICQC: boolean = false) {
       order.status !== OrderStatus.TRANSCRIBED &&
       order.status !== OrderStatus.FORMATTED
     ) {
-      logger.error(`Order is not transcribed for orderId ${orderId}`)
+      logger.error(
+        `Order status ${order.status} is not valid for QC assignment for orderId ${orderId}`
+      )
       return {
         success: false,
-        error: 'Order is not transcribed',
+        error: 'Order is not in a valid state for QC assignment',
       }
     }
 
@@ -89,7 +91,9 @@ export async function assignQC(orderId: number, isICQC: boolean = false) {
     const rejectedAssignment = await prisma.jobAssignment.findFirst({
       where: {
         transcriberId,
-        status: JobStatus.REJECTED,
+        status: {
+          in: [JobStatus.REJECTED, JobStatus.CANCELLED],
+        },
         type: JobType.QC,
         orderId,
       },
@@ -105,7 +109,7 @@ export async function assignQC(orderId: number, isICQC: boolean = false) {
       }
     }
 
-    await assignFileToQC(
+    const result = await assignFileToQC(
       orderId,
       order.status === 'TRANSCRIBED'
         ? OrderStatus.QC_ASSIGNED
@@ -120,6 +124,14 @@ export async function assignQC(orderId: number, isICQC: boolean = false) {
       '',
       isICQC
     )
+
+    if (!result) {
+      return {
+        success: false,
+        error:
+          'This file is already assigned to another QC. Please try another file.',
+      }
+    }
 
     logger.info(
       `QC ${user.email} assigned for order ${order.fileId}${

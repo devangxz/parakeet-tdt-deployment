@@ -20,7 +20,7 @@ const assignFileToQC = async (
     `--> assignFileToQC ${orderId} ${transcriberId}${isICQC ? ' (IC QC)' : ''}`
   )
   try {
-    await updateOrderAndCreateJobAssignment(
+    const assignmentResult = await updateOrderAndCreateJobAssignment(
       orderId,
       orderStatus,
       transcriberId,
@@ -30,6 +30,14 @@ const assignFileToQC = async (
       comment,
       isICQC
     )
+
+    // If assignment failed (likely due to concurrent assignment), return early
+    if (!assignmentResult) {
+      logger.info(
+        `Assignment failed for ${orderId} - likely already assigned to another transcriber`
+      )
+      return false
+    }
 
     const { cost, rate } = await calculateAssignmentAmount(
       orderId,
