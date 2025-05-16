@@ -121,7 +121,6 @@ export default function Waveform({
 
   useEffect(() => {
     if (isPaused) {
-      console.log('Resetting waveform due to pause');
       // Reset internal values
       setInternalBufferedRanges([])
       setInternalCurrentValue(0)
