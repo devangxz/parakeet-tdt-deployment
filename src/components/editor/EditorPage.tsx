@@ -5,7 +5,7 @@ import { Cross1Icon, ReloadIcon, CheckIcon, ChevronDownIcon, ChevronUpIcon } fro
 import { debounce } from 'lodash'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import Quill, { Delta, Op } from 'quill/core'
+import Quill, { Delta } from 'quill/core'
 import React, {
   useCallback,
   useEffect,
@@ -27,6 +27,7 @@ import Header from '@/components/editor/Header'
 import SectionSelector from '@/components/editor/SectionSelector'
 import SubmissionValidation from '@/components/editor/SubmissionValidation'
 import {
+  DiffTabComponent,
   EditorTabComponent,
   InfoTabComponent,
   SpeakersTabComponent
@@ -83,8 +84,7 @@ import {
   generateSubtitles,
 } from '@/utils/editorUtils'
 import { persistEditorDataIDB } from '@/utils/indexedDB'
-import { getFormattedTranscript } from '@/utils/transcript'
-import { diff_match_patch, DIFF_DELETE, DIFF_INSERT } from '@/utils/transcript/diff_match_patch'
+import { DmpDiff } from '@/utils/transcript/diff_match_patch'
 
 export type SupportingDocument = {
   filename: string
@@ -161,6 +161,7 @@ function EditorPage() {
     isUploaded?: boolean
   }>({ renamedFile: null, originalFile: null })
   const { data: session } = useSession()
+  const [diff, setDiff] = useState<DmpDiff[]>([])
   const [ctms, setCtms] = useState<CTMType[]>([])
   const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null)
   const [step, setStep] = useState<string>('')
@@ -228,8 +229,6 @@ function EditorPage() {
   const [formatErrors, setFormatErrors] = useState<CombinedASRFormatError[]>([])
   const [diffToggleEnabled, setDiffToggleEnabled] = useState(false)
   const [alignments, setAlignments] = useState<AlignmentType[]>([])
-  const [isVersionLoadingDialogOpen, setIsVersionLoadingDialogOpen] = useState(false)
-
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
     if (!quill) return
@@ -390,8 +389,8 @@ function EditorPage() {
     // Then highlight all matches using a single Delta operation
     if (results.length > 0) {
       // Create a delta that represents all the formatting operations
-      const delta = new Delta()
-
+      const delta = new Delta();
+      
       // We need to sort the results to apply formatting in ascending order
       results.sort((a, b) => a - b);
       
@@ -429,7 +428,7 @@ function EditorPage() {
     const text = e.target.value
     const prevText = findText
     setFindText(text)
-
+    
     // Clear ALL previous search highlights immediately when text changes
     if (text !== prevText && quillRef?.current) {
       clearAllHighlights(quillRef.current.getEditor())
@@ -440,19 +439,19 @@ function EditorPage() {
     if (findDebounceRef.current) {
       clearTimeout(findDebounceRef.current)
     }
-
+    
     // Use debounce to avoid excessive processing
     if (text.length > 0) {
       findDebounceRef.current = setTimeout(() => {
         if (quillRef?.current) {
           const quill = quillRef.current.getEditor()
-
+          
           // Clear previous highlights before adding new ones
           clearAllHighlights(quill)
-
+          
           // Reset search state to prepare for fresh highlighting
           setLastSearchIndex(-1)
-
+          
           // Highlight all matches and get the count
           const matchesFound = highlightAllMatches(
             quill,
@@ -462,7 +461,7 @@ function EditorPage() {
             selection
           )
           setMatchCount(matchesFound)
-
+          
           // If there are matches, select the first one
           if (matchesFound > 0) {
             searchAndSelectInstance(text, selection)
@@ -506,17 +505,13 @@ function EditorPage() {
   const shortcutControls = useMemo(() => {
     const controls: Partial<ShortcutControls> = {
       findNextOccurrenceOfString: () => {
-        window.addEventListener(
-          'keydown',
-          function preventDefaultFind(e) {
-            if (e.key === 'f' && (e.ctrlKey || e.metaKey)) {
-              e.preventDefault()
-              e.stopPropagation()
-              window.removeEventListener('keydown', preventDefaultFind)
-            }
-          },
-          { capture: true, once: true }
-        )
+        window.addEventListener('keydown', function preventDefaultFind(e) {
+          if (e.key === 'f' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault()
+            e.stopPropagation()
+            window.removeEventListener('keydown', preventDefaultFind)
+          }
+        }, { capture: true, once: true })
         if (!findAndReplaceOpen) {
           if (quillRef?.current) {
             const quill = quillRef.current.getEditor()
@@ -565,29 +560,16 @@ function EditorPage() {
         }
       },
       saveChanges: async () => {
-        if (
-          editorRef.current &&
-          !highlightNumbersEnabled &&
-          !diffToggleEnabled
-        ) {
-          editorRef.current.clearAllHighlights()
+        if (editorRef.current) {
+          if (!highlightNumbersEnabled) {
+            editorRef.current.clearAllHighlights();
+          }
+          editorRef.current.triggerAlignmentUpdate();
         }
         autoCapitalizeSentences(quillRef, autoCapitalize)
-
-        let transcript: string | null = null
-        if (orderDetails.fileId && diffToggleEnabled) {
-          transcript = saveTranscriptInDiffMode()
-          if (transcript) {
-            persistEditorDataIDB(orderDetails.fileId, {
-              transcript: transcript,
-              listenCount,
-              editedSegments: Array.from(editedSegments),
-            })
-          }
-        }
-
+        
         await handleSave({
-          getEditorText: transcript ? () => transcript : getEditorText,
+          getEditorText: getEditorText,
           orderDetails,
           setButtonLoading,
           listenCount,
@@ -596,16 +578,14 @@ function EditorPage() {
           quill: quillRef?.current?.getEditor(),
         })
 
-        if (!diffToggleEnabled) {
-          updateFormattedTranscript()
-        }
+        updateFormattedTranscript()
 
         if (highlightNumbersEnabled && editorRef.current != null) {
           setTimeout(() => {
-            if (editorRef.current) {
-              editorRef.current.highlightNumbers()
+            if(editorRef.current) {
+              editorRef.current.highlightNumbers();
             }
-          }, 200)
+          }, 200);
         }
       },
     }
@@ -711,7 +691,7 @@ function EditorPage() {
         setLastSearchIndex(-1)
         setSelection(null)
         setSearchHighlight(null)
-
+        
         if (quillRef?.current) {
           clearAllHighlights(quillRef.current.getEditor())
         }
@@ -734,6 +714,14 @@ function EditorPage() {
       setSelection(null)
     }
   }, [findAndReplaceOpen, quillRef])
+
+  const handleTabsValueChange = async (value: string) => {
+    if (value === 'diff') {
+      setDiffToggleEnabled(true)
+    } else {
+      setDiffToggleEnabled(false)
+    }
+  }
 
   const getAudioPlayer = useCallback((audioPlayer: HTMLAudioElement | null) => {
     setAudioPlayer(audioPlayer)
@@ -759,41 +747,11 @@ function EditorPage() {
     }
   }, [orderDetails.fileId])
 
-  const saveTranscriptInDiffMode = useCallback(() => {
-    const quill = quillRef?.current?.getEditor()
-    if (!quill) return ''
-
-    const currentContent = quill.getContents()
-    const transcript = currentContent.ops.reduce((result: string, op: Op) => {
-      const isDeletedText =
-        op.attributes?.strike && op.attributes.strike == true
-
-      if (op.insert && !isDeletedText) {
-        result += op.insert
-      }
-      return result
-    }, '')
-
-    return transcript
-  }, [quillRef])
-
   useEffect(() => {
     const interval = setInterval(async () => {
-      let transcript: string | null = null
-      if (orderDetails.fileId && diffToggleEnabled) {
-        transcript = saveTranscriptInDiffMode()
-        if (transcript) {
-          persistEditorDataIDB(orderDetails.fileId, {
-            transcript: transcript,
-            listenCount,
-            editedSegments: Array.from(editedSegments),
-          })
-        }
-      }
-
       await handleSave(
         {
-          getEditorText: transcript ? () => transcript : getEditorText,
+          getEditorText,
           orderDetails,
           setButtonLoading,
           listenCount,
@@ -803,15 +761,11 @@ function EditorPage() {
         },
         false
       )
-
-      if (!diffToggleEnabled) {
-        updateFormattedTranscript()
-      }
+      updateFormattedTranscript()
     }, 1000 * 60 * AUTOSAVE_INTERVAL)
 
     return () => clearInterval(interval)
   }, [
-    editorRef,
     getEditorText,
     orderDetails,
     notes,
@@ -819,8 +773,6 @@ function EditorPage() {
     cfd,
     listenCount,
     editedSegments,
-    diffToggleEnabled,
-    saveTranscriptInDiffMode,
     quillRef,
   ])
 
@@ -889,7 +841,7 @@ function EditorPage() {
         const werValue = await getWerPercentage()
         setWerPercentage(werValue)
       }
-
+      
       updateWerPercentage()
     }
   }, [isSubmitModalOpen, step, getWerPercentage])
@@ -919,13 +871,13 @@ function EditorPage() {
       updateSpeakerChangePercentage()
     }
   }, [isSubmitModalOpen, step])
-
+  
   const getSpeakerMacroF1Score = async (): Promise<number> =>
     calculateSpeakerMacroF1Score(
       orderDetails.isTestOrder ? testTranscript : await getTranscriptByTagAction(orderDetails.fileId, FileTag.AUTO) || '',
       getEditorText()
     )
-
+  
   const getEditorMode = useCallback((editorMode: string) => {
     setEditorMode(editorMode)
   }, [])
@@ -1028,7 +980,7 @@ function EditorPage() {
         console.log('next handler')
         // Clear previous highlights before adding new ones
         clearAllHighlights(quill)
-
+        
         const matchesFound = highlightAllMatches(
           quill,
           findText,
@@ -1048,7 +1000,7 @@ function EditorPage() {
     setReplaceText(text)
   }
 
-  const findPreviousHandler = () => {
+    const findPreviousHandler = () => {
     if (quillRef?.current && findText) {
       searchAndSelectReverseInstance(findText, selection)
     }
@@ -1188,9 +1140,9 @@ function EditorPage() {
     if (!quillRef?.current) return
 
     if (
-      step !== 'QC' || 
-      session?.user?.role === 'CUSTOMER' || 
-      !['TRANSCRIPTION', 'TRANSCRIPTION_FORMATTING'].includes(orderDetails.orderType)
+      step !== 'QC' ||
+      session?.user?.role === 'CUSTOMER' ||
+      orderDetails.orderType !== 'TRANSCRIPTION'
     ) {
       setIsFormatWarningDialogOpen(false)
       return
@@ -1209,95 +1161,6 @@ function EditorPage() {
 
     return () => clearTimeout(timeoutId)
   }, [quillRef])
-
-  const generateDiff = (
-    originalTranscript: string,
-    currentTranscript: string
-  ) => {
-    const dmp = new diff_match_patch()
-    const diff = dmp.diff_contextAwareWordMode(originalTranscript, currentTranscript)
-    return diff
-  }
-
-  const renderDiff = useCallback(
-    (diffs: [number, string][]) => {
-      const quill = quillRef?.current?.getEditor()
-      if (!quill) return
-     
-      const delta = new Delta()
-      diffs.forEach(([op, text]) => {
-        if (op === DIFF_INSERT) {
-          delta.insert(text, { background: 'var(--diff-insert-color)' })
-        } else if (op === DIFF_DELETE) {
-          delta.insert(text, { background: 'var(--diff-delete-color)', strike: true })
-        } else {
-          delta.insert(text)
-        }
-      })
-      quill.setContents(delta, 'silent')
-      
-      if (editorRef.current) {
-        editorRef.current?.triggerAlignmentUpdate()        
-      }
-    },
-    [quillRef, editorRef]
-  )
-
-  const toggleDiffView = useCallback(
-    (newDiffToggleValue = diffToggleEnabled) => {
-      const quill = quillRef?.current?.getEditor()
-      if (!quill) return
-
-      setTimeout(async () => {
-        try {
-          if (!newDiffToggleValue) {
-            const savedTranscript = saveTranscriptInDiffMode()
-            quill.setContents(getFormattedContent(savedTranscript), 'silent')
-            
-            if (editorRef.current) {
-              setTimeout(() => {
-                editorRef.current?.triggerAlignmentUpdate()
-              }, 100)
-            }
-            } else {
-            const currentText = quill.getText().trim()
-            const originalTranscript = orderDetails.isTestOrder
-              ? testTranscript
-              : await getFormattedTranscript(ctms, orderDetails.fileId)
-            const diff = generateDiff(originalTranscript, currentText) || []
-            renderDiff(diff)
-
-            const cleanTranscript = saveTranscriptInDiffMode()
-            if (cleanTranscript) {
-              persistEditorDataIDB(orderDetails.fileId, {
-                transcript: cleanTranscript,
-                listenCount,
-                editedSegments: Array.from(editedSegments),
-              })
-            }
-          }
-        } catch (error) {
-          toast.error('Cannot toggle diff mode')
-          setIsVersionLoadingDialogOpen(false)
-          setDiffToggleEnabled(false)
-        }
-      }, 0)
-    },
-    [
-      quillRef,
-      ctms,
-      diffToggleEnabled,
-      generateDiff,
-      saveTranscriptInDiffMode,
-      orderDetails.fileId,
-      orderDetails.isTestOrder,
-      testTranscript,
-      listenCount,
-      editedSegments,
-      renderDiff,
-      editorRef,
-    ]
-  )
 
   useEffect(() => {
     const generateAlignments = async () => {
@@ -1343,233 +1206,6 @@ function EditorPage() {
     generateSubtitlesIfNeeded();
   }, [alignments]);
 
-  useEffect(() => {
-    if (!diffToggleEnabled || !quillRef?.current) return
-
-    const quill = quillRef.current.getEditor()
-    if (!quill) return
-
-    let prevText = quill.getText()
-    let prevContents = quill.getContents()
-    let changeTimeout: NodeJS.Timeout | null = null
-
-    const handleTextChange = () => {
-      if (!diffToggleEnabled) return
-
-      const cursorPosition = quill.getSelection()
-
-      if (changeTimeout) {
-        clearTimeout(changeTimeout)
-      }
-
-      changeTimeout = setTimeout(() => {
-        if (!diffToggleEnabled) return
-
-        const currentText = quill.getText()
-
-        if (prevText !== currentText) {
-          try {
-            const dmp = new diff_match_patch()
-            const diffs = dmp.diff_contextAwareWordMode(prevText, currentText)
-            dmp.diff_cleanupSemantic(diffs)
-
-            const formattedTextMap: Map<
-              number,
-              {
-                end: number
-                isDeleted: boolean
-                isInserted: boolean
-              }
-            > = new Map()
-
-            if (prevContents.ops) {
-              let index = 0
-              for (const op of prevContents.ops) {
-                if (op.insert && typeof op.insert === 'string') {
-                  const isDeleted = op.attributes?.strike === true
-                  const isInserted = op.attributes?.background === 'var(--diff-insert-color)'
-
-                  if (isDeleted || isInserted) {
-                    formattedTextMap.set(index, {
-                      end: index + op.insert.length,
-                      isDeleted,
-                      isInserted,
-                    })
-                  }
-
-                  index += op.insert.length
-                }
-              }
-            }
-
-            const formatDelta = new Delta()
-            const insertedRanges: { start: number; end: number }[] = []
-            let currentPos = 0
-
-            for (const [op, text] of diffs) {
-              if (op === DIFF_INSERT) {
-                insertedRanges.push({
-                  start: currentPos,
-                  end: currentPos + text.length,
-                })
-              }
-
-              if (op !== DIFF_DELETE) {
-                currentPos += text.length
-              }
-            }
-
-            insertedRanges.forEach((range) => {
-              const length = range.end - range.start
-              if (length > 0) {
-                formatDelta.retain(range.start)
-                formatDelta.retain(length, {
-                  background: 'var(--diff-insert-color)',
-                  strike: false,
-                })
-              }
-            })
-
-            if (formatDelta.ops?.length) {
-              quill.updateContents(formatDelta, 'silent')
-            }
-
-            const deletionDelta = new Delta()
-            let lastDeletePos = 0
-            currentPos = 0
-            let originalTextPos = 0
-
-            for (const [op, text] of diffs) {
-              if (op === DIFF_DELETE) {
-                let isFormattedTextRemoval = false
-                const deleteStart = originalTextPos
-                const deleteEnd = originalTextPos + text.length
-
-                Array.from(formattedTextMap.entries()).forEach(
-                  ([formattedStart, formattedInfo]) => {
-                    const hasOverlap = !(
-                      deleteEnd <= formattedStart ||
-                      deleteStart >= formattedInfo.end
-                    )
-
-                    if (hasOverlap) {
-                      isFormattedTextRemoval = true
-                    }
-                  }
-                )
-
-                if (!isFormattedTextRemoval) {
-                  deletionDelta.retain(currentPos - lastDeletePos)
-                  lastDeletePos = currentPos
-                  deletionDelta.insert(text, {
-                    background: 'var(--diff-delete-color)',
-                    strike: true,
-                  })
-                }
-
-                originalTextPos += text.length
-              } else {
-                currentPos += text.length
-                originalTextPos += text.length
-              }
-            }
-
-            if (deletionDelta.ops?.length) {
-              quill.updateContents(deletionDelta, 'silent')
-            }
-
-            const sanitizedTranscript = saveTranscriptInDiffMode()
-            if (sanitizedTranscript) {
-              persistEditorDataIDB(orderDetails.fileId, {
-                transcript: sanitizedTranscript,
-                listenCount,
-                editedSegments: Array.from(editedSegments),
-              })
-
-              if (editorRef.current) {
-                setTimeout(() => {
-                  editorRef.current?.triggerAlignmentUpdate()
-                }, 100)
-              }
-            }
-
-            if (cursorPosition) {
-              quill.setSelection(cursorPosition.index, cursorPosition.length)
-            }
-
-            prevText = currentText
-            prevContents = quill.getContents()
-          } catch (error) {
-            toast.error('Failed to process changes in diff mode')
-          }
-        }
-      }, 500)
-    }
-
-    quill.on('text-change', handleTextChange)
-
-    return () => {
-      quill.off('text-change', handleTextChange)
-      if (changeTimeout) {
-        clearTimeout(changeTimeout)
-      }
-    }
-  }, [
-    diffToggleEnabled,
-    quillRef,
-    orderDetails.fileId,
-    listenCount,
-    editedSegments,
-    editorRef,
-    saveTranscriptInDiffMode,
-  ])
-
-  const handleDiffToggle = useCallback(() => {
-    if (!diffToggleEnabled) {
-      setIsVersionLoadingDialogOpen(true)
-      
-      ;(async () => {
-        try {
-          await handleSave(
-            {
-              getEditorText,
-              orderDetails,
-              setButtonLoading,
-              listenCount,
-              editedSegments,
-              role: session?.user?.role || '',
-              quill: quillRef?.current?.getEditor(),
-            },
-            false
-          )
-
-          setDiffToggleEnabled(true)
-          toggleDiffView(true)
-          setIsVersionLoadingDialogOpen(false)
-        } catch (error) {
-          toast.error('Cannot switch to diff mode')
-          setIsVersionLoadingDialogOpen(false)
-          setDiffToggleEnabled(false)
-        }
-      })()
-    } else {
-      toggleDiffView(false)
-      setDiffToggleEnabled(false)
-    }
-  }, [
-    diffToggleEnabled,
-    toggleDiffView,
-    handleSave,
-    getEditorText,
-    orderDetails,
-    setButtonLoading,
-    listenCount,
-    editedSegments,
-    session?.user?.role,
-    quillRef,
-    setIsVersionLoadingDialogOpen,
-  ])
-
   return (
     <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
       <Topbar
@@ -1596,8 +1232,6 @@ function EditorPage() {
         setCtms={setCtms}
         editorRef={editorRef}
         step={step}
-        diffToggleEnabled={diffToggleEnabled}
-        handleDiffToggle={handleDiffToggle}
       />
 
       <Header
@@ -1614,8 +1248,6 @@ function EditorPage() {
         editorRef={editorRef}
         step={step}
         toggleHighlightNumerics={toggleHighlightNumerics}
-        diffToggleEnabled={diffToggleEnabled}
-        handleDiffToggle={handleDiffToggle}
       />
 
       <div className='flex h-full overflow-hidden'>
@@ -1658,7 +1290,11 @@ function EditorPage() {
                       <InfoTabComponent orderDetails={orderDetails} />
                     </Tabs>
                   ) : (
-                    <Tabs defaultValue='transcribe' className='h-full'>
+                    <Tabs
+                      onValueChange={handleTabsValueChange}
+                      defaultValue='transcribe'
+                      className='h-full'
+                    >
                       <div className='flex border-b border-customBorder text-md font-medium'>
                         <TabsList className='px-2 gap-x-7'>
                           <TabsTrigger
@@ -1667,6 +1303,15 @@ function EditorPage() {
                           >
                             Transcribe
                           </TabsTrigger>
+                          {session?.user?.role !== 'CUSTOMER' &&
+                            orderDetails.orderType !== 'FORMATTING' && (
+                              <TabsTrigger
+                                className='text-base px-0 pt-2 pb-[6.5px]'
+                                value='diff'
+                              >
+                                Diff
+                              </TabsTrigger>
+                            )}
                           <TabsTrigger
                             className='text-base px-0 pt-2 pb-[6.5px]'
                             value='info'
@@ -1708,6 +1353,11 @@ function EditorPage() {
                         highlightNumbersEnabled={highlightNumbersEnabled}
                         setHighlightNumbersEnabled={setHighlightNumbersEnabled}
                       />
+
+                      {session?.user?.role !== 'CUSTOMER' &&
+                        orderDetails.orderType !== 'FORMATTING' && (
+                          <DiffTabComponent diff={diff} />
+                        )}
 
                       <InfoTabComponent orderDetails={orderDetails} />
                       <SpeakersTabComponent
@@ -2121,9 +1771,7 @@ function EditorPage() {
 
         {step === 'QC' &&
           session?.user?.role !== 'CUSTOMER' &&
-          ['TRANSCRIPTION', 'TRANSCRIPTION_FORMATTING'].includes(
-            orderDetails.orderType
-          ) && (
+          orderDetails.orderType === 'TRANSCRIPTION' && (
             <FormatWarningDialog
               isOpen={isFormatWarningDialogOpen}
               onOpenChange={setIsFormatWarningDialogOpen}
@@ -2135,24 +1783,8 @@ function EditorPage() {
           <VersionCompareDialog
             isOpen={diffToggleEnabled}
             fileId={orderDetails.fileId}
-            renderDiff={renderDiff}
+            setDiff={setDiff}
           />
-        )}
-
-        {isVersionLoadingDialogOpen && !diffToggleEnabled && (
-          <Dialog open={isVersionLoadingDialogOpen} modal>
-            <DialogContent className='max-w-md p-6 flex flex-col items-center justify-center [&>button]:hidden'>
-              <div className='flex flex-col items-center space-y-4'>
-                <ReloadIcon className='h-8 w-8 animate-spin text-primary' />
-                <DialogTitle className='text-center'>
-                  Loading version comparison...
-                </DialogTitle>
-                <DialogDescription className='text-center'>
-                  Please wait while we prepare the versions for comparison.
-                </DialogDescription>
-              </div>
-            </DialogContent>
-          </Dialog>
         )}
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
 import ReactQuill from 'react-quill'
 
+import Diff from './Diff'
 import Editor, { EditorHandle } from './Editor'
 import { OrderDetails } from './EditorPage'
 import SpeakerManager from './SpeakerManager'
@@ -11,6 +12,7 @@ import {
   CustomerQuillSelection,
   EditorData,
 } from '@/utils/editorUtils'
+import { DmpDiff } from '@/utils/transcript/diff_match_patch'
 
 interface EditorTabComponentProps {
   transcriptLoading: boolean
@@ -87,6 +89,20 @@ export const EditorTabComponent = ({
           />
         </div>
       )}
+    </div>
+  </TabsContent>
+)
+
+export const DiffTabComponent = ({ diff }: { diff: DmpDiff[] }) => (
+  <TabsContent
+    forceMount
+    className='data-[state=inactive]:hidden h-full mt-0 overflow-hidden pb-[41px]'
+    value='diff'
+  >
+    <div className='h-full overflow-y-auto py-[12px] px-[15px]'>
+      <div className='h-full'>
+        <Diff diffOutput={diff} />
+      </div>
     </div>
   </TabsContent>
 )

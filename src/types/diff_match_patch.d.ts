@@ -13,7 +13,6 @@ declare module '@/utils/transcript/diff_match_patch' {
 
     diff_main(text1: string, text2: string, opt_checklines?: boolean, opt_deadline?: number): DmpDiff[];
     diff_wordMode(text1: string, text2: string): DmpDiff[];
-    diff_contextAwareWordMode(text1: string, text2: string): DmpDiff[];
     diff_cleanupEfficiency(diffs: DmpDiff[]): void;
     diff_cleanupSemantic(diffs: DmpDiff[]): void;
     diff_levenshtein(diffs: DmpDiff[]): number;

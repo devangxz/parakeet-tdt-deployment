@@ -92,7 +92,6 @@ export async function POST(req: NextRequest) {
     }
 
     const transcriptPayload: {
-      isASR: boolean
       fileId: string
       userId: number
       assemblyAITranscript: string
@@ -102,7 +101,6 @@ export async function POST(req: NextRequest) {
       combinedCTMs?: ReturnType<typeof getCTMs>
       transcript: string
     } = {
-      isASR: true,
       fileId,
       userId: order.userId,
       assemblyAITranscript,
