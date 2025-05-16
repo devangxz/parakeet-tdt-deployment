@@ -22,6 +22,7 @@ interface WaveformProps {
   backgroundPosition?: string
   timeMarkerInterval?: number
   isScreenMode?: boolean
+  onPause?: boolean
 }
 
 export default function Waveform({
@@ -33,6 +34,7 @@ export default function Waveform({
   bufferedRanges: externalBufferedRanges,
   onClick,
   onSeek,
+  onPause,
   className = '',
   currentTime: externalCurrentTime,
   showCurrentTimeLabel = false,
@@ -49,12 +51,16 @@ export default function Waveform({
   const [internalCurrentTime, setInternalCurrentTime] = useState('00:00')
   const [internalLoading, setInternalLoading] = useState(false)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0, visible: false, text: '' })
-  
+  const [isPaused, setIsPaused] = useState(onPause)
   const currentValue = externalCurrentValue !== undefined ? externalCurrentValue : internalCurrentValue
   const bufferedRanges = externalBufferedRanges || internalBufferedRanges
   const audioDuration = externalAudioDuration || internalAudioDuration
   const currentTimeDisplay = externalCurrentTime || internalCurrentTime
   const isLoading = externalLoading !== undefined ? externalLoading : internalLoading
+
+  useEffect(() => {
+    setIsPaused(onPause);
+  }, [onPause]);
 
   useEffect(() => {
     if (!audioPlayer?.current) return
@@ -112,6 +118,26 @@ export default function Waveform({
       audio.removeEventListener('canplay', handleLoadingEnd)
     }
   }, [audioPlayer?.current])
+
+  useEffect(() => {
+    if (isPaused) {
+      console.log('Resetting waveform due to pause');
+      // Reset internal values
+      setInternalBufferedRanges([])
+      setInternalCurrentValue(0)
+      setInternalCurrentTime('00:00')
+      
+      // If audio player exists, reset its current time
+      if (audioPlayer?.current) {
+        audioPlayer.current.currentTime = 0;
+      }
+      
+      // If onSeek callback is provided, use it to notify about the reset
+      if (onSeek) {
+        onSeek(0);
+      }
+    }
+  }, [isPaused, audioPlayer, onSeek])
 
   const getOptimalInterval = (duration: number): number => {
     const hours = duration / 3600;

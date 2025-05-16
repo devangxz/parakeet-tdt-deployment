@@ -10,18 +10,36 @@ import Waveform from '@/components/editor/Waveform'
 interface AudioContextType {
   playingFile: string | null;
   setPlayingFile: (fileId: string | null) => void;
+  isPaused: boolean;
+  setIsPaused: (isPaused: boolean) => void;
 }
 
-const AudioContext = createContext<AudioContextType>({
+export const AudioContext = createContext<AudioContextType>({
   playingFile: null,
   setPlayingFile: () => {},
+  isPaused: false,
+  setIsPaused: () => {},
 });
 
 export const AudioProvider = ({ children }: { children: React.ReactNode }) => {
   const [playingFile, setPlayingFile] = useState<string | null>(null);
-  
+  const [isPaused, setIsPaused] = useState(true);
+    
+  // Also reset isPaused when the playing file changes
+  useEffect(() => {
+    if (playingFile === null) {
+      setIsPaused(true);
+    }
+  }, [playingFile]);
+
   return (
-    <AudioContext.Provider value={{ playingFile, setPlayingFile }}>
+    <AudioContext.Provider value={{ 
+      playingFile, 
+      setPlayingFile, 
+      isPaused,
+      setIsPaused,
+      // clearAudioForFile 
+    }}>
       {children}
     </AudioContext.Provider>
   );
@@ -41,6 +59,10 @@ export function RowPlayButton({ fileId, isLoading = false }: RowPlayButtonProps)
     if (isPlaying) {
       setPlayingFile(null);
     } else {
+      // If another file is playing, stop it first
+      // if (playingFile && playingFile !== fileId) {
+      //   setActiveAudioUrl(null);
+      // }
       setPlayingFile(fileId);
     }
   };
@@ -67,21 +89,32 @@ export default function AudioWaveformPlayer({
   waveformUrl,
   duration,
 }: AudioWaveformPlayerProps) {
-  const { playingFile, setPlayingFile } = useContext(AudioContext);
+  const { playingFile, setPlayingFile, isPaused, setIsPaused } = useContext(AudioContext);
   const isPlaying = playingFile === fileId;
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
-
   // Load audio URL when needed
   useEffect(() => {
     if (isPlaying && !audioUrl) {
       getSignedUrlAction(`${fileId}.mp3`, 3600).then((res) => {
         if (res.success && res.signedUrl) {
           setAudioUrl(res.signedUrl);
+          // setActiveAudioUrl(res.signedUrl);
         }
       });
     }
   }, [fileId, isPlaying, audioUrl]);
+
+  // // Clear audioUrl when playing different file
+  useEffect(() => {
+    if (playingFile !== fileId && audioUrl) {
+      setAudioUrl(null);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
+    }
+  }, [playingFile, fileId, audioUrl]);
 
   // Handle play/pause when audio URL changes or play state changes
   useEffect(() => {
@@ -92,12 +125,13 @@ export default function AudioWaveformPlayer({
         console.error('Failed to play audio:', err);
         setPlayingFile(null);
       });
+      setIsPaused(false);
     } else {
+      setIsPaused(true);
       audioRef.current.pause();
     }
-  }, [isPlaying, audioUrl, setPlayingFile]);
+  }, [isPlaying, audioUrl, setPlayingFile, setIsPaused]);
 
-  // Reset playing state when audio ends
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -126,9 +160,11 @@ export default function AudioWaveformPlayer({
               audioRef.current.currentTime = time;
               if (!isPlaying) {
                 setPlayingFile(fileId);
+                setIsPaused(false);
               }
             }
           }}
+          onPause={isPaused}
         />
       </div>
     </div>
