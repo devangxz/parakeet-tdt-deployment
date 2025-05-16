@@ -98,7 +98,7 @@ const Process = () => {
             >
               <span className='absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300' />
               <FileAudio className='w-5 h-5 mr-3 relative' />
-              <span className='relative'>Start Transcribing Now</span>
+              <span className='relative'>Order Now</span>
             </Link>
 
             <p className='mt-4 text-sm text-muted-foreground'>
