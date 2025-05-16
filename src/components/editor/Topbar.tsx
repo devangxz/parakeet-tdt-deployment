@@ -129,6 +129,8 @@ interface TopbarProps {
   setCtms: (ctms: CTMType[]) => void
   editorRef: React.Ref<EditorHandle>
   step: string
+  diffToggleEnabled: boolean
+  handleDiffToggle: () => void
 }
 
 export default memo(function Topbar({
@@ -155,6 +157,8 @@ export default memo(function Topbar({
   setCtms,
   editorRef,
   step,
+  diffToggleEnabled,
+  handleDiffToggle
 }: TopbarProps) {
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
@@ -224,6 +228,7 @@ export default memo(function Topbar({
   const [isHeatmapModalOpen, setIsHeatmapModalOpen] = useState(false)
   const [isRestoreVersionModalOpen, setIsRestoreVersionModalOpen] =
     useState(false)
+  const [isDiffModeDialogOpen, setIsDiffModeDialogOpen] = useState(false)
 
   const playNextBlankInstance = useCallback(() => {
     const quill = quillRef?.current?.getEditor()
@@ -571,6 +576,9 @@ export default memo(function Topbar({
       const LLMFileUrl = await getTextFile(orderDetails.fileId, 'LLM')
       setLLMFileUrl(LLMFileUrl?.signedUrl || '')
     }
+    if (diffToggleEnabled) {
+      handleDiffToggle()
+    }
   }
 
   const revertTranscript = async () => {
@@ -683,7 +691,7 @@ export default memo(function Topbar({
             <TooltipContent>{orderDetails.filename}</TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        
+
         {orderDetails.status === 'QC_ASSIGNED' && (
           <span
             className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${
@@ -751,7 +759,12 @@ export default memo(function Topbar({
             {['CUSTOMER'].includes(session?.user?.role ?? '') ? (
               <Button
                 disabled={isCheckAndDownloadLoading}
-                onClick={() => handleCheckAndDownload(orderDetails.fileId)}
+                onClick={() => {
+                  handleCheckAndDownload(orderDetails.fileId)
+                  if (diffToggleEnabled) {
+                    handleDiffToggle()
+                  }
+                }}
                 className='format-button border-r-[1.5px] border-white/70'
               >
                 {isCheckAndDownloadLoading ? (
@@ -766,10 +779,14 @@ export default memo(function Topbar({
             ) : (
               <Button
                 onClick={() => {
-                  if (orderDetails.status === 'QC_ASSIGNED') {
-                    setIsSpeakerNameModalOpen(true)
+                  if (diffToggleEnabled) {
+                    setIsDiffModeDialogOpen(true)
                   } else {
-                    setIsSubmitModalOpen(true)
+                    if (orderDetails.status === 'QC_ASSIGNED') {
+                      setIsSpeakerNameModalOpen(true)
+                    } else {
+                      setIsSubmitModalOpen(true)
+                    }
                   }
                 }}
                 className='format-button border-r-[1.5px] border-white/70'
@@ -1193,6 +1210,52 @@ export default memo(function Topbar({
         updateQuill={updateTranscript}
         setCtms={setCtms}
       />
+      {isDiffModeDialogOpen && (
+        <Dialog
+          open={isDiffModeDialogOpen}
+          onOpenChange={setIsDiffModeDialogOpen}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Exit Diff Mode</DialogTitle>
+            </DialogHeader>
+            <div className='space-y-3'>
+              <div className='border-l-4 border-primary flex items-start p-4 my-1 bg-primary/10 border rounded-md shadow-sm'>
+                <div className='flex-shrink-0'>
+                  <svg
+                    xmlns='http://www.w3.org/2000/svg'
+                    className='h-6 w-6 text-primary'
+                    viewBox='0 0 20 20'
+                    fill='currentColor'
+                  >
+                    <path
+                      fillRule='evenodd'
+                      d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-9-4a1 1 0 112 0v2a1 1 0 01-2 0V6zm1 4a1 1 0 00-.993.883L9 11v2a1 1 0 001.993.117L11 13v-2a1 1 0 00-1-1z'
+                      clipRule='evenodd'
+                    />
+                  </svg>
+                </div>
+                <div className='ml-3'>
+                  <p className='text-sm font-medium text-primary'>Warning</p>
+                  <p className='text-sm text-primary mt-1'>
+                    Please exit the diff mode before submitting your transcript.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <div className='flex gap-2 justify-end'>
+                <Button
+                  variant='default'
+                  onClick={() => setIsDiffModeDialogOpen(false)}
+                >
+                  OK
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 })
