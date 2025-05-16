@@ -4,6 +4,7 @@ import { OrderStatus, JobStatus, JobType, InputFileType } from '@prisma/client'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { sendTemplateMail } from '@/lib/ses'
 import assignFileToQC from '@/services/transcribe-service/assign-file-to-qc'
 
 export async function reassignApprovalOrder(formData: {
@@ -98,6 +99,20 @@ export async function reassignApprovalOrder(formData: {
           isAcceptedByOM: retainEarnings ? true : false,
         },
       })
+    }
+
+    if (!retainEarnings) {
+      const templateData = {
+        fileId: orderInformation.fileId,
+        type: 'Editor',
+        subject: 'Scribie Editor File Rejected',
+        comment: comment ?? '',
+      }
+      await sendTemplateMail(
+        'UNASSIGN_FILE',
+        currentJobAssignment.transcriberId,
+        templateData
+      )
     }
 
     logger.info(`Successfully re-assigned qc for file ${orderId}`)
