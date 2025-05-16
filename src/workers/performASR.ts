@@ -487,6 +487,7 @@ export async function performASR(fileId: string): Promise<ASRResult> {
       audio: fileURL,
       punctuate: true,
       speaker_labels: true,
+      speech_threshold: 0.8,
     })
 
     const assemblyAIEndTime = new Date()
@@ -494,7 +495,9 @@ export async function performASR(fileId: string): Promise<ASRResult> {
       (assemblyAIEndTime.getTime() - assemblyAIStartTime.getTime()) / 1000
     )
     logger.info(
-      `[${fileId}] AssemblyAI transcription completed at ${assemblyAIEndTime.toISOString()} (took ${assemblyAITimeTaken} seconds)`
+      `[${fileId}] AssemblyAI transcription completed at ${assemblyAIEndTime.toISOString()} (took ${assemblyAITimeTaken} seconds) assembly AI Transcript Id: ${
+        assemblyResult.id
+      }`
     )
 
     if (!assemblyResult.words || assemblyResult.words.length === 0) {
