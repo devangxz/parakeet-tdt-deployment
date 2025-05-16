@@ -4,6 +4,7 @@ import { JobStatus, JobType, InputFileType } from '@prisma/client'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { sendTemplateMail } from '@/lib/ses'
 import assignFileToReviewer from '@/services/transcribe-service/assign-file-to-review'
 
 export async function reassignReview(formData: {
@@ -77,6 +78,20 @@ export async function reassignReview(formData: {
           : { cancelledTs: new Date() }),
       },
     })
+
+    if (!retainEarnings) {
+      const templateData = {
+        fileId: orderInformation.fileId,
+        type: 'Review',
+        subject: 'Scribie Reviewer File Rejected',
+        comment: comment ?? '',
+      }
+      await sendTemplateMail(
+        'UNASSIGN_FILE',
+        currentJobAssignment.transcriberId,
+        templateData
+      )
+    }
 
     logger.info(`Successfully re-assigned reviewer for file ${orderId}`)
     return {
