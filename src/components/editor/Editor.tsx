@@ -103,7 +103,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
   const [typingTimer, setTypingTimer] = useState<NodeJS.Timeout | null>(null)
   const alignmentWorker = useRef<Worker | null>(null)
   const prevLineNodeRef = useRef<HTMLElement | null>(null)
-  const lastHighlightedRef = useRef<{ index: number | null; originalBackground: string | null | false }>({ index: null, originalBackground: null })
+  const lastHighlightedRef = useRef<number | null>(null)
   const beforeSelectionRef = useRef<Range | null>(null)
   const alignmentCallbacks = useRef<Array<() => void>>([])
   const [currentSelection, setCurrentSelection] = useState<Range | null>(null)
@@ -388,26 +388,17 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
 
   const clearLastHighlight = useCallback(() => {
     const quill = quillRef.current?.getEditor()
-    if (!quill || lastHighlightedRef.current.index === null) {
+    if (!quill || lastHighlightedRef.current === null) {
       return
     }
-    const wordIndexToClear = lastHighlightedRef.current.index
-    const backgroundToRestore = lastHighlightedRef.current.originalBackground
-    lastHighlightedRef.current = { index: null, originalBackground: null }
 
-    requestAnimationFrame(() => {
-      const currentQuill = quillRef.current?.getEditor()
-      if (!currentQuill) return
-      const oldAl = alignments[wordIndexToClear]
-      if (oldAl && oldAl.startPos !== undefined && oldAl.endPos !== undefined) {
-        currentQuill.formatText(
-          oldAl.startPos,
-          oldAl.endPos - oldAl.startPos,
-          { background: backgroundToRestore },
-          'silent'
-        )
-      }
-    })
+    const oldAl = alignments[lastHighlightedRef.current]
+    if (oldAl.startPos !== undefined && oldAl.endPos !== undefined) {
+      quill.formatText(oldAl.startPos, oldAl.endPos - oldAl.startPos, {
+        background: null,
+      })
+    }
+    lastHighlightedRef.current = null
   }, [alignments])
 
   const shortcutControls = useMemo(() => {
@@ -560,7 +551,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       ;(el as HTMLElement).classList.remove('line-highlight')
     })
     // Reset any stored last highlight
-    lastHighlightedRef.current = { index: null, originalBackground: null }
+    lastHighlightedRef.current = null
   }, [quillRef])
 
   const removeTimestampsToolbar = useCallback(() => {
@@ -741,8 +732,8 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       const quill = quillRef.current?.getEditor()
       if (!quill) return
 
-      if (lastHighlightedRef.current.index) {
-        const oldAl = alignments[lastHighlightedRef.current.index]
+      if (lastHighlightedRef.current) {
+        const oldAl = alignments[lastHighlightedRef.current]
         const oldStartPos = oldAl.startPos
         const oldEndPos = oldAl.endPos
 
@@ -754,7 +745,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
           })
         }
 
-        lastHighlightedRef.current = { index: null, originalBackground: null }
+        lastHighlightedRef.current = null
       }
 
       const newItem: UndoRedoItem = {
@@ -793,7 +784,6 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     highlightNumbers, 
     highlightNumbersEnabled
   ])
-  
   const handleUndo = useCallback(() => {
     if (undoStack.length === 0) return
 
@@ -931,7 +921,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
   useEffect(() => {
     if (!highlightWordsEnabled) {
       clearHighlights()
-      lastHighlightedRef.current = { index: null, originalBackground: null }
+      lastHighlightedRef.current = null
     }
   }, [highlightWordsEnabled, clearHighlights])
 
@@ -951,72 +941,26 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       const currentWordIndex = getAlignmentIndexByTime(
         alignments,
         currentTime,
-        lastHighlightedRef.current.index
+        lastHighlightedRef.current
       )
 
-      if (currentWordIndex === lastHighlightedRef.current.index) return
+      if (currentWordIndex === lastHighlightedRef.current) return
 
       clearLastHighlight()
 
       const newAl = alignments[currentWordIndex]
       if (newAl?.startPos !== undefined && newAl?.endPos !== undefined) {
-        const wordLength = newAl.endPos - newAl.startPos
-        const text = quill.getText(newAl.startPos, wordLength)
+        // Highlight the new word
+        quill.formatText(newAl.startPos, newAl.endPos - newAl.startPos, {
+          background: 'var(--highlight-color)',
+        })
 
-        if (text && text.trim()) {
-          const currentFormats = quill.getFormat(newAl.startPos, wordLength)
-
-          let originalBackground: string | null | false = null
-          if (
-            typeof currentFormats.background === 'string' ||
-            currentFormats.background === false
-          ) {
-            originalBackground = currentFormats.background
-          }
-
-          if (!isTyping) {
-            lastHighlightedRef.current = {
-              index: currentWordIndex,
-              originalBackground: originalBackground,
-            }
-          }
-
-          requestAnimationFrame(() => {
-            const currentQuill = quillRef.current?.getEditor()
-            if (
-              !currentQuill ||
-              isTyping ||
-              lastHighlightedRef.current.index !== currentWordIndex
-            )
-              return
-
-            const currentNewAl = alignments[currentWordIndex]
-            if (
-              currentNewAl?.startPos !== undefined &&
-              currentNewAl?.endPos !== undefined
-            ) {
-              currentQuill.formatText(
-                currentNewAl.startPos,
-                currentNewAl.endPos - currentNewAl.startPos,
-                {
-                  background: 'var(--highlight-color)',
-                },
-                'silent'
-              )
-            }
-          })
+        if (!isTyping) {
+          lastHighlightedRef.current = currentWordIndex
         }
       }
     }, 100),
-    [
-      alignments,
-      highlightWordsEnabled,
-      isTyping,
-      clearLastHighlight,
-      audioPlayer,
-      alignmentWorkerRunning,
-      quillRef,
-    ]
+    [alignments, highlightWordsEnabled, isTyping, clearLastHighlight]
   )
 
   useEffect(() => {
@@ -1315,7 +1259,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
       const currentWordIndex = getAlignmentIndexByTime(
         alignments,
         currentTime,
-        lastHighlightedRef.current.index
+        lastHighlightedRef.current
       )
       if (currentWordIndex === null || currentWordIndex === undefined) return
       const newAl = alignments[currentWordIndex]
@@ -1352,7 +1296,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
         theme='snow'
         modules={quillModules}
         defaultValue={{ ops: initialContent }}
-        formats={['size', 'background', 'font', 'color', 'bold', 'italics', 'strike']}
+        formats={['size', 'background', 'font', 'color', 'bold', 'italics']}
         className='h-full'
         onChangeSelection={handleSelectionChange}
         onBlur={handleBlur}
