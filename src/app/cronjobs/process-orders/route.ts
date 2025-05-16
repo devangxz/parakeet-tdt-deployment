@@ -175,12 +175,7 @@ export async function POST() {
         )
         logger.info(`File ${file?.fileId} exists in ASR queue: ${isInASRQueue}`)
 
-        let ctmsExists = await fileExistsInS3(`${file?.fileId}_assembly_ai_ctms.json`)
-        if (!ctmsExists) {
-          ctmsExists = await fileExistsInS3(`${file?.fileId}_ctms.json`)
-        }
-
-        if (!isInASRQueue && !ctmsExists) {
+        if (!isInASRQueue) {
           logger.info(`Adding file ${file?.fileId} to ASR queue`)
 
           await workerQueueService.createJob(

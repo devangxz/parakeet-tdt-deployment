@@ -158,6 +158,7 @@ export interface VersionsResult {
   success: boolean
   versions?: Version[]
   message?: string | null
+  autoVersionType?: string | null
 }
 
 export async function getFileVersionsAction(
@@ -194,6 +195,7 @@ export async function getFileVersionsAction(
     return {
       success: true,
       versions,
+      autoVersionType: versionsResponse.data?.autoVersionType || null
     }
   } catch (error) {
     logger.error(
