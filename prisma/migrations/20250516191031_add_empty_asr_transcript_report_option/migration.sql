@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "ReportOption" ADD VALUE 'EMPTY_ASR_TRANSCRIPT';

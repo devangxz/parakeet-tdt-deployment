@@ -1142,7 +1142,9 @@ function EditorPage() {
     if (
       step !== 'QC' ||
       session?.user?.role === 'CUSTOMER' ||
-      orderDetails.orderType !== 'TRANSCRIPTION'
+      !['TRANSCRIPTION', 'TRANSCRIPTION_FORMATTING'].includes(
+        orderDetails.orderType
+      )
     ) {
       setIsFormatWarningDialogOpen(false)
       return
@@ -1771,7 +1773,9 @@ function EditorPage() {
 
         {step === 'QC' &&
           session?.user?.role !== 'CUSTOMER' &&
-          orderDetails.orderType === 'TRANSCRIPTION' && (
+          ['TRANSCRIPTION', 'TRANSCRIPTION_FORMATTING'].includes(
+            orderDetails.orderType
+          ) && (
             <FormatWarningDialog
               isOpen={isFormatWarningDialogOpen}
               onOpenChange={setIsFormatWarningDialogOpen}

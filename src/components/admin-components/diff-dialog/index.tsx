@@ -1,9 +1,9 @@
-import { ReloadIcon } from '@radix-ui/react-icons'
+import { ReloadIcon, InfoCircledIcon } from '@radix-ui/react-icons'
 import { useState, useEffect, useCallback, memo } from 'react'
 import { toast } from 'sonner'
 
 import { getOrderDetailsAction } from '@/app/actions/editor/order-details'
-import { getDiffFilesAction } from '@/app/actions/files/get-diff-files'
+import { getDiffFilesAction, getScreeningDiffFilesAction } from '@/app/actions/files/get-diff-files'
 import { getTestDiffFilesAction } from '@/app/actions/files/get-test-diff-files'
 import { OrderDetails } from '@/components/editor/EditorPage'
 import SpeakerManager from '@/components/editor/SpeakerManager'
@@ -16,6 +16,7 @@ interface DialogProps {
   open: boolean
   onClose: () => void
   fileId: string
+  isScreeningFile?: boolean
 }
 
 const LoadingComponent = memo(() => (
@@ -29,7 +30,7 @@ const LoadingComponent = memo(() => (
 
 LoadingComponent.displayName = 'LoadingComponent';
 
-const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
+const OpenDiffDialog = ({ open, onClose, fileId, isScreeningFile = false }: DialogProps) => {
   const [regularDiff, setRegularDiff] = useState<DmpDiff[]>([])
   const [masterToModifiedDiff, setMasterToModifiedDiff] = useState<DmpDiff[]>([])
   const [masterToSubmittedDiff, setMasterToSubmittedDiff] = useState<DmpDiff[]>([])
@@ -38,7 +39,11 @@ const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
   const [isFailed, setIsFailed] = useState(false)
   const [isTestOrder, setIsTestOrder] = useState(false)
   const [activeTab, setActiveTab] = useState("master-modified")
-  const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null)
+  const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null)  
+  const [screeningDiff, setScreeningDiff] = useState<DmpDiff[]>([])
+  const [assemblyAiTranscript, setAssemblyAiTranscript] = useState<string>('')
+  const [hasCombinedVersion, setHasCombinedVersion] = useState(false)
+  const [hasNoTranscripts, setHasNoTranscripts] = useState(false)
   
   // Clear all diff data when dialog closes to prevent memory leaks
   const handleClose = useCallback(() => {
@@ -46,6 +51,10 @@ const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
     setMasterToModifiedDiff([])
     setMasterToSubmittedDiff([])
     setModifiedToSubmittedDiff([])
+    setScreeningDiff([])
+    setAssemblyAiTranscript('')
+    setHasCombinedVersion(false)
+    setHasNoTranscripts(false)
     setIsTestOrder(false)
     setOrderDetails(null)
     onClose()
@@ -94,7 +103,36 @@ const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
   
   const loadDiff = useCallback(async () => {
     if (!fileId || fileId.length === 0) return
+    setLoading(true)
     try {
+      if (isScreeningFile) {
+        const screeningRes = await getScreeningDiffFilesAction(fileId)
+        
+        if (screeningRes.success) {
+          if (screeningRes.assemblyAiFile && screeningRes.assemblyAiFile.length > 0) {
+            setAssemblyAiTranscript(screeningRes.assemblyAiFile as string)
+            
+            if (screeningRes.hasCombinedVersion && screeningRes.combinedFile) {
+              const { assemblyAiFile, combinedFile } = screeningRes
+              const dmp = new diff_match_patch()
+              const diff = dmp.diff_wordMode(assemblyAiFile as string, combinedFile as string)
+              dmp.diff_cleanupSemantic(diff)
+              setScreeningDiff(diff)
+              setHasCombinedVersion(true)
+            } else {
+              setHasCombinedVersion(false)
+            }
+          } else {
+            setHasNoTranscripts(true)
+          }
+        } else {
+          setHasNoTranscripts(true)
+        }
+        
+        setLoading(false)
+        return
+      }
+
       // First, check if this is a test order
       const testRes = await getTestDiffFilesAction(fileId)
       if (testRes.success && testRes.isTestOrder) {
@@ -139,15 +177,15 @@ const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
       }
       setLoading(false)
     } catch (error) {
+      setLoading(false)
       toast.error('Failed to load diff')
       handleClose()
     }
-  }, [fileId, activeTab, handleClose, isTestOrder])
-
+  }, [fileId, activeTab, handleClose, isTestOrder, isScreeningFile])
+  
   // Load diff when dialog opens or tab changes
   useEffect(() => {
     if (open && fileId.length > 0) {
-      setLoading(true)
       loadDiff()
       fetchOrderDetails()
     }
@@ -159,15 +197,19 @@ const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
         setMasterToModifiedDiff([])
         setMasterToSubmittedDiff([])
         setModifiedToSubmittedDiff([])
+        setScreeningDiff([])
+        setAssemblyAiTranscript('')
+        setHasCombinedVersion(false)
+        setHasNoTranscripts(false)
         setOrderDetails(null)
       }
     }
   }, [open, fileId, loadDiff, fetchOrderDetails])
 
   const renderDiff = (diff: DmpDiff[]) => {
-      // Preprocess the diff to handle newlines better
+    // Preprocess the diff to handle newlines better
   const processedDiff = [];
-  
+
   for (let i = 0; i < diff.length; i++) {
     const [op, text] = diff[i];
     
@@ -221,20 +263,46 @@ const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>Diff</DialogTitle>
           <DialogDescription>
-            {isTestOrder ? 'Compare test transcript versions' : 'Diff between ASR and QC outputs'}
+            {isScreeningFile ? 'Diff between AssemblyAI and AssemblyAI + GPT-4o Transcribe outputs' : 
+             isTestOrder ? 'Compare test transcript versions' : 
+             'Diff between ASR and QC outputs'}
           </DialogDescription>
         </DialogHeader>
         
         <Tabs defaultValue="diff" className="w-full flex-1 flex flex-col min-h-0">
           <TabsList className="w-full justify-start flex-shrink-0">
             <TabsTrigger value="diff">Diff</TabsTrigger>
-            <TabsTrigger value="speakers">Speakers</TabsTrigger>
+            {!isScreeningFile && <TabsTrigger value="speakers">Speakers</TabsTrigger>}
           </TabsList>
           
           <TabsContent value="diff" className='flex-1 flex flex-col min-h-0 overflow-hidden'>
             <div className="flex-1 border rounded-md border-customBorder flex flex-col min-h-0">
               {loading ? (
                 <LoadingComponent />
+              ) : isScreeningFile ? (
+                <div className='whitespace-pre-wrap p-4 overflow-y-auto h-full'>
+                  {hasNoTranscripts ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                      <p className="text-lg font-medium mb-2">No transcripts available</p>
+                    </div>
+                  ) : hasCombinedVersion ? (
+                    renderDiff(screeningDiff)
+                  ) : assemblyAiTranscript ? (
+                    <div>
+                      <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                        <p className="text-yellow-800 font-medium flex items-center gap-2">
+                          <InfoCircledIcon className="h-4 w-4" />
+                          AssemblyAI + GPT-4o Transcribe transcript not available, showing AssemblyAI transcript only
+                        </p>
+                      </div>
+                      <div>{assemblyAiTranscript}</div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                      <p className="text-lg font-medium mb-2">No transcripts available</p>
+                    </div>
+                  )}
+                </div>
               ) : isTestOrder ? (
                 <Tabs 
                   defaultValue="master-modified" 
@@ -300,21 +368,23 @@ const OpenDiffDialog = ({ open, onClose, fileId }: DialogProps) => {
             </div>
           </TabsContent>
           
-          <TabsContent value="speakers" className="flex-1 min-h-0 overflow-y-auto">
-            <div className="h-full flex-1 border rounded-md border-customBorder overflow-hidden">
-              { orderDetails ? (
-                <SpeakerManager 
-                  orderDetails={orderDetails} 
-                  isDialog={true}
-                  isDiffDialog={true}
-                />
-              ) : (
-                <div className="flex justify-center items-center h-full">
-                  <p>Failed to load speaker information</p>
-                </div>
-              )}
-            </div>
-          </TabsContent>
+          {!isScreeningFile && (
+            <TabsContent value="speakers" className="flex-1 min-h-0 overflow-y-auto">
+              <div className="h-full flex-1 border rounded-md border-customBorder overflow-hidden">
+                { orderDetails ? (
+                  <SpeakerManager 
+                    orderDetails={orderDetails} 
+                    isDialog={true}
+                    isDiffDialog={true}
+                  />
+                ) : (
+                  <div className="flex justify-center items-center h-full">
+                    <p>Failed to load speaker information</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
         
         <DialogFooter className="flex-shrink-0 mt-4">
