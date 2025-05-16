@@ -38,8 +38,6 @@ html {
 
     --radius: 0.5rem;
     --highlight-color: rgba(255, 255, 0, 0.8);
-    --diff-insert-color: #e6ffe6;
-    --diff-delete-color: #ffe6e6;
   }
 
   .dark {
@@ -71,8 +69,6 @@ html {
     --input: 263 35% 15%;
     --ring: 263 75.6% 58%;
     --highlight-color: rgba(255, 230, 0, 0.6);
-    --diff-insert-color: #004000;
-    --diff-delete-color: #be0000;
   }
 
   * {

@@ -167,8 +167,6 @@ interface HeaderProps {
   editorRef?: React.RefObject<EditorHandle>
   step: string
   toggleHighlightNumerics: () => void
-  diffToggleEnabled: boolean
-  handleDiffToggle: () => void
 }
 
 export default memo(function Header({
@@ -185,8 +183,6 @@ export default memo(function Header({
   editorRef,
   step,
   toggleHighlightNumerics,
-  diffToggleEnabled,
-  handleDiffToggle,
 }: HeaderProps) {
   const [audioDuration, setAudioDuration] = useState(0)
   const audioPlayer = useRef<HTMLAudioElement>(null)
@@ -754,8 +750,6 @@ export default memo(function Header({
                     toggleHighlightNumerics={toggleHighlightNumerics}
                     handleUndo={handleUndo}
                     handleRedo={handleRedo}
-                    handleDiffToggle={handleDiffToggle}
-                    diffToggleEnabled={diffToggleEnabled}
                   />
                 </div>
               </TooltipProvider>
