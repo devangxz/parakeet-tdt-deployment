@@ -26,7 +26,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import FileAudioPlayer from '@/components/utils/FileAudioPlayer'
-import { getAccentCode } from '@/services/editor-service/get-accent-code'
 import { BaseTranscriberFile } from '@/types/files'
 import formatDuration from '@/utils/formatDuration'
 import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
@@ -92,18 +91,6 @@ export default function AssignedFilesPage({ changeTab }: Props) {
     setAudioUrl()
   }, [playing])
 
-  const fetchAccentCode = async (fileId: string) => {
-    try {
-      const result = await getAccentCode(fileId)
-      if (result.success && result.accentCode) {
-        return result.accentCode
-      }
-    } catch (error) {
-      console.error('Failed to fetch accent code', error)
-    }
-    return 'N/A'
-  }
-
   const fetchFiles = async (showLoader = false) => {
     if (showLoader) {
       setIsLoading(true)
@@ -159,16 +146,11 @@ export default function AssignedFilesPage({ changeTab }: Props) {
             comment: assignment.comment ?? '',
             isCustomFormat,
             isICQC: assignment.order.isICQC,
-            accentCode: '',
+            accentCode: assignment.order.accentCode,
           }
         })
-        const filesWithAccent = await Promise.all(
-          orders.map(async (file: File) => {
-            const accentCode = await fetchAccentCode(file.fileId)
-            return { ...file, accentCode }
-          })
-        )
-        setAssginedFiles(filesWithAccent)
+
+        setAssginedFiles(orders)
         setError(null)
       }
     } catch (err) {
@@ -254,7 +236,7 @@ export default function AssignedFilesPage({ changeTab }: Props) {
                 <TooltipTrigger>
                   <Badge
                     variant='outline'
-                    className='font-semibold text-[10px] text-blue-600'
+                    className='font-semibold text-[10px] text-green-600'
                   >
                     {row.original.accentCode}
                   </Badge>

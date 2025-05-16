@@ -34,7 +34,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { LEGAL_QC_TRANSCRIBER_RATE } from '@/constants'
-import { getAccentCode } from '@/services/editor-service/get-accent-code'
 import formatDuration from '@/utils/formatDuration'
 import { getFormattedTimeStrings } from '@/utils/getFormattedTimeStrings'
 
@@ -115,18 +114,6 @@ export default function HistoryFilesPage() {
     [isLegalQCPage]
   )
 
-  const fetchAccentCode = async (fileId: string) => {
-    try {
-      const result = await getAccentCode(fileId)
-      if (result.success && result.accentCode) {
-        return result.accentCode
-      }
-    } catch (error) {
-      console.error('Failed to fetch accent code', error)
-    }
-    return 'N/A'
-  }
-
   const fetchFiles = useCallback(
     async (pageNum: number, size: number, forceRefresh = false) => {
       const cacheKey = getCacheKey(pageNum, size)
@@ -188,6 +175,7 @@ export default function HistoryFilesPage() {
               orgName: assignment.orgName,
               customFormatOption: assignment.customFormatOption,
               comment: assignment.comment ?? '',
+              accentCode: assignment.accentCode,
             }
           })
 
@@ -198,13 +186,6 @@ export default function HistoryFilesPage() {
           }
 
           setAssginedFiles(orders)
-          const filesWithAccent = await Promise.all(
-            orders.map(async (file: File) => {
-              const accentCode = await fetchAccentCode(file.fileId)
-              return { ...file, accentCode }
-            })
-          )
-          setAssginedFiles(filesWithAccent)
           setPaginationMeta(response.pagination)
           setError(null)
         }
@@ -273,7 +254,7 @@ export default function HistoryFilesPage() {
                 <TooltipTrigger>
                   <Badge
                     variant='outline'
-                    className='font-semibold text-[10px] text-blue-600'
+                    className='font-semibold text-[10px] text-green-600'
                   >
                     {row.original.accentCode}
                   </Badge>

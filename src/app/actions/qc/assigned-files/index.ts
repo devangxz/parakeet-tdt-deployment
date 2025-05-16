@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { getAccentCode } from '@/services/editor-service/get-accent-code'
 import { getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 import getCustomFormatOption from '@/utils/getCustomFormatOption'
@@ -91,12 +92,15 @@ export async function getAssignedQCFiles(type?: string | null) {
       const orgName = await getOrgName(file.order.userId)
       const customFormatOption = await getCustomFormatOption(file.order.userId)
       const isTestCustomer = await getTestCustomer(file.order.userId)
+      const accent = await getAccentCode(file.order.fileId)
+      console.log(accent)
       file.order.qc_cost = transcriberCost.cost
       file.order.rate = transcriberCost.rate
       file.order.orgName = orgName
       file.order.isTestCustomer = isTestCustomer
       file.order.customFormatOption = customFormatOption
       file.order.isICQC = file.isICQC || false
+      file.order.accentCode = accent.accentCode
     }
 
     logger.info(
