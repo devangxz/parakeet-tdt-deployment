@@ -485,7 +485,6 @@ export async function performASR(fileId: string): Promise<ASRResult> {
       audio: fileURL,
       punctuate: true,
       speaker_labels: true,
-      speech_threshold: 0.8,
     })
 
     const assemblyAIEndTime = new Date()
