@@ -129,6 +129,7 @@ interface TopbarProps {
   setCtms: (ctms: CTMType[]) => void
   editorRef: React.Ref<EditorHandle>
   step: string
+  setEditorReadOnly: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 export default memo(function Topbar({
@@ -155,6 +156,7 @@ export default memo(function Topbar({
   setCtms,
   editorRef,
   step,
+  setEditorReadOnly,
 }: TopbarProps) {
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
@@ -224,6 +226,8 @@ export default memo(function Topbar({
   const [isHeatmapModalOpen, setIsHeatmapModalOpen] = useState(false)
   const [isRestoreVersionModalOpen, setIsRestoreVersionModalOpen] =
     useState(false)
+  const [fiveMinutesLeft, setFiveMinutesLeft] = useState(false)
+  const [showTimeoutDialog, setShowTimeoutDialog] = useState(false)
 
   const playNextBlankInstance = useCallback(() => {
     const quill = quillRef?.current?.getEditor()
@@ -637,25 +641,42 @@ export default memo(function Topbar({
   useEffect(() => {
     let timer: NodeJS.Timeout
 
-    const updateRemainingTime = () => {
+    orderDetails.remainingTime = '20'
+    const updateRemainingTime = async () => {
       const remainingSeconds = parseInt(orderDetails.remainingTime)
       if (remainingSeconds > 0) {
         const hours = Math.floor(remainingSeconds / 3600)
         const minutes = Math.floor((remainingSeconds % 3600) / 60)
         const seconds = remainingSeconds % 60
-
+        if(hours === 0 && minutes < 5 ){
+          setFiveMinutesLeft(true)
+        }
         const formattedTime = [
           hours.toString().padStart(2, '0'),
           minutes.toString().padStart(2, '0'),
           seconds.toString().padStart(2, '0'),
         ].join(':')
-
+        console.log(`formattedTime: ${formattedTime}`)
         setTimeoutCount(formattedTime)
         orderDetails.remainingTime = (remainingSeconds - 1).toString()
-
         timer = setTimeout(updateRemainingTime, 1000)
+        console.log(`timer: ${timer}`)
       } else {
         setTimeoutCount('00:00:00')
+        setShowTimeoutDialog(true)
+        await handleSave({
+          getEditorText,
+          orderDetails,
+          setButtonLoading,
+          listenCount,
+          editedSegments,
+          role: session?.user?.role || '',
+          quill: quillRef?.current?.getEditor(),
+        }, false)
+        setEditorReadOnly(true)
+        const quill = quillRef?.current?.getEditor()
+        quill?.disable()
+        setShowTimeoutDialog(false)
       }
     }
 
@@ -668,7 +689,7 @@ export default memo(function Topbar({
         clearTimeout(timer)
       }
     }
-  }, [orderDetails])
+  }, [orderDetails, setEditorReadOnly])
 
   return (
     <div className='bg-background border border-customBorder rounded-md p-2'>
@@ -686,8 +707,8 @@ export default memo(function Topbar({
         
         {orderDetails.status === 'QC_ASSIGNED' && (
           <span
-            className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${
-              orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
+            className={`absolute left-1/2 transform -translate-x-1/2 ${
+              fiveMinutesLeft ? 'animate-pulse text-red-600' : 'text-green-600 '
             }`}
           >
             {timeoutCount}
@@ -773,6 +794,7 @@ export default memo(function Topbar({
                   }
                 }}
                 className='format-button border-r-[1.5px] border-white/70'
+                disabled={timeoutCount === '00:00:00'}
               >
                 Submit
               </Button>
@@ -783,7 +805,7 @@ export default memo(function Topbar({
               onOpenChange={handleDropdownMenuOpenChange}
             >
               <DropdownMenuTrigger className='focus-visible:ring-0 outline-none'>
-                <Button className='px-2 format-icon-button focus-visible:ring-0 outline-none'>
+                <Button className='px-2 format-icon-button focus-visible:ring-0 outline-none' disabled={timeoutCount === '00:00:00'} >
                   <span className='sr-only'>Open menu</span>
                   <ChevronDownIcon className='h-4 w-4' />
                 </Button>
@@ -884,13 +906,14 @@ export default memo(function Topbar({
                     Formatting Options
                   </DropdownMenuItem>
                 )}
-                {session?.user?.role === 'CUSTOMER' && (
-                  <DropdownMenuItem
-                    onClick={() => setIsReReviewModalOpen(true)}
-                  >
-                    Re-Review
-                  </DropdownMenuItem>
-                )}
+                {session?.user?.role === 'CUSTOMER' &&
+                  !orderDetails.isTestOrder && (
+                    <DropdownMenuItem
+                      onClick={() => setIsReReviewModalOpen(true)}
+                    >
+                      Re-Review
+                    </DropdownMenuItem>
+                  )}
                 {orderDetails.status === 'QC_ASSIGNED' && (
                   <DropdownMenuItem asChild>
                     <a href={asrFileUrl} target='_blank'>
@@ -1149,6 +1172,23 @@ export default memo(function Topbar({
           role={session?.user?.role || ''}
         />
       )}
+      {true && 
+        <Dialog open={showTimeoutDialog} modal>  
+        <DialogContent className='max-w-md p-8 flex flex-col items-center justify-center [&>button]:hidden'>
+          <div className='flex flex-col items-center space-y-4'>
+              <>
+                <ReloadIcon className='h-8 w-8 animate-spin text-primary' />
+                <DialogTitle className='text-center'>
+                  {'Time\'s up!'}
+                </DialogTitle>
+                <DialogDescription className='text-center'>
+                  Saving your work. Please wait for a moment.
+                </DialogDescription>
+              </>
+          </div>
+        </DialogContent>
+      </Dialog>
+      }
       {/* process with llm */}
       {processWithLLMModalOpen && (
         <ProcessWithLLMDialog

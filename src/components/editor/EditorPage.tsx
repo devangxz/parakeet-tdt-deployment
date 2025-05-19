@@ -229,6 +229,7 @@ function EditorPage() {
   const [formatErrors, setFormatErrors] = useState<CombinedASRFormatError[]>([])
   const [diffToggleEnabled, setDiffToggleEnabled] = useState(false)
   const [alignments, setAlignments] = useState<AlignmentType[]>([])
+  const [editorReadOnly, setEditorReadOnly] = useState(false)
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
     if (!quill) return
@@ -1232,6 +1233,7 @@ function EditorPage() {
         setCtms={setCtms}
         editorRef={editorRef}
         step={step}
+        setEditorReadOnly={setEditorReadOnly}
       />
 
       <Header
@@ -1352,6 +1354,7 @@ function EditorPage() {
                         step={step}
                         highlightNumbersEnabled={highlightNumbersEnabled}
                         setHighlightNumbersEnabled={setHighlightNumbersEnabled}
+                        readOnly={editorReadOnly}
                       />
 
                       {session?.user?.role !== 'CUSTOMER' &&
