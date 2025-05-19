@@ -671,8 +671,13 @@ const fetchFileDetails = async ({
     // Retrieve editorData from IndexedDB once
     
     const fileData = await getEditorDataIDB(orderRes.orderDetails.fileId)
-    const transcript = (isTestOrder && testTranscript ? testTranscript : fileData?.transcript ||
+
+    let transcript = (isTestOrder && testTranscript ? testTranscript : fileData?.transcript ||
       transcriptRes.data.result.transcript) as string
+
+    if(user?.role === 'CUSTOMER' || user?.role === 'OM' || user?.role === 'ADMIN' || user?.role === 'INTERNAL_TEAM_USER'){
+      transcript = transcriptRes.data.result.transcript
+    }
     await persistEditorDataIDB(orderRes.orderDetails.fileId, { transcript })
     
     const originalCtms = transcriptRes.data.result.ctms
