@@ -40,6 +40,7 @@ interface File {
   orgName: string
   customFormatOption: string
   comment?: string
+  accentCode?: string
 }
 
 interface PaginationMeta {
@@ -209,6 +210,21 @@ export default function HistoryFilesPage() {
                 <p>Difficulty</p>
               </TooltipContent>
             </Tooltip>
+            {row.original.accentCode && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge
+                    variant='outline'
+                    className='font-semibold text-[10px] text-green-600'
+                  >
+                    {row.original.accentCode}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Accent</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
             {row.original.orgName.length > 0 && (
               <Badge
                 variant='outline'

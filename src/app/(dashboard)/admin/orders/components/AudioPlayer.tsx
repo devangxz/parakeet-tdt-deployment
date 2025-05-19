@@ -81,7 +81,17 @@ const createShortcutControls = (
   },
   decreasePlaybackSpeed: () => {
     if (audioPlayer.current) {
-      audioPlayer.current.playbackRate -= 0.1
+      audioPlayer.current.playbackRate -= 0.1 
+    }
+  },
+  decreasePlaybackRateBy25: () => {
+    if (audioPlayer.current) {
+      audioPlayer.current.playbackRate = Math.max(0.1, audioPlayer.current.playbackRate - 0.25)
+    }
+  },
+  increasePlaybackRateBy25: () => {
+    if (audioPlayer.current) {
+      audioPlayer.current.playbackRate += 0.25
     }
   },
 })

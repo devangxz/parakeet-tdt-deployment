@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { getAccentCode } from '@/services/editor-service/get-accent-code'
 import getCustomFormatOption from '@/utils/getCustomFormatOption'
 import getOrgName from '@/utils/getOrgName'
 
@@ -103,10 +104,12 @@ export async function getHistoryFiles(
     for (const file of historyCFFiles as any) {
       const orgName = await getOrgName(file.order.userId)
       const customFormatOption = await getCustomFormatOption(file.order.userId)
+      const accent = await getAccentCode(file.order.fileId)
       file.earnings =
         file.order.status === OrderStatus.DELIVERED ? file.earnings : 0
       file.orgName = orgName
       file.customFormatOption = customFormatOption
+      file.accentCode = accent.accentCode
     }
 
     logger.info(
