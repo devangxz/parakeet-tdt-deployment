@@ -30,6 +30,7 @@ interface File extends BaseTranscriberFile {
   containsMp4: boolean
   customFormatOption: string
   icqcCategory: string
+  accentCode: string
 }
 
 interface Props {
@@ -86,7 +87,7 @@ export default function ICQCFilesPage({ changeTab }: Props) {
           const { timeString, dateString } = getFormattedTimeStrings(
             order.orderTs.toISOString()
           )
-
+          console.log(order.accentCode)
           return {
             index: index + 1,
             orderId: order.id,
@@ -114,6 +115,7 @@ export default function ICQCFilesPage({ changeTab }: Props) {
               order.File.fileKey?.split('.').pop().toLowerCase() === 'mp4',
             customFormatOption: order.customFormatOption,
             icqcCategory: order.icqcCategory,
+            accentCode: order.accentCode,
           }
         })
         setIcqcFiles(orders ?? [])
@@ -197,6 +199,21 @@ export default function ICQCFilesPage({ changeTab }: Props) {
                 <p>Difficulty</p>
               </TooltipContent>
             </Tooltip>
+            {row.original.accentCode && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge
+                    variant='outline'
+                    className='font-semibold text-[10px] text-green-600'
+                  >
+                    {row.original.accentCode}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Accent</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
             {row.original.priority === 1 && (
               <Tooltip>
                 <TooltipTrigger>

@@ -30,6 +30,7 @@ interface File extends BaseTranscriberFile {
   testFile: boolean
   containsMp4: boolean
   customFormatOption: string
+  accentCode: string
 }
 
 interface Props {
@@ -116,6 +117,7 @@ export default function AvailableFilesPage({ changeTab }: Props) {
             containsMp4:
               order.File.fileKey?.split('.').pop().toLowerCase() === 'mp4',
             customFormatOption: order.customFormatOption,
+            accentCode: order.accentCode,
           }
         })
         setAvailableFiles(orders ?? [])
@@ -199,6 +201,21 @@ export default function AvailableFilesPage({ changeTab }: Props) {
                 <p>Difficulty</p>
               </TooltipContent>
             </Tooltip>
+            {row.original.accentCode && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge
+                    variant='outline'
+                    className='font-semibold text-[10px] text-green-600'
+                  >
+                    {row.original.accentCode}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Accent</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
             {row.original.priority === 1 && (
               <Tooltip>
                 <TooltipTrigger>
