@@ -65,6 +65,41 @@ export const sanitizeFileName = (filename: string): string => {
       .replace(/［/g, '[')
       .replace(/］/g, ']')
       .replace(/[\x00-\x1F\x7F]/g, '')
-      .replace(/[<>{}^`]/g, '-') || 'unnamed_file'
+      .replace(/[''‛′‵՚︐]/g, "'")
+      .replace(/["""„‟″‶″]/g, '"')
+      .replace(/[—–]/g, '-')
+      .replace(/[…]/g, '...')
+      .replace(/[:#?&;+=,/\\$@!|()\[\]{}^`~*%<>]/g, '_')
+      .replace(/[^\x00-\x7F]/g, function (char) {
+        const accentsMap: Record<string, string> = {
+          á: 'a',
+          à: 'a',
+          ä: 'a',
+          â: 'a',
+          ã: 'a',
+          å: 'a',
+          é: 'e',
+          è: 'e',
+          ë: 'e',
+          ê: 'e',
+          í: 'i',
+          ì: 'i',
+          ï: 'i',
+          î: 'i',
+          ó: 'o',
+          ò: 'o',
+          ö: 'o',
+          ô: 'o',
+          õ: 'o',
+          ú: 'u',
+          ù: 'u',
+          ü: 'u',
+          û: 'u',
+          ñ: 'n',
+          ç: 'c',
+        }
+
+        return accentsMap[char.toLowerCase()] || '_'
+      }) || 'unnamed_file'
   )
 }
