@@ -656,11 +656,9 @@ export default memo(function Topbar({
           minutes.toString().padStart(2, '0'),
           seconds.toString().padStart(2, '0'),
         ].join(':')
-        console.log(`formattedTime: ${formattedTime}`)
         setTimeoutCount(formattedTime)
         orderDetails.remainingTime = (remainingSeconds - 1).toString()
         timer = setTimeout(updateRemainingTime, 1000)
-        console.log(`timer: ${timer}`)
       } else {
         setTimeoutCount('00:00:00')
         setShowTimeoutDialog(true)
