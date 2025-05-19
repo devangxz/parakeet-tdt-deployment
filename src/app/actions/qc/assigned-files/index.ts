@@ -93,7 +93,6 @@ export async function getAssignedQCFiles(type?: string | null) {
       const customFormatOption = await getCustomFormatOption(file.order.userId)
       const isTestCustomer = await getTestCustomer(file.order.userId)
       const accent = await getAccentCode(file.order.fileId)
-      console.log(accent)
       file.order.qc_cost = transcriberCost.cost
       file.order.rate = transcriberCost.rate
       file.order.orgName = orgName
