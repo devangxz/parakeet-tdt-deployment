@@ -56,6 +56,7 @@ export const sanitizeFileName = (filename: string): string => {
   if (!filename) return 'unnamed_file'
   return (
     filename
+      .replace(/[\x00-\x1F\x7F]/g, '')
       .replace(/：/g, ':')
       .replace(/｜/g, '|')
       .replace(/＜/g, '<')
@@ -64,13 +65,26 @@ export const sanitizeFileName = (filename: string): string => {
       .replace(/＊/g, '*')
       .replace(/［/g, '[')
       .replace(/］/g, ']')
-      .replace(/[\x00-\x1F\x7F]/g, '')
       .replace(/[''‛′‵՚︐]/g, "'")
       .replace(/["""„‟″‶″]/g, '"')
       .replace(/[—–]/g, '-')
       .replace(/[…]/g, '...')
-      .replace(/[:#?&;+=,/\\$@!|()\[\]{}^`~*%<>]/g, '_')
       .replace(/[^\x00-\x7F]/g, function (char) {
+        const charCode = char.charCodeAt(0)
+        if (
+          [
+            0x0027, 0x2019, 0x2018, 0x201b, 0x0060, 0x00b4, 0x2032, 0x2035,
+            0x2034, 0x2033, 0x02b9, 0x02bc, 0x02be, 0x02c8, 0x02ca, 0x02cb,
+            0x02f4, 0x05f3, 0x2018, 0x2019, 0x201a, 0x201b, 0x201c, 0x201d,
+            0x201e, 0x201f, 0x2032, 0x2033, 0x2034, 0x2035, 0x2036, 0x2037,
+            0x2057, 0x02b9, 0x02ba, 0x02bb, 0x02bc, 0x02bd, 0x02be, 0x02bf,
+            0x02c8, 0x02ca, 0x02cb, 0x0060, 0x00b4, 0x2018, 0x2019, 0x201a,
+            0x201b, 0x2039, 0x203a,
+          ].includes(charCode)
+        ) {
+          return "'"
+        }
+
         const accentsMap: Record<string, string> = {
           á: 'a',
           à: 'a',
@@ -100,6 +114,7 @@ export const sanitizeFileName = (filename: string): string => {
         }
 
         return accentsMap[char.toLowerCase()] || '_'
-      }) || 'unnamed_file'
+      })
+      .replace(/[:#\?&;+=,\/\\$@!\|\[\]\{\}\^`~\*%<>]/g, '_') || 'unnamed_file'
   )
 }
