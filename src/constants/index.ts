@@ -95,6 +95,7 @@ export const MAX_FORMAT_FILES = config.max_format_files
 export const FORMAT_FILES_EXCEPTION_LIST: string[] =
   config.format_files_exception_list
 export const QC_VALIDATION = config.qc_validation
+export const AUDIO_ISSUES = config.audio_issues
 
 // Review with Gemini
 export const GEMINI_PROMPT_OPTIONS = [

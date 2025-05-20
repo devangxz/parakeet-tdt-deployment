@@ -2,6 +2,7 @@
 
 import { OrderStatus, InvoiceType } from '@prisma/client'
 
+import { AUDIO_ISSUES } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { sendTemplateMail } from '@/lib/ses'
@@ -107,12 +108,23 @@ export async function flagHighDifficulty(formData: {
           deliveredTs: addHours(new Date(), delayPeriod),
         },
       })
+
+      const issuesListHtml = `<ul>${issuesArray
+        .map((key) => {
+          const issue = AUDIO_ISSUES[key.trim() as keyof typeof AUDIO_ISSUES]
+          if (!issue) return ''
+          const longText =
+            issue.long.charAt(0).toUpperCase() + issue.long.slice(1)
+          return `<li>${longText} (eg. ${issue.example})</li>`
+        })
+        .join('')}</ul>`
+
       const templateData = {
-        issues: issues,
+        issues: issuesListHtml,
         final_rate: rate.toString(),
         total: price.toString(),
         payment_url: `https://${process.env.SERVER}/payments/pending?id=${invoice?.invoiceId}`,
-        file_url: `https://${process.env.SERVER}/files/permalink/${orderInformation.fileId}`,
+        file_url: `https://${process.env.SERVER}/files/in-progress`,
       }
       await sendTemplateMail(
         'HIGH_DIFFICULTY',

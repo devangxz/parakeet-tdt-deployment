@@ -111,10 +111,10 @@ export async function POST(req: NextRequest) {
     )
 
     if (file) {
-      logger.info('Handling file upload')
+      logger.info(`Handling file upload ${fileId}`)
       return handleFileUpload(file, userInfo, fileId)
     } else {
-      logger.info(`Handling URL upload ${decodeURIComponent(url)}`)
+      logger.info(`Handling URL upload ${fileId} ${decodeURIComponent(url)}`)
       return handleUrlUpload(decodeURIComponent(url), userInfo, fileId)
     }
   } catch (error) {
