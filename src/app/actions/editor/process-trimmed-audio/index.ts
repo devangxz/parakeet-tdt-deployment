@@ -30,6 +30,7 @@ export async function extractAccentAction(
 
     // Wait for file processing to complete
     let file = await fileManager.getFile(uploadedFileResponse.file.name)
+    logger.info(`File state in getting accent: ${uploadedFileResponse.file.name} ${file.state} ${uploadedFileResponse.file.mimeType} ${uploadedFileResponse.file.uri}`)
     while (file.state === FileState.PROCESSING) {
       process.stdout.write('.')
       file = await fileManager.getFile(uploadedFileResponse.file.name)
@@ -97,7 +98,15 @@ Return the value and label field (e.g., { "value": "NA", "label": "North America
 { "value": "AI", "label": "Indigenous American" },
 { "value": "NN", "label": "Other Non-native/Mixed" }
 ]
-Give response from above json array only. Do not provide any response outside json.`}
+
+Instructions:
+Analyze the provided audio file.
+Return only the most appropriate JSON object from the array above.
+Do not add any explanation or extra text.
+If no valid audio is present or the accent is unintelligible, return:
+{ "value": "N/A", "label": "No Valid Audio" }
+Output format: JSON object only. No preamble, no explanation, no additional text.
+`}
 
     const systemPrompt = {
       text: 'You are an expert linguist and phonetics analyst. Given a transcript and/or an audio file, your task is to determine the most likely accent of the speaker(s). ',
