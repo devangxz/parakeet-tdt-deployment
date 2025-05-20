@@ -93,8 +93,8 @@ export async function createMultipartUpload(
         type: isYouTubeFile
           ? 'YOUTUBE_FILE'
           : fileExtension.toLowerCase() === '.docx'
-            ? 'DOCX_FILE'
-            : 'ORIGINAL_FILE',
+          ? 'DOCX_FILE'
+          : 'ORIGINAL_FILE',
         user_id: user.userId?.toString(),
         team_user_id:
           user.internalTeamUserId?.toString() || user.userId?.toString(),
@@ -135,7 +135,9 @@ export async function createMultipartUpload(
       key: data.Key,
     }
   } catch (error) {
-    logger.error(`Failed to create multipart upload: ${error}`)
+    logger.error(
+      `Failed to create multipart upload for file ${originalName}: ${error}`
+    )
     return {
       success: false,
       message: 'An error occurred. Please try again after some time.',

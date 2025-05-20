@@ -123,7 +123,9 @@ export async function checkUploadSession(
       }
     }
   } catch (error) {
-    logger.error(`Failed to check existing upload session: ${error}`)
+    logger.error(
+      `Failed to check existing upload session for file ${fileName}: ${error}`
+    )
     return {
       success: false,
       message: 'An error occurred. Please try again after some time.',

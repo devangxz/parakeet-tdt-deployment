@@ -32,11 +32,13 @@ interface ASRStats {
 }
 
 interface ASRResult {
-  words: TranscriptWord[]
+  words?: TranscriptWord[]
   gptTranscript?: string
-  ASRElapsedTime: number
+  ASRElapsedTime?: number
   fileId: string
-  asrStats: ASRStats
+  asrStats?: ASRStats
+  screenFile?: boolean
+  screenReason?: string
 }
 
 const MIN_CHUNK_S = 240
@@ -496,10 +498,13 @@ export async function performASR(fileId: string): Promise<ASRResult> {
     )
 
     if (!assemblyResult.words || assemblyResult.words.length === 0) {
-      logger.error(`[${fileId}] AssemblyAI returned no words`)
-      throw new Error(
-        'AssemblyAI returned no words, cannot perform optimal chunking.'
-      )
+      logger.info(`[${fileId}] AssemblyAI returned empty transcript - screening file`)
+      const screenResult: ASRResult = {
+        fileId,
+        screenFile: true,
+        screenReason: 'EMPTY_ASR_TRANSCRIPT'
+      }      
+      return screenResult
     }
 
     logger.info(`[${fileId}] AssemblyAI transcription completed successfully`)
@@ -598,6 +603,16 @@ export async function performASR(fileId: string): Promise<ASRResult> {
         await ses.sendAlert(
           `Negative AssemblyAI Account Balance`,
           `ASR process failed for file ${fileId} because the AssemblyAI account has insufficient balance. Please add more credits to continue processing.`,
+          'software'
+        )
+      } else {
+        logger.error(
+          `[${fileId}] ASR process failed after max retries, sending alert`
+        )
+        const ses = getAWSSesInstance()
+        await ses.sendAlert(
+          `ASR Process Failed`,
+          `ASR process failed for file ${fileId}. Error: ${errorMessage}`,
           'software'
         )
       }

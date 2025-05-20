@@ -8,14 +8,13 @@ import { getFileVersionFromS3 } from '@/utils/backend-helper'
 
 export async function getDiffFilesAction(fileId: string) {
     try {
-
         const asrFileVersion = await prisma.fileVersion.findFirst({
             where: {
                 fileId,
                 tag: FileTag.AUTO,
             },
             orderBy: {
-                updatedAt: 'desc',
+                updatedAt: 'asc',
             },
         })
 
@@ -48,10 +47,67 @@ export async function getDiffFilesAction(fileId: string) {
             qcFile,
         }
     } catch (error) {
-        logger.error(`Failed to move file ${fileId}`, error)
+        logger.error(`Failed to get diff files for ${fileId}: ${error}`)
         return {
             success: false,
-            message: 'An error occurred while moving file',
+            message: 'An error occurred while getting diff files',
+        }
+    }
+}
+
+export async function getScreeningDiffFilesAction(fileId: string) {
+    try {
+        const assemblyAiVersion = await prisma.fileVersion.findFirst({
+            where: {
+                fileId,
+                tag: FileTag.ASSEMBLY_AI,
+            },
+            orderBy: {
+                updatedAt: 'desc',
+            },
+        })
+
+        if (!assemblyAiVersion?.s3VersionId) {
+            return {
+                success: false,
+                message: 'No AssemblyAI version available',
+            }
+        }
+
+        const assemblyAiFile = (await getFileVersionFromS3(`${fileId}.txt`, assemblyAiVersion.s3VersionId)).toString()
+
+        const combinedVersion = await prisma.fileVersion.findFirst({
+            where: {
+                fileId,
+                tag: FileTag.ASSEMBLY_AI_GPT_4O,
+            },
+            orderBy: {
+                updatedAt: 'desc',
+            },
+        })
+        
+        if (combinedVersion?.s3VersionId) {
+            const combinedFile = (await getFileVersionFromS3(`${fileId}.txt`, combinedVersion.s3VersionId)).toString()
+            
+            return {
+                success: true,
+                assemblyAiFile,
+                combinedFile,
+                hasCombinedVersion: true,
+            }
+        }
+        
+        return {
+            success: true,
+            assemblyAiFile,
+            hasCombinedVersion: false,
+        }
+
+    } catch (error) {
+        logger.error(`Failed to get screening diff files for ${fileId}: ${error}`)
+        return {
+            success: false,
+            message: 'An error occurred while getting screening diff files',
         }
     }
 }

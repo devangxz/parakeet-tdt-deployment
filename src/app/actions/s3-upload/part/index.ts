@@ -22,7 +22,9 @@ export async function getUploadPartSignedUrl(
     const url = await getSignedUrl(s3Client, command, { expiresIn: 48 * 3600 })
     return { success: true, url }
   } catch (error) {
-    logger.error(`Failed to get upload part signed URL: ${error}`)
+    logger.error(
+      `Failed to get upload part signed URL for file ${sendBackData.key}: ${error}`
+    )
     return {
       success: false,
       message: 'An error occurred. Please try again after some time.',

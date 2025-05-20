@@ -28,13 +28,59 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid ASR result' }, { status: 400 })
     }
 
-    const { words, gptTranscript, ASRElapsedTime, fileId, asrStats } = asrResult
+    const {
+      words,
+      gptTranscript,
+      ASRElapsedTime,
+      fileId,
+      asrStats,
+      screenFile,
+      screenReason,
+    } = asrResult
 
     const order = await prisma.order.findUnique({
       where: { fileId },
     })
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    if (screenFile) {
+      logger.info(
+        `[${fileId}] Screening file based on ASR result with reason: ${screenReason}`
+      )
+
+      let reportOption: ReportOption
+      let reportComment: string
+      switch (screenReason) {
+        case 'EMPTY_ASR_TRANSCRIPT':
+          reportOption = ReportOption.EMPTY_ASR_TRANSCRIPT
+          reportComment = 'The ASR transcript is empty'
+          break
+        default:
+          reportOption = ReportOption.OTHER
+          reportComment = 'Unknown screening reason'
+          break
+      }
+
+      await prisma.order.update({
+        where: { fileId },
+        data: {
+          reportMode: ReportMode.AUTO,
+          reportOption,
+          reportComment,
+          status: OrderStatus.SUBMITTED_FOR_SCREENING,
+        },
+      })
+
+      return NextResponse.json(
+        {
+          success: true,
+          screenReason: reportOption,
+          status: 'SUBMITTED_FOR_SCREENING',
+        },
+        { status: 200 }
+      )
     }
 
     const assemblyAICTMs = getCTMs(words)
@@ -94,6 +140,7 @@ export async function POST(req: NextRequest) {
     }
 
     const transcriptPayload: {
+      isASR: boolean
       fileId: string
       userId: number
       assemblyAITranscript: string
@@ -103,6 +150,7 @@ export async function POST(req: NextRequest) {
       combinedCTMs?: ReturnType<typeof getCTMs>
       transcript: string
     } = {
+      isASR: true,
       fileId,
       userId: order.userId,
       assemblyAITranscript,
