@@ -641,7 +641,7 @@ export default memo(function Topbar({
 
   useEffect(() => {
     let timer: NodeJS.Timeout
-
+    
     const updateRemainingTime = async () => {
       const remainingSeconds = parseInt(orderDetails.remainingTime)
       if (remainingSeconds > 0) {
@@ -812,7 +812,7 @@ export default memo(function Topbar({
               modal={false}
               onOpenChange={handleDropdownMenuOpenChange}
             >
-              <DropdownMenuTrigger className='focus-visible:ring-0 outline-none'>
+              <DropdownMenuTrigger className='focus-visible:ring-0 outline-none' disabled={timeoutCount === '00:00:00'}>
                 <Button className='px-2 format-icon-button focus-visible:ring-0 outline-none' disabled={timeoutCount === '00:00:00'} >
                   <span className='sr-only'>Open menu</span>
                   <ChevronDownIcon className='h-4 w-4' />
@@ -1180,22 +1180,32 @@ export default memo(function Topbar({
           role={session?.user?.role || ''}
         />
       )}
-      {showTimeoutDialog && 
-        <Dialog open={showTimeoutDialog} onOpenChange={setShowTimeoutDialog}>  
-        <DialogContent className={`max-w-md p-6 flex flex-col justify-center ${orderDetails.remainingTime === '0' ? '' : '[&>button]:hidden'}`}>
-          <div className="flex flex-col items-center space-y-4">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center ">
-              <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600" />
+      {showTimeoutDialog && (
+        <Dialog open={showTimeoutDialog} onOpenChange={setShowTimeoutDialog}>
+          <DialogContent
+            className={`max-w-sm sm:max-w-md p-6 rounded-xl shadow-lg text-center space-y-4`}
+          >
+            <div className="flex flex-col items-center space-y-3">
+              <div className="bg-yellow-100 text-yellow-700 rounded-full p-2">
+                <ExclamationTriangleIcon className="h-6 w-6" />
+              </div>
+
+              <DialogTitle className="text-lg font-semibold text-gray-900">
+                File Timedout
+              </DialogTitle>
+
+              <DialogDescription className="space-y-1">
+                <p className="text-gray-800">
+                  This file has been timed out due to inactivity and is now in read-only mode.
+                </p>
+                <p className="text-gray-500 text-sm">
+                  You can view the content but cannot make any changes.
+                </p>
+              </DialogDescription>
             </div>
-            <DialogTitle className="text-center text-lg">File Timeout</DialogTitle>
-            <DialogDescription className="text-center space-y-2">
-              <p>This file has been timed out due to inactivity and is now in read-only mode.</p>
-              <p className="text-muted-foreground text-sm">You can view the content but cannot make any changes.</p>
-            </DialogDescription>
-          </div>
-        </DialogContent>
-      </Dialog>
-      }
+          </DialogContent>
+        </Dialog>
+      )}
       {/* process with llm */}
       {processWithLLMModalOpen && (
         <ProcessWithLLMDialog
