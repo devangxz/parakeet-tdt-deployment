@@ -728,5 +728,98 @@
     "AI": "Indigenous American",
     "NTA": "Unsure/Unknown/Not Applicable",
     "NN": "Other Non-native/Mixed"
-  }  
+  },
+  "audio_issues": {
+    "ambient_noise": {
+      "short": "Ambient Noise",
+      "long": "ambient background noise is high",
+      "question": "Is the ambient background noise high",
+      "example": "hiss, line noise, static",
+      "type": "primary"
+    },
+    "noisy_environment": {
+      "short": "Noisy Environment",
+      "long": "the recording environment is noisy",
+      "question": "Is the recording environment noisy",
+      "example": "street, bar, restaurant or other loud noises in background",
+      "type": "primary"
+    },
+    "distant_speakers": {
+      "short": "Distant Speakers",
+      "long": "the voices of one or more speakers are inaudible as the recorder/microphone was positioned away from them",
+      "question": "Was the recorder/microphone kept away from the speakers",
+      "example": "faint, distant voices",
+      "type": "primary"
+    },
+    "accented_speakers": {
+      "short": "Accented Speakers",
+      "long": "one or more speakers has an accent and we do not have enough transcribers proficient with that accent",
+      "question": "Is the accent of or more speakers non-American",
+      "example": "British, Australian, Indian, Hispanic, any other non-American",
+      "type": "primary"
+    },
+    "audio_breaks": {
+      "short": "Audio Breaks",
+      "long": "the voices of one or more speakers breaks frequently",
+      "question": "Is the voice breaking",
+      "example": "bad phone line, audio gaps",
+      "type": "primary"
+    },
+    "disturbances": {
+      "short": "Disturbances",
+      "long": "the audio contains frequent disturbances",
+      "question": "Are there any loud disturbances in the audio",
+      "example": "loud typing sounds, rustling, wind howling, breathing sounds",
+      "type": "secondary"
+    },
+    "distortions": {
+      "short": "Distortion",
+      "long": "the audio is distorted",
+      "question": "Are the voices distorted",
+      "example": "volume distortion, shrill voices, clipping",
+      "type": "primary"
+    },
+    "inaudible_parts": {
+      "short": "Unclear Speakers",
+      "long": "one or more speakers are unclear",
+      "question": "Are the voices clear and audible",
+      "example": "muttering, volume variation, frequent overlaps",
+      "type": "secondary"
+    },
+    "echo": {
+      "short": "Echo",
+      "long": "the audio contains echo",
+      "question": "Is there an echo",
+      "example": "reverberation, same voice can be heard twice",
+      "type": "secondary"
+    },
+    "poor_quality": {
+      "short": "Quality",
+      "long": "the audio quality is poor and the speaker(s) are unclear",
+      "question": "Is this a high quality recording",
+      "example": "low sampling/bit rate, bad conference line, recorded off speakers",
+      "type": "primary"
+    },
+    "diction": {
+      "short": "Diction",
+      "long": "the diction of one or more speakers is challenging",
+      "question": "Are there any issues with the diction of the speakers",
+      "example": "slurring, rapid speaking, unnatural pronunciation",
+      "type": "primary"
+    },
+    "muffled_voices": {
+      "short": "Muffled",
+      "long": "the voices of one or more speakers are muffled and unclear",
+      "question": "Are the voices muffled",
+      "example": "hidden or obstructed microphone, vintage tapes",
+      "type": "secondary"
+    },
+    "blank": {
+      "short": "Blank",
+      "long": "the file is a blank and does not contain any spoken English audio",
+      "question": "Is the file empty",
+      "example": "only music, only background conversation, only non-English",
+      "type": "primary"
+    }
+  }
 }

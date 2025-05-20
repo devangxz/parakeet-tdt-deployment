@@ -1,18 +1,23 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
+import HighDifficultyRefundDialog from '@/components/high-difficulty-refund-dialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 
 interface HighDifficultyNoticeProps {
   count: number
+  onRefundSuccess?: () => void
 }
 
 export default function HighDifficultyNotice({
   count,
+  onRefundSuccess,
 }: HighDifficultyNoticeProps) {
   const router = useRouter()
+  const [openRefundDialog, setOpenRefundDialog] = useState(false)
 
   if (count <= 0) {
     return null
@@ -34,10 +39,22 @@ export default function HighDifficultyNotice({
             onClick={() => router.push('/payments/pending')}
             className='text-white not-rounded'
           >
-            Accept / Decline
+            Accept
+          </Button>
+          <Button
+            variant='destructive'
+            className='not-rounded'
+            onClick={() => setOpenRefundDialog(true)}
+          >
+            Decline
           </Button>
         </div>
       </AlertDescription>
+      <HighDifficultyRefundDialog
+        open={openRefundDialog}
+        onClose={() => setOpenRefundDialog(false)}
+        onSuccess={onRefundSuccess}
+      />
     </Alert>
   )
 }
