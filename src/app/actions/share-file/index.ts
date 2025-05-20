@@ -169,13 +169,13 @@ function getNewUserEmailContent(
 
   return `
     Hello,<br /><br />
-    <b>${fromUser?.name} (${fromUser?.email})</b> has shared a file on <a href='https://${process.env.SERVER}'>Scribie.ai</a>.<br /><br />
+    <b>${fromUser?.name} (${fromUser?.email})</b> has shared a file on <a href='https://${process.env.SERVER}'>Scribie</a>.<br /><br />
     To access the file, please visit the following link to create your account with us:<br /><br />
     <a href='${url}'>${url}</a><br /><br />
     After creating your account, please visit the 'Shared with me' folder to view the shared file:<br />
     <a href='${sharedUrl}'>${sharedUrl}</a><br /><br />
     Best regards,<br />
-    Scribie.ai Support
+    Scribie Support
   `
 }
 
@@ -195,11 +195,11 @@ function getExistingUserEmailContent(
     fromUser?.email
   })</b> has shared a file on <a href='https://${
     process.env.SERVER
-  }'>Scribie.ai</a>.<br /><br />
+  }'>Scribie</a>.<br /><br />
     ${message ? `${message}<br /><br />` : ''}
     Please visit the 'Shared with me' folder to view the shared file:<br /><br />
     <a href='${url}'>${url}</a><br /><br />
     Best regards,<br />
-    Scribie.ai Support
+    Scribie Support
   `
 }

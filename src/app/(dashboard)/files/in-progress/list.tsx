@@ -282,16 +282,6 @@ export default function InprogressFilesPage({
         return <div className='font-medium'>{displayText}</div>
       },
     },
-    {
-      accessorKey: 'orderStatus',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Status' />
-      ),
-      cell: ({ row }) => {
-        const orderStatus = row.getValue('orderStatus') as string
-        return <div className='font-medium'>{orderStatus || '-'}</div>
-      },
-    },
   ]
 
   if (session?.user?.internalTeamUserId) {

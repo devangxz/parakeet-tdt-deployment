@@ -11,7 +11,7 @@ import { getAWSSesInstance } from '@/lib/ses'
 export async function forgotPassword(email: string) {
   try {
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: email.toLowerCase() },
     })
 
     if (!user) {
@@ -23,7 +23,7 @@ export async function forgotPassword(email: string) {
     const expiry = addHours(new Date(), 24)
 
     await prisma.user.update({
-      where: { email },
+      where: { email: email.toLowerCase() },
       data: {
         resetPasswordToken: resetToken,
         resetPasswordTokenExpires: expiry,
@@ -31,7 +31,7 @@ export async function forgotPassword(email: string) {
     })
 
     const emailData = {
-      userEmailId: email,
+      userEmailId: email.toLowerCase(),
     }
 
     const templateData = {

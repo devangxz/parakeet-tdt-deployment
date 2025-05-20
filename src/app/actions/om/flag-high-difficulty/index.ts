@@ -71,7 +71,7 @@ export async function flagHighDifficulty(formData: {
         templateData
       )
 
-      logger.info(`rejected the screening file, for ${order.id}`)
+      logger.info(`rejected the screening file, for ${orderInformation.fileId}`)
     } else {
       const file = await prisma.file.findUnique({
         where: { fileId: orderInformation.fileId },

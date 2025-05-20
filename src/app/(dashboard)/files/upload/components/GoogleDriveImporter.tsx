@@ -591,9 +591,9 @@ const GoogleDriveImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             <h4 className='flex items-center'>Google Drive Importer</h4>
           </div>
           <div className='text-xs self-stretch mt-4 leading-5 text-center text-muted-foreground max-md:mr-1 max-md:max-w-full'>
-            Select files from your Google Drive to import. Please allow
-            Scribie.ai Importer in the popup to access your Google Drive files
-            for the import process. We will only access the selected files. The
+            Select files from your Google Drive to import. Please allow Scribie
+            Importer in the popup to access your Google Drive files for the
+            import process. We will only access the selected files. The
             permissions can be revoked from your{' '}
             <a
               href='https://security.google.com/settings/security/permissions'

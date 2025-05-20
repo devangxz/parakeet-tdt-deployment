@@ -52,7 +52,7 @@ export async function rejectScreenFile(formData: {
 
     const templateData = {
       filename: invoiceFile?.File.filename || '',
-      url: `https://${process.env.SERVER}/payments?id=${invoiceFile?.invoiceId}`,
+      url: `https://${process.env.SERVER}/payments/pending?id=${invoiceFile?.invoiceId}`,
     }
 
     await sendTemplateMail(

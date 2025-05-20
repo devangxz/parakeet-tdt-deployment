@@ -8,6 +8,7 @@ import { downloadFromS3, fileExistsInS3, getFileVersionFromS3 } from "@/utils/ba
 
 export const getAutoFileVersion = async (fileId: string) => {
   try{
+    logger.info(` --> getAutoFileVersion generating auto file version for fileId: ${fileId}`);
     const versionRecs = await prisma.fileVersion.findMany({
       where: {
         fileId,
@@ -17,6 +18,7 @@ export const getAutoFileVersion = async (fileId: string) => {
       select: { tag: true, s3VersionId: true },
       orderBy: { createdAt: 'asc' }
     });
+    
     let ctms: CTMType[] = [];
     let s3VersionId: string | null = null;
     const autoRec = versionRecs.find(v => v.tag === FileTag.AUTO);
@@ -45,7 +47,7 @@ export const getAutoFileVersion = async (fileId: string) => {
     }
   }
   catch(error){
-    logger.error(`[getLatestFileVersions] error: ${error}`);
+    logger.error(`[getAutoFileVersion] error: ${error}`);
     return {
       success: false,
       message: "Error getting latest file versions",
