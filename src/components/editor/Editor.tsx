@@ -1311,7 +1311,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
         modules={quillModules}
         defaultValue={{ ops: initialContent }}
         formats={['size', 'background', 'font', 'color', 'bold', 'italics']}
-        className='h-full'
+        className={`h-full ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
         onChangeSelection={handleSelectionChange}
         onBlur={handleBlur}
         onFocus={handleFocus}

@@ -1250,6 +1250,7 @@ function EditorPage() {
         editorRef={editorRef}
         step={step}
         toggleHighlightNumerics={toggleHighlightNumerics}
+        editorReadOnly={editorReadOnly}
       />
 
       <div className='flex h-full overflow-hidden'>

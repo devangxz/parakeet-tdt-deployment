@@ -167,6 +167,7 @@ interface HeaderProps {
   editorRef?: React.RefObject<EditorHandle>
   step: string
   toggleHighlightNumerics: () => void
+  editorReadOnly: boolean
 }
 
 export default memo(function Header({
@@ -183,6 +184,7 @@ export default memo(function Header({
   editorRef,
   step,
   toggleHighlightNumerics,
+  editorReadOnly,
 }: HeaderProps) {
   const [audioDuration, setAudioDuration] = useState(0)
   const audioPlayer = useRef<HTMLAudioElement>(null)
@@ -750,6 +752,7 @@ export default memo(function Header({
                     toggleHighlightNumerics={toggleHighlightNumerics}
                     handleUndo={handleUndo}
                     handleRedo={handleRedo}
+                    editorReadOnly={editorReadOnly}
                   />
                 </div>
               </TooltipProvider>

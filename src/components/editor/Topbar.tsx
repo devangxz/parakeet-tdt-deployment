@@ -4,6 +4,7 @@ import {
   ChevronDownIcon,
   Cross1Icon,
   ReloadIcon,
+  ExclamationTriangleIcon,
 } from '@radix-ui/react-icons'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import axios from 'axios'
@@ -641,7 +642,6 @@ export default memo(function Topbar({
   useEffect(() => {
     let timer: NodeJS.Timeout
 
-    orderDetails.remainingTime = '20'
     const updateRemainingTime = async () => {
       const remainingSeconds = parseInt(orderDetails.remainingTime)
       if (remainingSeconds > 0) {
@@ -661,20 +661,21 @@ export default memo(function Topbar({
         timer = setTimeout(updateRemainingTime, 1000)
       } else {
         setTimeoutCount('00:00:00')
-        setShowTimeoutDialog(true)
-        await handleSave({
-          getEditorText,
-          orderDetails,
-          setButtonLoading,
+        setEditorReadOnly(true)
+        const quill = quillRef?.current?.getEditor()
+        quill?.disable()
+        if(timer){
+          setShowTimeoutDialog(true)
+          await handleSave({
+            getEditorText,
+            orderDetails,
+            setButtonLoading,
           listenCount,
           editedSegments,
           role: session?.user?.role || '',
           quill: quillRef?.current?.getEditor(),
         }, false)
-        setEditorReadOnly(true)
-        const quill = quillRef?.current?.getEditor()
-        quill?.disable()
-        setShowTimeoutDialog(false)
+        }
       }
     }
 
@@ -687,7 +688,14 @@ export default memo(function Topbar({
         clearTimeout(timer)
       }
     }
-  }, [orderDetails, setEditorReadOnly])
+  }, [orderDetails])
+
+  useEffect(() => {
+    if(orderDetails.remainingTime === '0') {
+
+      setShowTimeoutDialog(true)
+    }
+  }, [orderDetails])
 
   return (
     <div className='bg-background border border-customBorder rounded-md p-2'>
@@ -704,13 +712,15 @@ export default memo(function Topbar({
         </TooltipProvider>
         
         {orderDetails.status === 'QC_ASSIGNED' && (
-          <span
-            className={`absolute left-1/2 transform -translate-x-1/2 ${
-              fiveMinutesLeft ? 'animate-pulse text-red-600' : 'text-green-600 '
-            }`}
-          >
-            {timeoutCount}
-          </span>
+          <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center">
+            <span
+              className={`${
+                fiveMinutesLeft || timeoutCount === '00:00:00' ? 'animate-pulse text-red-600' : 'text-green-600'
+              }`}
+            >
+              {timeoutCount}
+            </span>
+          </div>
         )}
 
         <div className='flex gap-2'>
@@ -1170,19 +1180,18 @@ export default memo(function Topbar({
           role={session?.user?.role || ''}
         />
       )}
-      {true && 
-        <Dialog open={showTimeoutDialog} modal>  
-        <DialogContent className='max-w-md p-8 flex flex-col items-center justify-center [&>button]:hidden'>
-          <div className='flex flex-col items-center space-y-4'>
-              <>
-                <ReloadIcon className='h-8 w-8 animate-spin text-primary' />
-                <DialogTitle className='text-center'>
-                  {'Time\'s up!'}
-                </DialogTitle>
-                <DialogDescription className='text-center'>
-                  Saving your work. Please wait for a moment.
-                </DialogDescription>
-              </>
+      {showTimeoutDialog && 
+        <Dialog open={showTimeoutDialog} onOpenChange={setShowTimeoutDialog}>  
+        <DialogContent className={`max-w-md p-6 flex flex-col justify-center ${orderDetails.remainingTime === '0' ? '' : '[&>button]:hidden'}`}>
+          <div className="flex flex-col items-center space-y-4">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center ">
+              <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600" />
+            </div>
+            <DialogTitle className="text-center text-lg">File Timeout</DialogTitle>
+            <DialogDescription className="text-center space-y-2">
+              <p>This file has been timed out due to inactivity and is now in read-only mode.</p>
+              <p className="text-muted-foreground text-sm">You can view the content but cannot make any changes.</p>
+            </DialogDescription>
           </div>
         </DialogContent>
       </Dialog>
