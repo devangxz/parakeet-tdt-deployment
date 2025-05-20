@@ -136,7 +136,7 @@ export function isPwerAboveThreshold(
   let screeningReason: string | null = null
 
   if (requiresManualScreening) {
-    screeningReason = `PWER ${pwer} > ASR PWER THRESHOLD ${threshold} - High error rate detected, requires manual screening`
+    screeningReason = `The PWER value of ${pwer} is above the acceptable threshold of ${threshold}`
   }
 
   logger.info(

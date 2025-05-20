@@ -10,6 +10,7 @@ import { fetchScreeningOrders } from '@/app/actions/om/fetch-screening-orders'
 import AcceptRejectScreenFileDialog from '@/components/admin-components/accept-reject-screen-file'
 import AssignQcDialog from '@/components/admin-components/assign-qc-dialog'
 import AudioWaveformPlayer, { AudioProvider, RowPlayButton } from '@/components/admin-components/audio-waveform-player'
+import OpenDiffDialog from '@/components/admin-components/diff-dialog'
 import FlagHighDifficulyDialog from '@/components/admin-components/flag-high-difficulty-dialog'
 import RevertToAssemblyAITranscriptDialog from '@/components/admin-components/revert-to-assembly-ai-transcript-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -42,7 +43,10 @@ const reportReasonMap = {
   ONLY_BACKGROUND_CONVERSATION: 'Only Background Conversation',
   ONLY_MUSIC: 'Only Music',
   OTHER: 'Other',
+  AUTO_PWER_ABOVE_THRESHOLD: 'PWER Above Threshold',
+  AUTO_DIFF_BELOW_THRESHOLD: 'Diff Below Threshold',
   NOT_PICKED_UP: 'Not Picked Up',
+  EMPTY_ASR_TRANSCRIPT: 'Empty ASR Transcript',
 }
 
 type ReportReasonMap = typeof reportReasonMap
@@ -63,6 +67,7 @@ interface File {
   hd: boolean
   reportOption: ReportReasonKey
   reportMode: string
+  reportComment: string
   fileCost: FileCost
   rateBonus: number
   type: string
@@ -86,6 +91,8 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
   const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false)
   const [openAssignQcDialog, setAssignQcDialog] = useState(false)
   const [waveformUrls, setWaveformUrls] = useState<Record<string, string>>({})
+  const [diffDialogOpen, setDiffDialogOpen] = useState(false)
+  const [fileId, setFileId] = useState('')
 
   const fetchWaveformUrl = async (fileId: string) => {
     try {
@@ -136,8 +143,9 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
             qc: qcNames || '-',
             deliveryTs: order.deliveryTs.toISOString(),
             hd: order.highDifficulty ?? false,
-            reportOption: order.reportOption ?? '-',
-            reportMode: order.reportMode ?? '-',
+            reportOption: order.reportOption,
+            reportMode: order.reportMode,
+            reportComment: order.reportComment,
             fileCost: order.fileCost,
             rateBonus: order.rateBonus,
             type: order.orderType,
@@ -319,8 +327,19 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
       accessorKey: 'reportOption',
       header: 'Reason',
       cell: ({ row }) => (
-        <div className='capitalize font-medium'>
-          {reportReasonMap[row.original.reportOption]}
+        <div className='capitalize font-medium' style={{ minWidth: '200px', maxWidth: '200px' }}>
+          {reportReasonMap[row.original.reportOption] || row.original.reportComment ? (
+            <>
+              {reportReasonMap[row.original.reportOption] && reportReasonMap[row.original.reportOption]}
+              {row.original.reportComment && (
+                <div className='text-xs text-gray-500 mt-1 italic'>
+                  ({row.original.reportComment})
+                </div>
+              )}
+            </>
+          ) : (
+            '-'
+          )}
         </div>
       ),
     },
@@ -385,6 +404,14 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end'>
+              <DropdownMenuItem
+                onClick={() => {
+                  setFileId(row.original.fileId)
+                  setDiffDialogOpen(true)
+                }}
+              >
+                Generate Diff
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
                   setSelectedFileId(row.original.fileId)
@@ -485,6 +512,12 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
         onClose={() => setIsRevertDialogOpen(false)}
         orderData={orderData}
         refetch={() => getScreeningOrders()}
+      />
+      <OpenDiffDialog
+        open={diffDialogOpen}
+        onClose={() => setDiffDialogOpen(false)}
+        fileId={fileId || ''}
+        isScreeningFile={true}
       />
     </AudioProvider>
   )

@@ -2,6 +2,8 @@ import { OrderStatus, ReportMode, ReportOption } from '@prisma/client'
 import axios from 'axios'
 import { NextRequest, NextResponse } from 'next/server'
 
+import config from '../../../../config.json'
+import { getAccentAction, GetAccentResult } from '@/app/actions/editor/process-audio-chunk'
 import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
@@ -26,13 +28,59 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid ASR result' }, { status: 400 })
     }
 
-    const { words, gptTranscript, ASRElapsedTime, fileId, asrStats } = asrResult
+    const {
+      words,
+      gptTranscript,
+      ASRElapsedTime,
+      fileId,
+      asrStats,
+      screenFile,
+      screenReason,
+    } = asrResult
 
     const order = await prisma.order.findUnique({
       where: { fileId },
     })
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+    }
+
+    if (screenFile) {
+      logger.info(
+        `[${fileId}] Screening file based on ASR result with reason: ${screenReason}`
+      )
+
+      let reportOption: ReportOption
+      let reportComment: string
+      switch (screenReason) {
+        case 'EMPTY_ASR_TRANSCRIPT':
+          reportOption = ReportOption.EMPTY_ASR_TRANSCRIPT
+          reportComment = 'The ASR transcript is empty'
+          break
+        default:
+          reportOption = ReportOption.OTHER
+          reportComment = 'Unknown screening reason'
+          break
+      }
+
+      await prisma.order.update({
+        where: { fileId },
+        data: {
+          reportMode: ReportMode.AUTO,
+          reportOption,
+          reportComment,
+          status: OrderStatus.SUBMITTED_FOR_SCREENING,
+        },
+      })
+
+      return NextResponse.json(
+        {
+          success: true,
+          screenReason: reportOption,
+          status: 'SUBMITTED_FOR_SCREENING',
+        },
+        { status: 200 }
+      )
     }
 
     const assemblyAICTMs = getCTMs(words)
@@ -92,6 +140,7 @@ export async function POST(req: NextRequest) {
     }
 
     const transcriptPayload: {
+      isASR: boolean
       fileId: string
       userId: number
       assemblyAITranscript: string
@@ -101,6 +150,7 @@ export async function POST(req: NextRequest) {
       combinedCTMs?: ReturnType<typeof getCTMs>
       transcript: string
     } = {
+      isASR: true,
       fileId,
       userId: order.userId,
       assemblyAITranscript,
@@ -137,6 +187,37 @@ export async function POST(req: NextRequest) {
       combinedASRFormatValidation: formattingCheckResult
         ? JSON.parse(JSON.stringify(formattingCheckResult))
         : null,
+    }
+
+    const accent: GetAccentResult = await getAccentAction(fileId)
+
+    if (accent.success && accent.data) {
+      const accentResponse = JSON.parse(accent.data)
+      const accentValue = accentResponse.value || 'N/A'
+      logger.info(`[${fileId}] Extracted accent: ${accentValue}`)
+      if(accentValue in config.accents_list) {
+        await prisma.fileAccent.create(
+          {
+            data: {
+              userId: order.userId,
+              fileId,
+              accentCode: accentValue,
+            },
+          }
+        )
+      }
+    }
+    else{
+      logger.error(`[${fileId}] Failed to get accent using default accent: ${accent.error} ${JSON.stringify(accent)}`)
+      await prisma.fileAccent.create(
+        {
+          data: {
+            userId: order.userId,
+            fileId,
+            accentCode: 'N/A',
+          },
+        }
+      )
     }
 
     if (qualityCheck.requiresManualScreening) {

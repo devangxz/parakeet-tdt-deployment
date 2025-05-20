@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { getAccentCode } from '@/services/editor-service/get-accent-code'
 import { isTranscriberICQC, getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 import getCustomFormatOption from '@/utils/getCustomFormatOption'
@@ -99,12 +100,13 @@ export async function getICQCFiles() {
       const orgName = await getOrgName(file.userId)
       const customFormatOption = await getCustomFormatOption(file.userId)
       const isTestCustomer = await getTestCustomer(file.userId)
+      const accent = await getAccentCode(file.fileId)
       file.qc_cost = transcriberCost.cost
       file.rate = transcriberCost.rate
       file.orgName = orgName
       file.isTestCustomer = isTestCustomer
       file.customFormatOption = customFormatOption
-
+      file.accentCode = accent.accentCode
       if (file.tat === 12) {
         file.icqcCategory = 'Rush Order'
       } else if (file.priority >= 1) {

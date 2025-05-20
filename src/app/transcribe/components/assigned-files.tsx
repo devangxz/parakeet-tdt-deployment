@@ -40,6 +40,7 @@ interface File extends BaseTranscriberFile {
   comment: string
   isCustomFormat: string
   isICQC: boolean
+  accentCode: string
 }
 
 interface Props {
@@ -145,9 +146,11 @@ export default function AssignedFilesPage({ changeTab }: Props) {
             comment: assignment.comment ?? '',
             isCustomFormat,
             isICQC: assignment.order.isICQC,
+            accentCode: assignment.order.accentCode,
           }
         })
-        setAssginedFiles(orders ?? [])
+
+        setAssginedFiles(orders)
         setError(null)
       }
     } catch (err) {
@@ -228,6 +231,21 @@ export default function AssignedFilesPage({ changeTab }: Props) {
                 <p>Difficulty</p>
               </TooltipContent>
             </Tooltip>
+            {row.original.accentCode && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge
+                    variant='outline'
+                    className='font-semibold text-[10px] text-green-600'
+                  >
+                    {row.original.accentCode}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Accent</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
             {row.original.priority === 1 && (
               <Tooltip>
                 <TooltipTrigger>

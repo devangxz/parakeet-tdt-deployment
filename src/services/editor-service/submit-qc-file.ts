@@ -280,6 +280,7 @@ export async function submitQCFile(
     const isTestCustomer = await getTestCustomer(order.userId)
 
     if (qcValidation && order.status === OrderStatus.QC_ASSIGNED) {
+      logger.info(`[${order.fileId}] Submitting QC validation stats for order ${orderId} ${JSON.stringify(order.status)}`)  
       try {
         await prisma.qCValidationStats.create({
           data: {
@@ -301,6 +302,8 @@ export async function submitQCFile(
           error instanceof Error ? error.message : String(error)
         logger.error(`Failed to create QC validation stats: ${errorMessage}`)
       }
+    }else{
+      logger.info(`[submitQCFile] Invalid qcValidation stats ${JSON.stringify(qcValidation)} for order ${orderId} and file ${order.fileId} ${JSON.stringify(order.status)}`)
     }
 
     if (

@@ -40,7 +40,9 @@ export async function completeMultipartUpload(
 
     return { success: true }
   } catch (error) {
-    logger.error(`Failed to complete multipart upload: ${error}`)
+    logger.error(
+      `Failed to complete multipart upload for file ${sendBackData.key}: ${error}`
+    )
     return {
       success: false,
       message: 'An error occurred. Please try again after some time.',

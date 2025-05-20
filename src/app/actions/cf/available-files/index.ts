@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { getAccentCode } from '@/services/editor-service/get-accent-code'
 import { isTranscriberICQC, getTestCustomer } from '@/utils/backend-helper'
 import calculateTranscriberCost from '@/utils/calculateTranscriberCost'
 import getCustomFormatOption from '@/utils/getCustomFormatOption'
@@ -96,11 +97,13 @@ export async function getAvailableFiles(type: string) {
       const orgName = await getOrgName(file.userId)
       const customFormatOption = await getCustomFormatOption(file.userId)
       const isTestCustomer = await getTestCustomer(file.userId)
+      const accent = await getAccentCode(file.fileId)
       file.cf_cost = transcriberCost.cost
       file.cf_rate = transcriberCost.rate
       file.orgName = orgName
       file.customFormatOption = customFormatOption
       file.isTestCustomer = isTestCustomer
+      file.accentCode = accent.accentCode
     }
 
     cfFiles = cfFiles.filter((file: any) => {
