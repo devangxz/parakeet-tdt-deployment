@@ -2,6 +2,7 @@ import { QCType, Role } from '@prisma/client'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { getAWSSesInstance } from '@/lib/ses'
 import isValidEmail from '@/utils/isValidEmail'
 
 interface ICQCUser {
@@ -128,6 +129,13 @@ export async function addICQC(
       },
     })
 
+    const awsSes = getAWSSesInstance()
+    await awsSes.sendAlert(
+      `New IC QC Added`,
+      `${user.email} has been added as an IC QC.`,
+      'software'
+    )
+
     logger.info(`Successfully added IC QC for ${user.email}`)
     return {
       success: true,
@@ -171,6 +179,13 @@ export async function removeICQC(
         qcType: QCType.FREELANCER,
       },
     })
+
+    const awsSes = getAWSSesInstance()
+    await awsSes.sendAlert(
+      `IC QC Removed`,
+      `${user.email} has been removed as an IC QC.`,
+      'software'
+    )
 
     logger.info(`Successfully removed IC QC for ${user.email}`)
     return {

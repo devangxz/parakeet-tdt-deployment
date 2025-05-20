@@ -484,7 +484,10 @@ export default function InprogressFilesPage({
         </div>
 
         {highDifficultyCount > 0 && (
-          <HighDifficultyNotice count={highDifficultyCount} />
+          <HighDifficultyNotice
+            count={highDifficultyCount}
+            onRefundSuccess={() => fetchInprogressFiles(true)}
+          />
         )}
 
         <DataTable
