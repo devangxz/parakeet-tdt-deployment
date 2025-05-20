@@ -83,6 +83,19 @@ interface File {
   }[]
 }
 
+const statusMap = {
+  'PENDING': 'TRANSCRIBING',
+  'TRANSCRIBED': 'PENDING',
+  'QC_ASSIGNED': 'QC ONGOING',
+  'QC_COMPLETED': 'QC DONE',
+  'FORMATTED': 'CF PENDING',
+  'REVIEWER_ASSIGNED': 'CF ONGOING',
+  'REVIEW_COMPLETED': 'CF DONE/ CFR PENDING',
+  'FINALIZER_ASSIGNED': 'CFR ONGOING',
+  'FINALIZING_COMPLETED': 'CFR DONE',
+  'DELIVERED': 'DELIVERED',
+}
+
 interface StatusPageProps {
   selectedFileId: string
   refetchPendingOrders: () => void
@@ -432,7 +445,12 @@ export default function StatusPage({
                           <span className='font-semibold'>
                             {fieldLabels[key]}
                           </span>
-                          <span>{value?.toString()}</span>
+                          <span>
+                            {fieldLabels[key] === 'Status'
+                              ? statusMap[value as keyof typeof statusMap] ||
+                                value?.toString()
+                              : value?.toString()}
+                          </span>
                         </div>
                       )
                     }
