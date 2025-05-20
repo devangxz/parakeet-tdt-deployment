@@ -118,7 +118,7 @@ async function completeQCJob(order: Order, transcriberId: number) {
 
   const templateData = {
     file_id: order.fileId,
-    subject: 'Scribie.ai Editor Assignment Submitted',
+    subject: 'Scribie Editor Assignment Submitted',
   }
   const ses = getAWSSesInstance()
   await ses.sendMail(
@@ -151,6 +151,14 @@ export async function submitQCFile(
       return {
         success: false,
         message: 'Order not found',
+      }
+    }
+
+    if (order.status !== OrderStatus.QC_ASSIGNED) {
+      logger.error(`Order is not assigned to QC for fileId ${order.fileId}`)
+      return {
+        success: false,
+        message: 'Something went wrong',
       }
     }
 
@@ -236,13 +244,19 @@ export async function submitQCFile(
         orderId,
         transcriberId,
         type: JobType.QC,
+        status: JobStatus.ACCEPTED,
       },
     })
 
     if (!assignment) {
       logger.error(
-        `Unauthorized try to submit a QC file by user ${transcriberId} for order ${orderId}`
+        `Unauthorized try to submit a QC file by user ${transcriberId} for fileId ${order.fileId}`
       )
+      return {
+        success: false,
+        message:
+          'File is not assigned, it may have timed out, pls check history and try again',
+      }
     }
 
     logger.info(
@@ -328,7 +342,7 @@ export async function submitQCFile(
         })
       })
       logger.info(
-        `<-- OrderTranscriptionFlow:submitQC - OrderStatus.SUBMITTED_FOR_APPROVAL`
+        `<-- OrderTranscriptionFlow:submitQC - OrderStatus.SUBMITTED_FOR_APPROVAL ${order.fileId} , userId: ${order.userId}`
       )
       return
     }

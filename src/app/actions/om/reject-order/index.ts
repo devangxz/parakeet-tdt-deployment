@@ -7,11 +7,10 @@ import prisma from '@/lib/prisma'
 
 export async function rejectOrder(formData: {
   orderId: number
-  reasons?: string
   comment?: string
 }) {
   try {
-    const { orderId, reasons = '', comment = '' } = formData
+    const { orderId, comment = '' } = formData
 
     const order = await prisma.order.findUnique({
       where: { id: Number(orderId) },
@@ -33,9 +32,7 @@ export async function rejectOrder(formData: {
               ? OrderStatus.REVIEW_COMPLETED
               : OrderStatus.TRANSCRIBED,
           updatedAt: new Date(),
-          comments: `Rejection reasons: ${reasons}${
-            comment ? ` | Comments: ${comment}` : ''
-          }`,
+          comments: `Rejection reasons: ${comment}`,
         },
       })
 
@@ -49,7 +46,7 @@ export async function rejectOrder(formData: {
       })
     })
 
-    logger.info(`rejected the file, for ${orderId} with reasons: ${reasons}`)
+    logger.info(`rejected the file, for ${orderId} with comment: ${comment}`)
     return {
       success: true,
       message: 'Successfully rejected',

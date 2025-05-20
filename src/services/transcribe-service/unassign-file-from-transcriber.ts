@@ -27,11 +27,11 @@ const unAssignFileFromTranscriber = async (
       fileId,
       type,
       subject:
-        type === 'QC'
-          ? 'Scribie.ai Editor File Unassigned'
+        type === 'Finalize'
+          ? 'Scribie Finalizer File Unassigned '
           : type === 'CF'
-          ? 'Scribie.ai Review File Unassigned'
-          : 'Scribie.ai Finalizer File Unassigned',
+          ? 'Scribie Review File Unassigned'
+          : 'Scribie Editor File Unassigned',
       comment: comment ?? '',
     }
 

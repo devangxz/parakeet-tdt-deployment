@@ -50,7 +50,11 @@ const CompanyLogo = ({ company }: CompanyLogoProps) => (
         alt={`${company.name} logo`}
         width={company.width}
         height={Math.round(company.width * 0.6)}
-        className={`object-contain w-auto h-auto max-w-full max-h-full ${(company.name === 'Cambridge' || company.name === 'ProTrainings') ? 'dark:bg-white dark:p-2' : ''}`}
+        className={`object-contain w-auto h-auto max-w-full max-h-full ${
+          company.name === 'Cambridge' || company.name === 'ProTrainings'
+            ? 'dark:bg-white dark:p-2'
+            : ''
+        }`}
         priority={true}
         quality={75}
         sizes='(max-width: 768px) 144px, 192px'
@@ -62,7 +66,7 @@ const CompanyLogo = ({ company }: CompanyLogoProps) => (
 )
 
 const Partners = () => (
-  <section className='mt-16 flex justify-center'>
+  <section className='mt-24 flex justify-center'>
     <div className='w-full xl:max-w-screen-xl space-y-8'>
       <div className='relative flex justify-center'>
         <div className='w-full relative'>

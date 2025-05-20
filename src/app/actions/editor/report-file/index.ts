@@ -86,7 +86,7 @@ export async function reportFileAction(
       JobStatus.CANCELLED,
       jobAssignment.transcriberId,
       order.fileId,
-      order.status === OrderStatus.QC_ASSIGNED ? 'QC' : 'REVIEW'
+      order.status === OrderStatus.QC_ASSIGNED ? 'QC' : 'CF'
     )
 
     await prisma.order.update({

@@ -1,8 +1,8 @@
 import { getMarkdownContent } from '@/lib/markdown'
 
 export const metadata = {
-  title: 'Terms and Conditions | Scribie.ai',
-  description: 'Terms and conditions for using Scribie.ai services',
+  title: 'Terms and Conditions | Scribie',
+  description: 'Terms and conditions for using Scribie services',
 }
 
 export default async function TermsPage() {

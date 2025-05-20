@@ -4,6 +4,7 @@ import { JobStatus, JobType, InputFileType } from '@prisma/client'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { sendTemplateMail } from '@/lib/ses'
 import assignFileToFinalizer from '@/services/transcribe-service/assign-file-to-finalizer'
 
 export async function reassignFinalizer(formData: {
@@ -76,6 +77,20 @@ export async function reassignFinalizer(formData: {
           : { cancelledTs: new Date() }),
       },
     })
+
+    if (!retainEarnings) {
+      const templateData = {
+        fileId: orderInformation.fileId,
+        type: 'Finalize',
+        subject: 'Scribie Finalizer File Rejected',
+        comment: comment ?? '',
+      }
+      await sendTemplateMail(
+        'UNASSIGN_FILE',
+        currentJobAssignment.transcriberId,
+        templateData
+      )
+    }
 
     logger.info(`Successfully re-assigned finalizer for file ${orderId}`)
     return {

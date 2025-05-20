@@ -629,9 +629,9 @@ const BoxImporter: React.FC<UploaderProps> = ({ onUploadSuccess }) => {
             <h4 className='flex items-center'>Box Importer</h4>
           </div>
           <div className='text-xs self-stretch mt-4 leading-5 text-center text-muted-foreground max-md:mr-1 max-md:max-w-full'>
-            Select files from your Box account to import. Please allow
-            Scribie.ai Importer in the popup to access your Box files for the
-            import process. We will only access the selected files.
+            Select files from your Box account to import. Please allow Scribie
+            Importer in the popup to access your Box files for the import
+            process. We will only access the selected files.
           </div>
           <button
             onClick={handleBoxAction}

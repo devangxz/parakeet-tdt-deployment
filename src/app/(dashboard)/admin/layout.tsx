@@ -13,6 +13,7 @@ import {
   TestTubes,
   BarChart,
   Headphones,
+  EyeIcon,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import React, { useEffect, useRef } from 'react'
@@ -63,6 +64,12 @@ export default function FilesLayout({
       href: '/admin/ic-qcs',
       name: 'IC QCs',
       icon: Headphones,
+      isActive: false,
+    },
+    {
+      href: '/admin/watchlist-transcribers',
+      name: 'Watchlist Transcribers',
+      icon: EyeIcon,
       isActive: false,
     },
   ]

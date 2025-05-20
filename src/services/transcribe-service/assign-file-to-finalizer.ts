@@ -15,7 +15,7 @@ const assignFileToFinalizer = async (
 ) => {
   logger.info(`--> assignFileToFinalizer ${orderId} ${transcriberId}`)
   try {
-    await updateOrderAndCreateJobAssignment(
+    const assignmentResult = await updateOrderAndCreateJobAssignment(
       orderId,
       OrderStatus.FINALIZER_ASSIGNED,
       transcriberId,
@@ -24,6 +24,13 @@ const assignFileToFinalizer = async (
       assignMode,
       comment
     )
+
+    if (!assignmentResult) {
+      logger.info(
+        `Assignment failed for ${orderId} - likely already assigned to another transcriber`
+      )
+      return false
+    }
 
     const { cost, rate } = await calculateAssignmentAmount(
       orderId,

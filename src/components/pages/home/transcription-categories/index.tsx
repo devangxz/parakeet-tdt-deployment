@@ -210,7 +210,7 @@ const TranscriptionCategories = () => {
   }
 
   return (
-    <section className='mt-16 sm:mt-24 md:mt-28 lg:mt-36 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
+    <section className='mt-16 sm:mt-20 md:mt-20 lg:mt-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
       <div className='relative mb-8 sm:mb-12 lg:mb-16'>
         <div className='relative'>
           <button

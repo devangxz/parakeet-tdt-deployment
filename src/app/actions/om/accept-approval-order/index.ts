@@ -4,9 +4,11 @@ import { JobStatus } from '@prisma/client'
 
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
+import { getAWSSesInstance } from '@/lib/ses'
 import { createCustomerTranscript } from '@/services/file-service/customer-transcript'
 import deliver from '@/services/file-service/deliver'
 import preDeliverIfConfigured from '@/services/file-service/pre-deliver-if-configured'
+import { checkTranscriberWatchlist } from '@/utils/backend-helper'
 
 export async function acceptApprovalOrder(orderId: number) {
   try {
@@ -50,7 +52,10 @@ export async function acceptApprovalOrder(orderId: number) {
     )
 
     if (!isPreDeliveryEligible) {
-      await createCustomerTranscript(orderInformation.fileId, orderInformation.userId)
+      await createCustomerTranscript(
+        orderInformation.fileId,
+        orderInformation.userId
+      )
       await deliver(orderInformation, currentJobAssignment.transcriberId)
     }
 
@@ -58,6 +63,44 @@ export async function acceptApprovalOrder(orderId: number) {
       where: { id: currentJobAssignment.id },
       data: { status: JobStatus.COMPLETED },
     })
+
+    const isTranscriberWatchlist = await checkTranscriberWatchlist(
+      currentJobAssignment.transcriberId
+    )
+
+    if (isTranscriberWatchlist) {
+      const twoMonthsAgo = new Date()
+      twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
+
+      const completedAssignments = await prisma.jobAssignment.count({
+        where: {
+          transcriberId: currentJobAssignment.transcriberId,
+          status: JobStatus.COMPLETED,
+          completedTs: {
+            gte: twoMonthsAgo,
+          },
+          type: 'QC',
+        },
+      })
+
+      if (completedAssignments >= 10) {
+        const transcriber = await prisma.user.findUnique({
+          where: { id: currentJobAssignment.transcriberId },
+          select: { firstname: true, lastname: true, email: true },
+        })
+
+        const awsSes = getAWSSesInstance()
+        await awsSes.sendAlert(
+          `Watchlist Transcriber Completed 10+ Assignments`,
+          `${transcriber?.email} has completed 10 or more assignments.`,
+          'software'
+        )
+
+        logger.info(
+          `Alert sent for watchlist transcriber ${currentJobAssignment.transcriberId} with ${completedAssignments} completed assignments`
+        )
+      }
+    }
 
     const qcValidationStats = await prisma.qCValidationStats.findFirst({
       where: {

@@ -204,7 +204,7 @@ export default async function submitReview(
 
     const templateData = {
       file_id: order.fileId,
-      subject: 'Scribie.ai Reviewer Assignment Submitted',
+      subject: 'Scribie Reviewer Assignment Submitted',
     }
 
     await sendTemplateMail('TRANSCRIBER_SUBMIT', transcriberId, templateData)

@@ -35,14 +35,24 @@ const DownloadModal = ({
         'srt': false,
     })
 
-    async function downloadFilesAsZip(files: { name: string, content: Blob }[]) {
+    async function downloadFilesAsZip(files: { name: string, content: Blob }[], folderName: string) {
         const zip = new JSZip();
+
+        let folder = zip;
+        if(folderName){
+            folder = zip.folder(folderName)!;
+        }
 
         // Add files to the zip
         for (const file of files) {
-            // You can organize files in folders by using paths
-            // Example: zip.file('folder1/file.txt', fileContent)
-            zip.file(file.name, file.content);
+          // If the file name includes path separators, it needs special handling
+          if (file.name.includes('/') || file.name.includes('\\')) {
+              // Extract just the filename without the path
+              const fileName = file.name.split(/[\/\\]/).pop() || file.name;
+              folder.file(fileName, file.content);
+          } else {
+              folder.file(file.name, file.content);
+          }
         }
 
         try {
@@ -67,19 +77,24 @@ const DownloadModal = ({
     }
 
     async function downloadRemoteFilesAsZip(fileUrls: { url: string, name: string }[]) {
-        const files = await Promise.all(
-            fileUrls.map(async (file) => {
-                const response = await fetch(file.url);
-                const blob = await response.blob();
-                return {
-                    name: `${fileUrls.length}-files/${file.name}`,
-                    content: blob
-                };
-            })
-        );
-
-        await downloadFilesAsZip(files);
-    }
+      // Create a folder name with the file count
+      const folderName = `files-${fileUrls.length}`;
+      
+      const files = await Promise.all(
+          fileUrls.map(async (file) => {
+              const response = await fetch(file.url);
+              const blob = await response.blob();
+              return {
+                  // Just use the filename without paths
+                  name: file.name,
+                  content: blob
+              };
+          })
+      );
+  
+      // Pass the folder name as a parameter
+      await downloadFilesAsZip(files, folderName);
+  }
 
     const handleSelectAllTypes = () => {
         setSelectedTypes({
