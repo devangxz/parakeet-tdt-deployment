@@ -133,7 +133,7 @@ export function CustomOrderOptions({
         <div className='flex items-center justify-between gap-5'>
           {orderType !== 'FORMATTING' &&
           customFormatOption.toLowerCase() === 'legal' ? (
-            <div className='w-[229px]'>
+            <div className='w-[229px] flex flex-col space-y-2'>
               <div className='flex items-center gap-1'>
                 <Label>Select template</Label>
                 <TooltipProvider>
@@ -185,8 +185,8 @@ export function CustomOrderOptions({
               <SupportingDocumentsDialog fileId={fileId} />
             </div>
           )}
-          <div className='w-[229px] flex flex-col'>
-            <Label className='pb-1'>Due date</Label>
+          <div className='w-[229px] flex flex-col space-y-2'>
+            <Label className=''>Due date</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button

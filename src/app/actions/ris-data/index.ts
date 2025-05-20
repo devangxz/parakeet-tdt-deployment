@@ -28,14 +28,14 @@ export async function getRISDataAction(fileId: string, templateType: string) {
     const session = await getServerSession(authOptions)
     const user = session?.user
     const organizationName = user?.organizationName?.toLowerCase() as string
-    logger.info(`organizationName: ${organizationName}`)
+    logger.info(`organizationName: ${organizationName} ${fileId} ${templateType}`)
 
     const risData = await extractDataFromRISFile(
       fileId,
       templateType,
       organizationName
     )
-
+    logger.info(`extracted data from docx risData: ${JSON.stringify(risData).slice(0, 200)}`)
     await prisma.file.update({
       where: { fileId: fileId },
       data: { customFormattingDetails: risData },
