@@ -45,6 +45,7 @@ interface VersionCompareDialogProps {
   isOpen: boolean
   fileId: string
   setDiff: React.Dispatch<React.SetStateAction<DmpDiff[]>>
+  renderDiff: (diffs: [number, string][]) => void
 }
 
 const TAG_LABELS: Record<string, string> = {
@@ -74,13 +75,14 @@ export default function VersionCompareDialog({
   isOpen,
   fileId,
   setDiff,
+  renderDiff,
 }: VersionCompareDialogProps) {
   const [versions, setVersions] = useState<Version[]>([])
   const [fromVersion, setFromVersion] = useState<Version | null>(null)
   const [toVersion, setToVersion] = useState<Version | null>(null)
   const [isFetchingVersions, setIsFetchingVersions] = useState(false)
   const [isComparing, setIsComparing] = useState(false)
-  const [position, setPosition] = useState({ x: 10, y: 70 })
+  const [position, setPosition] = useState({ x: 5, y: 30 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -117,6 +119,7 @@ export default function VersionCompareDialog({
       const dmp = new diff_match_patch()
       const diffs = dmp.diff_wordMode(result.fromText, result.toText)
       setDiff(diffs)
+      renderDiff(diffs)
     } catch {
       toast.error('Unable to retrieve version transcript for comparison')
     } finally {
@@ -259,7 +262,7 @@ export default function VersionCompareDialog({
       ref={dialogRef}
       className={`${
         !isOpen ? 'hidden' : ''
-      } fixed z-[50] rounded-lg shadow-lg border bg-background p-4 cursor-move`}
+      } fixed z-[40] rounded-lg shadow-lg border bg-background p-4 cursor-move`}
       style={{ top: `${position.y}px`, left: `${position.x}px` }}
       onMouseDown={handleMouseDown}
     >
@@ -286,7 +289,7 @@ export default function VersionCompareDialog({
                 <ChevronDownIcon className='ml-2 h-4 w-4 shrink-0' />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className='w-[320px] p-0'>
+            <PopoverContent className='w-[330px] p-0'>
               <Command>
                 <CommandInput
                   placeholder='Search versions...'
@@ -369,7 +372,7 @@ export default function VersionCompareDialog({
                 <ChevronDownIcon className='ml-2 h-4 w-4 shrink-0' />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className='w-[320px] p-0'>
+            <PopoverContent className='w-[330px] p-0'>
               <Command>
                 <CommandInput
                   placeholder='Search versions...'
