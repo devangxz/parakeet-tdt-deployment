@@ -135,7 +135,7 @@ export default function OrganizationDashboardPage() {
   return (
     <div className='h-full flex-1 flex-col space-y-8 p-5 md:flex'>
       <h1 className='text-lg font-semibold md:text-lg'>
-        Organization Revenue Dashboard
+        Organization Dashboard
       </h1>
 
       <div className='mb-6'>
