@@ -9,8 +9,6 @@ import HistoryFilesPage from '../components/history-files'
 import ICQCFilesPage from '../components/ic-qc-files'
 import { checkTranscriberICQCStatus } from '@/app/actions/transcriber'
 import Motd from '@/components/transcriber-motd/review-with-gemini'
-import ASRProcessingNotice from '@/components/transcriber-notice/asr-processing'
-import LlmProcessingNotice from '@/components/transcriber-notice/llm-processing'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 function LegalQCPageContent() {
@@ -73,8 +71,6 @@ function LegalQCPageContent() {
   return (
     <div className='h-full flex-1 flex-col p-4 md:flex space-y-3'>
       <Motd />
-      <LlmProcessingNotice />
-      <ASRProcessingNotice />
 
       <div>
         <Tabs

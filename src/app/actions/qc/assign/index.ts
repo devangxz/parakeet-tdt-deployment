@@ -88,24 +88,26 @@ export async function assignQC(orderId: number, isICQC: boolean = false) {
       }
     }
 
-    const rejectedAssignment = await prisma.jobAssignment.findFirst({
-      where: {
-        transcriberId,
-        status: {
-          in: [JobStatus.REJECTED, JobStatus.CANCELLED],
+    if (!isICQC) {
+      const rejectedAssignment = await prisma.jobAssignment.findFirst({
+        where: {
+          transcriberId,
+          status: {
+            in: [JobStatus.REJECTED, JobStatus.CANCELLED],
+          },
+          type: JobType.QC,
+          orderId,
         },
-        type: JobType.QC,
-        orderId,
-      },
-    })
+      })
 
-    if (rejectedAssignment) {
-      logger.error(
-        `${transcriberId} has already rejected the order ${orderId} and tried to assign it.`
-      )
-      return {
-        success: false,
-        error: "You can't assign a file if you've already rejected it.",
+      if (rejectedAssignment) {
+        logger.error(
+          `${transcriberId} has already rejected the order ${orderId} and tried to assign it.`
+        )
+        return {
+          success: false,
+          error: "You can't assign a file if you've already rejected it.",
+        }
       }
     }
 

@@ -1,24 +1,32 @@
 'use client'
 
-import { subDays } from 'date-fns'
-import { Loader2, Download } from 'lucide-react'
-import { useSession } from 'next-auth/react'
-import { useEffect, useState } from 'react'
-import { DateRange } from 'react-day-picker'
+import { Check, ChevronsUpDown, Loader2 } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
-import { DataTableFacetedFilter } from './components/filter'
-import { getOrgRevenue } from '@/app/actions/admin/revenue-dashboard/get-org-revenue'
-import { DateRangePicker } from '@/components/date-range-picker'
-import { RevenueDetailsModal } from '@/components/revenue-details-modal'
-import { CreditsInfoModal } from '@/components/revenue-details-modal/credits-info-modal'
+import { getOrganizationDetails } from '@/app/actions/admin/org-dashboard/get-organization-details'
+import { getOrganizations } from '@/app/actions/admin/org-dashboard/get-organizations'
 import { Button } from '@/components/ui/button'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import {
+  Command as CommandPrimitive,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import {
   Table,
   TableBody,
@@ -27,359 +35,247 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useToast } from '@/components/ui/use-toast'
-import { REVENUE_DASHBOARD_EMAILS } from '@/constants'
-import { exportToExcel } from '@/lib/excel-export'
+import { cn } from '@/lib/utils'
 
-type Organization = 'REMOTELEGAL' | 'ACR'
-
-interface OrderData {
-  orderId: string
-  fileId: string
-  fileName: string
-  orderDate: string
-  deliveryDate: string | null
-  amount: number
-  status: string
-  duration: number
-  pwer: number
-  workers: {
-    qc: string[]
-    review: string[]
-    cf: string[]
+interface Organization {
+  id: number
+  name: string
+  userId: number
+  user: {
+    email: string
   }
-  costs: {
-    asr: number
-    qc: number
-    cf: number
-    cfReview: number
-    fileBonus: number
-  }
-  totalCost: number
-  margin: number
-  marginPercentage: number
-  customerEmail: string
 }
 
-const statusOptions = [
-  { value: 'PENDING', label: 'Pending' },
-  { value: 'TRANSCRIBED', label: 'Transcribed' },
-  { value: 'QC_ASSIGNED', label: 'QC Assigned' },
-  { value: 'QC_COMPLETED', label: 'QC Completed' },
-  { value: 'FORMATTED', label: 'Formatted' },
-  { value: 'REVIEWER_ASSIGNED', label: 'Reviewer Assigned' },
-  { value: 'REVIEW_COMPLETED', label: 'Review Completed' },
-  { value: 'FINALIZER_ASSIGNED', label: 'Finalizer Assigned' },
-  { value: 'FINALIZING_COMPLETED', label: 'Finalizing Completed' },
-  { value: 'BLOCKED', label: 'Blocked' },
-  { value: 'PRE_DELIVERED', label: 'Pre-delivered' },
-  { value: 'SUBMITTED_FOR_APPROVAL', label: 'Submitted for Approval' },
-  { value: 'SUBMITTED_FOR_SCREENING', label: 'Submitted for Screening' },
-]
+interface QCData {
+  id: number
+  userId: number
+  email: string
+  name: string
+  submittedHours: number
+  filesCount: number
+}
 
-export default function RevenueDashboard() {
-  const { data: session } = useSession()
-  const { toast } = useToast()
-  const [isLoading, setIsLoading] = useState(false)
-  const [metrics, setMetrics] = useState<OrderData[]>([])
-  const [filteredMetrics, setFilteredMetrics] = useState<OrderData[]>([])
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
+interface OrganizationDetails {
+  id: number
+  name: string
+  userId: number
+  userEmail: string
+  userName: string
+  qcs: QCData[]
+}
 
-  const [selectedOrg, setSelectedOrg] = useState<Organization>('REMOTELEGAL')
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
-
-  const [dateRange, setDateRange] = useState<DateRange>(() => ({
-    from: subDays(new Date(), 10),
-    to: new Date(),
-  }))
-  const [selectedDates, setSelectedDates] = useState<{
-    startDate: Date | null
-    endDate: Date | null
-  }>({ startDate: null, endDate: null })
-  const [revenueModalOpen, setRevenueModalOpen] = useState(false)
-  const [creditsModalOpen, setCreditsModalOpen] = useState(false)
-
-  async function loadRevenueData(from: Date, to: Date) {
-    setIsLoading(true)
-    try {
-      const data = await getOrgRevenue(from, to, selectedOrg)
-      setMetrics(data)
-      setFilteredMetrics(data)
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'Failed to load revenue data',
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
+export default function OrganizationDashboardPage() {
+  const [open, setOpen] = useState(false)
+  const [searchValue, setSearchValue] = useState('')
+  const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [orgDetails, setOrgDetails] = useState<OrganizationDetails | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
+  const [selectedOrg, setSelectedOrg] = useState<string | null>(null)
+  const [selectedOrgUserId, setSelectedOrgUserId] = useState<number | null>(
+    null
+  )
 
   useEffect(() => {
-    loadRevenueData(dateRange.from ?? new Date(), dateRange.to ?? new Date())
+    async function loadOrganizations() {
+      try {
+        const orgs = await getOrganizations()
+        setOrganizations(orgs)
+        setInitialLoading(false)
+      } catch (error) {
+        toast.error('Failed to load organizations')
+        setInitialLoading(false)
+      }
+    }
+
+    loadOrganizations()
+  }, [])
+
+  useEffect(() => {
+    async function loadOrgDetails() {
+      if (!selectedOrg) {
+        setOrgDetails(null)
+        return
+      }
+
+      setLoading(true)
+      try {
+        const details = await getOrganizationDetails(
+          selectedOrg,
+          selectedOrgUserId ?? 0
+        )
+        setOrgDetails(details)
+      } catch (error) {
+        toast.error('Failed to load organization details')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadOrgDetails()
   }, [selectedOrg])
 
-  useEffect(() => {
-    if (selectedStatuses.length === 0) {
-      setFilteredMetrics(metrics)
-    } else {
-      setFilteredMetrics(
-        metrics.filter((order) => selectedStatuses.includes(order.status))
-      )
-    }
-  }, [selectedStatuses, metrics])
+  const filteredOrganizations = organizations.filter((org) =>
+    org.name.toLowerCase().includes(searchValue.toLowerCase())
+  )
 
-  async function handleLoadMore() {
-    if (metrics.length === 0 || isLoadingMore) return
+  const getDisplayName = useCallback((value: string | null) => {
+    if (!value) return 'Select organization...'
+    return value.split(' (')[0]
+  }, [])
 
-    setIsLoadingMore(true)
-    const endDate = dateRange.from ?? new Date()
-    const newFrom = subDays(endDate, 10)
-
-    try {
-      const newData = await getOrgRevenue(newFrom, endDate, selectedOrg)
-      setMetrics((prev) => [...prev, ...newData])
-      setDateRange((prev) => ({
-        from: newFrom,
-        to: prev.to ?? new Date(),
-      }))
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to load more data',
-      })
-    } finally {
-      setIsLoadingMore(false)
-    }
-  }
-
-  function handleDownloadExcel() {
-    const exportData = filteredMetrics.map((order) => ({
-      'Customer Email': order.customerEmail,
-      'File ID': order.fileId,
-      'File Name': order.fileName,
-      'Order Date': order.orderDate,
-      'Delivery Date': order.deliveryDate || '',
-      Status: order.status,
-      'Duration (hours)': (order.duration / 3600).toFixed(2),
-      PWER: order.pwer,
-      QC: order.workers.qc.join(', '),
-      'CF Review': order.workers.review.join(', '),
-      'CF Finalize': order.workers.cf.join(', '),
-      'ASR Cost': order.costs.asr,
-      'QC Cost': order.costs.qc,
-      'Review Cost': order.costs.cfReview,
-      'CF Cost': order.costs.cf,
-      'File Bonus': order.costs.fileBonus,
-      Amount: order.amount,
-      'Total Cost': order.totalCost,
-      Margin: order.margin,
-      'Margin %': order.marginPercentage,
-    }))
-
-    exportToExcel(exportData, `${selectedOrg.toLowerCase()}-revenue`)
+  if (initialLoading) {
+    return (
+      <div className='flex h-screen items-center justify-center'>
+        <Loader2 className='h-8 w-8 animate-spin text-primary' />
+      </div>
+    )
   }
 
   return (
-    <>
-      {session?.user?.role !== 'ADMIN' ||
-      !REVENUE_DASHBOARD_EMAILS.includes(session?.user?.email ?? '') ? (
-        <>
-          <div className='h-full flex-1 flex-col space-y-8 p-8 md:flex'>
-            <h1 className='text-lg font-semibold md:text-lg'>
-              You are not authorized to access this page
-            </h1>
-          </div>
-        </>
-      ) : (
-        <div className='h-full flex-1 flex-col space-y-8 p-5 md:flex'>
-          <h1 className='text-lg font-semibold md:text-lg'>
-            Organization Revenue Dashboard
-          </h1>
-          <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between'>
-            <div className='flex gap-2 items-center'>
-              <Select
-                value={selectedOrg}
-                onValueChange={(value) => setSelectedOrg(value as Organization)}
-              >
-                <SelectTrigger className='w-[180px]'>
-                  <SelectValue placeholder='Select Organization' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='REMOTELEGAL'>REMOTELEGAL</SelectItem>
-                  <SelectItem value='ACR'>ACR</SelectItem>
-                </SelectContent>
-              </Select>
+    <div className='h-full flex-1 flex-col space-y-8 p-5 md:flex'>
+      <h1 className='text-lg font-semibold md:text-lg'>
+        Organization Revenue Dashboard
+      </h1>
 
-              <DataTableFacetedFilter
-                title='Status'
-                options={statusOptions}
-                value={selectedStatuses}
-                onChange={setSelectedStatuses}
-              />
-
-              <Button
-                variant='order'
-                size='lg'
-                onClick={handleDownloadExcel}
-                disabled={isLoading || filteredMetrics.length === 0}
-                className='not-rounded'
-              >
-                <Download className='h-4 w-4 mr-2' />
-                Download Excel
-              </Button>
-            </div>
-            <DateRangePicker
-              value={dateRange}
-              onChange={(value) => {
-                setDateRange(value ?? { from: new Date(), to: new Date() })
-                loadRevenueData(
-                  value?.from ?? new Date(),
-                  value?.to ?? new Date()
-                )
-              }}
-              onUpdate={() => {}}
-            />
-          </div>
-
-          <div className='rounded-lg border'>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>#</TableHead>
-                  <TableHead>Customer Email</TableHead>
-                  <TableHead>File ID</TableHead>
-                  <TableHead>File Name</TableHead>
-                  <TableHead>Order Date</TableHead>
-                  <TableHead>Delivery Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>PWER</TableHead>
-                  <TableHead>QC</TableHead>
-                  <TableHead>CF Review</TableHead>
-                  <TableHead>CF Finalize</TableHead>
-                  <TableHead>ASR Cost</TableHead>
-                  <TableHead>QC Cost</TableHead>
-                  <TableHead>Review Cost</TableHead>
-                  <TableHead>CF Cost</TableHead>
-                  <TableHead>File Bonus</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Total Cost</TableHead>
-                  <TableHead>Margin</TableHead>
-                  <TableHead>Margin %</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={20} className='text-center py-8'>
-                      <Loader2 className='h-8 w-8 animate-spin mx-auto' />
-                    </TableCell>
-                  </TableRow>
-                ) : filteredMetrics.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={20} className='text-center py-8'>
-                      No data available for the selected period
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredMetrics.map((order, index) => (
-                    <TableRow key={order.orderId}>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell>{order.customerEmail}</TableCell>
-                      <TableCell>{order.fileId}</TableCell>
-                      <TableCell
-                        className='max-w-[200px] truncate'
-                        title={order.fileName}
-                      >
-                        {order.fileName}
-                      </TableCell>
-                      <TableCell>{order.orderDate}</TableCell>
-                      <TableCell>{order.deliveryDate || '-'}</TableCell>
-                      <TableCell>{order.status}</TableCell>
-                      <TableCell>
-                        {(order.duration / 3600).toFixed(2)}
-                      </TableCell>
-                      <TableCell>{order.pwer}</TableCell>
-                      <TableCell
-                        className='max-w-[150px] truncate'
-                        title={order.workers.qc.join(', ')}
-                      >
-                        {order.workers.qc.join(', ') || '-'}
-                      </TableCell>
-                      <TableCell
-                        className='max-w-[150px] truncate'
-                        title={order.workers.review.join(', ')}
-                      >
-                        {order.workers.review.join(', ') || '-'}
-                      </TableCell>
-                      <TableCell
-                        className='max-w-[150px] truncate'
-                        title={order.workers.cf.join(', ')}
-                      >
-                        {order.workers.cf.join(', ') || '-'}
-                      </TableCell>
-                      <TableCell>${order.costs.asr.toFixed(2)}</TableCell>
-                      <TableCell>${order.costs.qc.toFixed(2)}</TableCell>
-                      <TableCell>${order.costs.cfReview.toFixed(2)}</TableCell>
-                      <TableCell>${order.costs.cf.toFixed(2)}</TableCell>
-                      <TableCell>${order.costs.fileBonus.toFixed(2)}</TableCell>
-                      <TableCell>${order.amount.toFixed(2)}</TableCell>
-                      <TableCell>${order.totalCost.toFixed(2)}</TableCell>
-                      <TableCell>${order.margin.toFixed(2)}</TableCell>
-                      <TableCell>
-                        {order.marginPercentage.toFixed(2)}%
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className='flex justify-center mt-4'>
+      <div className='mb-6'>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
             <Button
-              onClick={handleLoadMore}
               variant='order'
-              disabled={isLoadingMore || metrics.length === 0}
-              className='not-rounded'
+              role='combobox'
+              aria-expanded={open}
+              className='w-[300px] justify-between not-rounded'
             >
-              {isLoadingMore ? (
-                <Loader2 className='h-4 w-4 animate-spin mr-2' />
-              ) : null}
-              Load More
+              {getDisplayName(selectedOrg)}
+              <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
             </Button>
-          </div>
+          </PopoverTrigger>
+          <PopoverContent className='w-[300px] p-0'>
+            <CommandPrimitive>
+              <CommandInput
+                placeholder='Search organization...'
+                className='h-9'
+                value={searchValue}
+                onValueChange={setSearchValue}
+              />
+              <CommandList>
+                <CommandEmpty>No organization found.</CommandEmpty>
+                <CommandGroup>
+                  {filteredOrganizations.map((org) => (
+                    <CommandItem
+                      key={org.userId}
+                      value={`${org.name} (${org.user.email})`}
+                      onSelect={() => {
+                        setSelectedOrgUserId(org.userId)
+                        setSelectedOrg(org.name)
+                        setOpen(false)
+                      }}
+                    >
+                      {org.name} <br /> ({org.user.email})
+                      <Check
+                        className={cn(
+                          'ml-auto h-4 w-4',
+                          selectedOrg === `${org.name} (${org.user.email})`
+                            ? 'opacity-100'
+                            : 'opacity-0'
+                        )}
+                      />
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </CommandPrimitive>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {loading ? (
+        <div className='flex h-64 items-center justify-center'>
+          <Loader2 className='h-8 w-8 animate-spin text-primary' />
+        </div>
+      ) : orgDetails ? (
+        <div className='space-y-6'>
+          <Card>
+            <CardHeader>
+              <CardTitle>Organization Details</CardTitle>
+              <CardDescription>
+                Information about the selected organization
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className='space-y-2'>
+                <div className='flex items-center'>
+                  <span className='font-semibold text-muted-foreground'>
+                    Customer Name:
+                  </span>
+                  <span className='ml-2'>{orgDetails.userName}</span>
+                </div>
+                <div className='flex items-center'>
+                  <span className='font-semibold text-muted-foreground'>
+                    CustometEmail:
+                  </span>
+                  <span className='ml-2'>{orgDetails.userEmail}</span>
+                </div>
+                <div className='flex items-center'>
+                  <span className='font-semibold text-muted-foreground'>
+                    Customer ID:
+                  </span>
+                  <span className='ml-2'>{orgDetails.userId}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>QC Performance</CardTitle>
+              <CardDescription>
+                QCs mapped to this organization and their work
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {orgDetails.qcs.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>QC Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>User ID</TableHead>
+                      <TableHead>Files Completed</TableHead>
+                      <TableHead>Submitted Hours</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orgDetails.qcs.map((qc) => (
+                      <TableRow key={qc.id}>
+                        <TableCell>{qc.name}</TableCell>
+                        <TableCell>{qc.email}</TableCell>
+                        <TableCell>{qc.userId}</TableCell>
+                        <TableCell>{qc.filesCount}</TableCell>
+                        <TableCell>
+                          {qc.submittedHours.toFixed(2)} hours
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className='py-6 text-center text-muted-foreground'>
+                  No QCs found for this organization
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className='rounded-lg border border-dashed border-gray-300 p-8 text-center'>
+          <h3 className='text-lg font-medium'>No organization selected</h3>
+          <p className='mt-2 text-muted-foreground'>
+            Select an organization from the dropdown to view details
+          </p>
         </div>
       )}
-
-      {selectedDates.startDate && selectedDates.endDate && (
-        <RevenueDetailsModal
-          isOpen={revenueModalOpen}
-          onClose={() => {
-            setSelectedDates({ startDate: null, endDate: null })
-            setRevenueModalOpen(false)
-          }}
-          startDate={selectedDates.startDate}
-          endDate={selectedDates.endDate}
-        />
-      )}
-      {selectedDates.startDate && selectedDates.endDate && (
-        <CreditsInfoModal
-          isOpen={creditsModalOpen}
-          onClose={() => {
-            setSelectedDates({ startDate: null, endDate: null })
-            setCreditsModalOpen(false)
-          }}
-          startDate={selectedDates.startDate}
-          endDate={selectedDates.endDate}
-        />
-      )}
-    </>
+    </div>
   )
 }
