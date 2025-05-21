@@ -613,6 +613,7 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
         }
       }
     } catch (error) {
+      console.error('Upload failed', error)
       toast.error('Upload failed')
       try {
         if (
@@ -625,6 +626,7 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
           await deleteMultipleFoldersAction(folderIds)
         }
       } catch (error) {
+        console.error('Upload failed', error)
         toast.error('Upload failed')
       }
       setIsUploading(false)
