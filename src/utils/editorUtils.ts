@@ -1233,7 +1233,7 @@ const handleSubmit = async ({
       })
     }
 
-    if (orderDetails.orderType !== 'FORMATTING') {
+    if (orderDetails.orderType === "TRANSCRIPTION" || (orderDetails.orderType === "TRANSCRIPTION_FORMATTING" && step === 'CF')) {
       // TODO: remove this after March 1st
       localStorage.removeItem('editorData')
       await deleteEditorDataIDB(orderDetails.fileId)

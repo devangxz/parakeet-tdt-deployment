@@ -3,6 +3,7 @@ import path from 'path'
 import mammoth from 'mammoth'
 import OpenAI from 'openai'
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
+import { PORTKEY_GATEWAY_URL, createHeaders } from 'portkey-ai'
 
 import config from '../../../config.json'
 import logger from '@/lib/logger'
@@ -138,7 +139,14 @@ async function makeLLMCall(systemPrompt: string, userPrompt: string) {
       },
     ]
     
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    const openai = new OpenAI({ 
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: PORTKEY_GATEWAY_URL,
+      defaultHeaders: createHeaders({
+        provider: 'openai',
+        apiKey: process.env.PORTKEY_API_KEY
+      })
+    });
     
     const seed: number = 1
     const temp: number = 0
