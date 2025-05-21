@@ -84,8 +84,7 @@ interface File {
 }
 
 const statusMap = {
-  'PENDING': 'TRANSCRIBING',
-  'TRANSCRIBED': 'PENDING',
+  'TRANSCRIBED': 'QC PENDING',
   'QC_ASSIGNED': 'QC ONGOING',
   'QC_COMPLETED': 'QC DONE',
   'FORMATTED': 'CF PENDING',
@@ -93,7 +92,6 @@ const statusMap = {
   'REVIEW_COMPLETED': 'CF DONE/ CFR PENDING',
   'FINALIZER_ASSIGNED': 'CFR ONGOING',
   'FINALIZING_COMPLETED': 'CFR DONE',
-  'DELIVERED': 'DELIVERED',
 }
 
 interface StatusPageProps {
