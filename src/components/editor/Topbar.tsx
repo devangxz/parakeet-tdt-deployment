@@ -129,6 +129,7 @@ interface TopbarProps {
   setCtms: (ctms: CTMType[]) => void
   editorRef: React.Ref<EditorHandle>
   step: string
+  audioPlayer: HTMLAudioElement | null
 }
 
 export default memo(function Topbar({
@@ -155,8 +156,8 @@ export default memo(function Topbar({
   setCtms,
   editorRef,
   step,
+  audioPlayer,
 }: TopbarProps) {
-  const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
   const [shortcuts, setShortcuts] = useState<
     { key: string; shortcut: string }[]
@@ -227,20 +228,20 @@ export default memo(function Topbar({
 
   const playNextBlankInstance = useCallback(() => {
     const quill = quillRef?.current?.getEditor()
-    if (!quill) return
-    navigateAndPlayBlanks(quill, audioPlayer.current, false)
+    if (!quill || !audioPlayer) return
+    navigateAndPlayBlanks(quill, audioPlayer, false)
   }, [audioPlayer, quillRef])
 
   const playPreviousBlankInstance = useCallback(() => {
     const quill = quillRef?.current?.getEditor()
     if (!quill) return
-    navigateAndPlayBlanks(quill, audioPlayer.current, true)
+    navigateAndPlayBlanks(quill, audioPlayer, true)
   }, [audioPlayer, quillRef])
 
   const playCurrentParagraphInstance = useCallback(() => {
     const quill = quillRef?.current?.getEditor()
     if (!quill) return
-    playCurrentParagraphTimestamp(quill, audioPlayer.current)
+    playCurrentParagraphTimestamp(quill, audioPlayer)
   }, [audioPlayer, quillRef])
 
   const updateTranscript = (
@@ -301,8 +302,10 @@ export default memo(function Topbar({
 
   useEffect(() => {
     const syncVideoWithAudio = () => {
-      if (!audioPlayer || !audioPlayer.current || !videoRef.current) return
-      const player = audioPlayer.current
+      console.log('audioPlayer.current', audioPlayer);
+      console.log('videoRef.current', videoRef.current);
+      if (!audioPlayer || !videoRef.current) return
+      const player = audioPlayer
       videoRef.current.volume = 0
 
       const handleAudioPlay = () => videoRef.current?.play()
@@ -324,9 +327,9 @@ export default memo(function Topbar({
     if (videoPlayerOpen) {
       const cleanup = syncVideoWithAudio()
       const interval = setInterval(() => {
-        if (!audioPlayer || !audioPlayer.current || !videoRef.current) return
-        if (videoRef.current.currentTime !== audioPlayer.current.currentTime) {
-          videoRef.current.currentTime = audioPlayer.current.currentTime
+        if (!audioPlayer || !videoRef.current) return
+        if (videoRef.current.currentTime !== audioPlayer.currentTime) {
+          videoRef.current.currentTime = audioPlayer.currentTime
         }
       }, 1000)
 
@@ -1058,7 +1061,7 @@ export default memo(function Topbar({
             ref={videoRef}
             src={`${videoUrl}`}
             className='w-full h-full'
-            controls={true}
+            // controls={true}
             onMouseDown={handleDragChange}
           ></video>
           <button
