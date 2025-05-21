@@ -32,7 +32,7 @@ export default function AdminDashboard() {
       if (response.success) {
         toast.success('Successfully refunded the file.')
       } else {
-        toast.error(response.s)
+        toast.error(response.message || 'Failed to refund the file.')
       }
     } catch (error) {
       toast.error('Failed to refund the file.')
