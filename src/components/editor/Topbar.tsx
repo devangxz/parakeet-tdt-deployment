@@ -4,6 +4,7 @@ import {
   ChevronDownIcon,
   Cross1Icon,
   ReloadIcon,
+  ExclamationTriangleIcon,
 } from '@radix-ui/react-icons'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import axios from 'axios'
@@ -129,6 +130,7 @@ interface TopbarProps {
   setCtms: (ctms: CTMType[]) => void
   editorRef: React.Ref<EditorHandle>
   step: string
+  setEditorReadOnly: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 export default memo(function Topbar({
@@ -155,6 +157,7 @@ export default memo(function Topbar({
   setCtms,
   editorRef,
   step,
+  setEditorReadOnly,
 }: TopbarProps) {
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
@@ -224,6 +227,8 @@ export default memo(function Topbar({
   const [isHeatmapModalOpen, setIsHeatmapModalOpen] = useState(false)
   const [isRestoreVersionModalOpen, setIsRestoreVersionModalOpen] =
     useState(false)
+  const [fiveMinutesLeft, setFiveMinutesLeft] = useState(false)
+  const [showTimeoutDialog, setShowTimeoutDialog] = useState(false)
 
   const playNextBlankInstance = useCallback(() => {
     const quill = quillRef?.current?.getEditor()
@@ -636,26 +641,41 @@ export default memo(function Topbar({
 
   useEffect(() => {
     let timer: NodeJS.Timeout
-
-    const updateRemainingTime = () => {
+    
+    const updateRemainingTime = async () => {
       const remainingSeconds = parseInt(orderDetails.remainingTime)
       if (remainingSeconds > 0) {
         const hours = Math.floor(remainingSeconds / 3600)
         const minutes = Math.floor((remainingSeconds % 3600) / 60)
         const seconds = remainingSeconds % 60
-
+        if(hours === 0 && minutes < 5 ){
+          setFiveMinutesLeft(true)
+        }
         const formattedTime = [
           hours.toString().padStart(2, '0'),
           minutes.toString().padStart(2, '0'),
           seconds.toString().padStart(2, '0'),
         ].join(':')
-
         setTimeoutCount(formattedTime)
         orderDetails.remainingTime = (remainingSeconds - 1).toString()
-
         timer = setTimeout(updateRemainingTime, 1000)
       } else {
         setTimeoutCount('00:00:00')
+        setEditorReadOnly(true)
+        const quill = quillRef?.current?.getEditor()
+        quill?.disable()
+        if(timer){
+          setShowTimeoutDialog(true)
+          await handleSave({
+            getEditorText,
+            orderDetails,
+            setButtonLoading,
+          listenCount,
+          editedSegments,
+          role: session?.user?.role || '',
+          quill: quillRef?.current?.getEditor(),
+        }, false)
+        }
       }
     }
 
@@ -667,6 +687,13 @@ export default memo(function Topbar({
       if (timer) {
         clearTimeout(timer)
       }
+    }
+  }, [orderDetails])
+
+  useEffect(() => {
+    if(orderDetails.remainingTime === '0') {
+
+      setShowTimeoutDialog(true)
     }
   }, [orderDetails])
 
@@ -685,13 +712,15 @@ export default memo(function Topbar({
         </TooltipProvider>
         
         {orderDetails.status === 'QC_ASSIGNED' && (
-          <span
-            className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${
-              orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
-            }`}
-          >
-            {timeoutCount}
-          </span>
+          <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center">
+            <span
+              className={`${
+                fiveMinutesLeft || timeoutCount === '00:00:00' ? 'animate-pulse text-red-600' : 'text-green-600'
+              }`}
+            >
+              {timeoutCount}
+            </span>
+          </div>
         )}
 
         <div className='flex gap-2'>
@@ -773,6 +802,7 @@ export default memo(function Topbar({
                   }
                 }}
                 className='format-button border-r-[1.5px] border-white/70'
+                disabled={timeoutCount === '00:00:00'}
               >
                 Submit
               </Button>
@@ -782,8 +812,8 @@ export default memo(function Topbar({
               modal={false}
               onOpenChange={handleDropdownMenuOpenChange}
             >
-              <DropdownMenuTrigger className='focus-visible:ring-0 outline-none'>
-                <Button className='px-2 format-icon-button focus-visible:ring-0 outline-none'>
+              <DropdownMenuTrigger className='focus-visible:ring-0 outline-none' disabled={timeoutCount === '00:00:00'}>
+                <Button className='px-2 format-icon-button focus-visible:ring-0 outline-none' disabled={timeoutCount === '00:00:00'} >
                   <span className='sr-only'>Open menu</span>
                   <ChevronDownIcon className='h-4 w-4' />
                 </Button>
@@ -884,13 +914,14 @@ export default memo(function Topbar({
                     Formatting Options
                   </DropdownMenuItem>
                 )}
-                {session?.user?.role === 'CUSTOMER' && (
-                  <DropdownMenuItem
-                    onClick={() => setIsReReviewModalOpen(true)}
-                  >
-                    Re-Review
-                  </DropdownMenuItem>
-                )}
+                {session?.user?.role === 'CUSTOMER' &&
+                  !orderDetails.isTestOrder && (
+                    <DropdownMenuItem
+                      onClick={() => setIsReReviewModalOpen(true)}
+                    >
+                      Re-Review
+                    </DropdownMenuItem>
+                  )}
                 {orderDetails.status === 'QC_ASSIGNED' && (
                   <DropdownMenuItem asChild>
                     <a href={asrFileUrl} target='_blank'>
@@ -1148,6 +1179,32 @@ export default memo(function Topbar({
           updateQuill={updateTranscript}
           role={session?.user?.role || ''}
         />
+      )}
+      {showTimeoutDialog && (
+        <Dialog open={showTimeoutDialog} onOpenChange={setShowTimeoutDialog}>
+          <DialogContent
+            className={`max-w-sm sm:max-w-md p-6 rounded-xl shadow-lg text-center space-y-4`}
+          >
+            <div className="flex flex-col items-center space-y-3">
+              <div className="bg-yellow-100 text-yellow-700 rounded-full p-2">
+                <ExclamationTriangleIcon className="h-6 w-6" />
+              </div>
+
+              <DialogTitle className="text-lg font-semibold text-gray-900">
+                File Timedout
+              </DialogTitle>
+
+              <DialogDescription className="space-y-1">
+                <p className="text-gray-800">
+                  This file has been timed out due to inactivity and is now in read-only mode.
+                </p>
+                <p className="text-gray-500 text-sm">
+                  You can view the content but cannot make any changes.
+                </p>
+              </DialogDescription>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
       {/* process with llm */}
       {processWithLLMModalOpen && (

@@ -33,6 +33,7 @@ interface EditorTabComponentProps {
   step: string
   highlightNumbersEnabled: boolean
   setHighlightNumbersEnabled: (enabled: boolean) => void
+  readOnly?: boolean
 }
 
 export const EditorTabComponent = ({
@@ -54,6 +55,7 @@ export const EditorTabComponent = ({
   step,
   highlightNumbersEnabled,
   setHighlightNumbersEnabled,
+  readOnly = false,
 }: EditorTabComponentProps) => (
   <TabsContent
     forceMount
@@ -86,6 +88,7 @@ export const EditorTabComponent = ({
             step={step}
             highlightNumbersEnabled={highlightNumbersEnabled}
             setHighlightNumbersEnabled={setHighlightNumbersEnabled}
+            readOnly={readOnly}
           />
         </div>
       )}

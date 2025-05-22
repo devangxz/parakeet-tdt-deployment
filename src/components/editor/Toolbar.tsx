@@ -59,6 +59,7 @@ interface ToolbarProps {
   toggleHighlightNumerics: () => void
   handleUndo: () => void
   handleRedo: () => void
+  editorReadOnly: boolean
 }
 
 export default function Toolbar({
@@ -85,6 +86,7 @@ export default function Toolbar({
   toggleHighlightNumerics,
   handleUndo,
   handleRedo,
+  editorReadOnly,
 }: ToolbarProps) {
   return (
     <TooltipProvider>
@@ -94,6 +96,7 @@ export default function Toolbar({
             icon={<Undo2 className='w-4 h-4' />}
             onClick={handleUndo}
             tooltip='Undo'
+            disabled={editorReadOnly}
           />
         </TooltipTrigger>
         <TooltipContent>
@@ -107,6 +110,7 @@ export default function Toolbar({
             icon={<Redo2 className='w-4 h-4' />}
             onClick={handleRedo}
             tooltip='Redo'
+            disabled={editorReadOnly}
           />
         </TooltipTrigger>
         <TooltipContent>
@@ -120,6 +124,7 @@ export default function Toolbar({
             icon={<ThickArrowRightIcon className='w-4 h-4' />}
             onClick={playNextBlankInstance}
             tooltip='Play next blank'
+            disabled={editorReadOnly}
           />
         </TooltipTrigger>
         <TooltipContent>
@@ -133,6 +138,7 @@ export default function Toolbar({
             icon={<ThickArrowLeftIcon className='w-4 h-4' />}
             onClick={playPreviousBlankInstance}
             tooltip='Play previous blank'
+            disabled={editorReadOnly}
           />
         </TooltipTrigger>
         <TooltipContent>
@@ -146,6 +152,7 @@ export default function Toolbar({
             icon={<TextAlignLeftIcon className='w-4 h-4' />}
             tooltip='Play audio from the start of current paragraph'
             onClick={playCurrentParagraphInstance}
+            disabled={editorReadOnly}
           />
         </TooltipTrigger>
         <TooltipContent>
@@ -161,6 +168,7 @@ export default function Toolbar({
                 icon={<TimerIcon className='w-4 h-4' />}
                 onClick={setSelectionHandler}
                 tooltip='Adjust timestamps'
+                disabled={editorReadOnly}
               />
             </DialogTrigger>
             <DialogContent>
@@ -175,9 +183,10 @@ export default function Toolbar({
                 placeholder='Enter seconds'
                 value={adjustTimestampsBy}
                 onChange={(e) => setAdjustTimestampsBy(e.target.value)}
+                disabled={editorReadOnly}
               />
               <DialogClose asChild>
-                <Button onClick={handleAdjustTimestamps}>Adjust</Button>
+                <Button onClick={handleAdjustTimestamps} disabled={editorReadOnly}>Adjust</Button>
               </DialogClose>
             </DialogContent>
           </Dialog>
@@ -193,6 +202,7 @@ export default function Toolbar({
             icon={<ZoomInIcon className='w-4 h-4' />}
             tooltip='Increase font size'
             onClick={increaseFontSize}
+            disabled={editorReadOnly}
           />
         </TooltipTrigger>
         <TooltipContent>
@@ -206,6 +216,7 @@ export default function Toolbar({
             icon={<ZoomOutIcon className='w-4 h-4' />}
             tooltip='Decrease font size'
             onClick={decreaseFontSize}
+            disabled={editorReadOnly}
           />
         </TooltipTrigger>
         <TooltipContent>
@@ -219,6 +230,7 @@ export default function Toolbar({
             icon={<ClockIcon className='w-4 h-4' />}
             tooltip='Insert timestamps'
             onClick={insertTimestampBlankAtCursorPositionInstance}
+            disabled={editorReadOnly}
           />
         </TooltipTrigger>
         <TooltipContent>
@@ -232,6 +244,7 @@ export default function Toolbar({
             icon={<MagnifyingGlassIcon className='w-4 h-4' />}
             tooltip='Find and replace'
             onClick={toggleFindAndReplace}
+            disabled={editorReadOnly}
           />
         </TooltipTrigger>
         <TooltipContent>
@@ -251,6 +264,7 @@ export default function Toolbar({
             }
             tooltip='Word Highlight'
             onClick={() => setHighlightWordsEnabled(!highlightWordsEnabled)}
+            disabled={editorReadOnly}
           />
         </TooltipTrigger>
         <TooltipContent>
@@ -264,6 +278,7 @@ export default function Toolbar({
             icon={<BinaryIcon className='w-4 h-4' />}
             tooltip='Highlight numerics'
             onClick={toggleHighlightNumerics}
+            disabled={editorReadOnly}
           />
         </TooltipTrigger>
         <TooltipContent>
@@ -281,6 +296,7 @@ export default function Toolbar({
                   icon={<SpaceEvenlyVerticallyIcon className='w-4 h-4' />}
                   tooltip='Mark section'
                   onClick={markSection}
+                  disabled={editorReadOnly}
                 />
               </TooltipTrigger>
               <TooltipContent>
@@ -294,6 +310,7 @@ export default function Toolbar({
                   icon={<PersonIcon className='w-4 h-4' />}
                   tooltip='Mark examinee'
                   onClick={markExaminee}
+                  disabled={editorReadOnly}
                 />
               </TooltipTrigger>
               <TooltipContent>
@@ -307,6 +324,7 @@ export default function Toolbar({
                   icon={<Pencil2Icon className='w-4 h-4' />}
                   tooltip='Insert witness swear in line'
                   onClick={insertSwearInLine}
+                  disabled={editorReadOnly}
                 />
               </TooltipTrigger>
               <TooltipContent>
@@ -320,6 +338,7 @@ export default function Toolbar({
                   icon={<Pencil1Icon className='w-4 h-4' />}
                   tooltip='Insert interpreter swear in line'
                   onClick={insertInterpreterSwearInLine}
+                  disabled={editorReadOnly}
                 />
               </TooltipTrigger>
               <TooltipContent>
@@ -335,7 +354,8 @@ export default function Toolbar({
                       icon={<TimerOff className='w-4 h-4' />}
                       onClick={setSelectionHandler}
                       tooltip='Remove timestamps'
-                      />
+                      disabled={editorReadOnly}
+                    />
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>

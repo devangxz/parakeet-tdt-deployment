@@ -61,6 +61,7 @@ interface EditorProps {
   step: string
   highlightNumbersEnabled?: boolean
   setHighlightNumbersEnabled: (enabled: boolean) => void
+  readOnly?: boolean
 }
 
 type Sources = 'user' | 'api' | 'silent'
@@ -95,6 +96,7 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     step,
     highlightNumbersEnabled,
     setHighlightNumbersEnabled,
+    readOnly = false,
   } = props
 
   const ctms = initialCtms // Make CTMs constant
@@ -1289,6 +1291,18 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
     }
   }, [highlightNumbersEnabled, orderDetails.fileId])
 
+  // Effect to handle read-only state
+  useEffect(() => {
+    const quill = quillRef.current?.getEditor()
+    if (!quill) return
+    
+    if (readOnly) {
+      quill.disable()
+    } else {
+      quill.enable()
+    }
+  }, [readOnly])
+
   return (
     <div className='relative w-full h-full'>
       <ReactQuill
@@ -1297,10 +1311,11 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
         modules={quillModules}
         defaultValue={{ ops: initialContent }}
         formats={['size', 'background', 'font', 'color', 'bold', 'italics']}
-        className='h-full'
+        className={`h-full ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
         onChangeSelection={handleSelectionChange}
         onBlur={handleBlur}
         onFocus={handleFocus}
+        readOnly={readOnly}
       />
 
       {
