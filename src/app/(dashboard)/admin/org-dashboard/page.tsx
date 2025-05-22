@@ -1,11 +1,13 @@
 'use client'
 
-import { Check, ChevronsUpDown, Loader2 } from 'lucide-react'
+import { Check, ChevronsUpDown, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
+import { addTranscriberToOrg } from '@/app/actions/admin/org-dashboard/add-transcriber-to-org'
 import { getOrganizationDetails } from '@/app/actions/admin/org-dashboard/get-organization-details'
 import { getOrganizations } from '@/app/actions/admin/org-dashboard/get-organizations'
+import { removeQCFromOrg } from '@/app/actions/admin/org-dashboard/remove-qc-from-org'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -22,6 +24,17 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Popover,
   PopoverContent,
@@ -75,6 +88,11 @@ export default function OrganizationDashboardPage() {
   const [selectedOrgUserId, setSelectedOrgUserId] = useState<number | null>(
     null
   )
+  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [selectedQC, setSelectedQC] = useState<QCData | null>(null)
+  const [transcriberEmail, setTranscriberEmail] = useState('')
+  const [isProcessing, setIsProcessing] = useState(false)
 
   useEffect(() => {
     async function loadOrganizations() {
@@ -123,6 +141,63 @@ export default function OrganizationDashboardPage() {
     if (!value) return 'Select organization...'
     return value.split(' (')[0]
   }, [])
+
+  const handleRemoveQC = async () => {
+    if (!selectedQC || !orgDetails || !orgDetails.name) return
+
+    setIsProcessing(true)
+    try {
+      const result = await removeQCFromOrg({
+        qcEmail: selectedQC.email,
+        orgName: orgDetails.name,
+      })
+
+      if (result.success) {
+        toast.success(result.message)
+        setIsRemoveDialogOpen(false)
+        const details = await getOrganizationDetails(
+          selectedOrg!,
+          selectedOrgUserId ?? 0
+        )
+        setOrgDetails(details)
+      } else {
+        toast.error(result.message)
+      }
+    } catch (error) {
+      toast.error('Failed to remove QC from organization')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleAddTranscriber = async () => {
+    if (!transcriberEmail || !orgDetails || !orgDetails.name) return
+
+    setIsProcessing(true)
+    try {
+      const result = await addTranscriberToOrg({
+        transcriberEmail,
+        orgName: orgDetails.name,
+      })
+
+      if (result.success) {
+        toast.success(result.message)
+        const details = await getOrganizationDetails(
+          selectedOrg!,
+          selectedOrgUserId ?? 0
+        )
+        setOrgDetails(details)
+        setTranscriberEmail('')
+        setIsAddDialogOpen(false)
+      } else {
+        toast.error(result.message)
+      }
+    } catch (error) {
+      toast.error('Failed to add transcriber to organization')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
 
   if (initialLoading) {
     return (
@@ -228,11 +303,65 @@ export default function OrganizationDashboardPage() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>QC Performance</CardTitle>
-              <CardDescription>
-                QCs mapped to this organization and their work
-              </CardDescription>
+            <CardHeader className='flex flex-row items-center justify-between'>
+              <div>
+                <CardTitle>QC Performance</CardTitle>
+                <CardDescription>
+                  QCs mapped to this organization and their work
+                </CardDescription>
+              </div>
+
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant='default' size='sm'>
+                    <Plus className='h-4 w-4 mr-2' /> Add Transcriber
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add Transcriber to Organization</DialogTitle>
+                    <DialogDescription>
+                      Enter the email address of the transcriber you want to add
+                      to this organization.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className='grid gap-4 py-4'>
+                    <div className='grid gap-2'>
+                      <Label htmlFor='transcriber-email'>
+                        Transcriber Email
+                      </Label>
+                      <Input
+                        id='transcriber-email'
+                        value={transcriberEmail}
+                        onChange={(e) => setTranscriberEmail(e.target.value)}
+                        placeholder='Enter transcriber email'
+                      />
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button
+                      variant='outline'
+                      onClick={() => setIsAddDialogOpen(false)}
+                      disabled={isProcessing}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleAddTranscriber}
+                      disabled={!transcriberEmail || isProcessing}
+                    >
+                      {isProcessing ? (
+                        <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+                      ) : (
+                        <Plus className='h-4 w-4 mr-2' />
+                      )}
+                      Add
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               {orgDetails.qcs.length > 0 ? (
@@ -244,6 +373,7 @@ export default function OrganizationDashboardPage() {
                       <TableHead>User ID</TableHead>
                       <TableHead>Files Completed</TableHead>
                       <TableHead>Submitted Hours</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -255,6 +385,67 @@ export default function OrganizationDashboardPage() {
                         <TableCell>{qc.filesCount}</TableCell>
                         <TableCell>
                           {qc.submittedHours.toFixed(2)} hours
+                        </TableCell>
+                        <TableCell>
+                          <Dialog
+                            open={
+                              isRemoveDialogOpen && selectedQC?.id === qc.id
+                            }
+                            onOpenChange={(open) => {
+                              if (!open) {
+                                setIsRemoveDialogOpen(false)
+                                setSelectedQC(null)
+                              }
+                            }}
+                          >
+                            <DialogTrigger asChild>
+                              <Button
+                                variant='order'
+                                onClick={() => {
+                                  setSelectedQC(qc)
+                                  setIsRemoveDialogOpen(true)
+                                }}
+                                className='not-rounded'
+                              >
+                                Remove from Organization
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>
+                                  Remove QC from Organization
+                                </DialogTitle>
+                                <DialogDescription>
+                                  Are you sure you want to remove {qc.name} (
+                                  {qc.email}) from this organization?
+                                </DialogDescription>
+                              </DialogHeader>
+                              <DialogFooter>
+                                <Button
+                                  variant='outline'
+                                  onClick={() => {
+                                    setIsRemoveDialogOpen(false)
+                                    setSelectedQC(null)
+                                  }}
+                                  disabled={isProcessing}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  variant='destructive'
+                                  onClick={handleRemoveQC}
+                                  disabled={isProcessing}
+                                >
+                                  {isProcessing ? (
+                                    <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+                                  ) : (
+                                    <Trash2 className='h-4 w-4 mr-2' />
+                                  )}
+                                  Remove
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
                         </TableCell>
                       </TableRow>
                     ))}

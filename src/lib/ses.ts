@@ -161,10 +161,12 @@ async function sendMailHtml(
   try {
     const command = new SendTemplatedEmailCommand(emailParams)
     const result = await ses.send(command)
-    logger.info(`<-- sendMailHtml ${result.MessageId}`)
+    logger.info(`<-- sendMailHtml ${templateId} ${result.MessageId}`)
     return result
   } catch (error) {
-    logger.error(`Error sending HTML email: ${(error as Error).message}`)
+    logger.error(
+      `Error sending HTML email ${templateId}: ${(error as Error).message}`
+    )
     throw error
   }
 }
