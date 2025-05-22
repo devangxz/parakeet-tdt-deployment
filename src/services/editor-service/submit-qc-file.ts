@@ -198,8 +198,6 @@ export async function submitQCFile(
         )
         return
       }
-      console.log('transcriberId', transcriberId)
-      console.log('order.fileId', order.fileId)
       await axios.post(
         `${FILE_CACHE_URL}/save-transcript`,
         {

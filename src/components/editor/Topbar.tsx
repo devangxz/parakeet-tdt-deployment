@@ -302,8 +302,6 @@ export default memo(function Topbar({
 
   useEffect(() => {
     const syncVideoWithAudio = () => {
-      console.log('audioPlayer.current', audioPlayer);
-      console.log('videoRef.current', videoRef.current);
       if (!audioPlayer || !videoRef.current) return
       const player = audioPlayer
       videoRef.current.volume = 0
