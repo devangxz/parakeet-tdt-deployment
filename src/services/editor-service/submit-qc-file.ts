@@ -7,6 +7,7 @@ import {
   OrderStatus,
   OrderType,
   ReportMode,
+  Role,
   TestStatus,
 } from '@prisma/client'
 import axios from 'axios'
@@ -154,11 +155,29 @@ export async function submitQCFile(
       }
     }
 
-    if (order.status !== OrderStatus.QC_ASSIGNED) {
-      logger.error(`Order is not assigned to QC for fileId ${order.fileId}`)
+    const transcriberDetails = await prisma.user.findUnique({
+      where: {
+        id: transcriberId,
+      },
+    })
+
+    if (!transcriberDetails) {
+      logger.error(`No transcriber details found for the given transcriber ID ${transcriberId}`)
       return {
         success: false,
-        message: 'Something went wrong',
+        message: 'Transcriber details not found',
+      }
+    }
+    const transcriberRole = transcriberDetails?.role
+    const isHighRole = ([Role.OM, Role.ADMIN, Role.CUSTOMER, Role.INTERNAL_TEAM_USER] as string[]).includes(transcriberRole)
+    if(!isHighRole){
+      if (order.status !== OrderStatus.QC_ASSIGNED) {
+        logger.error(`[submitQCFile] Transcriber ${transcriberId} with role ${transcriberRole} is not authorized to submit QC file for order ${order.fileId}`)
+        logger.error(`[submitQCFile] Order is not assigned to QC for fileId ${order.fileId}`)
+        return {
+          success: false,
+          message: 'Something went wrong',
+        }
       }
     }
 
@@ -179,7 +198,8 @@ export async function submitQCFile(
         )
         return
       }
-
+      console.log('transcriberId', transcriberId)
+      console.log('order.fileId', order.fileId)
       await axios.post(
         `${FILE_CACHE_URL}/save-transcript`,
         {
@@ -248,7 +268,7 @@ export async function submitQCFile(
       },
     })
 
-    if (!assignment) {
+    if (!assignment && !isHighRole) {
       logger.error(
         `Unauthorized try to submit a QC file by user ${transcriberId} for fileId ${order.fileId}`
       )

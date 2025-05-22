@@ -1061,7 +1061,6 @@ export default memo(function Topbar({
             ref={videoRef}
             src={`${videoUrl}`}
             className='w-full h-full'
-            // controls={true}
             onMouseDown={handleDragChange}
           ></video>
           <button
