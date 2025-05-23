@@ -229,6 +229,7 @@ function EditorPage() {
   const [formatErrors, setFormatErrors] = useState<CombinedASRFormatError[]>([])
   const [diffToggleEnabled, setDiffToggleEnabled] = useState(false)
   const [alignments, setAlignments] = useState<AlignmentType[]>([])
+  const [editorReadOnly, setEditorReadOnly] = useState(false)
   const [activeTab, setActiveTab] = useState('transcribe')
   const [capturedEditorContent, setCapturedEditorContent] = useState<string>('')
   
@@ -1601,6 +1602,7 @@ function EditorPage() {
         setCtms={setCtms}
         editorRef={editorRef}
         step={step}
+        setEditorReadOnly={setEditorReadOnly}
         diffToggleEnabled={diffToggleEnabled}
       />
 
@@ -1618,6 +1620,7 @@ function EditorPage() {
         editorRef={editorRef}
         step={step}
         toggleHighlightNumerics={toggleHighlightNumerics}
+        editorReadOnly={editorReadOnly}
       />
 
       <div className='flex h-full overflow-hidden'>
@@ -1730,6 +1733,7 @@ function EditorPage() {
                         step={step}
                         highlightNumbersEnabled={highlightNumbersEnabled}
                         setHighlightNumbersEnabled={setHighlightNumbersEnabled}
+                        readOnly={editorReadOnly}
                       />
 
                       <InfoTabComponent orderDetails={orderDetails} />
