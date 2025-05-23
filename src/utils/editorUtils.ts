@@ -911,7 +911,7 @@ const generateSubtitles = async(fileId: string, currentAlignments: AlignmentType
     const filteredAlignments = currentAlignments.filter(
       (alignment) => 'type' in alignment && alignment.type !== 'meta'
     )
-    console.log('filteredAlignments', filteredAlignments)
+
     const subtitles = getSRTVTT(filteredAlignments)
     if (subtitles) {
       await uploadSubtitlesAction(fileId, subtitles)
