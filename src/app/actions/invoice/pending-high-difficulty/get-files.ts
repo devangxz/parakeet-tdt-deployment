@@ -1,7 +1,9 @@
 'use server'
 
 import { OrderStatus } from '@prisma/client'
+import { getServerSession } from 'next-auth'
 
+import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 
@@ -13,10 +15,14 @@ export interface HighDifficultyFile {
 
 export async function getHighDifficultyFiles() {
   try {
+    const session = await getServerSession(authOptions)
+    const user = session?.user
+    const userId = user?.internalTeamUserId || user?.userId
     const highDifficultyOrders = await prisma.order.findMany({
       where: {
         highDifficulty: true,
         status: OrderStatus.BLOCKED,
+        userId: userId,
       },
       include: {
         File: {

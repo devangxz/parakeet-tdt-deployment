@@ -54,11 +54,11 @@ export default function HighDifficultyFilesDialog({
   }
 
   const formatReasons = (reasons: string) => {
-    if (!reasons) return 'No specific reasons provided'
-
     try {
-      const issuesArray = reasons.split(',')
-      const formattedHtml = `<ul>${issuesArray
+      const issuesArray =
+        reasons === '' ? ['ambient_noise'] : reasons.split(',')
+      const issues = issuesArray.length === 0 ? ['ambient_noise'] : issuesArray
+      const formattedHtml = `<ul class="list-disc list-inside">${issues
         .map((key) => {
           const issue = AUDIO_ISSUES[key.trim() as keyof typeof AUDIO_ISSUES]
           if (!issue) return ''
@@ -66,13 +66,12 @@ export default function HighDifficultyFilesDialog({
             issue.long.charAt(0).toUpperCase() + issue.long.slice(1)
           return `<li>${longText} (eg. ${issue.example})</li>`
         })
-        .filter(Boolean) // Remove empty strings
+        .filter(Boolean)
         .join('')}</ul>`
 
       return formattedHtml
     } catch (error) {
-      console.error('Error formatting reasons:', error)
-      return reasons // Fallback to original string if formatting fails
+      return reasons
     }
   }
 
@@ -113,7 +112,7 @@ export default function HighDifficultyFilesDialog({
 
         <div className='flex justify-end mt-4'>
           <DialogClose asChild>
-            <Button variant='secondary' onClick={onClose}>
+            <Button variant='order' onClick={onClose}>
               Close
             </Button>
           </DialogClose>

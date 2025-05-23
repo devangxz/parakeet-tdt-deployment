@@ -412,20 +412,22 @@ export default function InvoiceDownloadButton({
 
       const { invoice } = response.responseData
 
-      // Prepare file data if available
       const files: FileItem[] = []
       if (invoice.type !== 'ADD_CREDITS' && response.responseData.files) {
         response.responseData.files.forEach((file: any) => {
+          const price =
+            invoice.type === 'TRANSCRIPT'
+              ? file.price
+              : (invoice.orderRate * (file.File.duration / 60)).toFixed(2)
           files.push({
             name: file.File.filename,
-            amount: file.price,
+            amount: Number(price),
             duration: file.File.duration,
             fileId: file.File.fileId,
           })
         })
       }
 
-      // Set invoice data
       setInvoiceData({
         id: invoice.invoiceId,
         amount: invoice.amount,
@@ -434,7 +436,6 @@ export default function InvoiceDownloadButton({
         files: files.length > 0 ? files : undefined,
       })
 
-      // Set user data
       setUserData({
         userId: invoice.userId.toString(),
         email: invoice.user.email,
