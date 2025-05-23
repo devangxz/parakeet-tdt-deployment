@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import {
   getFileVersionsAction,
   getVersionComparisonAction,
+  getVersionTranscriptAction,
 } from '@/app/actions/editor/get-version-diff'
 import { Button } from '@/components/ui/button'
 import {
@@ -45,6 +46,8 @@ interface VersionCompareDialogProps {
   isOpen: boolean
   fileId: string
   renderDiff: (diffs: [number, string][]) => void
+  currentEditorContent?: string
+  onSaveNeeded?: () => Promise<void>
 }
 
 const TAG_LABELS: Record<string, string> = {
@@ -74,13 +77,18 @@ export default function VersionCompareDialog({
   isOpen,
   fileId,
   renderDiff,
+  currentEditorContent,
+  onSaveNeeded,
 }: VersionCompareDialogProps) {
   const [versions, setVersions] = useState<Version[]>([])
   const [fromVersion, setFromVersion] = useState<Version | null>(null)
   const [toVersion, setToVersion] = useState<Version | null>(null)
   const [isFetchingVersions, setIsFetchingVersions] = useState(false)
   const [isComparing, setIsComparing] = useState(false)
-  const [position, setPosition] = useState({ x: 5, y: 30 })
+  const [position, setPosition] = useState({
+    x: 5,
+    y: window.innerHeight - 150,
+  })
   const [isDragging, setIsDragging] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -89,6 +97,14 @@ export default function VersionCompareDialog({
   const [searchFrom, setSearchFrom] = useState<string>('')
   const [searchTo, setSearchTo] = useState<string>('')
   const isInitialCompareRef = useRef(true)
+  const initialFetchDoneRef = useRef(false)
+  const currentEditorContentRef = useRef<string | undefined>(undefined)
+  const onSaveNeededRef = useRef<(() => Promise<void>) | undefined>(undefined)
+
+  useEffect(() => {
+    currentEditorContentRef.current = currentEditorContent
+    onSaveNeededRef.current = onSaveNeeded
+  }, [currentEditorContent, onSaveNeeded])
 
   const performComparison = useCallback(
     async (from: Version, to: Version) => {
@@ -118,9 +134,12 @@ export default function VersionCompareDialog({
           )
           return
         }
-        
+
         const dmp = new diff_match_patch()
-        const diffs = dmp.diff_contextAwareWordMode(result.fromText, result.toText)
+        const diffs = dmp.diff_contextAwareWordMode(
+          result.fromText,
+          result.toText
+        )
         renderDiff(diffs)
       } catch {
         toast.error('Unable to retrieve version transcript for comparison')
@@ -133,32 +152,62 @@ export default function VersionCompareDialog({
 
   useEffect(() => {
     const fetchVersions = async () => {
+      if (initialFetchDoneRef.current) return
+
       try {
         setIsFetchingVersions(true)
 
         const result = await getFileVersionsAction(fileId)
 
         if (result.success && result.versions?.length) {
+          if (
+            currentEditorContentRef.current &&
+            onSaveNeededRef.current &&
+            result.versions.length > 0
+          ) {
+            const latestVersion = result.versions[0]
+            const versionResult = await getVersionTranscriptAction(
+              fileId,
+              latestVersion
+            )
+
+            if (versionResult.success && versionResult.text) {
+              const latestContent = versionResult.text
+
+              if (
+                currentEditorContentRef.current.trim() !== latestContent.trim()
+              ) {
+                await onSaveNeededRef.current()
+
+                const updatedResult = await getFileVersionsAction(fileId)
+                if (updatedResult.success && updatedResult.versions?.length) {
+                  setVersions(updatedResult.versions)
+
+                  const fromVersion =
+                    updatedResult.versions[updatedResult.versions.length - 1]
+                  const toVersion = updatedResult.versions[0]
+
+                  setFromVersion(fromVersion)
+                  setToVersion(toVersion)
+
+                  initialFetchDoneRef.current = true
+                  setIsFetchingVersions(false)
+                  return
+                }
+              }
+            }
+          }
+
           setVersions(result.versions)
 
-          let fromVersion
+          const fromVersion = result.versions[result.versions.length - 1]
           const toVersion = result.versions[0]
 
           if (result.versions.length === 1) {
             toast.error(
               'At least two versions are required for comparison. Only one version is available for this file.'
             )
-          } else if (toVersion.tag === 'ASSEMBLY_AI_GPT_4O') {
-            fromVersion = result.versions.find((v) => v.tag === 'ASSEMBLY_AI')
-          } else if (result.autoVersionType) {
-            fromVersion = result.versions.find(
-              (v) => v.tag === result.autoVersionType
-            )
           }
-          if (!fromVersion) {
-            fromVersion = result.versions[result.versions.length - 1]
-          }
-
           setFromVersion(fromVersion)
           setToVersion(toVersion)
         } else {
@@ -170,6 +219,7 @@ export default function VersionCompareDialog({
         toast.error('Unable to retrieve versions')
       } finally {
         setIsFetchingVersions(false)
+        initialFetchDoneRef.current = true
       }
     }
 
@@ -177,6 +227,10 @@ export default function VersionCompareDialog({
       fetchVersions()
       setSearchFrom('')
       setSearchTo('')
+
+      return () => {
+        initialFetchDoneRef.current = false
+      }
     }
   }, [isOpen, fileId])
 
@@ -258,7 +312,7 @@ export default function VersionCompareDialog({
     const rawTag = version.tag || ''
     const tagLabel = TAG_LABELS[rawTag] || rawTag
 
-    const label = rawTag ? `${timeFormatted} – ${tagLabel}` : `${timeFormatted}`
+    const label = rawTag ? `${tagLabel} | ${timeFormatted}` : timeFormatted
 
     return isLatestVersion ? `${label} (Current Version)` : label
   }
@@ -300,184 +354,219 @@ export default function VersionCompareDialog({
   return (
     <div
       ref={dialogRef}
-      className={`${
-        !isOpen ? 'hidden' : ''
-      } fixed z-[40] rounded-lg shadow-lg border bg-background p-4 cursor-move`}
+      className='fixed z-[50] shadow-lg border bg-background cursor-move overflow-hidden rounded-lg inline-block'
       style={{ top: `${position.y}px`, left: `${position.x}px` }}
       onMouseDown={handleMouseDown}
     >
-      <div className='flex flex-col md:flex-row justify-evenly items-center py-2 gap-4'>
-        <div className='flex flex-row gap-2 items-center w-full md:w-auto'>
-          <label
-            htmlFor='from-version'
-            className='text-sm font-medium items-center'
-          >
-            From Version:
-          </label>
-          <Popover open={fromPopoverOpen} onOpenChange={setFromPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant='outline'
-                role='combobox'
-                aria-expanded={fromPopoverOpen}
-                className='flex justify-between'
-                disabled={isFetchingVersions || isComparing}
-              >
-                {fromVersion
-                  ? formatVersionLabel(fromVersion, fromVersion === versions[0])
-                  : 'Select version'}
-                <ChevronDownIcon className='ml-2 h-4 w-4 shrink-0' />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className='w-[330px] p-0'>
-              <Command>
-                <CommandInput
-                  placeholder='Search versions...'
-                  value={searchFrom}
-                  onValueChange={setSearchFrom}
-                />
-                <CommandList>
-                  <ScrollArea className='max-h-72 overflow-auto'>
-                    <CommandEmpty>No version found</CommandEmpty>
-                    <CommandGroup>
-                      {versions
-                        .filter(
-                          (version) =>
-                            searchFrom === '' ||
-                            formatVersionLabel(version)
-                              .toLowerCase()
-                              .includes(searchFrom.toLowerCase())
-                        )
-                        .map((version) => {
-                          const versionId =
-                            version.s3VersionId ?? version.commitHash ?? ''
-                          const selectedFromId =
-                            fromVersion?.s3VersionId ??
-                            fromVersion?.commitHash ??
-                            ''
-                          return (
-                            <CommandItem
-                              className='cursor-pointer'
-                              key={version.s3VersionId || version.commitHash}
-                              value={formatVersionLabel(version)}
-                              onSelect={() => {
-                                setFromVersion(version)
-                                setFromPopoverOpen(false)
-                                isInitialCompareRef.current = true
-                              }}
-                            >
-                              <div className='flex-1'>
-                                {formatSelectVersionLabel(
-                                  version,
-                                  version === versions[0]
-                                )}
-                              </div>
-                              <CheckIcon
-                                className={cn(
-                                  'ml-2 h-4 w-4',
-                                  versionId === selectedFromId
-                                    ? 'opacity-100'
-                                    : 'opacity-0'
-                                )}
-                              />
-                            </CommandItem>
+      <div className='flex flex-col justify-evenly items-stretch w-full'>
+        <div className='flex w-full md:flex-row justify-between items-center gap-4 md:gap-8 p-4 pb-3'>
+          <div className='flex flex-col gap-1 items-start w-full md:w-auto'>
+            <label htmlFor='from-version' className='text-sm font-medium ml-1'>
+              From Version:
+            </label>
+            <Popover open={fromPopoverOpen} onOpenChange={setFromPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant='outline'
+                  role='combobox'
+                  aria-expanded={fromPopoverOpen}
+                  className='flex justify-between items-center py-1 h-auto w-full'
+                  disabled={isFetchingVersions || isComparing}
+                >
+                  {fromVersion ? (
+                    <div className='flex flex-col items-start'>
+                      <div className='flex items-center gap-1.5'>
+                        <span className='text-sm font-medium'>
+                          {fromVersion.tag
+                            ? TAG_LABELS[fromVersion.tag] || fromVersion.tag
+                            : ''}
+                          {fromVersion === versions[0]
+                            ? ' (Current Version)'
+                            : ''}
+                        </span>
+                      </div>
+                      <span className='text-xs text-muted-foreground'>
+                        {format(
+                          new Date(fromVersion.timestamp),
+                          'MMM d, h:mm:ss a'
+                        )}
+                      </span>
+                    </div>
+                  ) : (
+                    'Select version'
+                  )}
+                  <ChevronDownIcon className='ml-4 h-4 w-4 shrink-0' />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className='w-[330px] p-0'>
+                <Command>
+                  <CommandInput
+                    placeholder='Search versions...'
+                    value={searchFrom}
+                    onValueChange={setSearchFrom}
+                  />
+                  <CommandList>
+                    <ScrollArea className='max-h-72 overflow-auto'>
+                      <CommandEmpty>No version found</CommandEmpty>
+                      <CommandGroup>
+                        {versions
+                          .filter(
+                            (version) =>
+                              searchFrom === '' ||
+                              formatVersionLabel(version)
+                                .toLowerCase()
+                                .includes(searchFrom.toLowerCase())
                           )
-                        })}
-                    </CommandGroup>
-                  </ScrollArea>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
+                          .map((version) => {
+                            const versionId =
+                              version.s3VersionId ?? version.commitHash ?? ''
+                            const selectedFromId =
+                              fromVersion?.s3VersionId ??
+                              fromVersion?.commitHash ??
+                              ''
+                            return (
+                              <CommandItem
+                                className='cursor-pointer'
+                                key={version.s3VersionId || version.commitHash}
+                                value={formatVersionLabel(version)}
+                                onSelect={() => {
+                                  setFromVersion(version)
+                                  setFromPopoverOpen(false)
+                                  isInitialCompareRef.current = true
+                                }}
+                              >
+                                <div className='flex-1'>
+                                  {formatSelectVersionLabel(
+                                    version,
+                                    version === versions[0]
+                                  )}
+                                </div>
+                                <CheckIcon
+                                  className={cn(
+                                    'ml-2 h-4 w-4',
+                                    versionId === selectedFromId
+                                      ? 'opacity-100'
+                                      : 'opacity-0'
+                                  )}
+                                />
+                              </CommandItem>
+                            )
+                          })}
+                      </CommandGroup>
+                    </ScrollArea>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
 
-        <div className='hidden md:flex items-center justify-center'>
-          {isFetchingVersions || isComparing ? (
-            <ReloadIcon className='h-5 w-5 animate-spin text-muted-foreground' />
-          ) : (
-            <ArrowRightIcon className='h-5 w-5' />
-          )}
-        </div>
+          <div className='hidden md:flex items-center justify-center'>
+            {isFetchingVersions || isComparing ? (
+              <ReloadIcon className='h-5 w-5 animate-spin text-muted-foreground' />
+            ) : (
+              <ArrowRightIcon className='h-5 w-5' />
+            )}
+          </div>
 
-        <div className='flex flex-row gap-2 w-full md:w-auto items-center'>
-          <label htmlFor='to-version' className='text-sm font-medium'>
-            To Version:
-          </label>
-          <Popover open={toPopoverOpen} onOpenChange={setToPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant='outline'
-                role='combobox'
-                aria-expanded={toPopoverOpen}
-                className='flex justify-between'
-                disabled={isFetchingVersions || isComparing}
-              >
-                {toVersion
-                  ? formatVersionLabel(toVersion, toVersion === versions[0])
-                  : 'Select version'}
-                <ChevronDownIcon className='ml-2 h-4 w-4 shrink-0' />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className='w-[330px] p-0'>
-              <Command>
-                <CommandInput
-                  placeholder='Search versions...'
-                  value={searchTo}
-                  onValueChange={setSearchTo}
-                />
-                <CommandList>
-                  <ScrollArea className='max-h-72 overflow-auto'>
-                    <CommandEmpty>No version found</CommandEmpty>
-                    <CommandGroup>
-                      {versions
-                        .filter(
-                          (version) =>
-                            searchTo === '' ||
-                            formatVersionLabel(version)
-                              .toLowerCase()
-                              .includes(searchTo.toLowerCase())
-                        )
-                        .map((version) => {
-                          const versionId =
-                            version.s3VersionId ?? version.commitHash ?? ''
-                          const selectedToId =
-                            toVersion?.s3VersionId ??
-                            toVersion?.commitHash ??
-                            ''
-                          return (
-                            <CommandItem
-                              className='cursor-pointer'
-                              key={version.s3VersionId || version.commitHash}
-                              value={formatVersionLabel(version)}
-                              onSelect={() => {
-                                setToVersion(version)
-                                setToPopoverOpen(false)
-                                isInitialCompareRef.current = true
-                              }}
-                            >
-                              <div className='flex-1'>
-                                {formatSelectVersionLabel(
-                                  version,
-                                  version === versions[0]
-                                )}
-                              </div>
-                              <CheckIcon
-                                className={cn(
-                                  'ml-2 h-4 w-4',
-                                  versionId === selectedToId
-                                    ? 'opacity-100'
-                                    : 'opacity-0'
-                                )}
-                              />
-                            </CommandItem>
+          <div className='flex flex-col gap-1 items-start w-full md:w-auto'>
+            <label htmlFor='to-version' className='text-sm font-medium ml-1'>
+              To Version:
+            </label>
+            <Popover open={toPopoverOpen} onOpenChange={setToPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant='outline'
+                  role='combobox'
+                  aria-expanded={toPopoverOpen}
+                  className='flex justify-between items-center py-1 h-auto w-full'
+                  disabled={isFetchingVersions || isComparing}
+                >
+                  {toVersion ? (
+                    <div className='flex flex-col items-start'>
+                      <div className='flex items-center gap-1.5'>
+                        <span className='text-sm font-medium'>
+                          {toVersion.tag
+                            ? TAG_LABELS[toVersion.tag] || toVersion.tag
+                            : ''}
+                          {toVersion === versions[0]
+                            ? ' (Current Version)'
+                            : ''}
+                        </span>
+                      </div>
+                      <span className='text-xs text-muted-foreground'>
+                        {format(
+                          new Date(toVersion.timestamp),
+                          'MMM d, h:mm:ss a'
+                        )}
+                      </span>
+                    </div>
+                  ) : (
+                    'Select version'
+                  )}
+                  <ChevronDownIcon className='ml-4 h-4 w-4 shrink-0' />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className='w-[330px] p-0'>
+                <Command>
+                  <CommandInput
+                    placeholder='Search versions...'
+                    value={searchTo}
+                    onValueChange={setSearchTo}
+                  />
+                  <CommandList>
+                    <ScrollArea className='max-h-72 overflow-auto'>
+                      <CommandEmpty>No version found</CommandEmpty>
+                      <CommandGroup>
+                        {versions
+                          .filter(
+                            (version) =>
+                              searchTo === '' ||
+                              formatVersionLabel(version)
+                                .toLowerCase()
+                                .includes(searchTo.toLowerCase())
                           )
-                        })}
-                    </CommandGroup>
-                  </ScrollArea>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+                          .map((version) => {
+                            const versionId =
+                              version.s3VersionId ?? version.commitHash ?? ''
+                            const selectedToId =
+                              toVersion?.s3VersionId ??
+                              toVersion?.commitHash ??
+                              ''
+                            return (
+                              <CommandItem
+                                className='cursor-pointer'
+                                key={version.s3VersionId || version.commitHash}
+                                value={formatVersionLabel(version)}
+                                onSelect={() => {
+                                  setToVersion(version)
+                                  setToPopoverOpen(false)
+                                  isInitialCompareRef.current = true
+                                }}
+                              >
+                                <div className='flex-1'>
+                                  {formatSelectVersionLabel(
+                                    version,
+                                    version === versions[0]
+                                  )}
+                                </div>
+                                <CheckIcon
+                                  className={cn(
+                                    'ml-2 h-4 w-4',
+                                    versionId === selectedToId
+                                      ? 'opacity-100'
+                                      : 'opacity-0'
+                                  )}
+                                />
+                              </CommandItem>
+                            )
+                          })}
+                      </CommandGroup>
+                    </ScrollArea>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       </div>
     </div>

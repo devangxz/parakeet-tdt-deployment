@@ -8,7 +8,7 @@ import { FILE_CACHE_URL } from '@/constants'
 import logger from '@/lib/logger'
 import { getFileVersionFromS3 } from '@/utils/backend-helper'
 
-export interface VersionComparisonResult {
+interface VersionComparisonResult {
   success: boolean
   fromText?: string | null
   toText?: string | null
@@ -154,11 +154,10 @@ export async function getVersionComparisonAction(
   }
 }
 
-export interface VersionsResult {
+interface VersionsResult {
   success: boolean
   versions?: Version[]
   message?: string | null
-  autoVersionType?: string | null
 }
 
 export async function getFileVersionsAction(
@@ -195,7 +194,6 @@ export async function getFileVersionsAction(
     return {
       success: true,
       versions,
-      autoVersionType: versionsResponse.data?.autoVersionType || null
     }
   } catch (error) {
     logger.error(
@@ -204,6 +202,51 @@ export async function getFileVersionsAction(
     return {
       success: false,
       message: 'Unable to retrieve versions',
+    }
+  }
+}
+
+interface VersionTranscriptResult {
+  success: boolean
+  text?: string | null
+  message?: string
+}
+
+export async function getVersionTranscriptAction(
+  fileId: string,
+  version: Version
+): Promise<VersionTranscriptResult> {
+  try {
+    const tokenRes = await fileCacheTokenAction()
+    if (!tokenRes.success) {
+      return {
+        success: false,
+        message: 'Failed to authenticate',
+      }
+    }
+
+    const versionText = await getTranscriptForVersion(
+      fileId,
+      version,
+      tokenRes.token as string
+    )
+
+    if (!versionText) {
+      return {
+        success: false,
+        message: 'Unable to retrieve version transcript',
+      }
+    }
+
+    return {
+      success: true,
+      text: versionText,
+    }
+  } catch (error) {
+    logger.error(`Error retrieving version transcript for file: ${fileId}, error: ${error}`)
+    return {
+      success: false,
+      message: 'Unable to retrieve version transcript',
     }
   }
 }

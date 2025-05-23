@@ -48,6 +48,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { RenderPDFDocument } from '@/components/utils'
@@ -228,8 +229,9 @@ function EditorPage() {
   const [formatErrors, setFormatErrors] = useState<CombinedASRFormatError[]>([])
   const [diffToggleEnabled, setDiffToggleEnabled] = useState(false)
   const [alignments, setAlignments] = useState<AlignmentType[]>([])
-  const [isVersionLoadingDialogOpen, setIsVersionLoadingDialogOpen] = useState(false)
-
+  const [activeTab, setActiveTab] = useState('transcribe')
+  const [capturedEditorContent, setCapturedEditorContent] = useState<string>('')
+  
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
     if (!quill) return
@@ -1213,95 +1215,6 @@ function EditorPage() {
     return () => clearTimeout(timeoutId)
   }, [quillRef])
 
-  const generateDiff = (
-    originalTranscript: string,
-    currentTranscript: string
-  ) => {
-    const dmp = new diff_match_patch()
-    const diff = dmp.diff_contextAwareWordMode(originalTranscript, currentTranscript)
-    return diff
-  }
-
-  const renderDiff = useCallback(
-    (diffs: [number, string][]) => {
-      const quill = quillRef?.current?.getEditor()
-      if (!quill) return
-     
-      const delta = new Delta()
-      diffs.forEach(([op, text]) => {
-        if (op === DIFF_INSERT) {
-          delta.insert(text, { background: 'var(--diff-insert-color)' })
-        } else if (op === DIFF_DELETE) {
-          delta.insert(text, { background: 'var(--diff-delete-color)', strike: true })
-        } else {
-          delta.insert(text)
-        }
-      })
-      quill.setContents(delta, 'silent')
-      
-      if (editorRef.current) {
-        editorRef.current?.triggerAlignmentUpdate()        
-      }
-    },
-    [quillRef, editorRef]
-  )
-
-  const toggleDiffView = useCallback(
-    (newDiffToggleValue = diffToggleEnabled) => {
-      const quill = quillRef?.current?.getEditor()
-      if (!quill) return
-
-      setTimeout(async () => {
-        try {
-          if (!newDiffToggleValue) {
-            const savedTranscript = saveTranscriptInDiffMode()
-            quill.setContents(getFormattedContent(savedTranscript), 'silent')
-            
-            if (editorRef.current) {
-              setTimeout(() => {
-                editorRef.current?.triggerAlignmentUpdate()
-              }, 100)
-            }
-            } else {
-            const currentText = quill.getText().trim()
-            const originalTranscript = orderDetails.isTestOrder
-              ? testTranscript
-              : await getFormattedTranscript(ctms, orderDetails.fileId)
-            const diff = generateDiff(originalTranscript, currentText) || []
-            renderDiff(diff)
-
-            const cleanTranscript = saveTranscriptInDiffMode()
-            if (cleanTranscript) {
-              persistEditorDataIDB(orderDetails.fileId, {
-                transcript: cleanTranscript,
-                listenCount,
-                editedSegments: Array.from(editedSegments),
-              })
-            }
-          }
-        } catch (error) {
-          toast.error('Cannot toggle diff mode')
-          setIsVersionLoadingDialogOpen(false)
-          setDiffToggleEnabled(false)
-        }
-      }, 0)
-    },
-    [
-      quillRef,
-      ctms,
-      diffToggleEnabled,
-      generateDiff,
-      saveTranscriptInDiffMode,
-      orderDetails.fileId,
-      orderDetails.isTestOrder,
-      testTranscript,
-      listenCount,
-      editedSegments,
-      renderDiff,
-      editorRef,
-    ]
-  )
-
   useEffect(() => {
     const generateAlignments = async () => {
       if (editorRef.current && alignments.length === 0 && initialEditorData) {
@@ -1521,57 +1434,146 @@ function EditorPage() {
     diffToggleEnabled,
     quillRef,
     orderDetails.fileId,
-    listenCount,
-    editedSegments,
     editorRef,
     saveTranscriptInDiffMode,
   ])
 
-  const handleDiffToggle = useCallback(() => {
-    if (!diffToggleEnabled) {
-      setIsVersionLoadingDialogOpen(true)
-      
-      ;(async () => {
-        try {
-          await handleSave(
-            {
-              getEditorText,
-              orderDetails,
-              setButtonLoading,
-              listenCount,
-              editedSegments,
-              role: session?.user?.role || '',
-              quill: quillRef?.current?.getEditor(),
-            },
-            false
-          )
+  const generateDiff = (
+    originalTranscript: string,
+    currentTranscript: string
+  ) => {
+    const dmp = new diff_match_patch()
+    const diff = dmp.diff_contextAwareWordMode(originalTranscript, currentTranscript)
+    return diff
+  }
 
-          setDiffToggleEnabled(true)
-          toggleDiffView(true)
-          setIsVersionLoadingDialogOpen(false)
-        } catch (error) {
-          toast.error('Cannot switch to diff mode')
-          setIsVersionLoadingDialogOpen(false)
-          setDiffToggleEnabled(false)
+  const renderDiff = useCallback(
+    (diffs: [number, string][]) => {
+      const quill = quillRef?.current?.getEditor()
+      if (!quill) return
+
+      const delta = new Delta()
+      diffs.forEach(([op, text]) => {
+        if (op === DIFF_INSERT) {
+          delta.insert(text, { background: 'var(--diff-insert-color)' })
+        } else if (op === DIFF_DELETE) {
+          delta.insert(text, { background: 'var(--diff-delete-color)', strike: true })
+        } else {
+          delta.insert(text)
         }
-      })()
-    } else {
-      toggleDiffView(false)
-      setDiffToggleEnabled(false)
+      })
+      quill.setContents(delta, 'silent')
+
+      if (editorRef.current) {
+        editorRef.current?.triggerAlignmentUpdate()
+      }
+    },
+    [quillRef, editorRef]
+  )
+
+  const handleSaveForDiff = useCallback(async () => {
+    try {
+      await handleSave(
+        {
+          getEditorText,
+          orderDetails,
+          setButtonLoading,
+          listenCount,
+          editedSegments,
+          role: session?.user?.role || '',
+          quill: quillRef?.current?.getEditor(),
+        },
+        false
+      )
+    } catch (error) {
+      toast.error('Error saving changes before diff comparison')
+      throw error
     }
   }, [
-    diffToggleEnabled,
-    toggleDiffView,
-    handleSave,
     getEditorText,
+    handleSave,
     orderDetails,
     setButtonLoading,
     listenCount,
     editedSegments,
     session?.user?.role,
     quillRef,
-    setIsVersionLoadingDialogOpen,
   ])
+
+  const toggleDiffView = useCallback(
+    (newDiffToggleValue = diffToggleEnabled) => {
+      const quill = quillRef?.current?.getEditor()
+      if (!quill) return
+
+      setTimeout(async () => {
+        try {
+          if (!newDiffToggleValue) {
+            const savedTranscript = saveTranscriptInDiffMode()
+            quill.setContents(getFormattedContent(savedTranscript), 'silent')
+
+            if (editorRef.current) {
+              setTimeout(() => {
+                editorRef.current?.triggerAlignmentUpdate()
+              }, 100)
+            }
+          } else {
+            const currentText = quill.getText().trim()
+            const originalTranscript = orderDetails.isTestOrder
+              ? testTranscript
+              : await getFormattedTranscript(ctms, orderDetails.fileId)
+            const diff = generateDiff(originalTranscript, currentText) || []
+            renderDiff(diff)
+
+            const cleanTranscript = saveTranscriptInDiffMode()
+            if (cleanTranscript) {
+              persistEditorDataIDB(orderDetails.fileId, {
+                transcript: cleanTranscript,
+                listenCount,
+                editedSegments: Array.from(editedSegments),
+              })
+            }
+          }
+        } catch (error) {
+          toast.error('Cannot toggle diff mode')
+          setDiffToggleEnabled(false)
+        }
+      }, 0)
+    },
+    [
+      quillRef,
+      ctms,
+      diffToggleEnabled,
+      generateDiff,
+      saveTranscriptInDiffMode,
+      orderDetails.fileId,
+      orderDetails.isTestOrder,
+      testTranscript,
+      listenCount,
+      editedSegments,
+      renderDiff,
+      editorRef,
+    ]
+  )
+
+  const handleDiffToggle = useCallback(() => {
+    if (!diffToggleEnabled) {
+      setCapturedEditorContent(getEditorText())
+
+      ;(async () => {
+        try {
+          setDiffToggleEnabled(true)
+          toggleDiffView(true)
+        } catch (error) {
+          toast.error('Cannot switch to diff mode')
+          setDiffToggleEnabled(false)
+        }
+      })()
+    } else {
+      toggleDiffView(false)
+      setDiffToggleEnabled(false)
+      setCapturedEditorContent('')
+    }
+  }, [diffToggleEnabled, toggleDiffView, getEditorText])
 
   return (
     <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
@@ -1600,7 +1602,6 @@ function EditorPage() {
         editorRef={editorRef}
         step={step}
         diffToggleEnabled={diffToggleEnabled}
-        handleDiffToggle={handleDiffToggle}
       />
 
       <Header
@@ -1617,8 +1618,6 @@ function EditorPage() {
         editorRef={editorRef}
         step={step}
         toggleHighlightNumerics={toggleHighlightNumerics}
-        diffToggleEnabled={diffToggleEnabled}
-        handleDiffToggle={handleDiffToggle}
       />
 
       <div className='flex h-full overflow-hidden'>
@@ -1661,7 +1660,14 @@ function EditorPage() {
                       <InfoTabComponent orderDetails={orderDetails} />
                     </Tabs>
                   ) : (
-                    <Tabs defaultValue='transcribe' className='h-full'>
+                    <Tabs
+                      defaultValue='transcribe'
+                      value={activeTab}
+                      onValueChange={(value) => {
+                        setActiveTab(value)
+                      }}
+                      className='h-full'
+                    >
                       <div className='flex border-b border-customBorder text-md font-medium'>
                         <TabsList className='px-2 gap-x-7'>
                           <TabsTrigger
@@ -1683,6 +1689,20 @@ function EditorPage() {
                             Speakers
                           </TabsTrigger>
                         </TabsList>
+
+                        {activeTab === 'transcribe' && (
+                          <div className='ml-auto pr-4 flex items-center gap-2'>
+                            <span className='text-sm text-muted-foreground'>
+                              Diff Mode
+                            </span>
+                            <Switch
+                              checked={diffToggleEnabled}
+                              onCheckedChange={handleDiffToggle}
+                              aria-label='Toggle diff mode'
+                              disabled={!initialEditorData}
+                            />
+                          </div>
+                        )}
                       </div>
 
                       <EditorTabComponent
@@ -2139,23 +2159,9 @@ function EditorPage() {
             isOpen={diffToggleEnabled}
             fileId={orderDetails.fileId}
             renderDiff={renderDiff}
+            currentEditorContent={capturedEditorContent}
+            onSaveNeeded={handleSaveForDiff}
           />
-        )}
-
-        {isVersionLoadingDialogOpen && !diffToggleEnabled && (
-          <Dialog open={isVersionLoadingDialogOpen} modal>
-            <DialogContent className='max-w-md p-6 flex flex-col items-center justify-center [&>button]:hidden'>
-              <div className='flex flex-col items-center space-y-4'>
-                <ReloadIcon className='h-8 w-8 animate-spin text-primary' />
-                <DialogTitle className='text-center'>
-                  Loading version comparison...
-                </DialogTitle>
-                <DialogDescription className='text-center'>
-                  Please wait while we prepare the versions for comparison.
-                </DialogDescription>
-              </div>
-            </DialogContent>
-          </Dialog>
         )}
       </div>
     </div>
