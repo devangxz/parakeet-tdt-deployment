@@ -680,7 +680,11 @@ const fetchFileDetails = async ({
     }
     await persistEditorDataIDB(orderRes.orderDetails.fileId, { transcript })
     
-    const originalCtms = transcriptRes.data.result.ctms
+    let originalCtms = transcriptRes.data.result.ctms
+    originalCtms = originalCtms.filter((ctm: CTMType) => ctm !== null)
+    if(Array.isArray(originalCtms) && originalCtms.length > 0 && Array.isArray(originalCtms[0])) {
+      originalCtms = originalCtms.flat()
+    }
     setCtms(originalCtms)
     if (isTestOrder && transcript) {
       try {
