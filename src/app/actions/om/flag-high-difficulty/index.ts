@@ -64,6 +64,7 @@ export async function flagHighDifficulty(formData: {
 
       const templateData = {
         filename: file?.filename || '',
+        url: `https://scribie.ai/payments/paid`,
       }
 
       await sendTemplateMail(
