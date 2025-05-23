@@ -6,6 +6,7 @@ import DropIn from 'braintree-web-drop-in-react'
 import { Session } from 'next-auth'
 import { useState } from 'react'
 
+import InvoiceDownloadButton from '../invoice-download-button'
 import PaymentSuccessIcon from '../payment-success'
 import { checkout } from '@/app/actions/payment/checkout'
 import { Button } from '@/components/ui/button'
@@ -158,6 +159,11 @@ const AdditionalProofreadingDialog = ({
             <DialogClose asChild>
               <Button variant='order'>Close</Button>
             </DialogClose>
+            <InvoiceDownloadButton
+              invoiceId={invoiceId}
+              buttonText='Download PDF'
+              variant='order'
+            />
             {!paymentSuccess && (
               <>
                 {isLoading ? (

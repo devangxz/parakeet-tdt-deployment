@@ -106,6 +106,7 @@ export async function flagHighDifficulty(formData: {
           deadlineTs: addHours(new Date(), delayPeriod),
           delayReason: 'HIGH_DIFFICULTY',
           deliveredTs: addHours(new Date(), delayPeriod),
+          comments: issues,
         },
       })
 
