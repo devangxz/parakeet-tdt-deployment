@@ -1436,6 +1436,8 @@ function EditorPage() {
     quillRef,
     orderDetails.fileId,
     editorRef,
+    listenCount,
+    editedSegments,
     saveTranscriptInDiffMode,
   ])
 
