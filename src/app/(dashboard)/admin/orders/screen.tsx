@@ -9,7 +9,10 @@ import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { fetchScreeningOrders } from '@/app/actions/om/fetch-screening-orders'
 import AcceptRejectScreenFileDialog from '@/components/admin-components/accept-reject-screen-file'
 import AssignQcDialog from '@/components/admin-components/assign-qc-dialog'
-import AudioWaveformPlayer, { AudioProvider, RowPlayButton } from '@/components/admin-components/audio-waveform-player'
+import AudioWaveformPlayer, {
+  AudioProvider,
+  RowPlayButton,
+} from '@/components/admin-components/audio-waveform-player'
 import OpenDiffDialog from '@/components/admin-components/diff-dialog'
 import FlagHighDifficulyDialog from '@/components/admin-components/flag-high-difficulty-dialog'
 import RevertToAssemblyAITranscriptDialog from '@/components/admin-components/revert-to-assembly-ai-transcript-dialog'
@@ -83,7 +86,11 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [orderId, setOrderId] = useState<string>('')
-  const [orderData, setOrderData] = useState<{ fileId: string; orderId: number; currentPwer: number } | null>(null)
+  const [orderData, setOrderData] = useState<{
+    fileId: string
+    orderId: number
+    currentPwer: number
+  } | null>(null)
   const [selectedFileId, setSelectedFileId] = useState<string>('')
   const [openDialog, setOpenDialog] = useState(false)
   const [isAccept, setIsAccept] = useState(true)
@@ -152,6 +159,20 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
             screenCount: order.screenCount,
           }
         }) as unknown as File[]
+
+        const now = new Date()
+        orders.sort((a, b) => {
+          const aDelivery = new Date(a.deliveryTs)
+          const bDelivery = new Date(b.deliveryTs)
+
+          const aOverdue = aDelivery < now
+          const bOverdue = bDelivery < now
+
+          if (aOverdue && !bOverdue) return -1
+          if (!aOverdue && bOverdue) return 1
+          return aDelivery.getTime() - bDelivery.getTime()
+        })
+
         setScreeningFiles(orders ?? [])
         setError(null)
 
@@ -213,9 +234,7 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
         <div className='font-medium flex items-center gap-2'>
           <span>{row.getValue('index')}</span>
           {waveformUrls[row.original.fileId] && (
-            <RowPlayButton 
-              fileId={row.original.fileId} 
-            />
+            <RowPlayButton fileId={row.original.fileId} />
           )}
         </div>
       ),
@@ -327,10 +346,15 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
       accessorKey: 'reportOption',
       header: 'Reason',
       cell: ({ row }) => (
-        <div className='capitalize font-medium' style={{ minWidth: '200px', maxWidth: '200px' }}>
-          {reportReasonMap[row.original.reportOption] || row.original.reportComment ? (
+        <div
+          className='capitalize font-medium'
+          style={{ minWidth: '200px', maxWidth: '200px' }}
+        >
+          {reportReasonMap[row.original.reportOption] ||
+          row.original.reportComment ? (
             <>
-              {reportReasonMap[row.original.reportOption] && reportReasonMap[row.original.reportOption]}
+              {reportReasonMap[row.original.reportOption] &&
+                reportReasonMap[row.original.reportOption]}
               {row.original.reportComment && (
                 <div className='text-xs text-gray-500 mt-1 italic'>
                   ({row.original.reportComment})
@@ -370,9 +394,7 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
       accessorKey: 'pwer',
       header: 'PWER',
       cell: ({ row }) => (
-        <div className='font-medium'>
-          {row.getValue('pwer')}
-        </div>
+        <div className='font-medium'>{row.getValue('pwer')}</div>
       ),
     },
     {
@@ -461,9 +483,9 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
     if (!('fileId' in row)) return null
     const fileId = row.fileId as string
     if (!waveformUrls[fileId]) return null
-    
+
     return (
-      <AudioWaveformPlayer 
+      <AudioWaveformPlayer
         fileId={fileId}
         waveformUrl={waveformUrls[fileId]}
         duration={row.duration}

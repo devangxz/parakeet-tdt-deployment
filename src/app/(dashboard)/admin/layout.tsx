@@ -14,6 +14,7 @@ import {
   BarChart,
   Headphones,
   EyeIcon,
+  DollarSign,
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import React, { useEffect, useRef } from 'react'
@@ -104,6 +105,12 @@ export default function FilesLayout({
       href: '/admin/revenue-dashboard',
       name: 'Revenue Dashboard',
       icon: CircleDollarSign,
+      isActive: false,
+    },
+    {
+      href: '/admin/org-revenue-dashboard',
+      name: 'Org Revenue Dashboard',
+      icon: DollarSign,
       isActive: false,
     },
     {

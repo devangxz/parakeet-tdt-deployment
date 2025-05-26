@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use server'
 
-import { JobStatus, OrderStatus } from '@prisma/client'
+import { OrderStatus } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/app/api/auth/[...nextauth]/auth-options'
@@ -53,21 +53,6 @@ export async function getICQCFiles() {
         ?.split(',')
         .map((customer) => customer.toLowerCase()) || []
 
-    const cancelledJobs = await prisma.jobAssignment.findMany({
-      where: {
-        transcriberId: user.userId,
-        status: {
-          in: [JobStatus.CANCELLED, JobStatus.REJECTED],
-        },
-        type: 'QC',
-      },
-      select: {
-        orderId: true,
-      },
-    })
-
-    const cancelledOrderIds = cancelledJobs.map((job) => job.orderId)
-
     const now = new Date()
 
     let primaryFiles = await prisma.order.findMany({
@@ -77,9 +62,6 @@ export async function getICQCFiles() {
         },
         updatedAt: {
           lte: new Date(Date.now() - 60 * 1000),
-        },
-        id: {
-          notIn: cancelledOrderIds,
         },
         OR: [
           { priority: { gte: 1 } },
@@ -122,7 +104,10 @@ export async function getICQCFiles() {
 
     primaryFiles = primaryFiles.filter((file: any) => {
       if (!file.orgName) return true
-      return enabledCustomers.includes(file.orgName.toLowerCase())
+      if (file.orgName.toLowerCase() === 'remotelegal') {
+        return enabledCustomers.includes(file.orgName.toLowerCase())
+      }
+      return true
     })
 
     primaryFiles.sort((a, b) => {
@@ -167,9 +152,6 @@ export async function getICQCFiles() {
         },
         updatedAt: {
           lte: new Date(Date.now() - 60 * 1000),
-        },
-        id: {
-          notIn: cancelledOrderIds,
         },
         highDifficulty: false,
         pwer: {

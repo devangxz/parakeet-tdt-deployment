@@ -1610,6 +1610,7 @@ function EditorPage() {
         setCtms={setCtms}
         editorRef={editorRef}
         step={step}
+        audioPlayer={audioPlayer}
         setEditorReadOnly={setEditorReadOnly}
         diffToggleEnabled={diffToggleEnabled}
       />

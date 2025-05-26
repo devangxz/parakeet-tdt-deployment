@@ -32,6 +32,7 @@ interface OrderMetrics {
   totalCost: number
   margin: number
   marginPercentage: number
+  invoiceId: string
 }
 
 interface GetOrdersError extends Error {
@@ -169,6 +170,7 @@ export async function getOrgRevenue(
             const totalCost = asrCost + qcCost + reviewCost + cfCost + fileBonus
             const margin = amount - totalCost
             const marginPercentage = amount > 0 ? (margin / amount) * 100 : 0
+            const invoiceId = order.File?.InvoiceFile?.[0]?.invoiceId ?? ''
 
             return {
               orderId: order.id.toString(),
@@ -194,6 +196,7 @@ export async function getOrgRevenue(
               totalCost,
               margin,
               marginPercentage,
+              invoiceId,
             }
           })
         )
