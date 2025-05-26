@@ -5,6 +5,7 @@ import { OrderStatus } from '@prisma/client'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { sendTemplateMail } from '@/lib/ses'
+import refundFile from '@/services/file-service/refund-file'
 
 export async function rejectScreenFile(formData: {
   orderId: number
@@ -39,12 +40,21 @@ export async function rejectScreenFile(formData: {
         }`
       : comment || ''
 
+    const refundResult = await refundFile(order.fileId)
+    if (!refundResult.success) {
+      logger.error(`Failed to refund file ${order.fileId}`)
+      return {
+        success: false,
+        message: 'Failed to refund file',
+      }
+    }
+
     await prisma.order.update({
       where: {
         id: order.id,
       },
       data: {
-        status: OrderStatus.CANCELLED,
+        status: OrderStatus.REFUNDED,
         updatedAt: new Date(),
         comments: rejectionComment,
       },

@@ -7,6 +7,7 @@ import { refundFileAction } from '@/app/actions/admin/refund-file'
 import { refundInvoiceAction } from '@/app/actions/admin/refund-invoice'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -15,6 +16,7 @@ export default function AdminDashboard() {
   const [refundFile, setRefundFile] = useState({
     fileId: '',
     amount: 0,
+    isPartialRefund: false,
   })
   const [refundInvoice, setRefundInvoice] = useState({
     invoiceId: '',
@@ -27,7 +29,8 @@ export default function AdminDashboard() {
       setLoading(true)
       const response = await refundFileAction(
         refundFile.fileId,
-        refundFile.amount
+        refundFile.amount,
+        refundFile.isPartialRefund
       )
       if (response.success) {
         toast.success('Successfully refunded the file.')
@@ -99,6 +102,24 @@ export default function AdminDashboard() {
                     }))
                   }
                 />
+              </div>
+              <div className='flex items-center space-x-2'>
+                <Checkbox
+                  id='partial-refund'
+                  checked={refundFile.isPartialRefund}
+                  onCheckedChange={(checked) =>
+                    setRefundFile((prev) => ({
+                      ...prev,
+                      isPartialRefund: checked as boolean,
+                    }))
+                  }
+                />
+                <Label
+                  htmlFor='partial-refund'
+                  className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
+                >
+                  Partial Refund
+                </Label>
               </div>
             </div>
             {loading ? (

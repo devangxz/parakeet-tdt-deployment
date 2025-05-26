@@ -3,9 +3,13 @@
 import logger from '@/lib/logger'
 import refundFile from '@/services/file-service/refund-file'
 
-export async function refundFileAction(fileId: string, amount: number) {
+export async function refundFileAction(
+  fileId: string,
+  amount: number,
+  isPartialRefund: boolean = false
+) {
   try {
-    const result = await refundFile(fileId, amount)
+    const result = await refundFile(fileId, amount, isPartialRefund)
     return {
       success: result.success,
       message: result.message,

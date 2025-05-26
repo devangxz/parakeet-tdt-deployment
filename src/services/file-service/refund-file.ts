@@ -16,7 +16,8 @@ interface RefundResult {
 
 async function refundFile(
   fileId: string,
-  amount?: number
+  amount?: number,
+  isPartialRefund: boolean = false
 ): Promise<RefundResult> {
   try {
     const file = await prisma.file.findUnique({
@@ -114,7 +115,7 @@ async function refundFile(
       `Total amount after refund ${totalAmountAfterRefund} for file ${fileId}`
     )
 
-    if (totalAmountAfterRefund === 0) {
+    if (!isPartialRefund) {
       await prisma.order.update({
         where: {
           id: orderInfo.id,
