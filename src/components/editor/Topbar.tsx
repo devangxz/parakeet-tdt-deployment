@@ -13,7 +13,6 @@ import React, {
   useEffect,
   useRef,
   useState,
-  useMemo,
   useCallback,
   memo,
 } from 'react'
@@ -79,8 +78,6 @@ import { AlignmentType, EditorSettings } from '@/types/editor'
 import DefaultShortcuts, {
   getAllShortcuts,
   setShortcut,
-  ShortcutControls,
-  useShortcuts,
   defaultShortcuts,
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
@@ -90,8 +87,6 @@ import {
   getFormattedContent,
   getFrequentTermsHandler,
   handleSave,
-  navigateAndPlayBlanks,
-  playCurrentParagraphTimestamp,
   regenDocx,
 } from '@/utils/editorUtils'
 
@@ -226,24 +221,6 @@ export default memo(function Topbar({
   const [isRestoreVersionModalOpen, setIsRestoreVersionModalOpen] =
     useState(false)
 
-  const playNextBlankInstance = useCallback(() => {
-    const quill = quillRef?.current?.getEditor()
-    if (!quill || !audioPlayer) return
-    navigateAndPlayBlanks(quill, audioPlayer, false)
-  }, [audioPlayer, quillRef])
-
-  const playPreviousBlankInstance = useCallback(() => {
-    const quill = quillRef?.current?.getEditor()
-    if (!quill) return
-    navigateAndPlayBlanks(quill, audioPlayer, true)
-  }, [audioPlayer, quillRef])
-
-  const playCurrentParagraphInstance = useCallback(() => {
-    const quill = quillRef?.current?.getEditor()
-    if (!quill) return
-    playCurrentParagraphTimestamp(quill, audioPlayer)
-  }, [audioPlayer, quillRef])
-
   const updateTranscript = (
     quillRef: React.RefObject<ReactQuill> | undefined,
     content: string
@@ -284,21 +261,6 @@ export default memo(function Topbar({
   useEffect(() => {
     autoCapitalizeRef.current = autoCapitalize
   }, [autoCapitalize])
-
-  const editorShortcutControls = useMemo(() => {
-    const controls: Partial<ShortcutControls> = {
-      playNextBlank: playNextBlankInstance,
-      playPreviousBlank: playPreviousBlankInstance,
-      playAudioFromTheStartOfCurrentParagraph: playCurrentParagraphInstance,
-    }
-    return controls as ShortcutControls
-  }, [
-    playNextBlankInstance,
-    playPreviousBlankInstance,
-    playCurrentParagraphInstance,
-  ])
-
-  useShortcuts(editorShortcutControls)
 
   useEffect(() => {
     const syncVideoWithAudio = () => {
