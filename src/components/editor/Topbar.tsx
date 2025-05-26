@@ -4,6 +4,7 @@ import {
   ChevronDownIcon,
   Cross1Icon,
   ReloadIcon,
+  ExclamationTriangleIcon,
 } from '@radix-ui/react-icons'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import axios from 'axios'
@@ -125,6 +126,8 @@ interface TopbarProps {
   editorRef: React.Ref<EditorHandle>
   step: string
   audioPlayer: HTMLAudioElement | null
+  setEditorReadOnly: React.Dispatch<React.SetStateAction<boolean>>
+  diffToggleEnabled: boolean
 }
 
 export default memo(function Topbar({
@@ -152,6 +155,8 @@ export default memo(function Topbar({
   editorRef,
   step,
   audioPlayer,
+  setEditorReadOnly,
+  diffToggleEnabled
 }: TopbarProps) {
   const [newEditorMode, setNewEditorMode] = useState<string>('')
   const [shortcuts, setShortcuts] = useState<
@@ -220,6 +225,10 @@ export default memo(function Topbar({
   const [isHeatmapModalOpen, setIsHeatmapModalOpen] = useState(false)
   const [isRestoreVersionModalOpen, setIsRestoreVersionModalOpen] =
     useState(false)
+  const [fiveMinutesLeft, setFiveMinutesLeft] = useState(false)
+  const [showTimeoutDialog, setShowTimeoutDialog] = useState(false)
+  const [isDiffModeDialogOpen, setIsDiffModeDialogOpen] = useState(false)
+  const [diffModeDialogAction, setDiffModeDialogAction] = useState<'submit' | 'download' | 'menu'>('submit')
 
   const updateTranscript = (
     quillRef: React.RefObject<ReactQuill> | undefined,
@@ -599,26 +608,41 @@ export default memo(function Topbar({
 
   useEffect(() => {
     let timer: NodeJS.Timeout
-
-    const updateRemainingTime = () => {
+    
+    const updateRemainingTime = async () => {
       const remainingSeconds = parseInt(orderDetails.remainingTime)
       if (remainingSeconds > 0) {
         const hours = Math.floor(remainingSeconds / 3600)
         const minutes = Math.floor((remainingSeconds % 3600) / 60)
         const seconds = remainingSeconds % 60
-
+        if(hours === 0 && minutes < 5 ){
+          setFiveMinutesLeft(true)
+        }
         const formattedTime = [
           hours.toString().padStart(2, '0'),
           minutes.toString().padStart(2, '0'),
           seconds.toString().padStart(2, '0'),
         ].join(':')
-
         setTimeoutCount(formattedTime)
         orderDetails.remainingTime = (remainingSeconds - 1).toString()
-
         timer = setTimeout(updateRemainingTime, 1000)
       } else {
         setTimeoutCount('00:00:00')
+        setEditorReadOnly(true)
+        const quill = quillRef?.current?.getEditor()
+        quill?.disable()
+        if(timer){
+          setShowTimeoutDialog(true)
+          await handleSave({
+            getEditorText,
+            orderDetails,
+            setButtonLoading,
+          listenCount,
+          editedSegments,
+          role: session?.user?.role || '',
+          quill: quillRef?.current?.getEditor(),
+        }, false)
+        }
       }
     }
 
@@ -630,6 +654,13 @@ export default memo(function Topbar({
       if (timer) {
         clearTimeout(timer)
       }
+    }
+  }, [orderDetails])
+
+  useEffect(() => {
+    if(orderDetails.remainingTime === '0') {
+
+      setShowTimeoutDialog(true)
     }
   }, [orderDetails])
 
@@ -646,15 +677,17 @@ export default memo(function Topbar({
             <TooltipContent>{orderDetails.filename}</TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        
+
         {orderDetails.status === 'QC_ASSIGNED' && (
-          <span
-            className={`text-red-600 absolute left-1/2 transform -translate-x-1/2 ${
-              orderDetails.remainingTime === '0' ? 'animate-pulse' : ''
-            }`}
-          >
-            {timeoutCount}
-          </span>
+          <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center">
+            <span
+              className={`${
+                fiveMinutesLeft || timeoutCount === '00:00:00' ? 'animate-pulse text-red-600' : 'text-green-600'
+              }`}
+            >
+              {timeoutCount}
+            </span>
+          </div>
         )}
 
         <div className='flex gap-2'>
@@ -714,7 +747,14 @@ export default memo(function Topbar({
             {['CUSTOMER'].includes(session?.user?.role ?? '') ? (
               <Button
                 disabled={isCheckAndDownloadLoading}
-                onClick={() => handleCheckAndDownload(orderDetails.fileId)}
+                onClick={() => {
+                  if (diffToggleEnabled) {
+                    setDiffModeDialogAction('download')
+                    setIsDiffModeDialogOpen(true)
+                  } else {
+                    handleCheckAndDownload(orderDetails.fileId)
+                  }
+                }}
                 className='format-button border-r-[1.5px] border-white/70'
               >
                 {isCheckAndDownloadLoading ? (
@@ -729,169 +769,189 @@ export default memo(function Topbar({
             ) : (
               <Button
                 onClick={() => {
-                  if (orderDetails.status === 'QC_ASSIGNED') {
-                    setIsSpeakerNameModalOpen(true)
+                  if (diffToggleEnabled) {
+                    setDiffModeDialogAction('submit')
+                    setIsDiffModeDialogOpen(true)
                   } else {
-                    setIsSubmitModalOpen(true)
+                    if (orderDetails.status === 'QC_ASSIGNED') {
+                      setIsSpeakerNameModalOpen(true)
+                    } else {
+                      setIsSubmitModalOpen(true)
+                    }
                   }
                 }}
                 className='format-button border-r-[1.5px] border-white/70'
+                disabled={timeoutCount === '00:00:00'}
               >
                 Submit
               </Button>
             )}
 
-            <DropdownMenu
-              modal={false}
-              onOpenChange={handleDropdownMenuOpenChange}
-            >
-              <DropdownMenuTrigger className='focus-visible:ring-0 outline-none'>
-                <Button className='px-2 format-icon-button focus-visible:ring-0 outline-none'>
-                  <span className='sr-only'>Open menu</span>
-                  <ChevronDownIcon className='h-4 w-4' />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align='end' className='w-30'>
-                <DropdownMenuItem
-                  onClick={() => {
-                    autoCapitalizeSentences(quillRef, autoCapitalize)
-                    handleSave({
-                      getEditorText,
-                      orderDetails,
-                      setButtonLoading,
-                      listenCount,
-                      editedSegments,
-                      role: session?.user?.role || '',
-                      quill: quillRef?.current?.getEditor(),
-                    })
-                  }}
-                >
-                  Save
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setIsShortcutsReferenceModalOpen(true)}
-                >
-                  Shortcuts Reference
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setIsConfigureShortcutsModalOpen(true)}
-                >
-                  Configure Shortcuts
-                </DropdownMenuItem>
-                {session?.user?.role !== 'CUSTOMER' && (
-                  <DropdownMenuItem onClick={toggleRevertTranscript}>
-                    Revert Transcript
-                  </DropdownMenuItem>
-                )}
-                {session?.user?.role !== 'CUSTOMER' &&
-                  !orderDetails.isTestOrder && (
-                    <DropdownMenuItem onClick={toggleVideo}>
-                      Toggle Video
-                    </DropdownMenuItem>
-                  )}
-                {session?.user?.role !== 'CUSTOMER' &&
-                  !orderDetails.isTestOrder && (
-                    <DropdownMenuItem
-                      onClick={downloadMP3.bind(null, orderDetails)}
-                    >
-                      Download MP3
-                    </DropdownMenuItem>
-                  )}
-                {!['CUSTOMER', 'OM', 'ADMIN'].includes(
-                  session?.user?.role || ''
-                ) &&
-                  !orderDetails.isTestOrder && (
-                    <DropdownMenuItem onClick={requestExtension}>
-                      Request Extension
-                    </DropdownMenuItem>
-                  )}
-                {session?.user?.role !== 'CUSTOMER' &&
-                  !orderDetails.isTestOrder && (
-                    <DropdownMenuItem onClick={() => setReportModalOpen(true)}>
-                      Report
-                    </DropdownMenuItem>
-                  )}
-                {session?.user?.role !== 'CUSTOMER' && (
+            {diffToggleEnabled ? (
+              <Button 
+                className='px-2 format-icon-button focus-visible:ring-0 outline-none'
+                onClick={() => {
+                  setDiffModeDialogAction('menu')
+                  setIsDiffModeDialogOpen(true)
+                }}
+              >
+                <span className='sr-only'>Open menu</span>
+                <ChevronDownIcon className='h-4 w-4' />
+              </Button>
+            ) : (
+              <DropdownMenu
+                modal={false}
+                onOpenChange={handleDropdownMenuOpenChange}
+              >
+                <DropdownMenuTrigger className='focus-visible:ring-0 outline-none' disabled={timeoutCount === '00:00:00'}>
+                  <Button className='px-2 format-icon-button focus-visible:ring-0 outline-none' disabled={timeoutCount === '00:00:00'} >
+                    <span className='sr-only'>Open menu</span>
+                    <ChevronDownIcon className='h-4 w-4' />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align='end' className='w-30'>
                   <DropdownMenuItem
-                    onClick={() =>
-                      getFrequentTermsHandler(
-                        orderDetails?.userId,
+                    onClick={() => {
+                      autoCapitalizeSentences(quillRef, autoCapitalize)
+                      handleSave({
+                        getEditorText,
+                        orderDetails,
                         setButtonLoading,
-                        setFrequentTermsData,
-                        setFrequentTermsModalOpen
-                      )
-                    }
+                        listenCount,
+                        editedSegments,
+                        role: session?.user?.role || '',
+                        quill: quillRef?.current?.getEditor(),
+                      })
+                    }}
                   >
-                    Frequent Terms
+                    Save
                   </DropdownMenuItem>
-                )}
-                {!orderDetails.isTestOrder && (
-                  <DropdownMenuItem onClick={() => setReviewModalOpen(true)}>
-                    Review with Gemini
-                  </DropdownMenuItem>
-                )}
-                {orderDetails.orderType === 'TRANSCRIPTION_FORMATTING' && (
                   <DropdownMenuItem
-                    onClick={() => setProcessWithLLMModalOpen(true)}
+                    onClick={() => setIsShortcutsReferenceModalOpen(true)}
                   >
-                    Marking with LLM
+                    Shortcuts Reference
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={toggleAutoCapitalize}>
-                  {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
-                </DropdownMenuItem>
-                {session?.user?.role === 'CUSTOMER' && (
                   <DropdownMenuItem
-                    onClick={() => setIsFormattingOptionsModalOpen(true)}
+                    onClick={() => setIsConfigureShortcutsModalOpen(true)}
                   >
-                    Formatting Options
+                    Configure Shortcuts
                   </DropdownMenuItem>
-                )}
-                {session?.user?.role === 'CUSTOMER' && (
+                  {session?.user?.role !== 'CUSTOMER' && (
+                    <DropdownMenuItem onClick={toggleRevertTranscript}>
+                      Revert Transcript
+                    </DropdownMenuItem>
+                  )}
+                  {session?.user?.role !== 'CUSTOMER' &&
+                    !orderDetails.isTestOrder && (
+                      <DropdownMenuItem onClick={toggleVideo}>
+                        Toggle Video
+                      </DropdownMenuItem>
+                    )}
+                  {session?.user?.role !== 'CUSTOMER' &&
+                    !orderDetails.isTestOrder && (
+                      <DropdownMenuItem
+                        onClick={downloadMP3.bind(null, orderDetails)}
+                      >
+                        Download MP3
+                      </DropdownMenuItem>
+                    )}
+                  {!['CUSTOMER', 'OM', 'ADMIN'].includes(
+                    session?.user?.role || ''
+                  ) &&
+                    !orderDetails.isTestOrder && (
+                      <DropdownMenuItem onClick={requestExtension}>
+                        Request Extension
+                      </DropdownMenuItem>
+                    )}
+                  {session?.user?.role !== 'CUSTOMER' &&
+                    !orderDetails.isTestOrder && (
+                      <DropdownMenuItem onClick={() => setReportModalOpen(true)}>
+                        Report
+                      </DropdownMenuItem>
+                    )}
+                  {session?.user?.role !== 'CUSTOMER' && (
+                    <DropdownMenuItem
+                      onClick={() =>
+                        getFrequentTermsHandler(
+                          orderDetails?.userId,
+                          setButtonLoading,
+                          setFrequentTermsData,
+                          setFrequentTermsModalOpen
+                        )
+                      }
+                    >
+                      Frequent Terms
+                    </DropdownMenuItem>
+                  )}
+                  {!orderDetails.isTestOrder && (
+                    <DropdownMenuItem onClick={() => setReviewModalOpen(true)}>
+                      Review with Gemini
+                    </DropdownMenuItem>
+                  )}
+                  {orderDetails.orderType === 'TRANSCRIPTION_FORMATTING' && (
+                    <DropdownMenuItem
+                      onClick={() => setProcessWithLLMModalOpen(true)}
+                    >
+                      Marking with LLM
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={toggleAutoCapitalize}>
+                    {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
+                  </DropdownMenuItem>
+                  {session?.user?.role === 'CUSTOMER' && (
+                    <DropdownMenuItem
+                      onClick={() => setIsFormattingOptionsModalOpen(true)}
+                    >
+                      Formatting Options
+                    </DropdownMenuItem>
+                  )}
+                  {session?.user?.role === 'CUSTOMER' &&
+                    !orderDetails.isTestOrder && (
+                      <DropdownMenuItem
+                        onClick={() => setIsReReviewModalOpen(true)}
+                      >
+                        Re-Review
+                      </DropdownMenuItem>
+                    )}
+                  {orderDetails.status === 'QC_ASSIGNED' && (
+                    <DropdownMenuItem asChild>
+                      <a href={asrFileUrl} target='_blank'>
+                        Download ASR text
+                      </a>
+                    </DropdownMenuItem>
+                  )}
+                  {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
+                    orderDetails.status === 'FINALIZER_ASSIGNED') && (
+                    <DropdownMenuItem asChild>
+                      <a href={qcFileUrl} target='_blank'>
+                        Download QC text
+                      </a>
+                    </DropdownMenuItem>
+                  )}
+                  {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
+                    orderDetails.status === 'FINALIZER_ASSIGNED') && (
+                    <DropdownMenuItem asChild>
+                      <a href={LLMFileUrl} target='_blank'>
+                        Download LLM text
+                      </a>
+                    </DropdownMenuItem>
+                  )}
+                  {session?.user?.role !== 'CUSTOMER' && (
+                    <DropdownMenuItem onClick={() => setIsHeatmapModalOpen(true)}>
+                      Waveform Heatmap
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
-                    onClick={() => setIsReReviewModalOpen(true)}
+                    onClick={() => setIsRestoreVersionModalOpen(true)}
                   >
-                    Re-Review
+                    Restore Version
                   </DropdownMenuItem>
-                )}
-                {orderDetails.status === 'QC_ASSIGNED' && (
-                  <DropdownMenuItem asChild>
-                    <a href={asrFileUrl} target='_blank'>
-                      Download ASR text
-                    </a>
+                  <DropdownMenuItem onClick={() => setIsSettingsModalOpen(true)}>
+                    Settings
                   </DropdownMenuItem>
-                )}
-                {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
-                  orderDetails.status === 'FINALIZER_ASSIGNED') && (
-                  <DropdownMenuItem asChild>
-                    <a href={qcFileUrl} target='_blank'>
-                      Download QC text
-                    </a>
-                  </DropdownMenuItem>
-                )}
-                {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
-                  orderDetails.status === 'FINALIZER_ASSIGNED') && (
-                  <DropdownMenuItem asChild>
-                    <a href={LLMFileUrl} target='_blank'>
-                      Download LLM text
-                    </a>
-                  </DropdownMenuItem>
-                )}
-                {session?.user?.role !== 'CUSTOMER' && (
-                  <DropdownMenuItem onClick={() => setIsHeatmapModalOpen(true)}>
-                    Waveform Heatmap
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem
-                  onClick={() => setIsRestoreVersionModalOpen(true)}
-                >
-                  Restore Version
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsSettingsModalOpen(true)}>
-                  Settings
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
             <Dialog>
               <DialogContent>
@@ -1111,6 +1171,32 @@ export default memo(function Topbar({
           role={session?.user?.role || ''}
         />
       )}
+      {showTimeoutDialog && (
+        <Dialog open={showTimeoutDialog} onOpenChange={setShowTimeoutDialog}>
+          <DialogContent
+            className={`max-w-sm sm:max-w-md p-6 rounded-xl shadow-lg text-center space-y-4`}
+          >
+            <div className="flex flex-col items-center space-y-3">
+              <div className="bg-yellow-100 text-yellow-700 rounded-full p-2">
+                <ExclamationTriangleIcon className="h-6 w-6" />
+              </div>
+
+              <DialogTitle className="text-lg font-semibold text-gray-900">
+                File Timedout
+              </DialogTitle>
+
+              <DialogDescription className="space-y-1">
+                <p className="text-gray-800">
+                  This file has been timed out due to inactivity and is now in read-only mode.
+                </p>
+                <p className="text-gray-500 text-sm">
+                  You can view the content but cannot make any changes.
+                </p>
+              </DialogDescription>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
       {/* process with llm */}
       {processWithLLMModalOpen && (
         <ProcessWithLLMDialog
@@ -1155,6 +1241,38 @@ export default memo(function Topbar({
         updateQuill={updateTranscript}
         setCtms={setCtms}
       />
+      {isDiffModeDialogOpen && (
+        <Dialog
+          open={isDiffModeDialogOpen}
+          onOpenChange={setIsDiffModeDialogOpen}
+          modal
+        >
+          <DialogContent className='max-w-md'>
+            <DialogHeader>
+              <DialogTitle>Exit Diff Mode</DialogTitle>
+              <DialogDescription>
+                {diffModeDialogAction === 'submit' && 
+                  'Please exit diff mode before submitting your transcript.'
+                }
+                {diffModeDialogAction === 'download' && 
+                  'Please exit diff mode before downloading files.'
+                }
+                {diffModeDialogAction === 'menu' && 
+                  'Please exit diff mode before accessing menu options.'
+                }
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className='mt-4 flex gap-2'>
+              <Button 
+                variant='outline'
+                onClick={() => setIsDiffModeDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 })
