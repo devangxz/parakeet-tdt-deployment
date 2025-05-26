@@ -554,8 +554,12 @@ const Editor = forwardRef<EditorHandle, EditorProps>((props, ref) => {
   const clearAllHighlights = useCallback(() => {
     const quill = quillRef.current?.getEditor()
     if (!quill) return
-    // Clear background highlights on all text
-    quill.formatText(0, quill.getLength(), { background: null })
+    
+    quill.formatText(0, quill.getLength(), { 
+      background: null,
+      strike: false,
+    })
+    
     // Remove any custom "line-highlight" classes from the editor
     const editorRoot = quill.root
     editorRoot.querySelectorAll('.line-highlight').forEach((el) => {
