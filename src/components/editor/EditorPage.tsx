@@ -228,6 +228,7 @@ function EditorPage() {
   const [isFormatWarningDialogOpen, setIsFormatWarningDialogOpen] = useState(false)
   const [formatErrors, setFormatErrors] = useState<CombinedASRFormatError[]>([])
   const [diffToggleEnabled, setDiffToggleEnabled] = useState(false)
+  const [isExitingDiffMode, setIsExitingDiffMode] = useState(false)
   const [alignments, setAlignments] = useState<AlignmentType[]>([])
   const [editorReadOnly, setEditorReadOnly] = useState(false)
   const [activeTab, setActiveTab] = useState('transcribe')
@@ -1504,7 +1505,7 @@ function EditorPage() {
   ])
 
   const toggleDiffView = useCallback(
-    (newDiffToggleValue = diffToggleEnabled) => {
+    async (newDiffToggleValue = diffToggleEnabled) => {
       const quill = quillRef?.current?.getEditor()
       if (!quill) return
 
@@ -1513,9 +1514,10 @@ function EditorPage() {
           if (!newDiffToggleValue) {
             const savedTranscript = saveTranscriptInDiffMode()
             quill.setContents(getFormattedContent(savedTranscript), 'silent')
-
+            
             if (editorRef.current) {
               setTimeout(() => {
+                editorRef.current?.clearAllHighlights()
                 editorRef.current?.triggerAlignmentUpdate()
               }, 100)
             }
@@ -1561,20 +1563,24 @@ function EditorPage() {
   const handleDiffToggle = useCallback(() => {
     if (!diffToggleEnabled) {
       setCapturedEditorContent(getEditorText())
-
+      
       ;(async () => {
         try {
           setDiffToggleEnabled(true)
-          toggleDiffView(true)
+          await toggleDiffView(true)
         } catch (error) {
           toast.error('Cannot switch to diff mode')
           setDiffToggleEnabled(false)
         }
       })()
     } else {
-      toggleDiffView(false)
-      setDiffToggleEnabled(false)
-      setCapturedEditorContent('')
+      ;(async () => {
+        setIsExitingDiffMode(true)
+        await toggleDiffView(false)
+        setIsExitingDiffMode(false)
+        setDiffToggleEnabled(false)
+        setCapturedEditorContent('')
+      })()
     }
   }, [diffToggleEnabled, toggleDiffView, getEditorText])
 
@@ -1695,19 +1701,20 @@ function EditorPage() {
                           </TabsTrigger>
                         </TabsList>
 
-                        {activeTab === 'transcribe' && (
-                          <div className='ml-auto pr-4 flex items-center gap-2'>
-                            <span className='text-sm text-muted-foreground'>
-                              Diff Mode
-                            </span>
-                            <Switch
-                              checked={diffToggleEnabled}
-                              onCheckedChange={handleDiffToggle}
-                              aria-label='Toggle diff mode'
-                              disabled={!initialEditorData}
-                            />
-                          </div>
-                        )}
+                        {session?.user?.role !== 'CUSTOMER' &&
+                          activeTab === 'transcribe' && (
+                            <div className='ml-auto pr-4 flex items-center gap-2'>
+                              <span className='text-sm text-muted-foreground'>
+                                Diff Mode
+                              </span>
+                              <Switch
+                                checked={diffToggleEnabled}
+                                onCheckedChange={handleDiffToggle}
+                                aria-label='Toggle diff mode'
+                                disabled={!initialEditorData}
+                              />
+                            </div>
+                          )}
                       </div>
 
                       <EditorTabComponent
@@ -2167,6 +2174,7 @@ function EditorPage() {
             renderDiff={renderDiff}
             currentEditorContent={capturedEditorContent}
             onSaveNeeded={handleSaveForDiff}
+            isExitingDiffMode={isExitingDiffMode}
           />
         )}
       </div>

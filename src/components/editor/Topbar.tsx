@@ -831,6 +831,7 @@ export default memo(function Topbar({
                   setDiffModeDialogAction('menu')
                   setIsDiffModeDialogOpen(true)
                 }}
+                disabled={timeoutCount === '00:00:00'}
               >
                 <span className='sr-only'>Open menu</span>
                 <ChevronDownIcon className='h-4 w-4' />
@@ -1300,7 +1301,7 @@ export default memo(function Topbar({
                 }
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter className='mt-4 flex gap-2'>
+            <DialogFooter className='mt-2'>
               <Button 
                 variant='outline'
                 onClick={() => setIsDiffModeDialogOpen(false)}

@@ -48,6 +48,7 @@ interface VersionCompareDialogProps {
   renderDiff: (diffs: [number, string][]) => void
   currentEditorContent?: string
   onSaveNeeded?: () => Promise<void>
+  isExitingDiffMode?: boolean
 }
 
 const TAG_LABELS: Record<string, string> = {
@@ -79,6 +80,7 @@ export default function VersionCompareDialog({
   renderDiff,
   currentEditorContent,
   onSaveNeeded,
+  isExitingDiffMode = false,
 }: VersionCompareDialogProps) {
   const [versions, setVersions] = useState<Version[]>([])
   const [fromVersion, setFromVersion] = useState<Version | null>(null)
@@ -96,8 +98,8 @@ export default function VersionCompareDialog({
   const [toPopoverOpen, setToPopoverOpen] = useState(false)
   const [searchFrom, setSearchFrom] = useState<string>('')
   const [searchTo, setSearchTo] = useState<string>('')
-  const isInitialCompareRef = useRef(true)
   const initialFetchDoneRef = useRef(false)
+  const hasPerformedInitialCompareRef = useRef(false)
   const currentEditorContentRef = useRef<string | undefined>(undefined)
   const onSaveNeededRef = useRef<(() => Promise<void>) | undefined>(undefined)
 
@@ -108,21 +110,7 @@ export default function VersionCompareDialog({
 
   const performComparison = useCallback(
     async (from: Version, to: Version) => {
-      if (!from || !to) {
-        toast.error(
-          'Please select both "From" and "To" versions to perform the comparison'
-        )
-        return
-      }
-
-      if (from === to) {
-        toast.error(
-          'Cannot compare a version with itself. Please select two different versions'
-        )
-        return
-      }
-
-      if (isComparing) return
+      if (isComparing) return false
 
       setIsComparing(true)
       try {
@@ -132,7 +120,7 @@ export default function VersionCompareDialog({
             result.message ||
               'Unable to retrieve version transcript for comparison'
           )
-          return
+          return false
         }
 
         const dmp = new diff_match_patch()
@@ -141,13 +129,47 @@ export default function VersionCompareDialog({
           result.toText
         )
         renderDiff(diffs)
+        return true
       } catch {
         toast.error('Unable to retrieve version transcript for comparison')
+        return false
       } finally {
         setIsComparing(false)
       }
     },
     [fileId, renderDiff, isComparing]
+  )
+
+  const handleVersionSelection = useCallback(
+    async (newVersion: Version, isFromVersion: boolean) => {
+      const otherVersion = isFromVersion ? toVersion : fromVersion
+      if (!newVersion || !otherVersion) {
+        if (isFromVersion) {
+          setFromVersion(newVersion)
+        } else {
+          setToVersion(newVersion)
+        }
+        return
+      }
+
+      if (newVersion === otherVersion) {
+        toast.error(
+          'Cannot compare a version with itself. Please select two different versions'
+        )
+        return
+      }
+
+      const success = await performComparison(newVersion, otherVersion)
+
+      if (success) {
+        if (isFromVersion) {
+          setFromVersion(newVersion)
+        } else {
+          setToVersion(newVersion)
+        }
+      }
+    },
+    [fromVersion, toVersion, performComparison]
   )
 
   useEffect(() => {
@@ -235,17 +257,20 @@ export default function VersionCompareDialog({
   }, [isOpen, fileId])
 
   useEffect(() => {
-    if (fromVersion && toVersion && !isComparing) {
-      if (isInitialCompareRef.current) {
-        performComparison(fromVersion, toVersion)
-        isInitialCompareRef.current = false
-      }
+    if (
+      fromVersion &&
+      toVersion &&
+      !isComparing &&
+      !hasPerformedInitialCompareRef.current
+    ) {
+      performComparison(fromVersion, toVersion)
+      hasPerformedInitialCompareRef.current = true
     }
   }, [fromVersion, toVersion, performComparison, isComparing])
 
   useEffect(() => {
     if (isOpen) {
-      isInitialCompareRef.current = true
+      hasPerformedInitialCompareRef.current = false
     }
   }, [isOpen])
 
@@ -398,7 +423,7 @@ export default function VersionCompareDialog({
                   <ChevronDownIcon className='ml-4 h-4 w-4 shrink-0' />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className='w-[330px] p-0'>
+              <PopoverContent className='w-full p-0'>
                 <Command>
                   <CommandInput
                     placeholder='Search versions...'
@@ -430,9 +455,8 @@ export default function VersionCompareDialog({
                                 key={version.s3VersionId || version.commitHash}
                                 value={formatVersionLabel(version)}
                                 onSelect={() => {
-                                  setFromVersion(version)
                                   setFromPopoverOpen(false)
-                                  isInitialCompareRef.current = true
+                                  handleVersionSelection(version, true)
                                 }}
                               >
                                 <div className='flex-1'>
@@ -443,7 +467,7 @@ export default function VersionCompareDialog({
                                 </div>
                                 <CheckIcon
                                   className={cn(
-                                    'ml-2 h-4 w-4',
+                                    'ml-3 h-4 w-4',
                                     versionId === selectedFromId
                                       ? 'opacity-100'
                                       : 'opacity-0'
@@ -461,7 +485,7 @@ export default function VersionCompareDialog({
           </div>
 
           <div className='hidden md:flex items-center justify-center'>
-            {isFetchingVersions || isComparing ? (
+            {isFetchingVersions || isComparing || isExitingDiffMode ? (
               <ReloadIcon className='h-5 w-5 animate-spin text-muted-foreground' />
             ) : (
               <ArrowRightIcon className='h-5 w-5' />
@@ -506,7 +530,7 @@ export default function VersionCompareDialog({
                   <ChevronDownIcon className='ml-4 h-4 w-4 shrink-0' />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className='w-[330px] p-0'>
+              <PopoverContent className='w-full p-0'>
                 <Command>
                   <CommandInput
                     placeholder='Search versions...'
@@ -538,9 +562,8 @@ export default function VersionCompareDialog({
                                 key={version.s3VersionId || version.commitHash}
                                 value={formatVersionLabel(version)}
                                 onSelect={() => {
-                                  setToVersion(version)
                                   setToPopoverOpen(false)
-                                  isInitialCompareRef.current = true
+                                  handleVersionSelection(version, false)
                                 }}
                               >
                                 <div className='flex-1'>
@@ -551,7 +574,7 @@ export default function VersionCompareDialog({
                                 </div>
                                 <CheckIcon
                                   className={cn(
-                                    'ml-2 h-4 w-4',
+                                    'ml-3 h-4 w-4',
                                     versionId === selectedToId
                                       ? 'opacity-100'
                                       : 'opacity-0'
