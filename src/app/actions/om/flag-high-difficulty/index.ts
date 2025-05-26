@@ -6,6 +6,7 @@ import { AUDIO_ISSUES } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { sendTemplateMail } from '@/lib/ses'
+import refundFile from '@/services/file-service/refund-file'
 import { generateInvoiceId } from '@/utils/backend-helper'
 
 function addHours(date: string | number | Date, hours: number) {
@@ -50,10 +51,18 @@ export async function flagHighDifficulty(formData: {
     }
 
     if (issuesArray.length >= refundTrigger) {
+      const refundResult = await refundFile(orderInformation.fileId)
+      if (!refundResult.success) {
+        logger.error(`Failed to refund file ${orderInformation.fileId}`)
+        return {
+          success: false,
+          message: 'Failed to refund file',
+        }
+      }
       const order = await prisma.order.update({
         where: { id: Number(orderId) },
         data: {
-          status: OrderStatus.CANCELLED,
+          status: OrderStatus.REFUNDED,
           updatedAt: new Date(),
         },
       })
@@ -64,6 +73,7 @@ export async function flagHighDifficulty(formData: {
 
       const templateData = {
         filename: file?.filename || '',
+        url: `https://scribie.ai/payments/paid`,
       }
 
       await sendTemplateMail(

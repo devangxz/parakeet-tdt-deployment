@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
 
     const templateData = {
       filename: invoiceFile?.File.filename || '',
-      url: `https://${process.env.SERVER}/payments?id=${invoiceFile?.invoiceId}`,
+      url: `https://${process.env.SERVER}/payments/paid?id=${invoiceFile?.invoiceId}`,
     }
 
     await sendTemplateMail(
