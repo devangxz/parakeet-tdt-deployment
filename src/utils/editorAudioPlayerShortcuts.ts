@@ -143,8 +143,8 @@ export interface ShortcutControls {
   increasePlaybackRateBy25: () => void
   // focusOnPlaybackSpeedTextBox: () => void;
   playAudioFromTheStartOfCurrentParagraph: () => void
-  // playNextBlankInstance: () => void
-  // playPreviousBlankInstance: () => void
+  playNextBlankInstance: () => void
+  playPreviousBlankInstance: () => void
   playCurrentParagraphInstance: () => void
   adjustTimestampsInstance: () => void
   capitalizeFirstLetter: () => void
