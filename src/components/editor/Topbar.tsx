@@ -14,7 +14,6 @@ import React, {
   useEffect,
   useRef,
   useState,
-  useMemo,
   useCallback,
   memo,
 } from 'react'
@@ -80,8 +79,6 @@ import { AlignmentType, EditorSettings } from '@/types/editor'
 import DefaultShortcuts, {
   getAllShortcuts,
   setShortcut,
-  ShortcutControls,
-  useShortcuts,
   defaultShortcuts,
 } from '@/utils/editorAudioPlayerShortcuts'
 import {
@@ -91,8 +88,6 @@ import {
   getFormattedContent,
   getFrequentTermsHandler,
   handleSave,
-  navigateAndPlayBlanks,
-  playCurrentParagraphTimestamp,
   regenDocx,
 } from '@/utils/editorUtils'
 
@@ -130,6 +125,7 @@ interface TopbarProps {
   setCtms: (ctms: CTMType[]) => void
   editorRef: React.Ref<EditorHandle>
   step: string
+  audioPlayer: HTMLAudioElement | null
   setEditorReadOnly: React.Dispatch<React.SetStateAction<boolean>>
   diffToggleEnabled: boolean
 }
@@ -158,10 +154,10 @@ export default memo(function Topbar({
   setCtms,
   editorRef,
   step,
+  audioPlayer,
   setEditorReadOnly,
   diffToggleEnabled
 }: TopbarProps) {
-  const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
   const [shortcuts, setShortcuts] = useState<
     { key: string; shortcut: string }[]
@@ -234,24 +230,6 @@ export default memo(function Topbar({
   const [isDiffModeDialogOpen, setIsDiffModeDialogOpen] = useState(false)
   const [diffModeDialogAction, setDiffModeDialogAction] = useState<'submit' | 'download' | 'menu'>('submit')
 
-  const playNextBlankInstance = useCallback(() => {
-    const quill = quillRef?.current?.getEditor()
-    if (!quill) return
-    navigateAndPlayBlanks(quill, audioPlayer.current, false)
-  }, [audioPlayer, quillRef])
-
-  const playPreviousBlankInstance = useCallback(() => {
-    const quill = quillRef?.current?.getEditor()
-    if (!quill) return
-    navigateAndPlayBlanks(quill, audioPlayer.current, true)
-  }, [audioPlayer, quillRef])
-
-  const playCurrentParagraphInstance = useCallback(() => {
-    const quill = quillRef?.current?.getEditor()
-    if (!quill) return
-    playCurrentParagraphTimestamp(quill, audioPlayer.current)
-  }, [audioPlayer, quillRef])
-
   const updateTranscript = (
     quillRef: React.RefObject<ReactQuill> | undefined,
     content: string
@@ -293,25 +271,10 @@ export default memo(function Topbar({
     autoCapitalizeRef.current = autoCapitalize
   }, [autoCapitalize])
 
-  const editorShortcutControls = useMemo(() => {
-    const controls: Partial<ShortcutControls> = {
-      playNextBlank: playNextBlankInstance,
-      playPreviousBlank: playPreviousBlankInstance,
-      playAudioFromTheStartOfCurrentParagraph: playCurrentParagraphInstance,
-    }
-    return controls as ShortcutControls
-  }, [
-    playNextBlankInstance,
-    playPreviousBlankInstance,
-    playCurrentParagraphInstance,
-  ])
-
-  useShortcuts(editorShortcutControls)
-
   useEffect(() => {
     const syncVideoWithAudio = () => {
-      if (!audioPlayer || !audioPlayer.current || !videoRef.current) return
-      const player = audioPlayer.current
+      if (!audioPlayer || !videoRef.current) return
+      const player = audioPlayer
       videoRef.current.volume = 0
 
       const handleAudioPlay = () => videoRef.current?.play()
@@ -333,9 +296,9 @@ export default memo(function Topbar({
     if (videoPlayerOpen) {
       const cleanup = syncVideoWithAudio()
       const interval = setInterval(() => {
-        if (!audioPlayer || !audioPlayer.current || !videoRef.current) return
-        if (videoRef.current.currentTime !== audioPlayer.current.currentTime) {
-          videoRef.current.currentTime = audioPlayer.current.currentTime
+        if (!audioPlayer || !videoRef.current) return
+        if (videoRef.current.currentTime !== audioPlayer.currentTime) {
+          videoRef.current.currentTime = audioPlayer.currentTime
         }
       }, 1000)
 
@@ -1118,7 +1081,6 @@ export default memo(function Topbar({
             ref={videoRef}
             src={`${videoUrl}`}
             className='w-full h-full'
-            controls={true}
             onMouseDown={handleDragChange}
           ></video>
           <button

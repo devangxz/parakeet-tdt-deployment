@@ -12,6 +12,12 @@ import ReassignPreDeliveryFile from '@/components/admin-components/re-assign-pre
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -45,6 +51,7 @@ interface File {
   orderType: string
   fileCost: FileCost
   rateBonus: number
+  reReviewComment: string
 }
 
 interface ReReviewPageProps {
@@ -63,6 +70,8 @@ export default function ReReviewPage({ onActionComplete }: ReReviewPageProps) {
   const [currentlyPlayingFileUrl, setCurrentlyPlayingFileUrl] = useState<{
     [key: string]: string
   }>({})
+  const [commentDialogOpen, setCommentDialogOpen] = useState(false)
+  const [currentComment, setCurrentComment] = useState('')
 
   const getAudioUrl = async (fileId: string) => {
     try {
@@ -123,6 +132,7 @@ export default function ReReviewPage({ onActionComplete }: ReReviewPageProps) {
             orderType: order.orderType,
             fileCost: order.fileCost,
             rateBonus: order.rateBonus,
+            reReviewComment: order.reReviewComment ?? '',
           }
         })
         setReReviewFiles(orders ?? [])
@@ -306,6 +316,31 @@ export default function ReReviewPage({ onActionComplete }: ReReviewPageProps) {
       ),
     },
     {
+      accessorKey: 'reReviewComment',
+      header: 'Re-Review Comment',
+      cell: ({ row }) => {
+        const comment = row.original.reReviewComment
+        return (
+          <div className='font-medium'>
+            {comment ? (
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => {
+                  setCurrentComment(comment)
+                  setCommentDialogOpen(true)
+                }}
+              >
+                View Comment
+              </Button>
+            ) : (
+              <span className='text-gray-400'>No comment</span>
+            )}
+          </div>
+        )
+      },
+    },
+    {
       id: 'actions',
       header: 'Actions',
       enableHiding: false,
@@ -409,6 +444,17 @@ export default function ReReviewPage({ onActionComplete }: ReReviewPageProps) {
         refetch={() => getReReviewOrders()}
         isCompleted={true}
       />
+
+      <Dialog open={commentDialogOpen} onOpenChange={setCommentDialogOpen}>
+        <DialogContent className='sm:max-w-md'>
+          <DialogHeader>
+            <DialogTitle>Re-Review Comment</DialogTitle>
+          </DialogHeader>
+          <div className='py-4 whitespace-pre-wrap'>
+            {currentComment || 'No comment available'}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

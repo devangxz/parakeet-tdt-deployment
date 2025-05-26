@@ -58,6 +58,7 @@ interface OrderData {
   margin: number
   marginPercentage: number
   customerEmail: string
+  invoiceId: string
 }
 
 export function RevenueDetailsModal({
@@ -92,6 +93,7 @@ export function RevenueDetailsModal({
       'Customer Email': order.customerEmail,
       'File ID': order.fileId,
       'File Name': order.fileName,
+      'Invoice ID': order.invoiceId,
       'Order Date': order.orderDate,
       'Delivery Date': order.deliveryDate || '',
       Status: order.status,
@@ -149,6 +151,7 @@ export function RevenueDetailsModal({
                   <TableHead>Customer Email</TableHead>
                   <TableHead>File ID</TableHead>
                   <TableHead>File Name</TableHead>
+                  <TableHead>Invoice ID</TableHead>
                   <TableHead>Order Date</TableHead>
                   <TableHead>Delivery Date</TableHead>
                   <TableHead>Status</TableHead>
@@ -180,6 +183,7 @@ export function RevenueDetailsModal({
                     >
                       {order.fileName}
                     </TableCell>
+                    <TableCell>{order.invoiceId}</TableCell>
                     <TableCell>{order.orderDate}</TableCell>
                     <TableCell>{order.deliveryDate || '-'}</TableCell>
                     <TableCell>{order.status}</TableCell>

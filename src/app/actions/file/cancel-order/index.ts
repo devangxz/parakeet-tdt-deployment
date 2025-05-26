@@ -70,7 +70,7 @@ export async function cancelOrderAction(fileId: string) {
 
     const templateData = {
       filename: invoiceFile?.File.filename || '',
-      url: `https://${process.env.SERVER}/payments?id=${invoiceFile?.invoiceId}`,
+      url: `https://${process.env.SERVER}/payments/paid?id=${invoiceFile?.invoiceId}`,
     }
 
     await sendTemplateMail(

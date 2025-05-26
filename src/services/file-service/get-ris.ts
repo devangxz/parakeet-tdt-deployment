@@ -3,6 +3,7 @@ import path from 'path'
 import mammoth from 'mammoth'
 import OpenAI from 'openai'
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions'
+import { PORTKEY_GATEWAY_URL, createHeaders } from 'portkey-ai'
 
 import config from '../../../config.json'
 import logger from '@/lib/logger'
@@ -126,29 +127,42 @@ function validateRISJson(risData: { [key: string]: string }): string[] {
 }
 
 async function makeLLMCall(systemPrompt: string, userPrompt: string) {
-  const messages: ChatCompletionMessageParam[] = [
-    {
-      role: 'system',
-      content: systemPrompt,
-    },
-    {
-      role: 'user',
-      content: userPrompt,
-    },
-  ]
-
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
-  const seed: number = 1
-  const temp: number = 0
-  const completion = await openai.chat.completions.create({
-    messages,
-    model: config.llm,
-    temperature: temp,
-    seed,
-  })
-
-  return completion.choices[0].message.content ?? ''
+  try{
+    const messages: ChatCompletionMessageParam[] = [
+      {
+        role: 'system',
+        content: systemPrompt,
+      },
+      {
+        role: 'user',
+        content: userPrompt,
+      },
+    ]
+    
+    const openai = new OpenAI({ 
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: PORTKEY_GATEWAY_URL,
+      defaultHeaders: createHeaders({
+        provider: 'openai',
+        apiKey: process.env.PORTKEY_API_KEY
+      })
+    });
+    
+    const seed: number = 1
+    const temp: number = 0
+    const completion = await openai.chat.completions.create({
+      messages,
+      model: config.llm,
+      temperature: temp,
+      seed,
+    })
+    
+    return completion.choices[0].message.content ?? ''
+  }
+  catch(error){
+    logger.error(`<-- makeLLMCall ${error instanceof Error ? error.message : String(error)}`)
+    return ''
+  }
 }
 
 export default async function extractDataFromRISFile(
@@ -162,7 +176,8 @@ export default async function extractDataFromRISFile(
     const risText = await getRISText(risFile)
     const template = getTemplateName(templateType)
     const templateText = await getTemplateData(template, organizationName)
-
+    logger.info(`templateText: ${templateText.length}, risText: ${risText.length}`)
+    
     // Call LLM
     // TODO: Update prompt to return the output in json format. Move the prompt to a json file
 

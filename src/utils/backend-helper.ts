@@ -65,9 +65,6 @@ export const getTeamAdminUserDetails = async (internalAdminUserId: number) => {
     })
 
     if (!teamMember) {
-      logger.info(
-        `No team found with the given internal admin user ID ${internalAdminUserId}`
-      )
       return false
     }
 
@@ -345,9 +342,6 @@ export const getEmailDetails = async (userId: number, paidBy: number = 0) => {
       })
 
       if (!teamMember) {
-        logger.info(
-          `No team found with the given internal admin user ID ${userId}`
-        )
         return false
       }
       const getTeamMembers = await prisma.teamMember.findMany({
@@ -557,7 +551,6 @@ export const getTeamSuperAdminEmailAndTeamName = async (teamId: number) => {
     })
 
     if (!team) {
-      logger.info(`No team found with the given team ID ${teamId}`)
       return false
     }
 
@@ -836,9 +829,7 @@ export const getICQCTodayCreditedHours = async (transcriberId: number) => {
           gte: startOfDay,
           lt: endOfDay,
         },
-        type: {
-          in: ['QC', 'REVIEW'],
-        },
+        isICQC: true,
       },
       include: {
         order: {

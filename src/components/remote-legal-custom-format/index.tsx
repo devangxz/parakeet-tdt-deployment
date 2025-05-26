@@ -13,6 +13,7 @@ import React, { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 
 import Bill from './bill'
+import InvoiceDownloadButton from '../invoice-download-button'
 import PaymentSuccessIcon from '../payment-success'
 import { CustomOrderOptions } from '@/app/(dashboard)/payments/invoice/[invoice_id]/components/custom-order-options'
 import { updateFilesInfo } from '@/app/actions/files/update-info'
@@ -1024,6 +1025,14 @@ const CustomFormatOrder = ({
         <Separator />
       </div>
       <div className='flex items-center justify-end gap-5 p-4 sticky bottom-0 right-0 w-full bg-background border-t-2 border-customBorder'>
+        <InvoiceDownloadButton
+          invoiceId={invoiceId}
+          buttonText='Download PDF'
+          className='text-md font-medium'
+          orderType={orderType}
+          variant='outline'
+          showPrimaryColor={true}
+        />
         {paymentSuccess ? (
           <Button
             className='w-[170px]'

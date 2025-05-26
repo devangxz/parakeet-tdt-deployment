@@ -176,24 +176,18 @@ export default function PreDeliveryPage({
             rateBonus: order.rateBonus,
           }
         })
-        // Sort orders so that overdue files from yesterday are placed on top
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const yesterday = new Date(today)
-        yesterday.setDate(today.getDate() - 1)
+        const now = new Date()
 
         orders.sort((a, b) => {
           const aDelivery = new Date(a.deliveryTs)
-          aDelivery.setHours(0, 0, 0, 0)
           const bDelivery = new Date(b.deliveryTs)
-          bDelivery.setHours(0, 0, 0, 0)
 
-          const aOverdue = aDelivery.getTime() === yesterday.getTime()
-          const bOverdue = bDelivery.getTime() === yesterday.getTime()
+          const aOverdue = aDelivery < now
+          const bOverdue = bDelivery < now
 
           if (aOverdue && !bOverdue) return -1
           if (!aOverdue && bOverdue) return 1
-          return a.index - b.index
+          return aDelivery.getTime() - bDelivery.getTime()
         })
 
         setPreDelieryFiles(orders ?? [])
@@ -488,8 +482,7 @@ export default function PreDeliveryPage({
     if (!waveformUrls[fileId]) return null
 
     return (
-      <div className='w-full h-full cursor-pointer'
-      >
+      <div className='w-full h-full cursor-pointer'>
         <WaveformHeatmap
           waveformUrl={waveformUrls[fileId]}
           listenCount={listenCounts[fileId] || []}
