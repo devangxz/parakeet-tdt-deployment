@@ -131,6 +131,7 @@ interface TopbarProps {
   editorRef: React.Ref<EditorHandle>
   step: string
   setEditorReadOnly: React.Dispatch<React.SetStateAction<boolean>>
+  diffToggleEnabled: boolean
 }
 
 export default memo(function Topbar({
@@ -158,6 +159,7 @@ export default memo(function Topbar({
   editorRef,
   step,
   setEditorReadOnly,
+  diffToggleEnabled
 }: TopbarProps) {
   const audioPlayer = useRef<HTMLAudioElement>(null)
   const [newEditorMode, setNewEditorMode] = useState<string>('')
@@ -229,6 +231,8 @@ export default memo(function Topbar({
     useState(false)
   const [fiveMinutesLeft, setFiveMinutesLeft] = useState(false)
   const [showTimeoutDialog, setShowTimeoutDialog] = useState(false)
+  const [isDiffModeDialogOpen, setIsDiffModeDialogOpen] = useState(false)
+  const [diffModeDialogAction, setDiffModeDialogAction] = useState<'submit' | 'download' | 'menu'>('submit')
 
   const playNextBlankInstance = useCallback(() => {
     const quill = quillRef?.current?.getEditor()
@@ -710,7 +714,7 @@ export default memo(function Topbar({
             <TooltipContent>{orderDetails.filename}</TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        
+
         {orderDetails.status === 'QC_ASSIGNED' && (
           <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center">
             <span
@@ -780,7 +784,14 @@ export default memo(function Topbar({
             {['CUSTOMER'].includes(session?.user?.role ?? '') ? (
               <Button
                 disabled={isCheckAndDownloadLoading}
-                onClick={() => handleCheckAndDownload(orderDetails.fileId)}
+                onClick={() => {
+                  if (diffToggleEnabled) {
+                    setDiffModeDialogAction('download')
+                    setIsDiffModeDialogOpen(true)
+                  } else {
+                    handleCheckAndDownload(orderDetails.fileId)
+                  }
+                }}
                 className='format-button border-r-[1.5px] border-white/70'
               >
                 {isCheckAndDownloadLoading ? (
@@ -795,10 +806,15 @@ export default memo(function Topbar({
             ) : (
               <Button
                 onClick={() => {
-                  if (orderDetails.status === 'QC_ASSIGNED') {
-                    setIsSpeakerNameModalOpen(true)
+                  if (diffToggleEnabled) {
+                    setDiffModeDialogAction('submit')
+                    setIsDiffModeDialogOpen(true)
                   } else {
-                    setIsSubmitModalOpen(true)
+                    if (orderDetails.status === 'QC_ASSIGNED') {
+                      setIsSpeakerNameModalOpen(true)
+                    } else {
+                      setIsSubmitModalOpen(true)
+                    }
                   }
                 }}
                 className='format-button border-r-[1.5px] border-white/70'
@@ -808,158 +824,171 @@ export default memo(function Topbar({
               </Button>
             )}
 
-            <DropdownMenu
-              modal={false}
-              onOpenChange={handleDropdownMenuOpenChange}
-            >
-              <DropdownMenuTrigger className='focus-visible:ring-0 outline-none' disabled={timeoutCount === '00:00:00'}>
-                <Button className='px-2 format-icon-button focus-visible:ring-0 outline-none' disabled={timeoutCount === '00:00:00'} >
-                  <span className='sr-only'>Open menu</span>
-                  <ChevronDownIcon className='h-4 w-4' />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align='end' className='w-30'>
-                <DropdownMenuItem
-                  onClick={() => {
-                    autoCapitalizeSentences(quillRef, autoCapitalize)
-                    handleSave({
-                      getEditorText,
-                      orderDetails,
-                      setButtonLoading,
-                      listenCount,
-                      editedSegments,
-                      role: session?.user?.role || '',
-                      quill: quillRef?.current?.getEditor(),
-                    })
-                  }}
-                >
-                  Save
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setIsShortcutsReferenceModalOpen(true)}
-                >
-                  Shortcuts Reference
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setIsConfigureShortcutsModalOpen(true)}
-                >
-                  Configure Shortcuts
-                </DropdownMenuItem>
-                {session?.user?.role !== 'CUSTOMER' && (
-                  <DropdownMenuItem onClick={toggleRevertTranscript}>
-                    Revert Transcript
-                  </DropdownMenuItem>
-                )}
-                {session?.user?.role !== 'CUSTOMER' &&
-                  !orderDetails.isTestOrder && (
-                    <DropdownMenuItem onClick={toggleVideo}>
-                      Toggle Video
-                    </DropdownMenuItem>
-                  )}
-                {session?.user?.role !== 'CUSTOMER' &&
-                  !orderDetails.isTestOrder && (
-                    <DropdownMenuItem
-                      onClick={downloadMP3.bind(null, orderDetails)}
-                    >
-                      Download MP3
-                    </DropdownMenuItem>
-                  )}
-                {!['CUSTOMER', 'OM', 'ADMIN'].includes(
-                  session?.user?.role || ''
-                ) &&
-                  !orderDetails.isTestOrder && (
-                    <DropdownMenuItem onClick={requestExtension}>
-                      Request Extension
-                    </DropdownMenuItem>
-                  )}
-                {session?.user?.role !== 'CUSTOMER' &&
-                  !orderDetails.isTestOrder && (
-                    <DropdownMenuItem onClick={() => setReportModalOpen(true)}>
-                      Report
-                    </DropdownMenuItem>
-                  )}
-                {session?.user?.role !== 'CUSTOMER' && (
+            {diffToggleEnabled ? (
+              <Button 
+                className='px-2 format-icon-button focus-visible:ring-0 outline-none'
+                onClick={() => {
+                  setDiffModeDialogAction('menu')
+                  setIsDiffModeDialogOpen(true)
+                }}
+              >
+                <span className='sr-only'>Open menu</span>
+                <ChevronDownIcon className='h-4 w-4' />
+              </Button>
+            ) : (
+              <DropdownMenu
+                modal={false}
+                onOpenChange={handleDropdownMenuOpenChange}
+              >
+                <DropdownMenuTrigger className='focus-visible:ring-0 outline-none' disabled={timeoutCount === '00:00:00'}>
+                  <Button className='px-2 format-icon-button focus-visible:ring-0 outline-none' disabled={timeoutCount === '00:00:00'} >
+                    <span className='sr-only'>Open menu</span>
+                    <ChevronDownIcon className='h-4 w-4' />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align='end' className='w-30'>
                   <DropdownMenuItem
-                    onClick={() =>
-                      getFrequentTermsHandler(
-                        orderDetails?.userId,
+                    onClick={() => {
+                      autoCapitalizeSentences(quillRef, autoCapitalize)
+                      handleSave({
+                        getEditorText,
+                        orderDetails,
                         setButtonLoading,
-                        setFrequentTermsData,
-                        setFrequentTermsModalOpen
-                      )
-                    }
+                        listenCount,
+                        editedSegments,
+                        role: session?.user?.role || '',
+                        quill: quillRef?.current?.getEditor(),
+                      })
+                    }}
                   >
-                    Frequent Terms
+                    Save
                   </DropdownMenuItem>
-                )}
-                {!orderDetails.isTestOrder && (
-                  <DropdownMenuItem onClick={() => setReviewModalOpen(true)}>
-                    Review with Gemini
-                  </DropdownMenuItem>
-                )}
-                {orderDetails.orderType === 'TRANSCRIPTION_FORMATTING' && (
                   <DropdownMenuItem
-                    onClick={() => setProcessWithLLMModalOpen(true)}
+                    onClick={() => setIsShortcutsReferenceModalOpen(true)}
                   >
-                    Marking with LLM
+                    Shortcuts Reference
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={toggleAutoCapitalize}>
-                  {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
-                </DropdownMenuItem>
-                {session?.user?.role === 'CUSTOMER' && (
                   <DropdownMenuItem
-                    onClick={() => setIsFormattingOptionsModalOpen(true)}
+                    onClick={() => setIsConfigureShortcutsModalOpen(true)}
                   >
-                    Formatting Options
+                    Configure Shortcuts
                   </DropdownMenuItem>
-                )}
-                {session?.user?.role === 'CUSTOMER' &&
-                  !orderDetails.isTestOrder && (
-                    <DropdownMenuItem
-                      onClick={() => setIsReReviewModalOpen(true)}
-                    >
-                      Re-Review
+                  {session?.user?.role !== 'CUSTOMER' && (
+                    <DropdownMenuItem onClick={toggleRevertTranscript}>
+                      Revert Transcript
                     </DropdownMenuItem>
                   )}
-                {orderDetails.status === 'QC_ASSIGNED' && (
-                  <DropdownMenuItem asChild>
-                    <a href={asrFileUrl} target='_blank'>
-                      Download ASR text
-                    </a>
+                  {session?.user?.role !== 'CUSTOMER' &&
+                    !orderDetails.isTestOrder && (
+                      <DropdownMenuItem onClick={toggleVideo}>
+                        Toggle Video
+                      </DropdownMenuItem>
+                    )}
+                  {session?.user?.role !== 'CUSTOMER' &&
+                    !orderDetails.isTestOrder && (
+                      <DropdownMenuItem
+                        onClick={downloadMP3.bind(null, orderDetails)}
+                      >
+                        Download MP3
+                      </DropdownMenuItem>
+                    )}
+                  {!['CUSTOMER', 'OM', 'ADMIN'].includes(
+                    session?.user?.role || ''
+                  ) &&
+                    !orderDetails.isTestOrder && (
+                      <DropdownMenuItem onClick={requestExtension}>
+                        Request Extension
+                      </DropdownMenuItem>
+                    )}
+                  {session?.user?.role !== 'CUSTOMER' &&
+                    !orderDetails.isTestOrder && (
+                      <DropdownMenuItem onClick={() => setReportModalOpen(true)}>
+                        Report
+                      </DropdownMenuItem>
+                    )}
+                  {session?.user?.role !== 'CUSTOMER' && (
+                    <DropdownMenuItem
+                      onClick={() =>
+                        getFrequentTermsHandler(
+                          orderDetails?.userId,
+                          setButtonLoading,
+                          setFrequentTermsData,
+                          setFrequentTermsModalOpen
+                        )
+                      }
+                    >
+                      Frequent Terms
+                    </DropdownMenuItem>
+                  )}
+                  {!orderDetails.isTestOrder && (
+                    <DropdownMenuItem onClick={() => setReviewModalOpen(true)}>
+                      Review with Gemini
+                    </DropdownMenuItem>
+                  )}
+                  {orderDetails.orderType === 'TRANSCRIPTION_FORMATTING' && (
+                    <DropdownMenuItem
+                      onClick={() => setProcessWithLLMModalOpen(true)}
+                    >
+                      Marking with LLM
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={toggleAutoCapitalize}>
+                    {autoCapitalize ? 'Disable' : 'Enable'} Auto Capitalize
                   </DropdownMenuItem>
-                )}
-                {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
-                  orderDetails.status === 'FINALIZER_ASSIGNED') && (
-                  <DropdownMenuItem asChild>
-                    <a href={qcFileUrl} target='_blank'>
-                      Download QC text
-                    </a>
+                  {session?.user?.role === 'CUSTOMER' && (
+                    <DropdownMenuItem
+                      onClick={() => setIsFormattingOptionsModalOpen(true)}
+                    >
+                      Formatting Options
+                    </DropdownMenuItem>
+                  )}
+                  {session?.user?.role === 'CUSTOMER' &&
+                    !orderDetails.isTestOrder && (
+                      <DropdownMenuItem
+                        onClick={() => setIsReReviewModalOpen(true)}
+                      >
+                        Re-Review
+                      </DropdownMenuItem>
+                    )}
+                  {orderDetails.status === 'QC_ASSIGNED' && (
+                    <DropdownMenuItem asChild>
+                      <a href={asrFileUrl} target='_blank'>
+                        Download ASR text
+                      </a>
+                    </DropdownMenuItem>
+                  )}
+                  {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
+                    orderDetails.status === 'FINALIZER_ASSIGNED') && (
+                    <DropdownMenuItem asChild>
+                      <a href={qcFileUrl} target='_blank'>
+                        Download QC text
+                      </a>
+                    </DropdownMenuItem>
+                  )}
+                  {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
+                    orderDetails.status === 'FINALIZER_ASSIGNED') && (
+                    <DropdownMenuItem asChild>
+                      <a href={LLMFileUrl} target='_blank'>
+                        Download LLM text
+                      </a>
+                    </DropdownMenuItem>
+                  )}
+                  {session?.user?.role !== 'CUSTOMER' && (
+                    <DropdownMenuItem onClick={() => setIsHeatmapModalOpen(true)}>
+                      Waveform Heatmap
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem
+                    onClick={() => setIsRestoreVersionModalOpen(true)}
+                  >
+                    Restore Version
                   </DropdownMenuItem>
-                )}
-                {(orderDetails.status === 'REVIEWER_ASSIGNED' ||
-                  orderDetails.status === 'FINALIZER_ASSIGNED') && (
-                  <DropdownMenuItem asChild>
-                    <a href={LLMFileUrl} target='_blank'>
-                      Download LLM text
-                    </a>
+                  <DropdownMenuItem onClick={() => setIsSettingsModalOpen(true)}>
+                    Settings
                   </DropdownMenuItem>
-                )}
-                {session?.user?.role !== 'CUSTOMER' && (
-                  <DropdownMenuItem onClick={() => setIsHeatmapModalOpen(true)}>
-                    Waveform Heatmap
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem
-                  onClick={() => setIsRestoreVersionModalOpen(true)}
-                >
-                  Restore Version
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsSettingsModalOpen(true)}>
-                  Settings
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
             <Dialog>
               <DialogContent>
@@ -1250,6 +1279,38 @@ export default memo(function Topbar({
         updateQuill={updateTranscript}
         setCtms={setCtms}
       />
+      {isDiffModeDialogOpen && (
+        <Dialog
+          open={isDiffModeDialogOpen}
+          onOpenChange={setIsDiffModeDialogOpen}
+          modal
+        >
+          <DialogContent className='max-w-md'>
+            <DialogHeader>
+              <DialogTitle>Exit Diff Mode</DialogTitle>
+              <DialogDescription>
+                {diffModeDialogAction === 'submit' && 
+                  'Please exit diff mode before submitting your transcript.'
+                }
+                {diffModeDialogAction === 'download' && 
+                  'Please exit diff mode before downloading files.'
+                }
+                {diffModeDialogAction === 'menu' && 
+                  'Please exit diff mode before accessing menu options.'
+                }
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className='mt-4 flex gap-2'>
+              <Button 
+                variant='outline'
+                onClick={() => setIsDiffModeDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 })
