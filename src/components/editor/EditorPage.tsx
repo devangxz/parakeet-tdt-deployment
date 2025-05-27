@@ -234,7 +234,6 @@ function EditorPage() {
   const [capturedEditorContent, setCapturedEditorContent] = useState<string>('')
   
   const diffToggleEnabled = diffModeState === 'on'
-  const isExitingDiffMode = diffModeState === 'exiting'
   
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -2181,14 +2180,20 @@ function EditorPage() {
             />
           )}
 
-        {(diffToggleEnabled || isExitingDiffMode) && (
+        {(diffToggleEnabled ||
+          diffModeState === 'entering' ||
+          diffModeState === 'exiting') && (
           <VersionCompareDialog
-            isOpen={diffToggleEnabled || isExitingDiffMode}
+            isOpen={
+              diffToggleEnabled ||
+              diffModeState === 'entering' ||
+              diffModeState === 'exiting'
+            }
             fileId={orderDetails.fileId}
             renderDiff={renderDiff}
             currentEditorContent={capturedEditorContent}
             onSaveNeeded={handleSaveForDiff}
-            isExitingDiffMode={isExitingDiffMode}
+            diffModeState={diffModeState}
           />
         )}
       </div>
