@@ -43,6 +43,9 @@ interface DataTableProps<TData, TValue> {
     onPageChange: (page: number) => void
     onPageSizeChange: (pageSize: number) => void
   }
+  initialFilters?: Record<string, string | string[] | [string, string] | { singleDate?: [string, string]; dateRange?: [string, string] }>
+  onFiltersChange?: (filters: Record<string, string | string[] | [string, string] | { singleDate?: [string, string]; dateRange?: [string, string] }>) => void
+  activeTab?: string
 }
 
 const isDeliveryDatePast = (deliveryTs: string) =>
@@ -57,6 +60,9 @@ export function DataTable<TData, TValue>({
   defaultColumnVisibility,
   isLoading = false,
   pagination,
+  initialFilters,
+  onFiltersChange,
+  activeTab,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({})
 
@@ -73,6 +79,42 @@ export function DataTable<TData, TValue>({
   )
   const [sorting, setSorting] = React.useState<SortingState>([])
 
+  React.useEffect(() => {
+    if (initialFilters && Object.keys(initialFilters).length > 0) {
+      const filtersToApply: ColumnFiltersState = Object.entries(initialFilters).map(
+        ([id, value]) => ({
+          id,
+          value,
+        })
+      );
+      setColumnFilters(filtersToApply);
+    }
+  }, [initialFilters]);
+
+  const handleColumnFiltersChange = React.useCallback(
+    (updaterOrValue: ColumnFiltersState | ((old: ColumnFiltersState) => ColumnFiltersState)) => {
+      setColumnFilters((prevFilters) => {
+        const newFilters = typeof updaterOrValue === 'function' 
+          ? updaterOrValue(prevFilters) 
+          : updaterOrValue;
+        
+        if (onFiltersChange) {
+          const filterObject = newFilters.reduce<Record<string, string | string[] | [string, string] | { singleDate?: [string, string]; dateRange?: [string, string] }>>(
+            (acc, filter) => {
+              acc[filter.id] = filter.value as string | string[] | [string, string] | { singleDate?: [string, string]; dateRange?: [string, string] };
+              return acc;
+            },
+            {}
+          );
+          onFiltersChange(filterObject);
+        }
+        
+        return newFilters;
+      });
+    },
+    [onFiltersChange]
+  );
+
   const table = useReactTable({
     data,
     columns,
@@ -85,7 +127,7 @@ export function DataTable<TData, TValue>({
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    onColumnFiltersChange: handleColumnFiltersChange,
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -147,7 +189,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className='space-y-4'>
-      <DataTableToolbar table={table} />
+      <DataTableToolbar table={table} activeTab={activeTab} />
       <div className='mt-4'>
         <DataTablePagination
           table={table}

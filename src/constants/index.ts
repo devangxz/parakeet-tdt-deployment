@@ -50,6 +50,10 @@ export const INVOICE_DISCLAIMER = config.invoice_disclaimer
 //user settings
 export const DEFAULT_USER_OPTIONS = config.default_user_options
 
+//admin preference local storage keys
+export const ADMIN_ORDERS_FILTER_KEY = config.admin_orders_table_filters
+export const ADMIN_APPROVALS_FILTERS_KEY = config.admin_approvals_table_filters
+
 //Static-Pages
 export const StaticContent = { faq, transcriberGuide }
 export const BASE_FARE = config.BASE_FARE

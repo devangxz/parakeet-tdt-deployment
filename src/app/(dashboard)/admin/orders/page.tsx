@@ -40,7 +40,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import FileAudioPlayer from '@/components/utils/FileAudioPlayer'
-import { HIGH_PWER, LOW_PWER } from '@/constants'
+import { ADMIN_APPROVALS_FILTERS_KEY, ADMIN_ORDERS_FILTER_KEY, HIGH_PWER, LOW_PWER } from '@/constants'
 import { FileCost } from '@/types/files'
 import formatDateTime from '@/utils/formatDateTime'
 import formatDuration from '@/utils/formatDuration'
@@ -88,6 +88,21 @@ interface File {
   }[]
 }
 
+// Interface for table filters
+interface TableFilters {
+  status?: string[]
+  type?: string[]
+  deliveryTs?: { singleDate?: [string, string]; dateRange?: [string, string] } | [string, string]
+  [key: string]: any
+}
+
+export interface OrdersTableFilters extends TableFilters {
+  orgName?: string[]
+}
+
+export interface ApprovalsTableFilters extends TableFilters {
+}
+
 export default function OrdersPage() {
   const [pendingOrders, setPendingOrders] = useState<File[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -122,6 +137,44 @@ export default function OrdersPage() {
   const [approvalFilesCount, setApprovalFilesCount] = useState<number>(0)
   const [reReviewFilesCount, setReReviewFilesCount] = useState<number>(0)
   const [youtubeImportsCount, setYoutubeImportsCount] = useState<number>(0)
+  const [tableFilters, setTableFilters] = useState<OrdersTableFilters>({})
+  const [approvalsTableFilters, setApprovalsTableFilters] = useState<ApprovalsTableFilters>({})
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedFilters = localStorage.getItem(ADMIN_ORDERS_FILTER_KEY)
+      if (savedFilters) {
+        try {
+          setTableFilters(JSON.parse(savedFilters))
+        } catch (e) {
+          console.error('Failed to parse saved filters:', e)
+        }
+      }
+
+      const savedApprovalsFilters = localStorage.getItem(ADMIN_APPROVALS_FILTERS_KEY)
+      if (savedApprovalsFilters) {
+        try {
+          setApprovalsTableFilters(JSON.parse(savedApprovalsFilters))
+        } catch (e) {
+          console.error('Failed to parse saved filters:', e)
+        }
+      }
+    }
+  }, [])
+
+  const handleOrdersFiltersChange = (newFilters: TableFilters ) => {
+    setTableFilters(newFilters)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(ADMIN_ORDERS_FILTER_KEY, JSON.stringify(newFilters))
+    }
+  }
+
+  const handleApprovalsFiltersChange = (newFilters: ApprovalsTableFilters ) => {
+    setApprovalsTableFilters(newFilters)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(ADMIN_APPROVALS_FILTERS_KEY, JSON.stringify(newFilters))
+    }
+  }
 
   const setAudioUrl = async () => {
     const fileId = Object.keys(playing)[0]
@@ -507,14 +560,32 @@ export default function OrdersPage() {
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title='Delivery Date' />
       ),
-      filterFn: (row, id, value: [string, string]) => {
-        if (!value || !value[0] || !value[1]) return true
-
+      filterFn: (row, id, value: { singleDate?: [string, string]; dateRange?: [string, string] } | [string, string]) => {
+        if (!value) return true
         const cellDate = new Date(row.getValue(id))
-        const [start, end] = value.map((str) => new Date(str))
+        
+        const dateRanges: [string, string][] = []
+        
+        if (Array.isArray(value)) {
+          if (value[0] && value[1]) {
+            dateRanges.push(value)
+          }
+        } else if (typeof value === 'object') {
+          if (value.singleDate && value.singleDate[0] && value.singleDate[1]) {
+            dateRanges.push(value.singleDate)
+          }
+          if (value.dateRange && value.dateRange[0] && value.dateRange[1]) {
+            dateRanges.push(value.dateRange)
+          }
+        }
 
-        // Check if the date is within the range
-        return cellDate >= start && cellDate <= end
+        if (dateRanges.length === 0) return true
+
+        return dateRanges.some(([start, end]) => {
+          const startDate = new Date(start)
+          const endDate = new Date(end)
+          return cellDate >= startDate && cellDate <= endDate
+        })
       },
       cell: ({ row }) => (
         <div className='flex gap-3 items-center'>
@@ -569,8 +640,50 @@ export default function OrdersPage() {
         defaultValue='orders'
         value={activeTab}
         onValueChange={(value) => {
+          if (activeTab === 'orders' && value !== 'orders') {
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(ADMIN_ORDERS_FILTER_KEY, JSON.stringify(tableFilters))
+            }
+          }
+
+          if(activeTab === 'approval' && value !== 'approval'){
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(ADMIN_APPROVALS_FILTERS_KEY, JSON.stringify(approvalsTableFilters))
+            }
+          }
+          
           setActiveTab(value)
           fetchAllTabCounts()
+          
+          if (value === 'orders' && activeTab !== 'orders') {
+            if (typeof window !== 'undefined') {
+              const savedFilters = localStorage.getItem(
+                ADMIN_ORDERS_FILTER_KEY
+              )
+              if (savedFilters) {
+                try {
+                  setTableFilters(JSON.parse(savedFilters))
+                } catch (e) {
+                  console.error('Failed to parse saved filters:', e)
+                }
+              }
+            }
+          }
+
+          if(value === 'approval' && activeTab !== 'approval'){
+            if (typeof window !== 'undefined') {
+              const savedFilters = localStorage.getItem(
+                ADMIN_APPROVALS_FILTERS_KEY
+              )
+              if(savedFilters){
+                try{
+                  setApprovalsTableFilters(JSON.parse(savedFilters))
+                }catch(e){
+                  console.error('Failed to parse saved filters:', e)
+                }
+              }
+            }
+          }
         }}
       >
         <TabsList className='grid grid-cols-8 mt-5 ml-8 w-[1150px]'>
@@ -649,6 +762,9 @@ export default function OrdersPage() {
                   </div>
                 ) : null
               }
+              initialFilters={tableFilters}
+              onFiltersChange={handleOrdersFiltersChange}
+              activeTab={'orders'}
             />
           </div>
           <div className='bg-muted/40'>
@@ -669,7 +785,7 @@ export default function OrdersPage() {
           <PreDeliveryPage onActionComplete={fetchAllTabCounts} />
         </TabsContent>
         <TabsContent value='approval'>
-          <ApprovalPage onActionComplete={fetchAllTabCounts} />
+          <ApprovalPage onActionComplete={fetchAllTabCounts} initialFilters={approvalsTableFilters} onFiltersChange={handleApprovalsFiltersChange} />
         </TabsContent>
         <TabsContent value='re-review'>
           <ReReviewPage onActionComplete={fetchAllTabCounts} />
