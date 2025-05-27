@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 
 import { DataTable } from './components/data-table'
 import QCLink from './components/qc-link'
+import { ApprovalsTableFilters } from './page'
 import { getListenCountAndEditedSegmentAction } from '@/app/actions/admin/get-listen-count-and-edited-segment'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { fetchApprovalOrders } from '@/app/actions/om/fetch-approval-orders'
@@ -70,9 +71,11 @@ interface CachedData {
 
 interface ApprovalPageProps {
   onActionComplete?: () => Promise<void>
+  initialFilters?: ApprovalsTableFilters
+  onFiltersChange?: (filters: ApprovalsTableFilters) => void
 }
 
-export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
+export default function ApprovalPage({ onActionComplete, initialFilters, onFiltersChange }: ApprovalPageProps) {
   const [approvalFiles, setApprovalFiles] = useState<File[] | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -408,6 +411,7 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
       cell: ({ row }) => (
         <div className='capitalize font-medium'>{row.getValue('status')}</div>
       ),
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
       accessorKey: 'type',
@@ -443,11 +447,32 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
           {formatDateTime(row.getValue('deliveryTs'))}
         </div>
       ),
-      filterFn: (row, id, value: [string, string]) => {
-        if (!value || !value[0] || !value[1]) return true
+      filterFn: (row, id, value: { singleDate?: [string, string]; dateRange?: [string, string] } | [string, string]) => {
+        if (!value) return true
+
         const cellDate = new Date(row.getValue(id))
-        const [start, end] = value.map((str) => new Date(str))
-        return cellDate >= start && cellDate <= end
+        const dateRanges: [string, string][] = []
+        
+        if (Array.isArray(value)) {
+          if (value[0] && value[1]) {
+            dateRanges.push(value)
+          }
+        } else if (typeof value === 'object') {
+          
+          if (value.singleDate && value.singleDate[0] && value.singleDate[1]) {
+            dateRanges.push(value.singleDate)
+          }
+          if (value.dateRange && value.dateRange[0] && value.dateRange[1]) {
+            dateRanges.push(value.dateRange)
+          }
+        }
+
+        if (dateRanges.length === 0) return true
+        return dateRanges.some(([start, end]) => {
+          const startDate = new Date(start)
+          const endDate = new Date(end)
+          return cellDate >= startDate && cellDate <= endDate
+        })
       },
     },
     {
@@ -728,6 +753,9 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
             onPageChange: handlePageChange,
             onPageSizeChange: handlePageSizeChange,
           }}
+          initialFilters={initialFilters}
+          onFiltersChange={onFiltersChange}
+          activeTab={'approval'}
         />
       </div>
       <ReassignApprovalFile

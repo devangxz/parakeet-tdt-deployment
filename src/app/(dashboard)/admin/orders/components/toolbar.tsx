@@ -21,10 +21,12 @@ import {
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>
+  activeTab?: string
 }
 
 export function DataTableToolbar<TData>({
   table,
+  activeTab,
 }: DataTableToolbarProps<TData>) {
   const [watchlistFilter, setWatchlistFilter] = React.useState<string>('all')
   const isFiltered = table.getState().columnFilters.length > 0
@@ -175,6 +177,18 @@ export function DataTableToolbar<TData>({
             onClick={() => {
               table.resetColumnFilters()
               setWatchlistFilter('all')
+              if (typeof window !== 'undefined') {
+                switch(activeTab){
+                  case 'orders':
+                    localStorage.removeItem('admin-orders-table-filters')
+                    break
+                  case 'approval':
+                    localStorage.removeItem('admin-approvals-table-filters')
+                    break
+                  default:
+                    break
+                }
+              }
             }}
             className='h-8 px-2 lg:px-3 not-rounded'
           >

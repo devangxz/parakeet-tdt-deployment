@@ -354,6 +354,7 @@ export default function PreDeliveryPage({
       cell: ({ row }) => (
         <div className='capitalize font-medium'>{row.getValue('status')}</div>
       ),
+      filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
       accessorKey: 'type',
@@ -388,11 +389,34 @@ export default function PreDeliveryPage({
           {formatDateTime(row.getValue('deliveryTs'))}
         </div>
       ),
-      filterFn: (row, id, value: [string, string]) => {
-        if (!value || !value[0] || !value[1]) return true
+      filterFn: (row, id, value: { singleDate?: [string, string]; dateRange?: [string, string] } | [string, string]) => {
+        if (!value) return true
+
         const cellDate = new Date(row.getValue(id))
-        const [start, end] = value.map((str) => new Date(str))
-        return cellDate >= start && cellDate <= end
+        
+        const dateRanges: [string, string][] = []
+        
+        if (Array.isArray(value)) {
+          if (value[0] && value[1]) {
+            dateRanges.push(value)
+          }
+        } else if (typeof value === 'object') {
+          if (value.singleDate && value.singleDate[0] && value.singleDate[1]) {
+            dateRanges.push(value.singleDate)
+          }
+          if (value.dateRange && value.dateRange[0] && value.dateRange[1]) {
+            dateRanges.push(value.dateRange)
+          }
+        }
+
+        if (dateRanges.length === 0) return true
+
+        // Check if the date falls within any of the specified ranges
+        return dateRanges.some(([start, end]) => {
+          const startDate = new Date(start)
+          const endDate = new Date(end)
+          return cellDate >= startDate && cellDate <= endDate
+        })
       },
     },
     {
