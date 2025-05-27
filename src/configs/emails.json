@@ -133,6 +133,15 @@
     "HTML": "QC_JOB_TIMEOUT.html",
     "TEXT": ""
   },
+  "QC_JOB_TIMEOUT_WARNING": {
+    "FROM": "$$SUPPORT_EMAIL_ID$$",
+    "TO": ["$$USER_EMAIL_ID$$"],
+    "CC": ["$$SUPPORT_EMAIL_ID$$"],
+    "BCC": [],
+    "SUBJECT": "Scribie.ai Editor File Timeout Warning",
+    "HTML": "QC_JOB_TIMEOUT_WARNING.html",
+    "TEXT": ""
+  },
   "REVIEW_JOB_TIMEOUT": {
     "FROM": "$$SUPPORT_EMAIL_ID$$",
     "TO": ["$$USER_EMAIL_ID$$"],
