@@ -124,6 +124,15 @@
     "HTML": "FINALIZER_ASSIGNMENT.html",
     "TEXT": ""
   },
+  "REASSIGN_FILE": {
+    "FROM": "$$SUPPORT_EMAIL_ID$$",
+    "TO": ["$$USER_EMAIL_ID$$"],
+    "CC": ["$$SUPPORT_EMAIL_ID$$"],
+    "BCC": [],
+    "SUBJECT": "Scribie.ai File Reassigned",
+    "HTML": "REASSIGN_FILE.html",
+    "TEXT": ""
+  },
   "QC_JOB_TIMEOUT": {
     "FROM": "$$SUPPORT_EMAIL_ID$$",
     "TO": ["$$USER_EMAIL_ID$$"],
@@ -262,6 +271,15 @@
     "BCC": [],
     "SUBJECT": "Scribie.ai Order Cancelled",
     "HTML": "TRANSCRIPT_CANCEL_ORDER.html",
+    "TEXT": ""
+  },
+  "TRANSCRIPT_ORDER_REFUND": {
+    "FROM": "$$SUPPORT_EMAIL_ID$$",
+    "TO": ["$$USER_EMAIL_ID$$"],
+    "CC": ["$$SUPPORT_EMAIL_ID$$"],
+    "BCC": [],
+    "SUBJECT": "Scribie.ai Order Cancelled",
+    "HTML": "TRANSCRIPT_ORDER_REFUND.html",
     "TEXT": ""
   },
   "DAILY_BONUS": {
