@@ -2352,6 +2352,24 @@ const getOptimalInterval = (duration: number): number => {
   return 7200;                      // 2 hour intervals for > 6 hours
 };
 
+const calculateTimerDuration = (duration: number) => {
+  let timeoutMultiplier = 4
+  if (duration <= 1800) {
+    // Less than 30 mins
+    timeoutMultiplier = 6
+  } else if (duration <= 10800) {
+    // Between 30 mins and 3 hours
+    timeoutMultiplier = 5
+  }
+
+  let durationInMs = duration * timeoutMultiplier * 1000
+  if (duration <= 10800) {
+    durationInMs += 7200 * 1000 // Add 2 hours for files under 3 hours
+  }
+
+  return durationInMs
+}
+
 export enum GeminiModel {
   GEMINI_1_5_FLASH = 'gemini-1.5-flash',
   GEMINI_2_0_FLASH = 'gemini-2.0-flash',
@@ -2405,5 +2423,6 @@ export {
   clearAllHighlights,
   generateSubtitles,
   getOptimalInterval,
+  calculateTimerDuration
 }
 export type { CTMType }
