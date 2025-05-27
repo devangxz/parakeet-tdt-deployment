@@ -57,6 +57,7 @@ import { CheckAndDownload } from '@/app/(dashboard)/files/delivered/components/c
 import { fileCacheTokenAction } from '@/app/actions/auth/file-cache-token'
 import { requestReReviewAction } from '@/app/actions/editor/re-review'
 import { requestExtensionAction } from '@/app/actions/editor/request-extension'
+import { sendTimeoutMail } from '@/app/actions/editor/timeout-mail'
 import { updateSpeakerNameAction } from '@/app/actions/editor/update-speaker-name'
 import { getSignedUrlAction } from '@/app/actions/get-signed-url'
 import { getTextFile } from '@/app/actions/get-text-file'
@@ -674,11 +675,12 @@ export default memo(function Topbar({
             getEditorText,
             orderDetails,
             setButtonLoading,
-          listenCount,
-          editedSegments,
-          role: session?.user?.role || '',
-          quill: quillRef?.current?.getEditor(),
-        }, false)
+            listenCount,
+            editedSegments,
+            role: session?.user?.role || '',
+            quill: quillRef?.current?.getEditor(),
+          }, false)
+          await sendTimeoutMail(orderDetails, session?.user?.email || '')
         }
       }
     }
@@ -696,10 +698,9 @@ export default memo(function Topbar({
 
   useEffect(() => {
     if(orderDetails.remainingTime === '0') {
-
       setShowTimeoutDialog(true)
     }
-  }, [orderDetails])
+  }, [orderDetails.remainingTime])
 
   return (
     <div className='bg-background border border-customBorder rounded-md p-2'>

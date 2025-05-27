@@ -5,11 +5,13 @@ import config from '../../../../config.json'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
+import { calculateTimerDuration } from '@/utils/editorUtils'
 import getOrgName from '@/utils/getOrgName'
 
 export async function POST() {
   try {
     const rejectedFiles: string[] = []
+    const warningFiles: string[] = []
     const assignedFiles = await prisma.jobAssignment.findMany({
       where: {
         status: JobStatus.ACCEPTED,
@@ -38,19 +40,7 @@ export async function POST() {
           continue
         }
 
-        let timeoutMultiplier = 4
-        if (file.order.File.duration <= 1800) {
-          // Less than 30 mins
-          timeoutMultiplier = 6
-        } else if (file.order.File.duration <= 10800) {
-          // Between 30 mins and 3 hours
-          timeoutMultiplier = 5
-        }
-
-        let durationInMs = file.order.File.duration * timeoutMultiplier * 1000
-        if (file.order.File.duration <= 10800) {
-          durationInMs += 7200 * 1000 // Add 2 hours for files under 3 hours
-        }
+        let durationInMs = calculateTimerDuration(file.order.File.duration)
 
         if (file.extensionRequested) {
           durationInMs +=
@@ -58,8 +48,31 @@ export async function POST() {
         }
 
         const requiredTime = new Date(Date.now() - durationInMs)
+        const warningTime = new Date(Date.now() - durationInMs + (15 * 60 * 1000)) // 15 minutes before timeout
+        const warningTimeStart = new Date(Date.now() - durationInMs + (10 * 60 * 1000)) // 10 minutes before timeout
 
-        if (new Date(file.acceptedTs) < requiredTime) {
+        // Check for warning condition (10-15 minutes before timeout)
+        if (new Date(file.acceptedTs) < warningTime && 
+            new Date(file.acceptedTs) >= warningTimeStart) {
+          
+          warningFiles.push(file.order.fileId)
+
+          const emailData = {
+            userEmailId: file.user.email,
+          }
+
+          const remainingTimeInHours = ((durationInMs - (Date.now() - new Date(file.acceptedTs).getTime())) / (60 * 60 * 1000)).toFixed(2)
+          
+          const templateData = {
+            filename: file.order.File.filename,
+            remaining_time: remainingTimeInHours,
+          }
+          
+          const ses = getAWSSesInstance()
+          await ses.sendMail('QC_JOB_TIMEOUT_WARNING', emailData, templateData)
+        }
+        // Check for timeout condition
+        else if (new Date(file.acceptedTs) < requiredTime) {
           await prisma.$transaction(async (prisma) => {
             await prisma.jobAssignment.update({
               where: {
@@ -123,9 +136,13 @@ export async function POST() {
     logger.info(
       `Timed out files have been rejected: ${rejectedFiles.join(', ')}`
     )
+    logger.info(
+      `Warning emails sent for files: ${warningFiles.join(', ')}`
+    )
     return NextResponse.json({
       success: true,
       rejectedFiles,
+      warningFiles,
     })
   } catch (error) {
     logger.error(`Error rejecting timed out files: ${error}`)
