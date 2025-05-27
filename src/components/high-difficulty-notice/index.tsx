@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import HighDifficultyFilesDialog from '@/components/high-difficulty-files-dialog'
 import HighDifficultyRefundDialog from '@/components/high-difficulty-refund-dialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -18,6 +19,7 @@ export default function HighDifficultyNotice({
 }: HighDifficultyNoticeProps) {
   const router = useRouter()
   const [openRefundDialog, setOpenRefundDialog] = useState(false)
+  const [openFilesDialog, setOpenFilesDialog] = useState(false)
 
   if (count <= 0) {
     return null
@@ -42,6 +44,13 @@ export default function HighDifficultyNotice({
             Accept
           </Button>
           <Button
+            variant='outline'
+            className='not-rounded'
+            onClick={() => setOpenFilesDialog(true)}
+          >
+            Check all
+          </Button>
+          <Button
             variant='destructive'
             className='not-rounded'
             onClick={() => setOpenRefundDialog(true)}
@@ -54,6 +63,10 @@ export default function HighDifficultyNotice({
         open={openRefundDialog}
         onClose={() => setOpenRefundDialog(false)}
         onSuccess={onRefundSuccess}
+      />
+      <HighDifficultyFilesDialog
+        open={openFilesDialog}
+        onClose={() => setOpenFilesDialog(false)}
       />
     </Alert>
   )

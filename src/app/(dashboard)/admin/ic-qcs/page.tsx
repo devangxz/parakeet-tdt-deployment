@@ -1,6 +1,6 @@
 'use client'
 import { ReloadIcon } from '@radix-ui/react-icons'
-import { ClockIcon, TrashIcon } from 'lucide-react'
+import { ClockIcon, PencilIcon, TrashIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -10,6 +10,7 @@ import {
   getICQCsAction,
 } from '@/app/actions/admin/get-ic-qcs'
 import { removeICQCAction } from '@/app/actions/admin/remove-ic-qc'
+import { updateICQCRate } from '@/app/actions/admin/update-ic-qc-rates'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -63,6 +64,12 @@ export default function ICQCsPage() {
   const [selectedUserName, setSelectedUserName] = useState('')
   const [monthlyHours, setMonthlyHours] = useState<MonthlyHours[]>([])
   const [loadingMonthlyHours, setLoadingMonthlyHours] = useState(false)
+  const [editingIcQc, setEditingIcQc] = useState<ICQCUser | null>(null)
+  const [editRateDialogOpen, setEditRateDialogOpen] = useState(false)
+  const [editQcRate, setEditQcRate] = useState(0)
+  const [editCfRate, setEditCfRate] = useState(0)
+  const [editCfRRate, setEditCfRRate] = useState(0)
+  const [updatingRates, setUpdatingRates] = useState(false)
 
   const fetchIcQcs = async () => {
     try {
@@ -144,6 +151,40 @@ export default function ICQCsPage() {
       toast.error('An error occurred while fetching monthly hours')
     } finally {
       setLoadingMonthlyHours(false)
+    }
+  }
+
+  const handleEditRates = (icQc: ICQCUser) => {
+    setEditingIcQc(icQc)
+    setEditQcRate(icQc.qcRate)
+    setEditCfRate(icQc.cfRate)
+    setEditCfRRate(icQc.cfRRate)
+    setEditRateDialogOpen(true)
+  }
+
+  const handleUpdateRates = async () => {
+    if (!editingIcQc) return
+
+    try {
+      setUpdatingRates(true)
+      const response = await updateICQCRate(
+        editingIcQc.email,
+        editQcRate,
+        editCfRate,
+        editCfRRate
+      )
+
+      if (response.success) {
+        toast.success(response.message || 'Rates updated successfully')
+        setEditRateDialogOpen(false)
+        await fetchIcQcs()
+      } else {
+        toast.error(response.message || 'Failed to update rates')
+      }
+    } catch (error) {
+      toast.error('An error occurred while updating rates')
+    } finally {
+      setUpdatingRates(false)
     }
   }
 
@@ -284,27 +325,38 @@ export default function ICQCsPage() {
                       </Button>
                     </TableCell>
                     <TableCell className='text-right'>
-                      {removingIcQc === icQc.id ? (
+                      <div className='flex justify-end space-x-2'>
                         <Button
-                          variant='destructive'
-                          size='sm'
-                          disabled
-                          className='not-rounded'
-                        >
-                          <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
-                          Removing...
-                        </Button>
-                      ) : (
-                        <Button
-                          variant='destructive'
+                          variant='outline'
                           size='sm'
                           className='not-rounded'
-                          onClick={() => handleRemoveIcQc(icQc.id)}
+                          onClick={() => handleEditRates(icQc)}
                         >
-                          <TrashIcon className='mr-2 h-4 w-4' />
-                          Remove
+                          <PencilIcon className='mr-2 h-4 w-4' />
+                          Edit Rates
                         </Button>
-                      )}
+                        {removingIcQc === icQc.id ? (
+                          <Button
+                            variant='destructive'
+                            size='sm'
+                            disabled
+                            className='not-rounded'
+                          >
+                            <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                            Removing...
+                          </Button>
+                        ) : (
+                          <Button
+                            variant='destructive'
+                            size='sm'
+                            className='not-rounded'
+                            onClick={() => handleRemoveIcQc(icQc.id)}
+                          >
+                            <TrashIcon className='mr-2 h-4 w-4' />
+                            Remove
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -359,6 +411,59 @@ export default function ICQCsPage() {
               </Table>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Rates Dialog */}
+      <Dialog open={editRateDialogOpen} onOpenChange={setEditRateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Rates</DialogTitle>
+            <DialogDescription>
+              Update rates for {editingIcQc?.firstname} {editingIcQc?.lastname}
+            </DialogDescription>
+          </DialogHeader>
+          <div className='grid gap-4 py-4'>
+            <div className='grid grid-cols-3 gap-4'>
+              <div className='grid gap-2'>
+                <Label htmlFor='editQcRate'>QC Rate (/hour)</Label>
+                <Input
+                  id='editQcRate'
+                  type='number'
+                  value={editQcRate}
+                  onChange={(e) => setEditQcRate(Number(e.target.value))}
+                />
+              </div>
+              <div className='grid gap-2'>
+                <Label htmlFor='editCfRate'>CF Rate (/hour)</Label>
+                <Input
+                  id='editCfRate'
+                  type='number'
+                  value={editCfRate}
+                  onChange={(e) => setEditCfRate(Number(e.target.value))}
+                />
+              </div>
+              <div className='grid gap-2'>
+                <Label htmlFor='editCfRRate'>CFR Rate (/hour)</Label>
+                <Input
+                  id='editCfRRate'
+                  type='number'
+                  value={editCfRRate}
+                  onChange={(e) => setEditCfRRate(Number(e.target.value))}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            {updatingRates ? (
+              <Button disabled>
+                <ReloadIcon className='mr-2 h-4 w-4 animate-spin' />
+                Updating...
+              </Button>
+            ) : (
+              <Button onClick={handleUpdateRates}>Update Rates</Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

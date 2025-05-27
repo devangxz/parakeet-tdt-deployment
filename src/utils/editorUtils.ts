@@ -680,7 +680,11 @@ const fetchFileDetails = async ({
     }
     await persistEditorDataIDB(orderRes.orderDetails.fileId, { transcript })
     
-    const originalCtms = transcriptRes.data.result.ctms
+    let originalCtms = transcriptRes.data.result.ctms
+    originalCtms = originalCtms.filter((ctm: CTMType) => ctm !== null)
+    if(Array.isArray(originalCtms) && originalCtms.length > 0 && Array.isArray(originalCtms[0])) {
+      originalCtms = originalCtms.flat()
+    }
     setCtms(originalCtms)
     if (isTestOrder && transcript) {
       try {
@@ -815,12 +819,12 @@ function getSRTVTT(alignments: AlignmentType[]) {
       if (!nextAlignment && line.length > 0) {
         const startTs = alignments[i - line.length + 1].start
         const endTs = current.end
-        const srtTimestamp = `00:${secondsToTs(startTs, false, 3).replace(
+        const srtTimestamp = `${secondsToTs(startTs, false, 3, true).replace(
           '.',
           ','
-        )} --> 00:${secondsToTs(endTs, false, 3).replace('.', ',')}`
-        const vttTimestamp = `00:${secondsToTs(startTs, false, 3)} --> 00:${secondsToTs(
-          endTs, false, 3
+        )} --> ${secondsToTs(endTs, false, 3, true).replace('.', ',')}`
+        const vttTimestamp = `${secondsToTs(startTs, false, 3, true)} --> ${secondsToTs(
+          endTs, false, 3, true
         )}`
 
         paraCount++
@@ -852,12 +856,12 @@ function getSRTVTT(alignments: AlignmentType[]) {
       if (forceBreak) {
         const startTs = alignments[i - line.length + 1].start
         const endTs = current.end
-        const srtTimestamp = `00:${secondsToTs(startTs, false, 3).replace(
+        const srtTimestamp = `${secondsToTs(startTs, false, 3, true).replace(
           '.',
           ','
-        )} --> 00:${secondsToTs(endTs, false, 3).replace('.', ',')}`
-        const vttTimestamp = `00:${secondsToTs(startTs, false, 3)} --> 00:${secondsToTs(
-          endTs, false, 3
+        )} --> ${secondsToTs(endTs, false, 3, true).replace('.', ',')}`
+        const vttTimestamp = `${secondsToTs(startTs, false, 3, true)} --> ${secondsToTs(
+          endTs, false, 3, true
         )}`
 
         paraCount++
@@ -874,12 +878,12 @@ function getSRTVTT(alignments: AlignmentType[]) {
       const endIndex = alignments.length - 1
       const startTs = alignments[startIndex].start
       const endTs = alignments[endIndex].end
-      const srtTimestamp = `00:${secondsToTs(startTs, false, 3).replace(
+      const srtTimestamp = `${secondsToTs(startTs, false, 3, true).replace(
         '.',
         ','
-      )} --> 00:${secondsToTs(endTs, false, 3).replace('.', ',')}`
-      const vttTimestamp = `00:${secondsToTs(startTs, false, 3)} --> 00:${secondsToTs(
-        endTs, false, 3
+      )} --> ${secondsToTs(endTs, false, 3, true).replace('.', ',')}`
+      const vttTimestamp = `${secondsToTs(startTs, false, 3, true)} --> ${secondsToTs(
+        endTs, false, 3, true
       )}`
 
       paraCount++
@@ -1233,7 +1237,7 @@ const handleSubmit = async ({
       })
     }
 
-    if (orderDetails.orderType !== 'FORMATTING') {
+    if (orderDetails.orderType === "TRANSCRIPTION" || (orderDetails.orderType === "TRANSCRIPTION_FORMATTING" && step === 'CF')) {
       // TODO: remove this after March 1st
       localStorage.removeItem('editorData')
       await deleteEditorDataIDB(orderDetails.fileId)

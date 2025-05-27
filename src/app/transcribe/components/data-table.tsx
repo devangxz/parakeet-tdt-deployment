@@ -59,6 +59,7 @@ export function DataTable<TData, TValue>({
       orgName: false,
       diff: false,
       isCustomFormat: false,
+      icqcCategory: false,
     })
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []

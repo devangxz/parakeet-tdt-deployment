@@ -48,7 +48,9 @@ export async function acceptTeamJoinRequest(teamId: number) {
 
     const templateData = {
       owner_firstname: teamEmailDetails.superAdminFirstName || '',
-      member_name: `${member?.firstname || ''} ${member?.lastname || ''}`,
+      member_name: member?.firstname
+        ? `${member?.firstname || ''} ${member?.lastname || ''}`
+        : 'A team member',
       team_name: teamEmailDetails.teamName,
     }
 

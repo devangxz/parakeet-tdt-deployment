@@ -234,24 +234,19 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
             } as File
           })
 
-          // Sort orders so that overdue files from yesterday are placed on top
-          const today = new Date()
-          today.setHours(0, 0, 0, 0)
-          const yesterday = new Date(today)
-          yesterday.setDate(today.getDate() - 1)
+          // Sort orders so that overdue files are placed on top
+          const now = new Date()
 
           orders.sort((a, b) => {
             const aDelivery = new Date(a.deliveryTs)
-            aDelivery.setHours(0, 0, 0, 0)
             const bDelivery = new Date(b.deliveryTs)
-            bDelivery.setHours(0, 0, 0, 0)
 
-            const aOverdue = aDelivery.getTime() === yesterday.getTime()
-            const bOverdue = bDelivery.getTime() === yesterday.getTime()
+            const aOverdue = aDelivery < now
+            const bOverdue = bDelivery < now
 
             if (aOverdue && !bOverdue) return -1
             if (!aOverdue && bOverdue) return 1
-            return a.index - b.index
+            return aDelivery.getTime() - bDelivery.getTime() // Sort by delivery date if both are overdue or not overdue
           })
 
           // Update watchlist counts
@@ -530,7 +525,7 @@ export default function ApprovalPage({ onActionComplete }: ApprovalPageProps) {
             value: stats.blankPercentage,
             isError: stats.blankPercentage > QC_VALIDATION.max_blank_percentage,
             tooltip: `Indicates percentage of inaudible/blank segments in the transcript added by QC. Should not exceed ${QC_VALIDATION.max_blank_percentage}% to maintain transcript quality.`,
-          }
+          },
         ]
 
         return (
