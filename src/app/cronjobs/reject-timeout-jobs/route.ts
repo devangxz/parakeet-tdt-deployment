@@ -56,7 +56,8 @@ export async function POST() {
             new Date(file.acceptedTs) >= warningTimeStart) {
           
           warningFiles.push(file.order.fileId)
-
+          
+          logger.info(`Sending timeout warning email to ${file.user.email} for order ${file.order.id} ${file.order.fileId}`)
           const emailData = {
             userEmailId: file.user.email,
           }
@@ -68,8 +69,12 @@ export async function POST() {
             elapsed_time: elapsedTimeInHours,
           }
           
+          logger.info(`Email data: ${JSON.stringify(emailData)}, Template data: ${JSON.stringify(templateData)}`)
+          
           const ses = getAWSSesInstance()
           await ses.sendMail('QC_JOB_TIMEOUT_WARNING', emailData, templateData)
+
+          logger.info(`Timeout warning email sent to ${file.user.email} for order ${file.order.id} ${file.order.fileId}`)
         }
         // Check for timeout condition
         else if (new Date(file.acceptedTs) < requiredTime) {
@@ -119,16 +124,20 @@ export async function POST() {
             ).toFixed(2),
           }
           const ses = getAWSSesInstance()
+          let result
 
           switch (file.type) {
             case JobType.REVIEW:
             case JobType.FINALIZE:
-              await ses.sendMail('REVIEW_JOB_TIMEOUT', emailData, templateData)
+              result = await ses.sendMail('REVIEW_JOB_TIMEOUT', emailData, templateData)
               break
             case JobType.QC:
-              await ses.sendMail('QC_JOB_TIMEOUT', emailData, templateData)
+              result = await ses.sendMail('QC_JOB_TIMEOUT', emailData, templateData)
               break
           }
+
+          logger.info(`AWS SES Timeout Response: ${JSON.stringify(result)}`)
+          logger.info(`Timeout email sent to ${file.user.email} for order ${file.order.id} ${file.order.fileId}`)
         }
       }
     }
