@@ -142,7 +142,13 @@ export default function VersionCompareDialog({
 
   const handleVersionSelection = useCallback(
     async (newVersion: Version, isFromVersion: boolean) => {
+      const currentVersion = isFromVersion ? fromVersion : toVersion
       const otherVersion = isFromVersion ? toVersion : fromVersion
+
+      if (newVersion === currentVersion) {
+        return
+      }
+
       if (!newVersion || !otherVersion) {
         if (isFromVersion) {
           setFromVersion(newVersion)
@@ -188,16 +194,22 @@ export default function VersionCompareDialog({
             result.versions.length > 0
           ) {
             const latestVersion = result.versions[0]
+            
+            let versionToCompare = latestVersion
+            if (latestVersion.tag === 'CUSTOMER_DELIVERED' && result.versions.length > 1) {
+              versionToCompare = result.versions[1]
+            }
+            
             const versionResult = await getVersionTranscriptAction(
               fileId,
-              latestVersion
+              versionToCompare
             )
 
             if (versionResult.success && versionResult.text) {
-              const latestContent = versionResult.text
+              const contentToCompare = versionResult.text
 
               if (
-                currentEditorContentRef.current.trim() !== latestContent.trim()
+                currentEditorContentRef.current.trim() !== contentToCompare.trim()
               ) {
                 await onSaveNeededRef.current()
 

@@ -227,12 +227,14 @@ function EditorPage() {
   const [toggleReplace, setToggleReplace] = useState(false);
   const [isFormatWarningDialogOpen, setIsFormatWarningDialogOpen] = useState(false)
   const [formatErrors, setFormatErrors] = useState<CombinedASRFormatError[]>([])
-  const [diffToggleEnabled, setDiffToggleEnabled] = useState(false)
-  const [isExitingDiffMode, setIsExitingDiffMode] = useState(false)
+  const [diffModeState, setDiffModeState] = useState<'off' | 'entering' | 'on' | 'exiting'>('off')
   const [alignments, setAlignments] = useState<AlignmentType[]>([])
   const [editorReadOnly, setEditorReadOnly] = useState(false)
   const [activeTab, setActiveTab] = useState('transcribe')
   const [capturedEditorContent, setCapturedEditorContent] = useState<string>('')
+  
+  const diffToggleEnabled = diffModeState === 'on'
+  const isExitingDiffMode = diffModeState === 'exiting'
   
   const setSelectionHandler = () => {
     const quill = quillRef?.current?.getEditor()
@@ -1504,85 +1506,91 @@ function EditorPage() {
     quillRef,
   ])
 
-  const toggleDiffView = useCallback(
-    async (newDiffToggleValue = diffToggleEnabled) => {
-      const quill = quillRef?.current?.getEditor()
-      if (!quill) return
+  const enterDiffMode = useCallback(async () => {
+    const quill = quillRef?.current?.getEditor()
+    if (!quill) throw new Error('Editor not available')
 
-      setTimeout(async () => {
-        try {
-          if (!newDiffToggleValue) {
-            const savedTranscript = saveTranscriptInDiffMode()
-            quill.setContents(getFormattedContent(savedTranscript), 'silent')
-            
-            if (editorRef.current) {
-              setTimeout(() => {
-                editorRef.current?.clearAllHighlights()
-                editorRef.current?.triggerAlignmentUpdate()
-              }, 100)
-            }
-          } else {
-            const currentText = quill.getText().trim()
-            const originalTranscript = orderDetails.isTestOrder
-              ? testTranscript
-              : await getFormattedTranscript(ctms, orderDetails.fileId)
-            const diff = generateDiff(originalTranscript, currentText) || []
-            renderDiff(diff)
+    const currentText = quill.getText().trim()
+    const originalTranscript = orderDetails.isTestOrder
+      ? testTranscript
+      : await getFormattedTranscript(ctms, orderDetails.fileId)
 
-            const cleanTranscript = saveTranscriptInDiffMode()
-            if (cleanTranscript) {
-              persistEditorDataIDB(orderDetails.fileId, {
-                transcript: cleanTranscript,
-                listenCount,
-                editedSegments: Array.from(editedSegments),
-              })
-            }
-          }
-        } catch (error) {
-          toast.error('Cannot toggle diff mode')
-          setDiffToggleEnabled(false)
-        }
-      }, 0)
-    },
-    [
-      quillRef,
-      ctms,
-      diffToggleEnabled,
-      generateDiff,
-      saveTranscriptInDiffMode,
-      orderDetails.fileId,
-      orderDetails.isTestOrder,
-      testTranscript,
-      listenCount,
-      editedSegments,
-      renderDiff,
-      editorRef,
-    ]
-  )
+    const diff = generateDiff(originalTranscript, currentText) || []
+    renderDiff(diff)
 
-  const handleDiffToggle = useCallback(() => {
-    if (!diffToggleEnabled) {
-      setCapturedEditorContent(getEditorText())
-      
-      ;(async () => {
-        try {
-          setDiffToggleEnabled(true)
-          await toggleDiffView(true)
-        } catch (error) {
-          toast.error('Cannot switch to diff mode')
-          setDiffToggleEnabled(false)
-        }
-      })()
-    } else {
-      ;(async () => {
-        setIsExitingDiffMode(true)
-        await toggleDiffView(false)
-        setIsExitingDiffMode(false)
-        setDiffToggleEnabled(false)
-        setCapturedEditorContent('')
-      })()
+    const cleanTranscript = saveTranscriptInDiffMode()
+    if (cleanTranscript) {
+      persistEditorDataIDB(orderDetails.fileId, {
+        transcript: cleanTranscript,
+        listenCount,
+        editedSegments: Array.from(editedSegments),
+      })
     }
-  }, [diffToggleEnabled, toggleDiffView, getEditorText])
+  }, [
+    quillRef,
+    ctms,
+    generateDiff,
+    saveTranscriptInDiffMode,
+    orderDetails.fileId,
+    orderDetails.isTestOrder,
+    testTranscript,
+    listenCount,
+    editedSegments,
+    renderDiff,
+  ])
+
+  const exitDiffMode = useCallback(async () => {
+    const quill = quillRef?.current?.getEditor()
+    if (!quill) throw new Error('Editor not available')
+
+    return new Promise<void>((resolve, reject) => {
+      try {
+        const savedTranscript = saveTranscriptInDiffMode()
+
+        quill.setContents(getFormattedContent(savedTranscript), 'silent')
+
+        requestAnimationFrame(() => {
+          try {
+            if (editorRef.current) {
+              editorRef.current.clearAllHighlights()
+              editorRef.current.triggerAlignmentUpdate()
+            }
+            resolve()
+          } catch (error) {
+            reject(error)
+          }
+        })
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }, [quillRef, saveTranscriptInDiffMode, editorRef])
+
+  const handleDiffToggle = useCallback(async () => {
+    if (diffModeState === 'entering' || diffModeState === 'exiting') {
+      return
+    }
+
+    try {
+      if (diffModeState === 'off') {
+        setCapturedEditorContent(getEditorText())
+        setDiffModeState('entering')
+
+        await enterDiffMode()
+        setDiffModeState('on')
+      } else if (diffModeState === 'on') {
+        setDiffModeState('exiting')
+
+        await exitDiffMode()
+        setDiffModeState('off')
+        setCapturedEditorContent('')
+      }
+    } catch (error) {
+      toast.error('Cannot toggle diff mode')
+      setDiffModeState('off')
+      setCapturedEditorContent('')
+    }
+  }, [diffModeState, getEditorText, enterDiffMode, exitDiffMode])
 
   return (
     <div className='bg-secondary dark:bg-background h-screen flex flex-col p-1 gap-y-1'>
@@ -1712,7 +1720,12 @@ function EditorPage() {
                                 checked={diffToggleEnabled}
                                 onCheckedChange={handleDiffToggle}
                                 aria-label='Toggle diff mode'
-                                disabled={!initialEditorData}
+                                disabled={
+                                  !initialEditorData ||
+                                  editorReadOnly ||
+                                  diffModeState === 'entering' ||
+                                  diffModeState === 'exiting'
+                                }
                               />
                             </div>
                           )}
@@ -2168,9 +2181,9 @@ function EditorPage() {
             />
           )}
 
-        {diffToggleEnabled && (
+        {(diffToggleEnabled || isExitingDiffMode) && (
           <VersionCompareDialog
-            isOpen={diffToggleEnabled}
+            isOpen={diffToggleEnabled || isExitingDiffMode}
             fileId={orderDetails.fileId}
             renderDiff={renderDiff}
             currentEditorContent={capturedEditorContent}
