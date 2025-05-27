@@ -61,11 +61,11 @@ export async function POST() {
             userEmailId: file.user.email,
           }
 
-          const remainingTimeInHours = ((durationInMs - (Date.now() - new Date(file.acceptedTs).getTime())) / (60 * 60 * 1000)).toFixed(2)
+          const elapsedTimeInHours = ((Date.now() - new Date(file.acceptedTs).getTime()) / (60 * 60 * 1000)).toFixed(2)
           
           const templateData = {
             filename: file.order.File.filename,
-            remaining_time: remainingTimeInHours,
+            elapsed_time: elapsedTimeInHours,
           }
           
           const ses = getAWSSesInstance()

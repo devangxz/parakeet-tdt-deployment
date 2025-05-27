@@ -138,7 +138,7 @@
     "TO": ["$$USER_EMAIL_ID$$"],
     "CC": ["$$SUPPORT_EMAIL_ID$$"],
     "BCC": [],
-    "SUBJECT": "Scribie.ai Editor File Timedout",
+    "SUBJECT": "Scribie.ai Editor File Timeout Warning",
     "HTML": "QC_JOB_TIMEOUT_WARNING.html",
     "TEXT": ""
   },

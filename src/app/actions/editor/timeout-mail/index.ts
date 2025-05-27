@@ -46,13 +46,14 @@ const sendTimeoutMail = async (orderDetails: OrderDetails, userEmailId: string) 
     if(jobAssignment.extensionRequested){
       durationInMs += fileData.duration * (config.extension_time_multiplier) * 1000
     }
-    await ses.sendMail('QC_JOB_TIMEOUT', {
+    const response = await ses.sendMail('QC_JOB_TIMEOUT', {
       userEmailId,
     }, {
       filename: orderDetails.filename,
-      transcriber_assignment_timeout: (durationInMs / 3600).toFixed(2),
+      transcriber_assignment_timeout: (durationInMs / (60 * 60 * 1000)).toFixed(2),
     })
-   logger.info(`Timeout Warning mail sent to ${userEmailId} for order ${orderDetails.orderId}`)
+
+   logger.info(`Timeout Warning mail sent to ${userEmailId} for order ${orderDetails.orderId} ${JSON.stringify(response)}`)
   } catch (error) {
     logger.error(`Error sending timeout mail to ${userEmailId} for order ${orderDetails.orderId}: ${error}`)
   }
