@@ -120,6 +120,7 @@ export async function getOrderDetailsAction(fileId: string) {
       select: {
         acceptedTs: true,
         extensionRequested: true,
+        assignMode: true,
       },
     })
 
@@ -177,6 +178,7 @@ export async function getOrderDetailsAction(fileId: string) {
       speakerOptions: speakers,
       isTestOrder: order.isTestOrder || false,
       pwer: order.pwer,
+      assignMode: assignment?.assignMode || 'MANUAL',
     }
 
     logger.info(`orderDetails fetched for file ${resultJson.file_id}`)

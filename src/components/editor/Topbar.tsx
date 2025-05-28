@@ -231,6 +231,29 @@ export default memo(function Topbar({
   const [isDiffModeDialogOpen, setIsDiffModeDialogOpen] = useState(false)
   const [diffModeDialogAction, setDiffModeDialogAction] = useState<'submit' | 'download' | 'menu'>('submit')
 
+  const getEditorText = useCallback(
+    () => quillRef?.current?.getEditor().getText() || '',
+    [quillRef]
+  )
+
+  // Helper function to determine if timeout actions should be taken
+  const shouldTakeTimeoutActions = useCallback(() => {
+    const isManualAssign = orderDetails.assignMode === 'MANUAL'
+    const isExemptOrg = ['remotelegal', 'acr'].includes(orderDetails.orgName.toLowerCase())
+    
+    return !isManualAssign && !isExemptOrg
+  }, [orderDetails.assignMode, orderDetails.orgName])
+
+  // Helper function to determine if file should timeout
+  const shouldFileTimeout = useCallback(() => {
+    const isManualAssign = orderDetails.assignMode === 'MANUAL'
+    const isExemptOrg = ['remotelegal', 'acr'].includes(orderDetails.orgName.toLowerCase())
+    const isQCAssigned = orderDetails.status === 'QC_ASSIGNED'
+    const isTimedOut = timeoutCount === '00:00:00'
+    
+    return isQCAssigned && isTimedOut && !isManualAssign && !isExemptOrg
+  }, [orderDetails.assignMode, orderDetails.orgName, orderDetails.status, timeoutCount])
+
   const updateTranscript = (
     quillRef: React.RefObject<ReactQuill> | undefined,
     content: string
@@ -602,11 +625,6 @@ export default memo(function Topbar({
     }
   }
 
-  const getEditorText = useCallback(
-    () => quillRef?.current?.getEditor().getText() || '',
-    [quillRef]
-  )
-
   useEffect(() => {
     let timer: NodeJS.Timeout
     
@@ -629,26 +647,28 @@ export default memo(function Topbar({
         timer = setTimeout(updateRemainingTime, 1000)
       } else {
         setTimeoutCount('00:00:00')
-        setEditorReadOnly(true)
-        const quill = quillRef?.current?.getEditor()
-        quill?.disable()
-        if(timer){
-          setShowTimeoutDialog(true)
-          await handleSave({
-            getEditorText,
-            orderDetails,
-            setButtonLoading,
-            listenCount,
-            editedSegments,
-            role: session?.user?.role || '',
-            quill: quillRef?.current?.getEditor(),
-          }, false)
-          await sendTimeoutMail(orderDetails, session?.user?.email || '')
+        if(shouldTakeTimeoutActions()) {
+          setEditorReadOnly(true)
+          const quill = quillRef?.current?.getEditor()
+          quill?.disable()
+          if(timer){
+            setShowTimeoutDialog(true)
+            await handleSave({
+              getEditorText,
+              orderDetails,
+              setButtonLoading,
+              listenCount,
+              editedSegments,
+              role: session?.user?.role || '',
+              quill: quillRef?.current?.getEditor(),
+            }, false)
+            await sendTimeoutMail(orderDetails, session?.user?.email || '')
+          }
         }
       }
     }
 
-    if (orderDetails.status === 'QC_ASSIGNED') {
+    if (orderDetails.status === 'QC_ASSIGNED' ) {
       updateRemainingTime()
     }
 
@@ -657,13 +677,13 @@ export default memo(function Topbar({
         clearTimeout(timer)
       }
     }
-  }, [orderDetails])
+  }, [orderDetails, shouldTakeTimeoutActions, getEditorText, setButtonLoading, listenCount, editedSegments, session?.user?.role, session?.user?.email, quillRef, setEditorReadOnly, setShowTimeoutDialog])
 
   useEffect(() => {
-    if(orderDetails.remainingTime === '0' && orderDetails.status === 'QC_ASSIGNED') {
+    if(orderDetails.remainingTime === '0' && shouldTakeTimeoutActions() && orderDetails.status === 'QC_ASSIGNED') {
       setShowTimeoutDialog(true)
     }
-  }, [orderDetails.remainingTime])
+  }, [orderDetails.remainingTime, orderDetails.status, shouldTakeTimeoutActions])
 
   return (
     <div className='bg-background border border-customBorder rounded-md p-2'>
@@ -782,7 +802,7 @@ export default memo(function Topbar({
                   }
                 }}
                 className='format-button border-r-[1.5px] border-white/70'
-                disabled={timeoutCount === '00:00:00' && orderDetails.status === 'QC_ASSIGNED'}
+                disabled={shouldFileTimeout()}
               >
                 Submit
               </Button>
@@ -795,7 +815,7 @@ export default memo(function Topbar({
                   setDiffModeDialogAction('menu')
                   setIsDiffModeDialogOpen(true)
                 }}
-                disabled={timeoutCount === '00:00:00' && orderDetails.status === 'QC_ASSIGNED'}
+                disabled={shouldFileTimeout()}
               >
                 <span className='sr-only'>Open menu</span>
                 <ChevronDownIcon className='h-4 w-4' />
@@ -805,8 +825,8 @@ export default memo(function Topbar({
                 modal={false}
                 onOpenChange={handleDropdownMenuOpenChange}
               >
-                <DropdownMenuTrigger className='focus-visible:ring-0 outline-none' disabled={timeoutCount === '00:00:00' && orderDetails.status === 'QC_ASSIGNED'}>
-                  <Button className='px-2 format-icon-button focus-visible:ring-0 outline-none' disabled={timeoutCount === '00:00:00' && orderDetails.status === 'QC_ASSIGNED'} >
+                <DropdownMenuTrigger className='focus-visible:ring-0 outline-none' disabled={shouldFileTimeout()}>
+                  <Button className='px-2 format-icon-button focus-visible:ring-0 outline-none' disabled={shouldFileTimeout()}>
                     <span className='sr-only'>Open menu</span>
                     <ChevronDownIcon className='h-4 w-4' />
                   </Button>
