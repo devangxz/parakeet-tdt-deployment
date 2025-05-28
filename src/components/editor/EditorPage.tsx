@@ -117,6 +117,7 @@ export type OrderDetails = {
   }[]
   isTestOrder: boolean
   pwer: number
+  assignMode: string
 }
 
 export type UploadFilesType = {
@@ -144,6 +145,7 @@ function EditorPage() {
     speakerOptions: [],
     isTestOrder: false,
     pwer: 0,
+    assignMode: 'MANUAL',
   })
   const [cfd, setCfd] = useState('')
   const [notes, setNotes] = useState('')
