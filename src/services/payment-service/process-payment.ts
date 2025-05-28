@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { InvoiceType, OrderStatus, OrderType } from '@prisma/client'
 
-import { RUSH_PRICE } from '@/constants'
+import { RUSH_PRICE, VERBATIM_PRICE } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance, sendTemplateMail } from '@/lib/ses'
@@ -126,12 +126,22 @@ export const processPayment = async (
       let body = ''
       let total = 0
       const isRushOrderEnabled = invoiceOptions.exd == 1
-      let rushOrderPrice = 0.5
+      const isVerbatimEnabled = invoiceOptions.vb == 1
+      let rushOrderPrice = 1.25
+      let verbatimPrice = 0.5
+      const teamAdminUserId = await getTeamAdminUserDetails(invoice.userId)
+      const userId = teamAdminUserId ? teamAdminUserId.userId : invoice.userId
+      const customPlanRates = await getUserRate(userId)
+
+      if (isVerbatimEnabled) {
+        if (!customPlanRates) {
+          verbatimPrice = VERBATIM_PRICE
+        } else {
+          verbatimPrice = customPlanRates.sv
+        }
+      }
 
       if (isRushOrderEnabled) {
-        const teamAdminUserId = await getTeamAdminUserDetails(invoice.userId)
-        const userId = teamAdminUserId ? teamAdminUserId.userId : invoice.userId
-        const customPlanRates = await getUserRate(userId)
         if (!customPlanRates) {
           rushOrderPrice = RUSH_PRICE
         } else {
@@ -145,6 +155,11 @@ export const processPayment = async (
         if (isRushOrderEnabled && file.File.duration) {
           const rushFee = rushOrderPrice * (file.File.duration / 60)
           filePrice += rushFee
+        }
+
+        if (isVerbatimEnabled && file.File.duration) {
+          const verbatimFee = verbatimPrice * (file.File.duration / 60)
+          filePrice += verbatimFee
         }
 
         total += filePrice
