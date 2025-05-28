@@ -64,6 +64,7 @@ export async function flagHighDifficulty(formData: {
         data: {
           status: OrderStatus.REFUNDED,
           updatedAt: new Date(),
+          highDifficultyReason: issues,
         },
       })
 
@@ -127,7 +128,7 @@ export async function flagHighDifficulty(formData: {
           deadlineTs: addHours(new Date(), delayPeriod),
           delayReason: 'HIGH_DIFFICULTY',
           deliveredTs: addHours(new Date(), delayPeriod),
-          comments: issues,
+          highDifficultyReason: issues,
         },
       })
 
