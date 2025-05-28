@@ -278,7 +278,7 @@
     "TO": ["$$USER_EMAIL_ID$$"],
     "CC": ["$$SUPPORT_EMAIL_ID$$"],
     "BCC": [],
-    "SUBJECT": "Scribie.ai Order Cancelled",
+    "SUBJECT": "Scribie.ai Order Refunded",
     "HTML": "TRANSCRIPT_ORDER_REFUND.html",
     "TEXT": ""
   },
