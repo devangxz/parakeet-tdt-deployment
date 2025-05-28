@@ -1,4 +1,4 @@
-import { OrderStatus, ReportMode, ReportOption } from '@prisma/client'
+import { ReportOption } from '@prisma/client'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { DURATION_DIFF } from '@/constants'
@@ -15,22 +15,20 @@ interface ConversionResult {
   error?: string
 }
 
-async function screenFile(
+async function reportFile(
   fileId: string,
   reportOption: ReportOption,
   reportComment: string
 ) {
   logger.info(
-    `[${fileId}] Screening file with reason: ${reportOption} - ${reportComment}`
+    `[${fileId}] Reporting file with reason: ${reportOption} - ${reportComment}`
   )
 
-  await prisma.order.update({
+  await prisma.file.update({
     where: { fileId },
     data: {
-      reportMode: ReportMode.AUTO,
       reportOption,
       reportComment,
-      status: OrderStatus.SUBMITTED_FOR_SCREENING,
     },
   })
 }
@@ -66,7 +64,7 @@ async function processConversionResult(result: ConversionResult) {
             })
 
             const reportComment = `The duration difference of ${durationDiff}s is above the acceptable threshold of ${DURATION_DIFF}s`
-            await screenFile(
+            await reportFile(
               fileId,
               ReportOption.DURATION_DIFFERENCE,
               reportComment
@@ -79,7 +77,7 @@ async function processConversionResult(result: ConversionResult) {
               'software'
             )
 
-            logger.info(`[${fileId}] File screened for duration difference`)
+            logger.info(`[${fileId}] File reported with duration difference`)
           }
         }
       }
@@ -96,9 +94,9 @@ async function processConversionResult(result: ConversionResult) {
         })
 
       const reportComment = 'The file conversion process failed'
-      await screenFile(fileId, ReportOption.CONVERSION_ERROR, reportComment)
+      await reportFile(fileId, ReportOption.CONVERSION_ERROR, reportComment)
 
-      logger.info(`[${fileId}] File screened for conversion error`)
+      logger.info(`[${fileId}] File reported with conversion error`)
     }
   } catch (error) {
     logger.error(
