@@ -603,11 +603,13 @@ const InvoicesDetailDialog = ({
               ? response.responseData.invoice.orderRate
               : file.price / (file.File.duration / 60)
 
-            fileRate = isRushOrder
-              ? baseRate + response.responseData.rates.rush_order
-              : isStrictVerbatim
-              ? baseRate + response.responseData.rates.verbatim
-              : baseRate
+            fileRate = baseRate
+            if (isRushOrder) {
+              fileRate += response.responseData.rates.rush_order
+            }
+            if (isStrictVerbatim) {
+              fileRate += response.responseData.rates.verbatim
+            }
           }
 
           const fileAmount = fileRate * (file.File.duration / 60)
