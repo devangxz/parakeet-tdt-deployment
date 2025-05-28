@@ -1744,7 +1744,6 @@ const insertTimestampBlankAtCursorPosition = (
   // Space added after reverting back to default color.
   quill.insertText(cursorPosition + formattedTime.length, ` `, 'user')
   // Set the selection after the inserted text.
-  console.log('cursorPosition', cursorPosition  + formattedTime.length + 1)
   quill.setSelection(cursorPosition + formattedTime.length + 1, 0)
   // Count total blanks in the transcript and show toast message with updated blank count
   const text = quill.getText()
