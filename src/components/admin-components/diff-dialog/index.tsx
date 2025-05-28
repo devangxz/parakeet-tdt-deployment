@@ -89,6 +89,7 @@ const OpenDiffDialog = ({ open, onClose, fileId, isScreeningFile = false }: Dial
           speakerOptions: response.orderDetails.speakerOptions || [],
           isTestOrder: response.orderDetails.isTestOrder,
           pwer: response.orderDetails.pwer || 0,
+          assignMode: response.orderDetails.assignMode || 'MANUAL',
         }
         
         setOrderDetails(formattedDetails)
