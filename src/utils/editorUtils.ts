@@ -1351,6 +1351,13 @@ const navigateAndPlayBlanks = (
     ? currentIndex + 1
     : 0
 
+  if(currentIndex > 0) {
+    quill.formatText(matches[currentIndex-1].index, matches[currentIndex-1][0].length, { bold: false }, 'silent')
+  }
+  else if(currentIndex === 0){
+    quill.formatText(matches[matches.length-1].index, matches[matches.length-1][0].length, { bold: false }, 'silent')
+  }
+
   const match = matches[currentIndex]
   if (!match) return
 

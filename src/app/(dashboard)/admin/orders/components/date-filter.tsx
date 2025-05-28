@@ -23,11 +23,23 @@ export function DateFilter<TData, TValue>({
 }: DateFilterProps<TData, TValue>) {
   const [date, setDate] = React.useState<Date>()
 
-  const filterValue = column?.getFilterValue() as [string, string] | undefined
+  const filterValue = column?.getFilterValue() as { singleDate?: [string, string] } | { dateRange?: [string, string] } | [string, string] | undefined
 
   React.useEffect(() => {
-    if (!filterValue) {
+    let dateValue: [string, string] | undefined
+
+    if (Array.isArray(filterValue)) {
+      dateValue = filterValue
+    } else if (filterValue && typeof filterValue === 'object') {
+      if ('singleDate' in filterValue) {
+        dateValue = filterValue.singleDate
+      }
+    }
+
+    if (!dateValue) {
       setDate(undefined)
+    } else if (Array.isArray(dateValue) && dateValue.length === 2) {
+      setDate(new Date(dateValue[0]))
     }
   }, [filterValue])
 
@@ -39,9 +51,26 @@ export function DateFilter<TData, TValue>({
       const endOfDay = new Date(selectedDate)
       endOfDay.setHours(23, 59, 59, 999)
 
-      column?.setFilterValue([startOfDay.toISOString(), endOfDay.toISOString()])
+      const existingValue = column?.getFilterValue()
+      let newFilterValue: { singleDate?: [string, string]; dateRange?: [string, string] }
+
+      if (existingValue && typeof existingValue === 'object' && !Array.isArray(existingValue)) {
+        newFilterValue = {
+          ...existingValue,
+          singleDate: [startOfDay.toISOString(), endOfDay.toISOString()]
+        }
+      } else {
+        newFilterValue = { singleDate: [startOfDay.toISOString(), endOfDay.toISOString()] }
+      }
+      column?.setFilterValue(newFilterValue)
     } else {
-      column?.setFilterValue(undefined)
+      // When clearing single date, preserve date range if it exists
+      const existingValue = column?.getFilterValue()
+      if (existingValue && typeof existingValue === 'object' && !Array.isArray(existingValue) && 'dateRange' in existingValue && existingValue.dateRange) {
+        column?.setFilterValue({ dateRange: existingValue.dateRange })
+      } else {
+        column?.setFilterValue(undefined)
+      }
     }
   }
 

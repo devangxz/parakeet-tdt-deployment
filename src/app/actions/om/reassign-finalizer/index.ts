@@ -59,6 +59,47 @@ export async function reassignFinalizer(formData: {
       return { success: false, message: 'User not found' }
     }
 
+    const isSameUser = currentJobAssignment.transcriberId === user.id
+
+    if (isSameUser) {
+      logger.error(
+        `User is the same as the current finalizer for file ${orderId}`
+      )
+      await prisma.jobAssignment.update({
+        where: { id: currentJobAssignment.id },
+        data: {
+          status: JobStatus.ACCEPTED,
+          acceptedTs: new Date(),
+        },
+      })
+
+      await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          status: 'FINALIZER_ASSIGNED',
+          updatedAt: new Date(),
+        },
+      })
+
+      const templateData = {
+        fileId: orderInformation.fileId,
+        jobType: 'finalize',
+        jobUrl: 'legal-cf-reviewer',
+        comment: comment ?? '',
+      }
+
+      await sendTemplateMail(
+        'REASSIGN_FILE',
+        currentJobAssignment.transcriberId,
+        templateData
+      )
+
+      return {
+        success: true,
+        message: 'Successfully re-assigned finalizer to the same user',
+      }
+    }
+
     await assignFileToFinalizer(
       Number(orderId),
       orderInformation.fileId,

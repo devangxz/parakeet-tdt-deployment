@@ -71,13 +71,24 @@ export async function flagHighDifficulty(formData: {
         where: { fileId: orderInformation.fileId },
       })
 
+      const issuesListHtml = `<ul>${issuesArray
+        .map((key) => {
+          const issue = AUDIO_ISSUES[key.trim() as keyof typeof AUDIO_ISSUES]
+          if (!issue) return ''
+          const longText =
+            issue.long.charAt(0).toUpperCase() + issue.long.slice(1)
+          return `<li>${longText} (eg. ${issue.example})</li>`
+        })
+        .join('')}</ul>`
+
       const templateData = {
         filename: file?.filename || '',
         url: `https://scribie.ai/payments/paid`,
+        reasons: issuesListHtml,
       }
 
       await sendTemplateMail(
-        'TRANSCRIPT_CANCEL_ORDER',
+        'TRANSCRIPT_ORDER_REFUND',
         order.userId,
         templateData
       )

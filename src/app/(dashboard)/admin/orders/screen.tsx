@@ -386,6 +386,34 @@ export default function ScreenPage({ onActionComplete }: ScreenPageProps) {
     {
       accessorKey: 'deliveryTs',
       header: 'Delivery Date',
+      filterFn: (row, id, value: { singleDate?: [string, string]; dateRange?: [string, string] } | [string, string]) => {
+        if (!value) return true
+
+        const cellDate = new Date(row.getValue(id))
+        
+        const dateRanges: [string, string][] = []
+        
+        if (Array.isArray(value)) {
+          if (value[0] && value[1]) {
+            dateRanges.push(value)
+          }
+        } else if (typeof value === 'object') {
+          if (value.singleDate && value.singleDate[0] && value.singleDate[1]) {
+            dateRanges.push(value.singleDate)
+          }
+          if (value.dateRange && value.dateRange[0] && value.dateRange[1]) {
+            dateRanges.push(value.dateRange)
+          }
+        }
+
+        if (dateRanges.length === 0) return true
+
+        return dateRanges.some(([start, end]) => {
+          const startDate = new Date(start)
+          const endDate = new Date(end)
+          return cellDate >= startDate && cellDate <= endDate
+        })
+      },
       cell: ({ row }) => (
         <div className='font-medium'>
           {formatDateTime(row.getValue('deliveryTs'))}

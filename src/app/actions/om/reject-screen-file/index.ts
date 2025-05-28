@@ -2,6 +2,7 @@
 
 import { OrderStatus } from '@prisma/client'
 
+import { AUDIO_ISSUES } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { sendTemplateMail } from '@/lib/ses'
@@ -60,13 +61,26 @@ export async function rejectScreenFile(formData: {
       },
     })
 
+    const issuesArray = reasons ? reasons.split(',') : []
+
+    const issuesListHtml = `<ul>${issuesArray
+      .map((key) => {
+        const issue = AUDIO_ISSUES[key.trim() as keyof typeof AUDIO_ISSUES]
+        if (!issue) return ''
+        const longText =
+          issue.long.charAt(0).toUpperCase() + issue.long.slice(1)
+        return `<li>${longText} (eg. ${issue.example})</li>`
+      })
+      .join('')}</ul>`
+
     const templateData = {
       filename: invoiceFile?.File.filename || '',
       url: `https://${process.env.SERVER}/payments/paid?id=${invoiceFile?.invoiceId}`,
+      reasons: issuesListHtml,
     }
 
     await sendTemplateMail(
-      'TRANSCRIPT_CANCEL_ORDER',
+      'TRANSCRIPT_ORDER_REFUND',
       order.userId,
       templateData
     )
