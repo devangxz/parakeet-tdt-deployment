@@ -660,7 +660,7 @@ export default memo(function Topbar({
   }, [orderDetails])
 
   useEffect(() => {
-    if(orderDetails.remainingTime === '0') {
+    if(orderDetails.remainingTime === '0' && orderDetails.status === 'QC_ASSIGNED') {
       setShowTimeoutDialog(true)
     }
   }, [orderDetails.remainingTime])
@@ -782,7 +782,7 @@ export default memo(function Topbar({
                   }
                 }}
                 className='format-button border-r-[1.5px] border-white/70'
-                disabled={timeoutCount === '00:00:00'}
+                disabled={timeoutCount === '00:00:00' && orderDetails.status === 'QC_ASSIGNED'}
               >
                 Submit
               </Button>
@@ -795,7 +795,7 @@ export default memo(function Topbar({
                   setDiffModeDialogAction('menu')
                   setIsDiffModeDialogOpen(true)
                 }}
-                disabled={timeoutCount === '00:00:00'}
+                disabled={timeoutCount === '00:00:00' && orderDetails.status === 'QC_ASSIGNED'}
               >
                 <span className='sr-only'>Open menu</span>
                 <ChevronDownIcon className='h-4 w-4' />
@@ -805,8 +805,8 @@ export default memo(function Topbar({
                 modal={false}
                 onOpenChange={handleDropdownMenuOpenChange}
               >
-                <DropdownMenuTrigger className='focus-visible:ring-0 outline-none' disabled={timeoutCount === '00:00:00'}>
-                  <Button className='px-2 format-icon-button focus-visible:ring-0 outline-none' disabled={timeoutCount === '00:00:00'} >
+                <DropdownMenuTrigger className='focus-visible:ring-0 outline-none' disabled={timeoutCount === '00:00:00' && orderDetails.status === 'QC_ASSIGNED'}>
+                  <Button className='px-2 format-icon-button focus-visible:ring-0 outline-none' disabled={timeoutCount === '00:00:00' && orderDetails.status === 'QC_ASSIGNED'} >
                     <span className='sr-only'>Open menu</span>
                     <ChevronDownIcon className='h-4 w-4' />
                   </Button>
