@@ -69,6 +69,8 @@
     "di": 1,
     "speakerTracking": false
   },
+  "admin_orders_table_filters": "admin-orders-table-filters",
+  "admin_approvals_table_filters": "admin-approvals-table-filters",
   "default_order_options": {
     "adp": 0,
     "ts": 1,

@@ -185,7 +185,7 @@ export async function getOrderDetailsAction(fileId: string) {
       orderDetails,
     }
   } catch (error) {
-    logger.error(`Error fetching order details for file ${fileId}`, error)
+    logger.error(`Error fetching order details for the file ${fileId} ${error}`)
     return {
       success: false,
       error: 'Error fetching order details.',

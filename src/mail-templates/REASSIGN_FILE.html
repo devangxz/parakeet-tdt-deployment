@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    Hello,<br />
+    <br />
+    The file {{ fileId }} has been reassigned to you for
+    <strong>{{ jobType }}</strong> on {{$$SCRIBIE_SERVER$$}}. Please visit the
+    following link to check.<br />
+    <br />
+    <a href="https://{{$$SCRIBIE_SERVER$$}}/transcribe/{{ jobUrl }}"
+      >https://{{$$SCRIBIE_SERVER$$}}/transcribe/{{ jobUrl }}</a
+    ><br />
+    <br />
+
+    Check the comment below for additional details and complete the job. For any
+    queries, please contact {{$$SCRIBIE_SUPPORT_EMAIL$$}}. <br />
+    <br />
+
+    {{#if comment}}
+    <strong>Comment:</strong> {{comment}}<br />
+    <br />
+    {{/if}} Thank You,<br />
+    {{$$SCRIBIE_SERVER$$}} Support.<br />
+    <hr />
+    <small
+      >This mail is not spam. You have received this message since you have been
+      reassigned a file for {{ jobType }} at
+      <a href="https://{{$$SCRIBIE_SERVER$$}}">{{$$SCRIBIE_SERVER$$}}</a
+      >.</small
+    >
+  </body>
+</html>

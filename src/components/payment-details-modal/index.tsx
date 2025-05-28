@@ -274,12 +274,17 @@ const InvoicePDF = ({
                 borderRight: 'none',
               }}
             >
-              {invoice?.type === 'TRANSCRIPT' || invoice?.type === 'FORMATTING'
+              {invoice?.type === 'TRANSCRIPT' ||
+              invoice?.type === 'FORMATTING' ||
+              invoice?.type === 'ADDL_FORMATTING' ||
+              invoice?.type === 'ADDL_PROOFREADING'
                 ? 'File Name'
                 : 'Description'}
             </Text>
             {(invoice?.type === 'TRANSCRIPT' ||
-              invoice?.type === 'FORMATTING') && (
+              invoice?.type === 'FORMATTING' ||
+              invoice?.type === 'ADDL_FORMATTING' ||
+              invoice?.type === 'ADDL_PROOFREADING') && (
               <>
                 <Text style={[styles.tableCellHeader, { paddingRight: 3 }]}>
                   Minutes
@@ -377,7 +382,9 @@ const InvoicePDF = ({
             </>
           )}
           {(invoice?.type === 'TRANSCRIPT' ||
-            invoice?.type === 'FORMATTING') && (
+            invoice?.type === 'FORMATTING' ||
+            invoice?.type === 'ADDL_FORMATTING' ||
+            invoice?.type === 'ADDL_PROOFREADING') && (
             <View style={styles.tableRow}>
               <Text
                 style={{
@@ -596,11 +603,13 @@ const InvoicesDetailDialog = ({
               ? response.responseData.invoice.orderRate
               : file.price / (file.File.duration / 60)
 
-            fileRate = isRushOrder
-              ? baseRate + response.responseData.rates.rush_order
-              : isStrictVerbatim
-              ? baseRate + response.responseData.rates.verbatim
-              : baseRate
+            fileRate = baseRate
+            if (isRushOrder) {
+              fileRate += response.responseData.rates.rush_order
+            }
+            if (isStrictVerbatim) {
+              fileRate += response.responseData.rates.verbatim
+            }
           }
 
           const fileAmount = fileRate * (file.File.duration / 60)
@@ -714,12 +723,16 @@ const InvoicesDetailDialog = ({
                       <Separator />
                     </>
                   )}
+                  {invoiceType === 'TRANSCRIPT' && (
+                    <>
+                      <Services
+                        services={services!}
+                        invoiceId={selectedInvoiceId}
+                      />
+                      <Separator />
+                    </>
+                  )}
 
-                  <Services
-                    services={services!}
-                    invoiceId={selectedInvoiceId}
-                  />
-                  <Separator />
                   <Receipt receipt={receipt!} />
                 </>
               ) : (
@@ -739,7 +752,9 @@ const InvoicesDetailDialog = ({
             {/* <Button variant='order'>Print</Button> */}
             {(invoiceType === 'TRANSCRIPT' ||
               invoiceType === 'FORMATTING' ||
-              invoiceType === 'ADD_CREDITS') && (
+              invoiceType === 'ADD_CREDITS' ||
+              invoiceType === 'ADDL_FORMATTING' ||
+              invoiceType === 'ADDL_PROOFREADING') && (
               <>
                 <Button variant='order' onClick={handleCheckStatus}>
                   Check Status
