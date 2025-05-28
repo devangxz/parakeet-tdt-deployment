@@ -1,7 +1,6 @@
 import { ReloadIcon } from '@radix-ui/react-icons'
 import ReactQuill from 'react-quill'
 
-import Diff from './Diff'
 import Editor, { EditorHandle } from './Editor'
 import { OrderDetails } from './EditorPage'
 import SpeakerManager from './SpeakerManager'
@@ -12,7 +11,6 @@ import {
   CustomerQuillSelection,
   EditorData,
 } from '@/utils/editorUtils'
-import { DmpDiff } from '@/utils/transcript/diff_match_patch'
 
 interface EditorTabComponentProps {
   transcriptLoading: boolean
@@ -33,6 +31,7 @@ interface EditorTabComponentProps {
   step: string
   highlightNumbersEnabled: boolean
   setHighlightNumbersEnabled: (enabled: boolean) => void
+  readOnly?: boolean
 }
 
 export const EditorTabComponent = ({
@@ -54,6 +53,7 @@ export const EditorTabComponent = ({
   step,
   highlightNumbersEnabled,
   setHighlightNumbersEnabled,
+  readOnly = false,
 }: EditorTabComponentProps) => (
   <TabsContent
     forceMount
@@ -86,23 +86,10 @@ export const EditorTabComponent = ({
             step={step}
             highlightNumbersEnabled={highlightNumbersEnabled}
             setHighlightNumbersEnabled={setHighlightNumbersEnabled}
+            readOnly={readOnly}
           />
         </div>
       )}
-    </div>
-  </TabsContent>
-)
-
-export const DiffTabComponent = ({ diff }: { diff: DmpDiff[] }) => (
-  <TabsContent
-    forceMount
-    className='data-[state=inactive]:hidden h-full mt-0 overflow-hidden pb-[41px]'
-    value='diff'
-  >
-    <div className='h-full overflow-y-auto py-[12px] px-[15px]'>
-      <div className='h-full'>
-        <Diff diffOutput={diff} />
-      </div>
     </div>
   </TabsContent>
 )

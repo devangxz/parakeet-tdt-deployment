@@ -108,7 +108,7 @@
     "lucide-react": "^0.364.0",
     "mammoth": "^1.8.0",
     "nanoid": "^5.0.9",
-    "next": "^14.2.4",
+    "next": "^14.2.25",
     "next-auth": "^4.24.7",
     "next-intl": "^3.9.5",
     "next-themes": "^0.3.0",

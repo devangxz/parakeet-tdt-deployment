@@ -226,8 +226,9 @@ model Order {
   deliveredTs DateTime @default(now()) @map("delivered_ts")
   deliveredBy Int?     @map("delivered_by")
 
-  delayReason    DelayReason? @map("delay_reason")
-  highDifficulty Boolean?     @default(false) @map("high_difficulty")
+  delayReason          DelayReason? @map("delay_reason")
+  highDifficulty       Boolean?     @default(false) @map("high_difficulty")
+  highDifficultyReason String?      @map("high_difficulty_reason")
 
   qcCost     Float @default(0) @map("qc_cost")
   reviewCost Float @default(0) @map("review_cost")
