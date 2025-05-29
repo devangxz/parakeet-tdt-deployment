@@ -38,6 +38,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
 import { FILE_CACHE_URL } from '@/constants'
+import { generateSubtitlesInZipDialog } from '@/utils/generateSubtitlesInZipDialog'
 import { uploadToGoogleDrive } from '@/utils/google-drive'
 
 interface CheckAndDownloadProps {
@@ -273,19 +274,23 @@ export function CheckAndDownload({
     }
   }
 
-  const regenerateSubtitles = () => {
-    // mark in localStorage that the next editor load should regenerate
-    localStorage.setItem('shouldRegenerateSubtitles', 'true')
-    window.open(
-      `/editor/${id}`,
-      '_blank',
-      'toolbar=no,location=no,menubar=no,width=' +
-        window.screen.width +
-        ',height=' +
-        window.screen.height +
-        ',left=0,top=0'
-    )
-    setToggleCheckAndDownload(false)
+  const regenerateSubtitles = async () => {
+    const toastId = toast.loading('Regenerating subtitles...')
+    try {
+      await generateSubtitlesInZipDialog([id])
+      toast.dismiss(toastId)
+      toast.success('Subtitles regenerated successfully')
+      
+      // Wait a bit for the files to be generated on the server
+      setTimeout(async () => {
+        await fetchSubtitleUrls()
+      }, 2000)
+      
+    } catch (error) {
+      toast.dismiss(toastId)
+      toast.error('Failed to regenerate subtitles')
+      console.error('Error regenerating subtitles:', error)
+    }
   }
 
   useEffect(() => {
