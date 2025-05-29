@@ -290,19 +290,32 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
       files = files.map((file) => {
         const sanitizedName = sanitizeFileName(file.name)
 
-        if (sanitizedName === file.name) return file
+        if (sanitizedName === file.name) {
+          const fullPath =
+            'webkitRelativePath' in file && file.webkitRelativePath
+              ? file.webkitRelativePath
+              : file.name
+          return Object.assign(file, { fullPath })
+        }
 
         const newFile = new File([file], sanitizedName, {
           type: file.type,
           lastModified: file.lastModified,
-        }) as File & { webkitRelativePath?: string }
+        }) as File & { fullPath?: string }
 
+        let fullPath: string
         if ('webkitRelativePath' in file && file.webkitRelativePath) {
           const pathParts = file.webkitRelativePath.split('/')
           pathParts[pathParts.length - 1] = sanitizedName
-          newFile.webkitRelativePath = pathParts.join('/')
+          fullPath = pathParts.join('/')
+        } else {
+          fullPath = sanitizedName
         }
-
+        Object.defineProperty(newFile, 'fullPath', {
+          value: fullPath,
+          writable: false,
+          enumerable: true,
+        })
         return newFile
       })
 
@@ -335,7 +348,9 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
 
       if (isRemoteLegal) {
         const remoteLegalFolderFiles = filesUnderSizeLimit.filter((file) => {
-          const pathSegments = file.webkitRelativePath.split('/')
+          const pathSegments =
+            (file as File & { fullPath?: string }).fullPath?.split('/') ||
+            file.webkitRelativePath.split('/')
           return (
             pathSegments.length > 1 &&
             pathSegments[1].toLowerCase() ===
@@ -453,25 +468,36 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
                 const entry = contents.files[filename]
                 if (!entry.dir) {
                   const blob = await entry.async('blob')
-                  return new File([blob], filename.split('/').slice(-1)[0], {
+                  const originalName = filename.split('/').slice(-1)[0]
+                  const sanitizedName = sanitizeFileName(originalName)
+                  const file = new File([blob], sanitizedName, {
                     type: blob.type || 'application/octet-stream',
                     lastModified: entry.date.getTime(),
-                  }) as File & { fullPath?: string }
+                  }) as ExtendedFile
+                  file.originalName = originalName
+                  return file
                 }
                 return null
               })
 
             const extractedFiles = (await Promise.all(extractedFilePromises))
-              .filter((file): file is File => file !== null)
+              .filter((file): file is ExtendedFile => file !== null)
               .map((file) => {
                 const originalFile =
                   contents.files[
                     Object.keys(contents.files).find((key) =>
-                      key.endsWith(file.name)
+                      key.endsWith(file.originalName || file.name)
                     ) || ''
                   ]
-                ;(file as File & { fullPath: string }).fullPath =
-                  originalFile?.name || file.name
+                if (originalFile) {
+                  const pathParts = originalFile.name.split('/')
+                  const sanitizedPathParts = pathParts.map((part, index) =>
+                    index === pathParts.length - 1 ? file.name : part
+                  )
+                  file.fullPath = sanitizedPathParts.join('/')
+                } else {
+                  file.fullPath = file.name
+                }
                 return file
               })
 
@@ -613,7 +639,6 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
         }
       }
     } catch (error) {
-      console.error('Upload failed', error)
       toast.error('Upload failed')
       try {
         if (
@@ -626,7 +651,6 @@ const FileAndFolderUploader: React.FC<UploaderProps> = ({
           await deleteMultipleFoldersAction(folderIds)
         }
       } catch (error) {
-        console.error('Upload failed', error)
         toast.error('Upload failed')
       }
       setIsUploading(false)

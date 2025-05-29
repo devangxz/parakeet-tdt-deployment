@@ -170,6 +170,7 @@ export interface FolderStructure {
 
 export interface ExtendedFile extends File {
     fullPath?: string;
+    originalName?: string;
 }
 
 export interface TreeNode {

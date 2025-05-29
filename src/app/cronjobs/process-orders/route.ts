@@ -1,4 +1,4 @@
-import { OrderStatus } from '@prisma/client'
+import { OrderStatus, ReportMode } from '@prisma/client'
 import { NextResponse } from 'next/server'
 
 import logger from '@/lib/logger'
@@ -40,6 +40,8 @@ export async function POST() {
           fileKey: true,
           userId: true,
           uploadedBy: true,
+          reportOption: true,
+          reportComment: true,
           user: {
             select: {
               email: true,
@@ -47,6 +49,23 @@ export async function POST() {
           },
         },
       })
+
+      if (fileRecord?.reportOption) {
+        logger.info(
+          `[${file?.fileId}] Screening file with reason: ${fileRecord?.reportOption} - ${fileRecord?.reportComment}`
+        )
+
+        await prisma.order.update({
+          where: { fileId: file?.fileId },
+          data: {
+            reportMode: ReportMode.AUTO,
+            reportOption: fileRecord?.reportOption,
+            reportComment: fileRecord?.reportComment,
+            status: OrderStatus.SUBMITTED_FOR_SCREENING,
+          },
+        })
+        continue
+      }
 
       const youtubeFile = await prisma.youTubeFile.findUnique({
         where: { fileId: file?.fileId },
