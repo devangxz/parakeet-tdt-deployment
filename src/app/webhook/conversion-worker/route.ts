@@ -1,10 +1,10 @@
+import { ReportOption } from '@prisma/client'
 import { NextRequest, NextResponse } from 'next/server'
 
-import { DURATION_DIFF, ERROR_CODES } from '@/constants'
+import { DURATION_DIFF } from '@/constants'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { getAWSSesInstance } from '@/lib/ses'
-import refundFile from '@/services/file-service/refund-file'
 import authenticateWebhook from '@/utils/authenticateWebhook'
 
 interface ConversionResult {
@@ -13,6 +13,24 @@ interface ConversionResult {
   fileId: string
   duration?: number
   error?: string
+}
+
+async function reportFile(
+  fileId: string,
+  reportOption: ReportOption,
+  reportComment: string
+) {
+  logger.info(
+    `[${fileId}] Reporting file with reason: ${reportOption} - ${reportComment}`
+  )
+
+  await prisma.file.update({
+    where: { fileId },
+    data: {
+      reportOption,
+      reportComment,
+    },
+  })
 }
 
 async function processConversionResult(result: ConversionResult) {
@@ -37,28 +55,30 @@ async function processConversionResult(result: ConversionResult) {
           select: { duration: true },
         })
 
-        if (file && Math.abs(file.duration - duration) > DURATION_DIFF) {
-          const user = await prisma.user.findUnique({
-            where: { id: Number(userId) },
-            select: { email: true },
-          })
+        if (file) {
+          const durationDiff = Math.abs(file.duration - duration)
+          if (durationDiff > DURATION_DIFF) {
+            const user = await prisma.user.findUnique({
+              where: { id: Number(userId) },
+              select: { email: true },
+            })
 
-          const ses = getAWSSesInstance()
-          await ses.sendAlert(
-            `File Duration Difference`,
-            `Duration difference detected for file ${fileId} uploaded by ${
-              user?.email
-            }. Original duration: ${
-              file.duration
-            }s, Converted duration: ${duration}s, Difference: ${Math.abs(
-              file.duration - duration
-            )}s`,
-            'software'
-          )
+            const reportComment = `The duration difference of ${durationDiff}s is above the acceptable threshold of ${DURATION_DIFF}s`
+            await reportFile(
+              fileId,
+              ReportOption.DURATION_DIFFERENCE,
+              reportComment
+            )
 
-          logger.info(
-            `${fileId} - File flagged for duration difference::${ERROR_CODES.DURATION_DIFF_ERROR.code}::${ERROR_CODES.DURATION_DIFF_ERROR.httpCode}`
-          )
+            const ses = getAWSSesInstance()
+            await ses.sendAlert(
+              `File Duration Difference`,
+              `Duration difference detected for file ${fileId} uploaded by ${user?.email}. Original duration: ${file.duration}s, Converted duration: ${duration}s, Difference: ${durationDiff}s`,
+              'software'
+            )
+
+            logger.info(`[${fileId}] File reported with duration difference`)
+          }
         }
       }
     } else {
@@ -73,26 +93,10 @@ async function processConversionResult(result: ConversionResult) {
           )
         })
 
-      const result = await refundFile(fileId)
-      if (result.success && result.refundDetails) {
-        const user = await prisma.user.findUnique({
-          where: { id: Number(userId) },
-          select: { email: true },
-        })
+      const reportComment = 'The file conversion process failed'
+      await reportFile(fileId, ReportOption.CONVERSION_ERROR, reportComment)
 
-        const emailData = {
-          userEmailId: user?.email ?? '',
-        }
-
-        const templateData = {
-          filename: result.refundDetails.fileName,
-          amount: result.refundDetails.amount.toFixed(2),
-          invoiceId: result.refundDetails.invoiceId,
-        }
-
-        const ses = getAWSSesInstance()
-        await ses.sendMail('REFUND_FILE', emailData, templateData)
-      }
+      logger.info(`[${fileId}] File reported with conversion error`)
     }
   } catch (error) {
     logger.error(

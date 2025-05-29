@@ -50,6 +50,8 @@ const reportReasonMap = {
   AUTO_DIFF_BELOW_THRESHOLD: 'Diff Below Threshold',
   NOT_PICKED_UP: 'Not Picked Up',
   EMPTY_ASR_TRANSCRIPT: 'Empty ASR Transcript',
+  DURATION_DIFFERENCE: 'Duration Difference',
+  CONVERSION_ERROR: 'Conversion Error',
 }
 
 type ReportReasonMap = typeof reportReasonMap

@@ -46,7 +46,7 @@ export async function copyFile(fileId: string) {
         userId: existingFile.userId,
         fileId: newFileId,
         filename: newFileName,
-        fileKey: `${newFileName}_${newFileId}.mp3`,
+        fileKey: existingFile.fileKey,
         filesize: existingFile.filesize,
         duration: existingFile.duration,
         bitRate: existingFile.bitRate,
@@ -54,6 +54,8 @@ export async function copyFile(fileId: string) {
         uploadedBy: user?.userId as number,
         fileStatus: FileStatus.NONE,
         converted: true,
+        reportOption: existingFile.reportOption,
+        reportComment: existingFile.reportComment,
       },
     })
 

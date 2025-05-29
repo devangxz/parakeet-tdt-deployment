@@ -139,6 +139,8 @@ model File {
   customFormattingDetails   Json?                   @map("custom_formatting_details")
   customDetailsChangesCount Int                     @default(0) @map("custom_details_changes_count")
   customInstructions        String?                 @map("custom_instructions")
+  reportOption              ReportOption?           @map("report_option")
+  reportComment             String?                 @map("report_comment")
   createdAt                 DateTime                @default(now()) @map("created_at")
   updatedAt                 DateTime                @default(now()) @map("updated_at")
   Orders                    Order[]
@@ -978,6 +980,8 @@ enum ReportOption {
   AUTO_DIFF_BELOW_THRESHOLD
   NOT_PICKED_UP
   EMPTY_ASR_TRANSCRIPT
+  DURATION_DIFFERENCE
+  CONVERSION_ERROR
 }
 
 enum InvoiceType {
