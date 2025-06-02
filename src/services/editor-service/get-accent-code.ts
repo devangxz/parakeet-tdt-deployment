@@ -1,4 +1,4 @@
-"use server"
+'use server'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 
@@ -8,9 +8,10 @@ interface GetAccentCodeResult {
   message?: string
 }
 
-export async function getAccentCode(fileId: string): Promise<GetAccentCodeResult> {
+export async function getAccentCode(
+  fileId: string
+): Promise<GetAccentCodeResult> {
   try {
-    logger.info(`[getAccentCode] Fetching accent code for fileId ${fileId}`)
     if (!fileId) {
       return {
         success: false,
@@ -21,7 +22,7 @@ export async function getAccentCode(fileId: string): Promise<GetAccentCodeResult
 
     const accentData = await prisma.fileAccent.findFirst({
       where: { fileId: fileId },
-      select: { accentCode: true }
+      select: { accentCode: true },
     })
 
     if (!accentData) {
@@ -31,7 +32,6 @@ export async function getAccentCode(fileId: string): Promise<GetAccentCodeResult
         accentCode: 'N/A',
       }
     }
-    logger.info(`[getAccentCode] Found accent code for fileId ${fileId}`)
     return {
       success: true,
       accentCode: accentData.accentCode || 'N/A',
@@ -44,4 +44,4 @@ export async function getAccentCode(fileId: string): Promise<GetAccentCodeResult
       accentCode: 'N/A',
     }
   }
-} 
+}

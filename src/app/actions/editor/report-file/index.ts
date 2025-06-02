@@ -98,6 +98,10 @@ export async function reportFileAction(
       },
     })
 
+    logger.info(
+      `Order ${order.fileId} report for ${OrderStatus.SUBMITTED_FOR_SCREENING} successfully.`
+    )
+
     return {
       success: true,
       message: 'Order reported successfully',

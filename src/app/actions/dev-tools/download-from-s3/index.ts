@@ -15,10 +15,10 @@ export async function downloadFromS3(fileId: string, suffix: string) {
     }
 
     const fileTagMap = {
-      'asr': FileTag.AUTO,
-      'qc': FileTag.QC_DELIVERED,
-      'rev_docx': FileTag.CF_REV_SUBMITTED,
-      'finalizer_docx': FileTag.CF_FINALIZER_SUBMITTED,
+      asr: FileTag.AUTO,
+      qc: FileTag.QC_DELIVERED,
+      rev_docx: FileTag.CF_REV_SUBMITTED,
+      finalizer_docx: FileTag.CF_FINALIZER_SUBMITTED,
     }
 
     let key = ''
@@ -64,6 +64,20 @@ export async function downloadFromS3(fileId: string, suffix: string) {
       }
     } else if (suffix === 'mp3' || suffix === 'mp4') {
       key = `${fileId}.${suffix}`
+    } else if (suffix === 'original') {
+      const file = await prisma.file.findUnique({
+        where: {
+          fileId: fileId,
+        },
+      })
+      if (file) {
+        key = file.fileKey ?? ''
+      } else {
+        return {
+          success: false,
+          message: 'File not found',
+        }
+      }
     }
 
     if (['asr', 'qc', 'rev_docx', 'finalizer_docx'].includes(suffix)) {

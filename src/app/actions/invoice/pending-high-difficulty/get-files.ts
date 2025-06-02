@@ -46,7 +46,7 @@ export async function getHighDifficultyFiles() {
       .map((order) => ({
         fileId: order.File!.fileId,
         filename: order.File!.filename,
-        reasons: order.comments || '',
+        reasons: order.highDifficultyReason || '',
       }))
 
     return {

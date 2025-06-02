@@ -654,6 +654,7 @@ export default function DevTools() {
                     <SelectItem value='ctms'>CTMS</SelectItem>
                     <SelectItem value='mp3'>MP3</SelectItem>
                     <SelectItem value='mp4'>MP4</SelectItem>
+                    <SelectItem value='original'>Original File</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button onClick={handleDownloadFromS3Click} disabled={loading}>

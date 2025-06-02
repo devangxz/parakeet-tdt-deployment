@@ -594,6 +594,7 @@ const fetchFileDetails = async ({
       speakerOptions: orderRes.orderDetails.speakerOptions || [],
       isTestOrder: orderRes.orderDetails.isTestOrder,
       pwer: orderRes.orderDetails.pwer || 0,
+      assignMode: orderRes.orderDetails.assignMode,
     }
 
     setOrderDetails(orderDetailsFormatted)

@@ -43,7 +43,9 @@ export async function reportBadAudio(formData: {
       },
     })
 
-    logger.info(`reported bad audio, for ${fileId}`)
+    logger.info(
+      `reported bad audio, for ${OrderStatus.SUBMITTED_FOR_SCREENING}, ${fileId}`
+    )
     return {
       success: true,
       message: 'Successfully reported',

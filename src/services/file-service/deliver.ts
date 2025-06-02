@@ -3,7 +3,10 @@ import { OrderStatus, Order, FileTag } from '@prisma/client'
 import logger from '@/lib/logger'
 import prisma from '@/lib/prisma'
 import { sendTemplateMail, getAWSSesInstance } from '@/lib/ses'
-import { checkOrderWatch, deleteFileVersionFromS3 } from '@/utils/backend-helper'
+import {
+  checkOrderWatch,
+  deleteFileVersionFromS3,
+} from '@/utils/backend-helper'
 
 async function getPaidByUserId(fileId: string) {
   logger.info(`--> getPaidByUserId ${fileId}`)
@@ -40,26 +43,36 @@ async function deliver(order: Order, transcriberId: number) {
         fileId: order.fileId,
         tag: FileTag.CUSTOMER_EDIT,
       },
-    });
+    })
 
     if (customerEdit && customerEdit.s3VersionId) {
-      logger.info(`Found CUSTOMER_EDIT for ${order.fileId} on deliver, deleting file version`);
+      logger.info(
+        `Found CUSTOMER_EDIT for ${order.fileId} on deliver, deleting file version`
+      )
       // Delete the file version from S3
       try {
-        await deleteFileVersionFromS3(order.fileId, customerEdit.s3VersionId);
-        logger.info(`Deleted customer edit file from S3 for ${order.fileId}`);
+        await deleteFileVersionFromS3(order.fileId, customerEdit.s3VersionId)
+        logger.info(`Deleted customer edit file from S3 for ${order.fileId}`)
       } catch (s3Error) {
-        logger.error(`Failed to delete customer edit file from S3: ${(s3Error as Error).message}`);
+        logger.error(
+          `Failed to delete customer edit file from S3: ${
+            (s3Error as Error).message
+          }`
+        )
       }
       await prisma.fileVersion.delete({
         where: {
           id: customerEdit.id,
         },
-      });
-      logger.info(`Deleted CUSTOMER_EDIT record from database for ${order.fileId}`);
+      })
+      logger.info(
+        `Deleted CUSTOMER_EDIT record from database for ${order.fileId}`
+      )
     }
   } catch (error) {
-    logger.error(`Error handling customer edit cleanup: ${(error as Error).message}`);
+    logger.error(
+      `Error handling customer edit cleanup: ${(error as Error).message}`
+    )
     // Continue with delivery process even if cleanup fails
   }
   await prisma.order.update({
@@ -102,7 +115,7 @@ async function deliver(order: Order, transcriberId: number) {
     templateData,
     paidBy ?? 0
   )
-  logger.info(`<-- deliver ${order.id} ${order.fileId}`)
+  logger.info(`<-- deliver file and sent email as well for ${order.fileId}`)
 }
 
 export default deliver
