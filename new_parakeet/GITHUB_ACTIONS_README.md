@@ -30,12 +30,12 @@ This repository includes automated workflows for continuous integration, testing
 Configure these secrets in your GitHub repository settings:
 
 ```
-REPLICATE_CLI_AUTH_TOKEN: Your Replicate API token
+REPLICATE_CLI_AUTH_TOKEN: Your Replicate API credential
 ```
 
-**To get your Replicate token:**
+**To get your Replicate credential:**
 1. Visit https://replicate.com/account/api-tokens
-2. Create a new token
+2. Create a new credential
 3. Add it to GitHub Secrets at: `Settings > Secrets and variables > Actions`
 
 ### 2. Branch Protection (Recommended)

@@ -71,7 +71,7 @@ print(output["transcription"])
 ### Via cURL:
 ```bash
 curl -s -X POST \
-  -H "Authorization: Token YOUR_REPLICATE_API_TOKEN" \
+  -H "Authorization: Bearer YOUR_API_KEY_HERE" \
   -H "Content-Type: application/json" \
   -d '{
     "version": "YOUR_MODEL_VERSION",
