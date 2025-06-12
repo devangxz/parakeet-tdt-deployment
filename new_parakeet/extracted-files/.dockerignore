@@ -1,0 +1,15 @@
+venv310/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.git/
+.gitignore
+README.md
+python-3.10.11-installer.exe
+app_simple.py
+app_parakeet_compatible.py
+.env
+.vscode/
+*.log 

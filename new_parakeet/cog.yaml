@@ -1,0 +1,36 @@
+# Configuration for Cog ⚙️
+build:
+  # GPU-enabled base image with CUDA
+  gpu: true
+  cuda: "11.8"
+  python_version: "3.10"
+  
+  # System dependencies
+  system_packages:
+    - "ffmpeg"
+    - "sox"
+    - "libsndfile1"
+    - "build-essential"
+    - "cmake"
+    - "git"
+    - "wget"
+    - "curl"
+  
+  # Python dependencies - using compatible versions
+  python_packages:
+    - "torch==2.1.0"
+    - "torchaudio==2.1.0"
+    - "nemo_toolkit[asr]==1.22.0"
+    - "omegaconf==2.3.0"
+    - "hydra-core==1.3.2"
+    - "librosa==0.10.1"
+    - "soundfile==0.12.1"
+    - "numpy>=1.21.0,<1.25.0"
+    - "transformers>=4.20.0"
+    - "datasets>=2.0.0"
+
+# Predict script
+predict: "predict.py:Predictor"
+
+# Model cache to speed up builds
+model_cache: true 
