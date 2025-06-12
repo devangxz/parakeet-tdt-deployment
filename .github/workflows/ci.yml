@@ -1,0 +1,168 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-test:
+    name: Code Quality & Testing
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black isort mypy
+        # Install basic dependencies for linting
+        pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+        pip install omegaconf hydra-core librosa soundfile numpy
+
+    - name: Lint with flake8
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+
+    - name: Check code formatting with black
+      run: |
+        black --check --diff .
+
+    - name: Check import sorting with isort
+      run: |
+        isort --check-only --diff .
+
+    - name: Type checking with mypy
+      run: |
+        mypy predict.py --ignore-missing-imports || true
+
+    - name: Validate cog.yaml syntax
+      run: |
+        python -c "
+        import yaml
+        try:
+            with open('cog.yaml', 'r') as f:
+                yaml.safe_load(f)
+            print('✅ cog.yaml syntax is valid')
+        except yaml.YAMLError as e:
+            print(f'❌ cog.yaml syntax error: {e}')
+            exit(1)
+        "
+
+    - name: Check predict.py structure
+      run: |
+        python -c "
+        import ast
+        import sys
+        
+        try:
+            with open('predict.py', 'r') as f:
+                tree = ast.parse(f.read())
+            
+            # Check for required Predictor class
+            predictor_class = None
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ClassDef) and node.name == 'Predictor':
+                    predictor_class = node
+                    break
+            
+            if not predictor_class:
+                print('❌ Predictor class not found in predict.py')
+                sys.exit(1)
+            
+            # Check for required methods
+            methods = [node.name for node in predictor_class.body if isinstance(node, ast.FunctionDef)]
+            required_methods = ['setup', 'predict']
+            
+            for method in required_methods:
+                if method not in methods:
+                    print(f'❌ Required method {method} not found in Predictor class')
+                    sys.exit(1)
+            
+            print('✅ predict.py structure is valid')
+            
+        except Exception as e:
+            print(f'❌ Error validating predict.py: {e}')
+            sys.exit(1)
+        "
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Bandit security scan
+      run: |
+        pip install bandit
+        bandit -r . -f json -o bandit-report.json || true
+        bandit -r . || true
+
+    - name: Check for secrets in code
+      run: |
+        # Simple regex checks for common secrets
+        if grep -r -E "(api_key|password|secret|token)" --include="*.py" --include="*.yml" --include="*.yaml" . | grep -v "github.com" | grep -v "example"; then
+          echo "⚠️  Potential secrets found in code. Please review."
+        else
+          echo "✅ No obvious secrets detected"
+        fi
+
+  docker-compatibility:
+    name: Docker Compatibility Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Test Docker build (dry run)
+      run: |
+        if [ -f "Dockerfile.replicate" ]; then
+          echo "🐳 Testing Dockerfile.replicate build..."
+          docker buildx build \
+            --platform linux/amd64 \
+            --file Dockerfile.replicate \
+            --tag test-image:latest \
+            --load \
+            . || {
+            echo "❌ Docker build failed"
+            exit 1
+          }
+          echo "✅ Docker build test passed"
+        else
+          echo "ℹ️  No Dockerfile.replicate found, skipping Docker test"
+        fi
+
+    - name: Validate .dockerignore
+      run: |
+        if [ -f ".dockerignore" ]; then
+          echo "✅ .dockerignore found"
+          echo "Contents:"
+          cat .dockerignore
+        else
+          echo "⚠️  .dockerignore not found - consider creating one to optimize build"
+        fi 
