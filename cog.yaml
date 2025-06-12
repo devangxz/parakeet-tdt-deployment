@@ -15,6 +15,7 @@ build:
   
   # Python dependencies
   python_packages:
+    - "Cython>=0.29.0"  # Required for youtokentome build
     - "torch==2.1.0"
     - "torchaudio==2.1.0"
     - "nemo_toolkit[asr]==1.22.0"
