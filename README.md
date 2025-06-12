@@ -9,7 +9,7 @@ Deploy NVIDIA's Parakeet TDT 0.6B V2 speech-to-text model on Replicate with GitH
 2. Create a new API token
 3. Add it to GitHub Secrets:
    - Go to: `Settings > Secrets and variables > Actions`
-   - Name: `REPLICATE_API_TOKEN`
+   - Name: `REPLICATE_CLI_AUTH_TOKEN`
    - Value: Your API token
 
 ### 2. Deploy
