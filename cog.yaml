@@ -9,12 +9,12 @@ build:
     - "ffmpeg"
     - "libsndfile1"
   python_packages:
-    - nemo_toolkit[asr]==2.3.0
-    - torch==2.3.0
-    - torchaudio==2.3.0
-    - pydub==0.25.1
-    - pyannote.audio==3.1.1
-    - requests==2.31.0
-    - numpy<2
+    - "nemo_toolkit[asr]==2.3.0"
+    - "torch==2.3.0"
+    - "torchaudio==2.3.0"
+    - "pydub==0.25.1"
+    - "pyannote.audio==3.1.1"
+    - "requests==2.31.0"
+    - "numpy<2"
 
 predict: "predict.py:Predictor" 
