@@ -1,6 +1,7 @@
 # Configuration for Cog ⚙️
-# Deploy NVIDIA Parakeet TDT 0.6B V2 to Replicate
+# Deploy NVIDIA Parakeet TDT 0.6B V2 to Replicate with Speaker Diarization
 # Using the same working dependencies as Modal deployment
+# Fixed: gpu: true (not "T4"), quoted packages to prevent YAML parsing issues
 
 build:
   gpu: true
