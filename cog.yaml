@@ -3,7 +3,7 @@
 # Using the same working dependencies as Modal deployment
 
 build:
-  gpu: "T4"
+  gpu: true
   python_version: "3.10"
   system_packages:
     - "ffmpeg"
