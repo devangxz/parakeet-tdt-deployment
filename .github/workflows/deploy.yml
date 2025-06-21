@@ -6,7 +6,7 @@ on:
       model_name:
         description: 'Model name (e.g., username/model-name)'
         required: false
-        default: 'devangxz/parakeet-tdt-0.6b-v2'
+        default: 'scribie/parakeet-tdt-speaker-diarization'
   push:
     branches:
       - main
@@ -33,4 +33,4 @@ jobs:
       - name: Push to Replicate
         run: |
           echo "🚀 Deploying to Replicate..."
-          cog push r8.im/${{ inputs.model_name || 'devangxz/parakeet-tdt-0.6b-v2' }} 
+          cog push r8.im/${{ inputs.model_name || 'scribie/parakeet-tdt-speaker-diarization' }} 
