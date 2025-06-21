@@ -30,12 +30,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install cog==0.9.8
           echo "Cog installation complete"
-          which cog || echo "Cog not in PATH, checking python -m cog"
-          python -m cog --version || pip show cog
+          # Add Python user bin to PATH
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          echo "$(python -m site --user-base)/bin" >> $GITHUB_PATH
+          # Verify installation
+          which cog || echo "Cog not found in PATH yet"
+          cog --version || echo "Cog command failed"
 
       - name: Push to Replicate
         env:
           REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_CLI_AUTH_TOKEN }}
         run: |
           echo "🚀 Deploying to Replicate..."
-          python -m cog push r8.im/${{ inputs.model_name || 'scribie/parakeet-tdt-speaker-diarization' }} 
+          cog push r8.im/${{ inputs.model_name || 'scribie/parakeet-tdt-speaker-diarization' }} 
