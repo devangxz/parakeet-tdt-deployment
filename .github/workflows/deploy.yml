@@ -29,10 +29,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install cog==0.9.8
+          echo "Cog installation complete"
+          which cog || echo "Cog not in PATH, checking python -m cog"
+          python -m cog --version || pip show cog
 
       - name: Push to Replicate
         env:
           REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_CLI_AUTH_TOKEN }}
         run: |
           echo "🚀 Deploying to Replicate..."
-          cog push r8.im/${{ inputs.model_name || 'scribie/parakeet-tdt-speaker-diarization' }} 
+          python -m cog push r8.im/${{ inputs.model_name || 'scribie/parakeet-tdt-speaker-diarization' }} 
