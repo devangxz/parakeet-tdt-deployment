@@ -1,4 +1,4 @@
-# cog.yaml
+# Alternative cog.yaml using run commands
 build:
   gpu: true
   cuda: "12.1"
