@@ -1,12 +1,7 @@
 name: Deploy to Replicate
 
 on:
-  workflow_dispatch:
-    inputs:
-      model_name:
-        description: 'Model name (e.g., username/model-name)'
-        required: false
-        default: 'scribie/parakeet-tdt-speaker-diarization'
+  workflow_dispatch: {}  # allow manual trigger
   push:
     branches:
       - main
@@ -33,4 +28,4 @@ jobs:
       - name: Push to Replicate
         run: |
           echo "🚀 Deploying to Replicate..."
-          cog push r8.im/${{ inputs.model_name || 'scribie/parakeet-tdt-speaker-diarization' }} 
+          cog push r8.im/scribie/parakeet-tdt-speaker-diarization 
