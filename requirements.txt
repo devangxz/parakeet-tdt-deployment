@@ -1,9 +1,9 @@
 --index-url https://download.pytorch.org/whl/cu121
 --extra-index-url https://pypi.org/simple
 nemo_toolkit[asr]==2.3.0
-torch==2.3.0+cu121
-torchaudio==2.3.0+cu121
+torch==2.3.0
+torchaudio==2.3.0
 pydub==0.25.1
-git+https://github.com/pyannote/pyannote-audio.git@3.1.1
+pyannote.audio==3.1.1
 requests==2.31.0
 numpy<2 
