@@ -36,4 +36,4 @@ jobs:
           HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
         run: |
           echo "🚀 Deploying to Replicate..."
-          cog push r8.im/${{ inputs.model_name || 'scribie/parakeet-tdt-speaker-diarization' }} 
+          HUGGINGFACE_TOKEN="${{ secrets.HUGGINGFACE_TOKEN }}" cog push r8.im/${{ inputs.model_name || 'scribie/parakeet-tdt-speaker-diarization' }} 
