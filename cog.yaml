@@ -17,5 +17,9 @@ build:
     - numpy<2
   run:
     - pip install "pyannote.audio==3.1.1"
+    - pip install "cuda-python>=12.3"
 
-predict: "predict.py:Predictor" 
+predict: "predict.py:Predictor"
+
+environment:
+  HUGGINGFACE_TOKEN 

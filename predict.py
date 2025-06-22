@@ -29,10 +29,17 @@ class Predictor(BasePredictor):
 
         print(f"[{datetime.now().isoformat()}] [INFO] Loading Pyannote diarization model...")
         hf_token = os.environ.get("HUGGINGFACE_TOKEN", None)
+        if not hf_token:
+            raise RuntimeError("HUGGINGFACE_TOKEN environment variable is required for speaker diarization")
+            
         self.diarization_pipeline = Pipeline.from_pretrained(
             "pyannote/speaker-diarization-3.1",
             use_auth_token=hf_token
         )
+        
+        if self.diarization_pipeline is None:
+            raise RuntimeError("Failed to load pyannote/speaker-diarization-3.1 - check HUGGINGFACE_TOKEN and model access permissions")
+            
         if torch.cuda.is_available():
             self.diarization_pipeline.to(torch.device("cuda"))
 
