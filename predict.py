@@ -53,7 +53,8 @@ class Predictor(BasePredictor):
         self,
         audio: CogPath = Input(description="Audio file to transcribe", default=None),
         audio_url: str = Input(description="URL of audio file to transcribe", default=None),
-        return_timestamps: bool = Input(description="Return word-level timestamps", default=True)
+        return_timestamps: bool = Input(description="Return word-level timestamps", default=True),
+        max_chunk_duration: int = Input(description="Maximum duration per chunk in seconds (to avoid memory issues)", default=300)
     ) -> Dict[str, Any]:
         try:
             # Load audio bytes
@@ -67,7 +68,7 @@ class Predictor(BasePredictor):
                 raise ValueError("Provide either 'audio' or 'audio_url'.")
 
             # Process
-            result = self._transcribe_with_diarization(audio_bytes, filename, return_timestamps)
+            result = self._transcribe_with_diarization(audio_bytes, filename, return_timestamps, max_chunk_duration)
             return result
 
         except Exception as e:
@@ -92,7 +93,7 @@ class Predictor(BasePredictor):
         return audio_bytes, filename
 
     def _transcribe_with_diarization(
-        self, audio_bytes: bytes, filename: str, return_timestamps: bool
+        self, audio_bytes: bytes, filename: str, return_timestamps: bool, max_chunk_duration: int
     ) -> Dict[str, Any]:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -105,6 +106,14 @@ class Predictor(BasePredictor):
             model_audio = audio.set_frame_rate(16000).set_channels(1)
             model_path = temp_path / "audio_model.wav"
             model_audio.export(str(model_path), format="wav")
+
+            # Check if audio needs chunking
+            audio_duration = len(model_audio) / 1000.0  # duration in seconds
+            print(f"[INFO] Audio duration: {audio_duration:.2f} seconds")
+            
+            if audio_duration > max_chunk_duration:
+                print(f"[INFO] Audio too long ({audio_duration:.2f}s), chunking into {max_chunk_duration}s segments")
+                return self._process_chunked_audio(model_audio, temp_path, return_timestamps, max_chunk_duration, filename)
 
             # --- Transcription ---
             transcripts = self.asr_model.transcribe(
@@ -162,4 +171,100 @@ class Predictor(BasePredictor):
                 "text": text,
                 "words": word_timestamps
             }
-            return result 
+            return result
+
+    def _process_chunked_audio(
+        self, audio: AudioSegment, temp_path: Path, return_timestamps: bool, max_chunk_duration: int, filename: str
+    ) -> Dict[str, Any]:
+        """Process large audio files in chunks to avoid memory issues"""
+        chunk_duration_ms = max_chunk_duration * 1000
+        total_duration = len(audio)
+        chunks = []
+        all_words = []
+        full_text = ""
+        
+        # Split audio into chunks
+        for i, start_ms in enumerate(range(0, total_duration, chunk_duration_ms)):
+            end_ms = min(start_ms + chunk_duration_ms, total_duration)
+            chunk = audio[start_ms:end_ms]
+            
+            chunk_path = temp_path / f"chunk_{i}.wav"
+            chunk.export(str(chunk_path), format="wav")
+            
+            print(f"[INFO] Processing chunk {i+1}, duration: {(end_ms-start_ms)/1000:.2f}s")
+            
+            # Transcribe chunk
+            try:
+                transcripts = self.asr_model.transcribe(
+                    audio=[str(chunk_path)],
+                    batch_size=1,
+                    return_hypotheses=True,
+                    timestamps=return_timestamps
+                )
+                
+                if transcripts:
+                    hypothesis = transcripts[0]
+                    chunk_text = getattr(hypothesis, 'text', str(hypothesis))
+                    full_text += chunk_text + " "
+                    
+                    # Add word timestamps with offset
+                    if return_timestamps and hasattr(hypothesis, 'timestamp') and 'word' in hypothesis.timestamp:
+                        for word_info in hypothesis.timestamp['word']:
+                            all_words.append({
+                                "text": word_info['word'],
+                                "start": int((word_info['start'] * 1000) + start_ms),
+                                "end": int((word_info['end'] * 1000) + start_ms),
+                                "confidence": 0.95,
+                                "speaker": "A"  # Will be updated by diarization
+                            })
+                            
+            except Exception as e:
+                print(f"[WARNING] Error processing chunk {i+1}: {e}")
+                continue
+        
+        # Run diarization on full audio (using a downsampled version if too long)
+        try:
+            full_audio_path = temp_path / "full_audio.wav"
+            if len(audio) > 60 * 60 * 1000:  # If longer than 1 hour, downsample for diarization
+                diarization_audio = audio[::2]  # Downsample by 2x
+            else:
+                diarization_audio = audio
+            diarization_audio.export(str(full_audio_path), format="wav")
+            
+            print(f"[INFO] Running speaker diarization on full audio...")
+            diarization = self.diarization_pipeline(str(full_audio_path))
+            
+            # Create speaker segments
+            segments = []
+            speaker_map = {}
+            speaker_counter = 0
+            for turn, _, speaker_label in diarization.itertracks(yield_label=True):
+                if speaker_label not in speaker_map:
+                    speaker_counter += 1
+                    speaker_map[speaker_label] = chr(64 + speaker_counter)  # A, B, C...
+
+                segments.append({
+                    "speaker": speaker_map[speaker_label],
+                    "start": turn.start,
+                    "end": turn.end
+                })
+
+            # Assign speakers to words
+            for word in all_words:
+                word_start_sec = word["start"] / 1000.0
+                word["speaker"] = "A"  # fallback
+                for seg in segments:
+                    if seg["start"] <= word_start_sec <= seg["end"]:
+                        word["speaker"] = seg["speaker"]
+                        break
+                        
+        except Exception as e:
+            print(f"[WARNING] Diarization failed: {e}. Using default speaker labels.")
+        
+        result = {
+            "id": filename[:8],
+            "status": "completed",
+            "text": full_text.strip(),
+            "words": all_words
+        }
+        return result 
