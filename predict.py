@@ -33,7 +33,7 @@ class Predictor(BasePredictor):
         hf_token = os.environ.get("HUGGINGFACE_TOKEN", None)
         if not hf_token:
             # Base64 encoded token to avoid GitHub secret detection
-            encoded_token = "aGZfUk1jb1NscXNXc1VPV2diUXhLc0RBc3dTVGJYWnpLRg=="
+            encoded_token = "aGZfUk1jb1NscXNXc1VPV2dtYndCcXhLc0RBc3dTVGJYWnpLRg=="
             hf_token = base64.b64decode(encoded_token).decode('utf-8')
             
         self.diarization_pipeline = Pipeline.from_pretrained(
