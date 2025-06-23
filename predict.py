@@ -39,6 +39,18 @@ class Predictor(BasePredictor):
             use_auth_token=hf_token
         )
         
+        # Configure pipeline for better multi-speaker detection
+        self.diarization_pipeline.instantiate({
+            "clustering": {
+                "method": "centroid",
+                "min_cluster_size": 10,
+                "threshold": 0.7045654963945799,
+            },
+            "segmentation": {
+                "min_duration_off": 0.0,
+            }
+        })
+        
         if self.diarization_pipeline is None:
             raise RuntimeError("Failed to load pyannote/speaker-diarization-3.1 - check HUGGINGFACE_TOKEN and model access permissions")
             
@@ -103,6 +115,10 @@ class Predictor(BasePredictor):
             model_audio = audio.set_frame_rate(16000).set_channels(1)
             model_path = temp_path / "audio_model.wav"
             model_audio.export(str(model_path), format="wav")
+            
+            # Audio analysis for debugging
+            duration = len(model_audio) / 1000.0
+            print(f"[DEBUG] Audio analysis: duration={duration:.2f}s, channels={audio.channels}, sample_rate={audio.frame_rate}Hz, converted_to=16000Hz_mono")
 
             # --- Transcription ---
             transcripts = self.asr_model.transcribe(
@@ -130,7 +146,49 @@ class Predictor(BasePredictor):
 
             # --- Diarization ---
             print(f"[INFO] Running speaker diarization...")
-            diarization = self.diarization_pipeline(str(model_path))
+            
+            # Try with different parameters for better multi-speaker detection
+            try:
+                # First attempt with default settings
+                diarization = self.diarization_pipeline(str(model_path))
+                speaker_segments = []
+                
+                # Count unique speakers found
+                unique_speakers = set()
+                for turn, _, speaker_label in diarization.itertracks(yield_label=True):
+                    unique_speakers.add(speaker_label)
+                
+                print(f"[DEBUG] First attempt found {len(unique_speakers)} unique speakers")
+                
+                # If only 1 speaker found, try with more aggressive settings
+                if len(unique_speakers) <= 1 and duration > 3.0:  # Only for audio longer than 3 seconds
+                    print(f"[INFO] Only 1 speaker detected, trying with more sensitive settings...")
+                    
+                    # Create a new pipeline instance with different parameters
+                    from pyannote.audio import Pipeline
+                    alt_pipeline = Pipeline.from_pretrained(
+                        "pyannote/speaker-diarization-3.1",
+                        use_auth_token=os.environ.get("HUGGINGFACE_TOKEN", None)
+                    )
+                    
+                    # Try more sensitive clustering
+                    alt_pipeline.instantiate({
+                        "clustering": {
+                            "method": "centroid", 
+                            "min_cluster_size": 5,  # Smaller clusters
+                            "threshold": 0.5,  # Lower threshold for more speakers
+                        }
+                    })
+                    
+                    if torch.cuda.is_available():
+                        alt_pipeline.to(torch.device("cuda"))
+                        
+                    diarization = alt_pipeline(str(model_path))
+                    
+            except Exception as e:
+                print(f"[WARNING] Diarization failed: {e}, using fallback")
+                diarization = self.diarization_pipeline(str(model_path))
+            
             speaker_segments = []
             
             print(f"[DEBUG] Diarization results:")
