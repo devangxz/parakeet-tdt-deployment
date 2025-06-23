@@ -15,7 +15,6 @@ import requests
 from urllib.parse import urlparse
 from pydub import AudioSegment
 import nemo.collections.asr as nemo_asr
-from pyannote.audio import Pipeline
 from cog import BasePredictor, Input, Path as CogPath
 
 class Predictor(BasePredictor):
@@ -28,34 +27,34 @@ class Predictor(BasePredictor):
         if torch.cuda.is_available():
             self.asr_model = self.asr_model.cuda()
 
-        print(f"[{datetime.now().isoformat()}] [INFO] Loading Pyannote diarization model...")
-        hf_token = os.environ.get("HUGGINGFACE_TOKEN", None)
-        if not hf_token:
-            encoded_token = "aGZfUk1jb1NscXNXc1VPV2dtYndCcXhLc0RBc3dTVGJYWnpLRg=="
-            hf_token = base64.b64decode(encoded_token).decode('utf-8')
-            
-        self.diarization_pipeline = Pipeline.from_pretrained(
-            "pyannote/speaker-diarization-3.1",
-            use_auth_token=hf_token
-        )
-        
-        # Configure pipeline for better multi-speaker detection
-        self.diarization_pipeline.instantiate({
-            "clustering": {
-                "method": "centroid",
-                "min_cluster_size": 10,
-                "threshold": 0.7045654963945799,
-            },
-            "segmentation": {
-                "min_duration_off": 0.0,
-            }
-        })
-        
-        if self.diarization_pipeline is None:
-            raise RuntimeError("Failed to load pyannote/speaker-diarization-3.1 - check HUGGINGFACE_TOKEN and model access permissions")
-            
-        if torch.cuda.is_available():
-            self.diarization_pipeline.to(torch.device("cuda"))
+        print(f"[{datetime.now().isoformat()}] [INFO] Loading NeMo speaker diarization model...")
+        # Try using NeMo's neural speaker diarization
+        try:
+            from nemo.collections.asr.models.msdd_models import NeuralDiarizer
+            self.diarization_model = NeuralDiarizer.from_pretrained(
+                model_name="nvidia/speakerverification_en_titanet_large"
+            )
+            if torch.cuda.is_available():
+                self.diarization_model = self.diarization_model.cuda()
+            self.use_nemo_diarization = True
+            print(f"[{datetime.now().isoformat()}] [INFO] Using NeMo neural diarization")
+        except Exception as e:
+            print(f"[{datetime.now().isoformat()}] [WARNING] Failed to load NeMo diarization: {e}")
+            print(f"[{datetime.now().isoformat()}] [INFO] Falling back to pyannote diarization")
+            # Fallback to pyannote
+            from pyannote.audio import Pipeline
+            hf_token = os.environ.get("HUGGINGFACE_TOKEN", None)
+            if not hf_token:
+                encoded_token = "aGZfUk1jb1NscXNXc1VPV2dtYndCcXhLc0RBc3dTVGJYWnpLRg=="
+                hf_token = base64.b64decode(encoded_token).decode('utf-8')
+                
+            self.diarization_pipeline = Pipeline.from_pretrained(
+                "pyannote/speaker-diarization-3.1",
+                use_auth_token=hf_token
+            )
+            if torch.cuda.is_available():
+                self.diarization_pipeline.to(torch.device("cuda"))
+            self.use_nemo_diarization = False
 
         print(f"[{datetime.now().isoformat()}] [INFO] Models loaded successfully.")
 
@@ -146,60 +145,80 @@ class Predictor(BasePredictor):
 
             # --- Diarization ---
             print(f"[INFO] Running speaker diarization...")
-            
-            # Try with different parameters for better multi-speaker detection
-            try:
-                # First attempt with default settings
-                diarization = self.diarization_pipeline(str(model_path))
-                speaker_segments = []
-                
-                # Count unique speakers found
-                unique_speakers = set()
-                for turn, _, speaker_label in diarization.itertracks(yield_label=True):
-                    unique_speakers.add(speaker_label)
-                
-                print(f"[DEBUG] First attempt found {len(unique_speakers)} unique speakers")
-                
-                # If only 1 speaker found, try with more aggressive settings
-                if len(unique_speakers) <= 1 and duration > 3.0:  # Only for audio longer than 3 seconds
-                    print(f"[INFO] Only 1 speaker detected, trying with more sensitive settings...")
-                    
-                    # Create a new pipeline instance with different parameters
-                    from pyannote.audio import Pipeline
-                    alt_pipeline = Pipeline.from_pretrained(
-                        "pyannote/speaker-diarization-3.1",
-                        use_auth_token=os.environ.get("HUGGINGFACE_TOKEN", None)
-                    )
-                    
-                    # Try more sensitive clustering
-                    alt_pipeline.instantiate({
-                        "clustering": {
-                            "method": "centroid", 
-                            "min_cluster_size": 5,  # Smaller clusters
-                            "threshold": 0.5,  # Lower threshold for more speakers
-                        }
-                    })
-                    
-                    if torch.cuda.is_available():
-                        alt_pipeline.to(torch.device("cuda"))
-                        
-                    diarization = alt_pipeline(str(model_path))
-                    
-            except Exception as e:
-                print(f"[WARNING] Diarization failed: {e}, using fallback")
-                diarization = self.diarization_pipeline(str(model_path))
-            
             speaker_segments = []
             
-            print(f"[DEBUG] Diarization results:")
-            for turn, _, speaker_label in diarization.itertracks(yield_label=True):
-                print(f"[DEBUG] {speaker_label}: {turn.start:.2f}s - {turn.end:.2f}s")
-                speaker_segments.append({
-                    "speaker": speaker_label,
-                    "start": turn.start,
-                    "end": turn.end,
-                    "confidence": 0.95
-                })
+            if self.use_nemo_diarization:
+                # Use NeMo neural diarization
+                try:
+                    print(f"[INFO] Using NeMo neural diarization")
+                    # NeMo neural diarization expects different input format
+                    result = self.diarization_model.diarize_batch([str(model_path)])
+                    
+                    # Process NeMo results
+                    for batch_result in result:
+                        for segment in batch_result:
+                            speaker_segments.append({
+                                "speaker": f"SPEAKER_{segment['speaker']:02d}",
+                                "start": segment["start"],
+                                "end": segment["end"],
+                                "confidence": segment.get("confidence", 0.95)
+                            })
+                    
+                    print(f"[DEBUG] NeMo diarization found {len(speaker_segments)} segments")
+                    
+                except Exception as e:
+                    print(f"[WARNING] NeMo diarization failed: {e}, falling back to pyannote")
+                    self.use_nemo_diarization = False
+            
+            if not self.use_nemo_diarization:
+                # Use pyannote.audio diarization
+                try:
+                    diarization = self.diarization_pipeline(str(model_path))
+                    
+                    # Count unique speakers found
+                    unique_speakers = set()
+                    for turn, _, speaker_label in diarization.itertracks(yield_label=True):
+                        unique_speakers.add(speaker_label)
+                    
+                    print(f"[DEBUG] Pyannote found {len(unique_speakers)} unique speakers")
+                    
+                    # If only 1 speaker found, try with more aggressive settings
+                    if len(unique_speakers) <= 1 and duration > 3.0:
+                        print(f"[INFO] Only 1 speaker detected, trying with more sensitive settings...")
+                        
+                        from pyannote.audio import Pipeline
+                        alt_pipeline = Pipeline.from_pretrained(
+                            "pyannote/speaker-diarization-3.1",
+                            use_auth_token=os.environ.get("HUGGINGFACE_TOKEN", None)
+                        )
+                        
+                        alt_pipeline.instantiate({
+                            "clustering": {
+                                "method": "centroid", 
+                                "min_cluster_size": 5,
+                                "threshold": 0.5,
+                            }
+                        })
+                        
+                        if torch.cuda.is_available():
+                            alt_pipeline.to(torch.device("cuda"))
+                            
+                        diarization = alt_pipeline(str(model_path))
+                        
+                except Exception as e:
+                    print(f"[WARNING] Pyannote diarization failed: {e}")
+                    diarization = self.diarization_pipeline(str(model_path))
+                
+                # Process pyannote results
+                print(f"[DEBUG] Pyannote diarization results:")
+                for turn, _, speaker_label in diarization.itertracks(yield_label=True):
+                    print(f"[DEBUG] {speaker_label}: {turn.start:.2f}s - {turn.end:.2f}s")
+                    speaker_segments.append({
+                        "speaker": speaker_label,
+                        "start": turn.start,
+                        "end": turn.end,
+                        "confidence": 0.95
+                    })
 
             speaker_segments.sort(key=lambda x: x["start"])
             
