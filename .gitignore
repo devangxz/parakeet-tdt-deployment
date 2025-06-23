@@ -1,0 +1,23 @@
+# Basic Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Mac OS
+.DS_Store
+
+# VS Code
+.vscode/
+
+# Secrets - DO NOT COMMIT TOKENS!
+.env
+.env.*
+*.env
+hf_token.txt
+config.py 

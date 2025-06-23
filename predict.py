@@ -17,6 +17,12 @@ import nemo.collections.asr as nemo_asr
 from pyannote.audio import Pipeline
 from cog import BasePredictor, Input, Path as CogPath
 
+# Try to import config, fallback to environment variable
+try:
+    from config import HUGGINGFACE_TOKEN as CONFIG_TOKEN
+except ImportError:
+    CONFIG_TOKEN = None
+
 class Predictor(BasePredictor):
     def setup(self) -> None:
         """Load ASR + Diarization models on startup"""
@@ -28,9 +34,10 @@ class Predictor(BasePredictor):
             self.asr_model = self.asr_model.cuda()
 
         print(f"[{datetime.now().isoformat()}] [INFO] Loading Pyannote diarization model...")
-        hf_token = os.environ.get("HUGGINGFACE_TOKEN", None)
+        # Try environment variable first, then config file
+        hf_token = os.environ.get("HUGGINGFACE_TOKEN", None) or CONFIG_TOKEN
         if not hf_token:
-            raise RuntimeError("HUGGINGFACE_TOKEN environment variable is required for speaker diarization")
+            raise RuntimeError("HUGGINGFACE_TOKEN not found in environment variable or config file")
             
         self.diarization_pipeline = Pipeline.from_pretrained(
             "pyannote/speaker-diarization-3.1",
