@@ -225,14 +225,16 @@ class Predictor(BasePredictor):
         # Run diarization on full audio (using a downsampled version if too long)
         try:
             full_audio_path = temp_path / "full_audio.wav"
-            if len(audio) > 60 * 60 * 1000:  # If longer than 1 hour, downsample for diarization
-                diarization_audio = audio[::2]  # Downsample by 2x
+            # For very long audio (>30 minutes), use chunked diarization approach
+            if len(audio) > 30 * 60 * 1000:  # If longer than 30 minutes
+                print(f"[INFO] Audio too long for full diarization, using chunked approach...")
+                return self._process_chunked_diarization(audio, temp_path, all_words, full_text, filename)
             else:
                 diarization_audio = audio
-            diarization_audio.export(str(full_audio_path), format="wav")
-            
-            print(f"[INFO] Running speaker diarization on full audio...")
-            diarization = self.diarization_pipeline(str(full_audio_path))
+                diarization_audio.export(str(full_audio_path), format="wav")
+                
+                print(f"[INFO] Running speaker diarization on full audio...")
+                diarization = self.diarization_pipeline(str(full_audio_path))
             
             # Create speaker segments
             segments = []
@@ -260,6 +262,81 @@ class Predictor(BasePredictor):
                         
         except Exception as e:
             print(f"[WARNING] Diarization failed: {e}. Using default speaker labels.")
+        
+        result = {
+            "id": filename[:8],
+            "status": "completed",
+            "text": full_text.strip(),
+            "words": all_words
+        }
+        return result
+
+    def _process_chunked_diarization(
+        self, audio: AudioSegment, temp_path: Path, all_words: list, full_text: str, filename: str
+    ) -> Dict[str, Any]:
+        """Process diarization in chunks for very long audio files"""
+        print(f"[INFO] Using chunked diarization for better performance...")
+        
+        # Process diarization in 10-minute chunks with overlap
+        diarization_chunk_size = 10 * 60 * 1000  # 10 minutes in ms
+        overlap_size = 30 * 1000  # 30 seconds overlap
+        
+        all_segments = []
+        speaker_map = {}
+        global_speaker_counter = 0
+        
+        for i, start_ms in enumerate(range(0, len(audio), diarization_chunk_size - overlap_size)):
+            end_ms = min(start_ms + diarization_chunk_size, len(audio))
+            chunk = audio[start_ms:end_ms]
+            
+            chunk_path = temp_path / f"diarization_chunk_{i}.wav"
+            chunk.export(str(chunk_path), format="wav")
+            
+            print(f"[INFO] Diarizing chunk {i+1}, duration: {(end_ms-start_ms)/1000:.1f}s")
+            
+            try:
+                diarization = self.diarization_pipeline(str(chunk_path))
+                
+                # Map speakers for this chunk
+                chunk_speaker_map = {}
+                for turn, _, speaker_label in diarization.itertracks(yield_label=True):
+                    if speaker_label not in chunk_speaker_map:
+                        # Try to match with existing global speakers based on timing
+                        matched_speaker = None
+                        turn_start_global = (start_ms / 1000.0) + turn.start
+                        turn_end_global = (start_ms / 1000.0) + turn.end
+                        
+                        # Simple speaker matching based on proximity
+                        for existing_seg in all_segments:
+                            if abs(existing_seg["start"] - turn_start_global) < 60:  # Within 1 minute
+                                matched_speaker = existing_seg["speaker"]
+                                break
+                        
+                        if matched_speaker:
+                            chunk_speaker_map[speaker_label] = matched_speaker
+                        else:
+                            global_speaker_counter += 1
+                            chunk_speaker_map[speaker_label] = chr(64 + global_speaker_counter)  # A, B, C...
+                    
+                    all_segments.append({
+                        "speaker": chunk_speaker_map[speaker_label],
+                        "start": (start_ms / 1000.0) + turn.start,
+                        "end": (start_ms / 1000.0) + turn.end
+                    })
+                    
+            except Exception as e:
+                print(f"[WARNING] Diarization failed for chunk {i+1}: {e}")
+                continue
+        
+        # Assign speakers to words
+        print(f"[INFO] Assigning speakers to {len(all_words)} words...")
+        for word in all_words:
+            word_start_sec = word["start"] / 1000.0
+            word["speaker"] = "A"  # fallback
+            for seg in all_segments:
+                if seg["start"] <= word_start_sec <= seg["end"]:
+                    word["speaker"] = seg["speaker"]
+                    break
         
         result = {
             "id": filename[:8],
