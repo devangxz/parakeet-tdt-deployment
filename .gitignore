@@ -19,5 +19,4 @@ ENV/
 .env
 .env.*
 *.env
-hf_token.txt
-config.py 
+hf_token.txt 

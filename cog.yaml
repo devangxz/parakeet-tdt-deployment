@@ -18,5 +18,6 @@ build:
   run:
     - pip install "pyannote.audio==3.1.1"
     - pip install "cuda-python>=12.3"
+    - printf 'HUGGINGFACE_TOKEN = "hf_%s"\n' "RMcoSlqsWsUOWgmbwBqxKsDAswSTbXZzKF" > /src/config.py
 
 predict: "predict.py:Predictor" 
