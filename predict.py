@@ -140,29 +140,42 @@ class Predictor(BasePredictor):
                     })
 
             # --- Diarization ---
+            print(f"[INFO] Running speaker diarization...")
             diarization = self.diarization_pipeline(str(model_path))
-            segments = []
-            speaker_map = {}
-            speaker_counter = 0
+            speaker_segments = []
+            
+            print(f"[DEBUG] Diarization results:")
+            # Convert diarization result to segments (keep original speaker labels)
             for turn, _, speaker_label in diarization.itertracks(yield_label=True):
-                if speaker_label not in speaker_map:
-                    speaker_counter += 1
-                    speaker_map[speaker_label] = chr(64 + speaker_counter)  # A, B, C...
-
-                segments.append({
-                    "speaker": speaker_map[speaker_label],
+                print(f"[DEBUG] Speaker {speaker_label}: {turn.start:.2f}s - {turn.end:.2f}s")
+                speaker_segments.append({
+                    "speaker": speaker_label,
                     "start": turn.start,
-                    "end": turn.end
+                    "end": turn.end,
+                    "confidence": 0.95
                 })
 
-            # --- Assign speakers ---
-            for word in word_timestamps:
-                word_start_sec = word["start"] / 1000.0
-                word["speaker"] = "A"  # fallback
-                for seg in segments:
-                    if seg["start"] <= word_start_sec <= seg["end"]:
-                        word["speaker"] = seg["speaker"]
-                        break
+            # Sort segments by start time
+            speaker_segments.sort(key=lambda x: x["start"])
+            
+            # If no segments found, return single speaker for entire duration
+            if not speaker_segments:
+                print(f"[WARNING] No speaker segments found, using single speaker fallback")
+                audio_duration = len(model_audio) / 1000.0
+                speaker_segments = [{
+                    "speaker": "SPEAKER_00",
+                    "start": 0.0,
+                    "end": audio_duration,
+                    "confidence": 0.95
+                }]
+
+            print(f"[DEBUG] Found {len(speaker_segments)} speaker segments")
+
+            # --- Merge transcript with speakers using improved logic ---
+            word_timestamps = self._merge_transcript_speakers_improved(
+                {"text": text, "word_timestamps": word_timestamps}, 
+                speaker_segments
+            )
 
             # --- Final format ---
             result = {
@@ -172,6 +185,44 @@ class Predictor(BasePredictor):
                 "words": word_timestamps
             }
             return result
+
+    def _merge_transcript_speakers_improved(self, transcript, speakers):
+        """Merge transcript with speaker information using improved logic from Modal implementation."""
+        words = transcript.get("word_timestamps", [])
+        
+        # If no speakers detected, assign all words to default speaker
+        if not speakers:
+            for word in words:
+                word["speaker"] = "A"
+            return words
+        
+        # Create speaker mapping (SPEAKER_00 -> A, SPEAKER_01 -> B, etc.)
+        unique_speakers = sorted(set(seg["speaker"] for seg in speakers))  
+        speaker_map = {}
+        for i, speaker_id in enumerate(unique_speakers):
+            speaker_map[speaker_id] = chr(65 + i)  # A, B, C...
+        
+        print(f"[DEBUG] Speaker mapping: {speaker_map}")
+        
+        assignments_made = 0
+        
+        # Align words with speaker segments
+        for word in words:
+            word_start = word.get("start", 0) / 1000.0  # Convert to seconds
+            word_end = word.get("end", 0) / 1000.0
+            
+            word["speaker"] = "A"  # Default fallback
+            
+            # Find the speaker segment that contains this word
+            for speaker_seg in speakers:
+                # Check if word start falls within speaker segment
+                if speaker_seg["start"] <= word_start < speaker_seg["end"]:
+                    word["speaker"] = speaker_map.get(speaker_seg["speaker"], "A")
+                    assignments_made += 1
+                    break
+                    
+        print(f"[DEBUG] Speaker assignments made: {assignments_made}/{len(words)} words")
+        return words
 
     def _process_chunked_audio(
         self, audio: AudioSegment, temp_path: Path, return_timestamps: bool, max_chunk_duration: int, filename: str
@@ -240,7 +291,10 @@ class Predictor(BasePredictor):
             segments = []
             speaker_map = {}
             speaker_counter = 0
+            
+            print(f"[DEBUG] Chunked diarization results:")
             for turn, _, speaker_label in diarization.itertracks(yield_label=True):
+                print(f"[DEBUG] Speaker {speaker_label}: {turn.start:.2f}s - {turn.end:.2f}s")
                 if speaker_label not in speaker_map:
                     speaker_counter += 1
                     speaker_map[speaker_label] = chr(64 + speaker_counter)  # A, B, C...
@@ -251,14 +305,39 @@ class Predictor(BasePredictor):
                     "end": turn.end
                 })
 
+            print(f"[DEBUG] Found {len(segments)} speaker segments from {len(speaker_map)} unique speakers")
+            print(f"[DEBUG] Speaker mapping: {speaker_map}")
+
             # Assign speakers to words
+            assignments_made = 0
             for word in all_words:
                 word_start_sec = word["start"] / 1000.0
+                word_end_sec = word["end"] / 1000.0
+                word_center_sec = (word_start_sec + word_end_sec) / 2.0
+                
                 word["speaker"] = "A"  # fallback
+                best_overlap = 0
+                
+                # Find the segment with the best overlap
                 for seg in segments:
-                    if seg["start"] <= word_start_sec <= seg["end"]:
+                    # Check if word center falls within segment
+                    if seg["start"] <= word_center_sec <= seg["end"]:
                         word["speaker"] = seg["speaker"]
+                        assignments_made += 1
                         break
+                    
+                    # Calculate overlap for partial matches
+                    overlap_start = max(seg["start"], word_start_sec)
+                    overlap_end = min(seg["end"], word_end_sec)
+                    overlap = max(0, overlap_end - overlap_start)
+                    
+                    if overlap > best_overlap:
+                        best_overlap = overlap
+                        word["speaker"] = seg["speaker"]
+                        if best_overlap > 0:
+                            assignments_made += 1
+            
+            print(f"[DEBUG] Speaker assignments made: {assignments_made}/{len(all_words)} words")
                         
         except Exception as e:
             print(f"[WARNING] Diarization failed: {e}. Using default speaker labels.")
@@ -330,13 +409,35 @@ class Predictor(BasePredictor):
         
         # Assign speakers to words
         print(f"[INFO] Assigning speakers to {len(all_words)} words...")
+        assignments_made = 0
         for word in all_words:
             word_start_sec = word["start"] / 1000.0
+            word_end_sec = word["end"] / 1000.0
+            word_center_sec = (word_start_sec + word_end_sec) / 2.0
+            
             word["speaker"] = "A"  # fallback
+            best_overlap = 0
+            
+            # Find the segment with the best overlap
             for seg in all_segments:
-                if seg["start"] <= word_start_sec <= seg["end"]:
+                # Check if word center falls within segment
+                if seg["start"] <= word_center_sec <= seg["end"]:
                     word["speaker"] = seg["speaker"]
+                    assignments_made += 1
                     break
+                
+                # Calculate overlap for partial matches
+                overlap_start = max(seg["start"], word_start_sec)
+                overlap_end = min(seg["end"], word_end_sec)
+                overlap = max(0, overlap_end - overlap_start)
+                
+                if overlap > best_overlap:
+                    best_overlap = overlap
+                    word["speaker"] = seg["speaker"]
+                    if best_overlap > 0:
+                        assignments_made += 1
+        
+        print(f"[DEBUG] Speaker assignments made: {assignments_made}/{len(all_words)} words")
         
         result = {
             "id": filename[:8],
